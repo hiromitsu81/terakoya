@@ -443,7 +443,7 @@
 </div>
 <div class="modebar"><span id="modebar"></span></div>
 <div class="recbar" id="recbar"><span id="recbarText">録音しています</span></div>
-<div class="ver" id="ver">Harmonizer v2.43　2026-10-01</div>
+<div class="ver" id="ver">Harmonizer v2.44　2026-10-01</div>
 
 <script>
 /* ============================================================================
@@ -1534,12 +1534,15 @@ function roomRender(r){
   ROOM.mode = r.mode; ROOM.host = r.host;
   if (r.status === 'lobby') {
     const names = r.members.map(m => m.n).join('、');
-    const txt = '大会「' + r.code + '」（' + (r.mode === 'hard' ? 'ハード・声だけ' : 'イージー・4択') + '・' + r.total + '問）\n参加：' + r.members.length + '人（' + names + '）\n' +
+    const txt = '大会「' + r.code + '」（' + (r.mode === 'hard' ? 'ハード・声だけ' : 'イージー・4択') + '・' + r.total + '問）\n' +
+      '1問' + r.point + '点。最初に正解した人に入ります。お手つきはその問はお休み。パスは ' + r.pass + '点減点。\n参加：' + r.members.length + '人（' + names + '）\n' +
       (r.host ? 'みんなが入ったら［スタート］を押してね。' : hztSanJs(r.hostName) + 'が［スタート］を押すと始まるよ。');
     if (!ROOM.lobbyRow) {
       ROOM.lobbyRow = bubble('bot', '');
       if (r.host) { const ch = document.createElement('div'); ch.className = 'chips'; ch.style.cssText = 'justify-content:flex-start;margin-top:6px';
-        const b = document.createElement('button'); b.className = 'chip'; b.type = 'button'; b.dataset.ract = 'start'; b.textContent = 'スタート'; ch.appendChild(b); ROOM.lobbyRow.appendChild(ch); }
+        [['start', 'スタート'], ['n10', '10問'], ['n30', '30問']].forEach(x => { if (x[0] === 'n30' && (r.prep || 0) < 30) return;
+          const b = document.createElement('button'); b.className = 'chip'; b.type = 'button'; b.dataset.ract = x[0]; b.textContent = x[1]; ch.appendChild(b); });
+        ROOM.lobbyRow.appendChild(ch); }
       toBottom();
     }
     ROOM.lobbyRow.querySelector('.bub').textContent = txt;
@@ -1565,9 +1568,10 @@ function roomShowQuestion(r){
   const q = r.q, row = bubble('bot', '');
   const head = '第' + q.n + '問／' + r.total + '問　【' + q.subject + '】';
   row.querySelector('.bub').textContent = head + '\n' + q.text + (q.choices ? '\n' + q.choices.map((c, i) => 'ABCD'[i] + '. ' + c).join('\n') : '\n（声で答えてね）');
-  if (q.choices) {
+  {
     const ch = document.createElement('div'); ch.className = 'chips'; ch.style.cssText = 'justify-content:flex-start;margin-top:6px';
-    q.choices.forEach((c, i) => { const b = document.createElement('button'); b.className = 'chip'; b.type = 'button'; b.dataset.rc = String(i); b.textContent = 'ABCD'[i] + '　' + c; ch.appendChild(b); });
+    (q.choices || []).forEach((c, i) => { const b = document.createElement('button'); b.className = 'chip'; b.type = 'button'; b.dataset.rc = String(i); b.textContent = 'ABCD'[i] + '　' + c; ch.appendChild(b); });
+    const ps = document.createElement('button'); ps.className = 'chip'; ps.type = 'button'; ps.dataset.rc = 'pass'; ps.textContent = 'パス（-' + (r.pass || 5) + '点）'; ch.appendChild(ps);
     row.appendChild(ch);
   }
   toBottom();
@@ -1580,14 +1584,14 @@ async function roomAnswer(payload){
   if (!ROOM.code || ROOM.answered) return;
   ROOM.answered = true;
   document.querySelectorAll('[data-rc]').forEach(b => { b.disabled = true; });
-  const me = bubble('me', payload.choice !== undefined ? 'ABCD'[payload.choice] : '（声で答えたよ）');
+  const me = bubble('me', payload.pass ? 'パス' : payload.choice !== undefined ? 'ABCD'[payload.choice] : '（声で答えたよ）');
   micLabel('送っています…');
   let d = null;
-  try { d = await api(Object.assign({ api: 'room', act: 'answer', code: ROOM.code }, payload)); } catch (e) { d = null; }
+  try { d = await api(Object.assign({ api: 'room', act: 'answer', code: ROOM.code }, payload)); } catch (e) { d = null; }   // payload.act='pass' で上書き
   if (d && d.heard) me.querySelector('.bub').textContent = d.heard;
   if (!d || d.error) { ROOM.answered = false; document.querySelectorAll('[data-rc]').forEach(b => { b.disabled = false; }); micLabel(d && d.error === 'transcribe' ? '聞き取れなかったよ。もう一回！' : 'うまく送れなかったよ。もう一回！'); return; }
   if (d.late) { micLabel('時間切れでした'); return; }
-  micLabel(d.you && d.you.ok ? '<b>正解！</b>　いちばん早い人を決めているよ…' : '<b>ざんねん</b>　次の問題でがんばろう');
+  micLabel(d.you && d.you.pass ? 'パスしました（-' + (d.room && d.room.pass || 5) + '点）' : d.you && d.you.ok ? '<b>正解！</b>　いちばん早い人を決めているよ…' : '<b>お手つき</b>　この問はお休み');
   if (d.room) roomRender(d.room);
 }
 function roomShowReveal(r){
@@ -1596,24 +1600,21 @@ function roomShowReveal(r){
   autoCancel();
   document.querySelectorAll('[data-rc]').forEach(b => { b.disabled = true; });
   const v = r.rev, row = bubble('bot', '');
-  const lines = ['正解は ' + v.a];
-  if (v.win) lines.push('🏆 いちばん早かったのは ' + hztSanJs(v.win) + '（' + v.rt + '秒）');
-  else lines.push('だれも正解しなかったよ');
-  if (v.ok && v.ok.length > 1) lines.push('正解：' + v.ok.join('、'));
+  const lines = (v.lines || []).concat(['', '正解は ' + v.a]);
   const me = r.members.find(m => m.me); if (me) lines.push('あなた：' + me.p + '点');
   row.querySelector('.bub').textContent = lines.join('\n'); toBottom();
-  speakParts([{ t: '正解は、' + String(v.a).replace(/^([A-D])\. /, '$1、') + '。' + (v.win ? 'いちばん早かったのは、' + hztSanJs(v.win) + '。' : '') }], row, {});
+  speakParts([{ t: (v.win ? v.win + '殿、正解。' : '') + '正解は、' + String(v.a).replace(/^([A-D])\. /, '$1、') + '。' }], row, {});
   micLabel('次の問題を待っています…');
 }
 function roomShowEnd(r){
   roomStop();
   const row = bubble('bot', '');
-  const L = ['【大会の結果】'];
-  r.members.forEach((m, i) => L.push((i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1) + '位 ') + ' ' + m.n + '　' + m.p + '点' + (m.me ? '（あなた）' : '')));
+  const L = (r.result && r.result.length) ? r.result.slice() : ['【大会の結果】'].concat(r.members.map((m, i) => (i + 1) + '位 ' + m.n + '　' + m.p + '点'));
+  const me = r.members.find(m => m.me); if (me) { L.push(''); L.push('あなた：' + me.p + '点'); }
   row.querySelector('.bub').textContent = L.join('\n');
   addChips(row, ['大会をひらく', 'はじめる', 'グループにシェア']);
   toBottom();
-  if (r.members[0]) speakParts([{ t: '大会おわり！ 1位は、' + hztSanJs(r.members[0].n) + '。おつかれさま！' }], row, {});
+  if (r.members[0] && r.members[0].p > 0) speakParts([{ t: '大会おわり！ 優勝は、' + r.members[0].n + '殿。あっぱれ。' }], row, {});
   ROOM.code = ''; micLabel('押して話す');
 }
 
@@ -2300,10 +2301,12 @@ document.addEventListener('click', (e) => {
   if (!c) return;
   if (c.dataset.guide) { guideAgain(); return; }
   if (c.dataset.ract === 'start') { c.disabled = true; api({ api: 'room', act: 'start', code: ROOM.code }).then(d => { if (d && d.room) roomRender(d.room); }).catch(() => { c.disabled = false; }); return; }
-  if (c.dataset.rc !== undefined) {   // 大会のボタン（イージー）
+  if (c.dataset.ract === 'n10' || c.dataset.ract === 'n30') { api({ api: 'room', act: 'setn', code: ROOM.code, n: c.dataset.ract === 'n30' ? 30 : 10 }).then(d => { if (d && d.room) roomRender(d.room); }); return; }
+  if (c.dataset.rc !== undefined) {   // 大会のボタン（A〜D・パス）
     if (ROOM.phase !== 'ask' || ROOM.answered) return;
     autoCancel(); if (rec && rec.state === 'recording') recCancelQuiet(); stopAllVoice();
-    roomAnswer({ choice: Number(c.dataset.rc), rt: Math.round((Date.now() - ROOM.shownAt) / 100) / 10 });
+    if (c.dataset.rc === 'pass') roomAnswer({ pass: true, act: 'pass' });
+    else roomAnswer({ choice: Number(c.dataset.rc), rt: Math.round((Date.now() - ROOM.shownAt) / 100) / 10 });
     return;
   }
   if (TUTOR) { autoCancel(); autoMiss = 0; if (rec && rec.state === 'recording') recCancelQuiet(); stopAllVoice(); }
