@@ -443,7 +443,7 @@
 </div>
 <div class="modebar"><span id="modebar"></span></div>
 <div class="recbar" id="recbar"><span id="recbarText">録音しています</span></div>
-<div class="ver" id="ver">Harmonizer v2.40　2026-10-01</div>
+<div class="ver" id="ver">Harmonizer v2.41　2026-10-01</div>
 
 <script>
 /* ============================================================================
@@ -527,7 +527,7 @@ const GUEST = (() => {
     return g;
   } catch (e) { return ''; }
 })();
-if (TUTOR) CONFIG.CHIPS = ['はじめる', '設定', '英語にして', '数学にして'];
+if (TUTOR) CONFIG.CHIPS = ['はじめる', 'メニュー', '使い方', 'モード'];
 else if (GUEST) CONFIG.CHIPS = ['Harmonizerで何ができる？', '今週が期限のタスクは？', '遅れているのはどこ？', '何を決めないと止まる？'];
 let busy = false;
 let rec = null, chunks = [], recMime = '', recT0 = 0, recTimer = null, recStream = null;
@@ -770,7 +770,10 @@ function relogin(){
 async function api(payload){
   if (GUEST || TUTOR) {   // 体験版・家庭教師：LINEのトークンは使わず、招待コードで
     let key = TUTOR ? { kind: 'ops', tutor: TUTOR } : { kind: 'ops', guest: GUEST };
-    if (TUTOR_LINE) { let t = ''; try { t = liff.getIDToken() || ''; } catch (e) { } key = { kind: 'hz_tutor', idToken: t }; }   // 寺小屋のGAS（hz_tutor.gs）へ
+    if (TUTOR_LINE) {
+      if (!isInLine() && idExpiring() && relogin()) return new Promise(() => { });   // ブラウザ：IDトークンの期限（1時間）が近い → ログインし直す
+      let t = ''; try { t = liff.getIDToken() || ''; } catch (e) { } key = { kind: 'hz_tutor', idToken: t };
+    }   // 寺小屋のGAS（hz_tutor.gs）へ
     // 寺小屋のGASも、ときどき一時的に 404・405・5xx を返す。読むだけの呼び出しは 1.5秒・3秒 おいてやり直す
     const safeT = /^(me|hello|voices|speak)$/.test(String(payload.api || ''));
     let r = null, lastErr = null;
@@ -2201,8 +2204,20 @@ async function tutorStart(){
     try { inLine = !!liff.isInClient(); } catch (e) { }
   }
   if (!inLine) {
-    gate('AI家庭教師は、LINEアプリの中で開いてください。\nスマホで招待URLをタップすると、LINEで開きます。\n（PCのブラウザ・スマホのブラウザでは開けません）');
-    return;
+    // v2.41：LINEの外（PC・スマホのブラウザ）でも、LINEでログインすれば使える（LINEのIDは同じなので、記録もそのまま）
+    let loggedIn = false;
+    try { loggedIn = typeof liff !== 'undefined' && liff.isLoggedIn(); } catch (e) { }
+    if (typeof liff === 'undefined') { gate('LINEのログインを読み込めませんでした。通信を確かめて、開き直してください。'); return; }
+    if (!loggedIn) {
+      splashOut();
+      $('main').innerHTML = '<div class="gate"><img src="' + CONFIG.LOGO + '" alt="" onerror="this.style.display=\'none\'">' +
+        '<b>AI家庭教師（試作）</b>' +
+        'LINEのアカウントでログインすると、PCやブラウザでも使えます。\n' +
+        'LINEアプリの中で開いたときと同じ記録で続きができます。\n' +
+        '<button class="play" id="tLogin" type="button" style="margin-top:16px;font-size:16px;padding:10px 22px">LINEでログインして始める</button></div>';
+      $('tLogin').onclick = () => { try { sessionStorage.removeItem('hz_relogin'); } catch (e) { } liff.login({ redirectUri: location.href.split('#')[0] }); };
+      return;
+    }
   }
   splashOut();
   const keep = $('main').innerHTML;
@@ -2219,6 +2234,7 @@ async function tutorStart(){
   $('main').innerHTML = keep;
   say('じゅんびしています…', 3);
   const me = await api({ api: 'me' });
+  if (me && me.error === 'login' && !inLine && relogin()) return;   // ブラウザ：ログインの期限切れ → ログインし直して戻ってくる
   if (!me || !me.ok) { gate(ERR[me && me.error] || 'いまは使えません。'); return; }
   $('who').innerHTML = '<span class="led"></span>' + (me.name || '') + '<span style="opacity:.6">・家庭教師</span>';
   try { $('padDig').style.display = 'none'; } catch (e) { }   // 熟議は家庭教師では使わない
