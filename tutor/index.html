@@ -805,7 +805,7 @@ async function diagnose(){
     const r = await fetch(CONFIG.GAS_URL + '?api=ouen', { credentials: 'omit' });
     const t = await r.text();
     if (r.ok && (t.indexOf('{') === 0 || (TUTOR_LINE && /<html|<!doctype/i.test(t)))) lines.push('GASは読めています（' + r.status + '）');
-    else lines.push('GASの応答が想定外（' + r.status + '）：' + t.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 60));
+    else lines.push('GETの応答が想定外（' + r.status + '）' + (' ← ' + (r.url ? r.url.replace(/^https:\/\//, '').split('?')[0].slice(0, 70) : '?') + (r.redirected ? '（転送あり）' : '') + '・' + r.type) + '：' + t.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 60));
   } catch (err) {
     lines.push('GASに届きません：' + String(err.message || err).slice(0, 60));
     lines.push('→ デプロイの「アクセスできるユーザー」が「全員」か確かめてください');
@@ -814,7 +814,7 @@ async function diagnose(){
   try {
     const r = await fetch(CONFIG.GAS_URL, { method: 'POST', credentials: 'omit', body: JSON.stringify({ kind: TUTOR_LINE ? 'hz_tutor' : 'ops', api: 'me', idToken: 'x' }) });
     const t = await r.text();
-    if (!r.ok) lines.push('POSTの応答が想定外（' + r.status + '）：' + t.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 80));
+    if (!r.ok) lines.push('POSTの応答が想定外（' + r.status + '）' + (' ← ' + (r.url ? r.url.replace(/^https:\/\//, '').split('?')[0].slice(0, 70) : '?') + (r.redirected ? '（転送あり）' : '') + '・' + r.type) + '：' + t.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 80));
     if (t.indexOf('login') >= 0) lines.push('運営の入口も生きています（本人確認で弾かれました＝正しい動き）');
     else if (t.indexOf('unknown api') >= 0) lines.push('doPost に ops の1行が入っていません（コード.gs）');
     else if (TUTOR_LINE && r.ok && t.indexOf('{') !== 0) lines.push('家庭教師の入口につながっていません → 新しいバージョンでデプロイし直してください');
@@ -2108,7 +2108,8 @@ async function guestStart(){
       const g = document.querySelector('.gate');
       if (g) g.innerHTML =
         '<img src="' + CONFIG.LOGO + '" alt="" onerror="this.style.display=\'none\'">' +
-        '<b>使えません</b>つなげませんでした。\n' + String(err.message || err).slice(0, 90) + '\n\n' + d;
+        '<b>使えません</b>' + String('つなげませんでした。\n' + String(err.message || err).slice(0, 90) + '\n\n' + d + '\n\n画面 ' + (document.lastModified || '') + '\nGAS …' + CONFIG.GAS_URL.slice(-18))
+          .replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);   // 応答のHTMLが画面に溶けて見えなくならないように
     } catch (e) { /* 診断できなくてもよい */ }
   }
 })();
