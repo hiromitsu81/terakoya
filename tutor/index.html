@@ -443,7 +443,7 @@
 </div>
 <div class="modebar"><span id="modebar"></span></div>
 <div class="recbar" id="recbar"><span id="recbarText">録音しています</span></div>
-<div class="ver" id="ver">Harmonizer v2.41　2026-10-01</div>
+<div class="ver" id="ver">Harmonizer v2.42　2026-10-01</div>
 
 <script>
 /* ============================================================================
@@ -889,6 +889,7 @@ async function ask(payload, shownText){
       tutorShow(row, text, d);
       meta(row, sec + (d.mode ? '　' + d.mode : ''));
       addChips(row, d.chips);
+      if (d.share) shareButton(row, d.share);   // 結果・挑戦状・チームのおさそい
       toBottom();
       tutorSpeak(d, row);
     } else {
@@ -2241,8 +2242,64 @@ async function tutorStart(){
   $('foot').style.display = 'block';
   if (matchMedia('(pointer: fine)').matches && $('typebar').style.display === 'none') $('bWrite').click();
   let greet = null;
-  try { greet = await api({ api: 'hello' }); if (!greet || !greet.ok) greet = null; } catch (e) { greet = null; }
+  // 挑戦状（?c=）・チームのおさそい（?team=）のURLから開いたとき
+  const hp = { api: 'hello' }, pc = tutorParam('c'), pt = tutorParam('team');
+  if (pc) hp.c = pc; if (pt) hp.team = pt;
+  try { greet = await api(hp); if (!greet || !greet.ok) greet = null; } catch (e) { greet = null; }
+  if (greet && greet.voice && greet.listen) {   // 挑戦状：あいさつの代わりに、その問題から始める
+    splashOut(); clearHint();
+    const row = bubble('bot', '');
+    tutorShow(row, greet.answer || greet.text || '', greet);
+    addChips(row, greet.chips); if (greet.share) shareButton(row, greet.share);
+    toBottom(); tutorSpeak(greet, row);
+    return;
+  }
   intro(me.name || '', greet);
+}
+
+/** URLの ?c= ?team= を読む（LINEで開いた最初の1回は ?liff.state=%3Fc%3D… の形で届く） */
+function tutorParam(k){
+  try {
+    const u = new URL(location.href);
+    let v = u.searchParams.get(k) || '';
+    if (!v && u.searchParams.get('liff.state')) v = new URLSearchParams(String(u.searchParams.get('liff.state')).replace(/^[^?]*\?/, '')).get(k) || '';
+    return v.replace(/[^A-Za-z0-9]/g, '').slice(0, 12);
+  } catch (e) { return ''; }
+}
+
+/** ［LINEで送る］：本人が送り先をえらんで送る（家庭教師から勝手に送ることはない） */
+function shareButton(row, sh){
+  const b = document.createElement('button');
+  b.className = 'play'; b.type = 'button'; b.textContent = '💬 LINEで送る（送り先をえらぶ）';
+  b.style.cssText = 'background:#0E7C7B;color:#fff;border-color:#0E7C7B';
+  b.onclick = () => shareSend(sh, row);
+  row.appendChild(b); toBottom();
+}
+async function shareSend(sh, row){
+  const url = 'https://miniapp.line.me/' + CONFIG.LIFF_IDS[0] + (sh.param ? '?' + sh.param : '');
+  const alt = String(sh.title || '声の家庭教師').slice(0, 300);
+  const msg = { type: 'flex', altText: alt, contents: { type: 'bubble',
+    header: { type: 'box', layout: 'vertical', backgroundColor: '#E2F3F1', paddingAll: '14px', contents: [
+      { type: 'text', text: 'AI寺小屋・声の家庭教師', size: 'xs', color: '#0E7C7B', weight: 'bold' },
+      { type: 'text', text: alt, size: 'lg', weight: 'bold', wrap: true, color: '#12302F', margin: 'sm' } ] },
+    body: { type: 'box', layout: 'vertical', spacing: 'sm', contents: (sh.lines || []).slice(0, 6).map(l => ({ type: 'text', text: String(l).slice(0, 120), wrap: true, size: 'md', color: '#333333' })) },
+    footer: { type: 'box', layout: 'vertical', contents: [ { type: 'button', style: 'primary', color: '#0E7C7B', action: { type: 'uri', label: String(sh.btn || 'やってみる').slice(0, 20), uri: url } } ] } } };
+  let can = false;
+  try { can = !!(window.liff && liff.isApiAvailable && liff.isApiAvailable('shareTargetPicker')); } catch (e) { }
+  if (can) {
+    try {
+      const res = await liff.shareTargetPicker([msg], { isMultiple: true });
+      modeToast(res ? '送りました' : '送るのをやめました');
+      return;
+    } catch (e) { /* 下の「コピーして送る」へ */ }
+  }
+  // 送り先をえらぶ画面が使えないとき：文をコピーして、自分でLINEに貼る
+  const text = alt + '\n' + (sh.lines || []).join('\n') + '\n' + url;
+  const box = document.createElement('div'); box.className = 'meta'; box.style.cssText = 'margin-top:8px;white-space:pre-wrap;user-select:all;font-size:13px';
+  box.textContent = text;
+  const cp = document.createElement('button'); cp.className = 'play'; cp.type = 'button'; cp.textContent = '文をコピー（LINEに貼って送る）';
+  cp.onclick = async () => { try { await navigator.clipboard.writeText(text); cp.textContent = 'コピーしました'; } catch (e) { const r = document.createRange(); r.selectNodeContents(box); const s = getSelection(); s.removeAllRanges(); s.addRange(r); cp.textContent = '長押しでコピーしてください'; } };
+  row.appendChild(box); row.appendChild(cp); toBottom();
 }
 
 /** 体験版のはじまり：同意 → 招待コードを確かめる → いつもの画面 */
