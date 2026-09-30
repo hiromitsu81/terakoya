@@ -443,7 +443,7 @@
 </div>
 <div class="modebar"><span id="modebar"></span></div>
 <div class="recbar" id="recbar"><span id="recbarText">録音しています</span></div>
-<div class="ver" id="ver">Harmonizer v2.42　2026-10-01</div>
+<div class="ver" id="ver">Harmonizer v2.43　2026-10-01</div>
 
 <script>
 /* ============================================================================
@@ -890,6 +890,7 @@ async function ask(payload, shownText){
       meta(row, sec + (d.mode ? '　' + d.mode : ''));
       addChips(row, d.chips);
       if (d.share) shareButton(row, d.share);   // 結果・挑戦状・チームのおさそい
+      if (d.room && d.room.code) roomStart(d.room.code);   // 大会に入った・ひらいた
       toBottom();
       tutorSpeak(d, row);
     } else {
@@ -1471,11 +1472,11 @@ function vadStart(stream, L, auto){
     const thr = Math.max(0.012, v.floor * 2.8);
     if (rms > thr) {
       v.loud = (v.loud || 0) + 1;
-      if (v.loud >= 2 && !v.speechAt) { v.speechAt = Date.now(); if (voiceEndAt && auto) lastRt = Math.max(0, (v.speechAt - voiceEndAt) / 1000 - 0.1); micLabel('<b>聞いています</b>　話し終わったら自動で送ります'); }
+      if (v.loud >= 2 && !v.speechAt) { v.speechAt = Date.now(); lastSpeechAt = v.speechAt; if (voiceEndAt && auto) lastRt = Math.max(0, (v.speechAt - voiceEndAt) / 1000 - 0.1); micLabel('<b>聞いています</b>　話し終わったら自動で送ります'); }
       v.lastLoud = Date.now();
     } else v.loud = 0;
     if (v.speechAt && Date.now() - v.lastLoud > L.end) { vadStop(); autoMiss = 0; recStop(); return; }   // 話し終わった
-    if (!v.speechAt && auto && el > L.wait * 1000) { vadStop(); autoMiss++; recCancelQuiet(autoMiss >= 2 ? '押して話す（聞こえなかったので、マイクを休んでいます）' : '押して話す'); }
+    if (!v.speechAt && auto && el > L.wait * 1000) { vadStop(); if (!ROOM.code) autoMiss++; recCancelQuiet(autoMiss >= 2 ? '押して話す（聞こえなかったので、マイクを休んでいます）' : '押して話す'); }
   }, 50);
   vad = v;
 }
@@ -1500,6 +1501,120 @@ function recCancelQuiet(label){
   chunks = [];
   micLabel(label || '押して話す');
   releaseHeldVoice();
+}
+
+/* ================================================================
+ *  早押し大会（v2.43）：1秒ごとに部屋のようすを聞いて、同じ問題を同時に出す
+ *   イージー＝A〜Dのボタンでも声でも／ハード＝声だけ
+ *   速さは、このスマホで測る（問題が出てから、押したとき・話し始めたとき）
+ * ================================================================ */
+const ROOM = { code: '', timer: null, qi: -1, phase: '', revQi: -1, shownAt: 0, answered: false, lobbyRow: null, mode: '', host: false, ended: false };
+let lastSpeechAt = 0;
+function roomStart(code){
+  if (ROOM.code === code && ROOM.timer) return;
+  roomStop();
+  Object.assign(ROOM, { code: code, qi: -1, phase: '', revQi: -1, answered: false, lobbyRow: null, ended: false });
+  roomPoll();
+}
+function roomStop(){ if (ROOM.timer) { clearTimeout(ROOM.timer); ROOM.timer = null; } }
+async function roomPoll(){
+  if (!ROOM.code) return;
+  let d = null;
+  try { d = await api({ api: 'room', act: 'state', code: ROOM.code }); } catch (e) { d = null; }
+  if (d && d.error === 'noroom') { roomLeave('この大会は終わったか、見つかりませんでした。'); return; }
+  if (d && d.room) roomRender(d.room);
+  if (ROOM.code && !ROOM.ended) ROOM.timer = setTimeout(roomPoll, ROOM.phase === 'ask' ? 800 : 1000);
+}
+function roomLeave(msg){
+  roomStop(); ROOM.code = ''; ROOM.phase = '';
+  if (msg) { const row = bubble('bot', ''); row.querySelector('.bub').textContent = msg; addChips(row, ['はじめる', 'メニュー']); toBottom(); }
+  micLabel('押して話す');
+}
+function roomRender(r){
+  ROOM.mode = r.mode; ROOM.host = r.host;
+  if (r.status === 'lobby') {
+    const names = r.members.map(m => m.n).join('、');
+    const txt = '大会「' + r.code + '」（' + (r.mode === 'hard' ? 'ハード・声だけ' : 'イージー・4択') + '・' + r.total + '問）\n参加：' + r.members.length + '人（' + names + '）\n' +
+      (r.host ? 'みんなが入ったら［スタート］を押してね。' : hztSanJs(r.hostName) + 'が［スタート］を押すと始まるよ。');
+    if (!ROOM.lobbyRow) {
+      ROOM.lobbyRow = bubble('bot', '');
+      if (r.host) { const ch = document.createElement('div'); ch.className = 'chips'; ch.style.cssText = 'justify-content:flex-start;margin-top:6px';
+        const b = document.createElement('button'); b.className = 'chip'; b.type = 'button'; b.dataset.ract = 'start'; b.textContent = 'スタート'; ch.appendChild(b); ROOM.lobbyRow.appendChild(ch); }
+      toBottom();
+    }
+    ROOM.lobbyRow.querySelector('.bub').textContent = txt;
+    micLabel('大会の準備中…');
+    return;
+  }
+  if (r.status === 'play') {
+    if (r.phase === 'wait') { ROOM.phase = 'wait'; micLabel('<b>もうすぐ始まるよ</b>（' + Math.ceil(r.left / 1000) + '秒）'); return; }
+    if (r.phase === 'ask') {
+      if (r.qi !== ROOM.qi) roomShowQuestion(r);
+      ROOM.phase = 'ask';
+      if (!ROOM.answered) micLabel('<b>のこり ' + Math.ceil(r.left / 1000) + '秒</b>　' + (r.mode === 'hard' ? '声で答えてね' : 'ボタンか声で答えてね'));
+      return;
+    }
+    if (r.phase === 'reveal' && r.rev && r.rev.qi !== ROOM.revQi) { ROOM.phase = 'reveal'; roomShowReveal(r); return; }
+    return;
+  }
+  if (r.status === 'end' && !ROOM.ended) { ROOM.ended = true; ROOM.phase = 'end'; roomShowEnd(r); }
+}
+function hztSanJs(n){ n = String(n || ''); return /(さん|くん|君|ちゃん|様|さま|先生|せんせい|氏)$/.test(n) ? n : n + 'さん'; }
+function roomShowQuestion(r){
+  ROOM.qi = r.qi; ROOM.answered = false; ROOM.shownAt = Date.now(); lastSpeechAt = 0;
+  const q = r.q, row = bubble('bot', '');
+  const head = '第' + q.n + '問／' + r.total + '問　【' + q.subject + '】';
+  row.querySelector('.bub').textContent = head + '\n' + q.text + (q.choices ? '\n' + q.choices.map((c, i) => 'ABCD'[i] + '. ' + c).join('\n') : '\n（声で答えてね）');
+  if (q.choices) {
+    const ch = document.createElement('div'); ch.className = 'chips'; ch.style.cssText = 'justify-content:flex-start;margin-top:6px';
+    q.choices.forEach((c, i) => { const b = document.createElement('button'); b.className = 'chip'; b.type = 'button'; b.dataset.rc = String(i); b.textContent = 'ABCD'[i] + '　' + c; ch.appendChild(b); });
+    row.appendChild(ch);
+  }
+  toBottom();
+  const parts = [{ t: '第' + q.n + '問、' + q.subject + '。' }, { t: q.text }];
+  if (q.choices) parts.push({ t: q.choices.map((c, i) => 'ABCD'[i] + '、' + c).join('。') });
+  const left = Math.max(3, Math.ceil(r.left / 1000) - 1);
+  speakParts(parts, row, { onend: () => { if (ROOM.phase === 'ask' && !ROOM.answered && prefs.auto !== false && !(rec && rec.state === 'recording')) recStart({ auto: true, room: true, listen: { end: 650, max: 8, wait: left } }); } });
+}
+async function roomAnswer(payload){
+  if (!ROOM.code || ROOM.answered) return;
+  ROOM.answered = true;
+  document.querySelectorAll('[data-rc]').forEach(b => { b.disabled = true; });
+  const me = bubble('me', payload.choice !== undefined ? 'ABCD'[payload.choice] : '（声で答えたよ）');
+  micLabel('送っています…');
+  let d = null;
+  try { d = await api(Object.assign({ api: 'room', act: 'answer', code: ROOM.code }, payload)); } catch (e) { d = null; }
+  if (d && d.heard) me.querySelector('.bub').textContent = d.heard;
+  if (!d || d.error) { ROOM.answered = false; document.querySelectorAll('[data-rc]').forEach(b => { b.disabled = false; }); micLabel(d && d.error === 'transcribe' ? '聞き取れなかったよ。もう一回！' : 'うまく送れなかったよ。もう一回！'); return; }
+  if (d.late) { micLabel('時間切れでした'); return; }
+  micLabel(d.you && d.you.ok ? '<b>正解！</b>　いちばん早い人を決めているよ…' : '<b>ざんねん</b>　次の問題でがんばろう');
+  if (d.room) roomRender(d.room);
+}
+function roomShowReveal(r){
+  ROOM.revQi = r.rev.qi;
+  if (rec && rec.state === 'recording') recCancelQuiet('押して話す');
+  autoCancel();
+  document.querySelectorAll('[data-rc]').forEach(b => { b.disabled = true; });
+  const v = r.rev, row = bubble('bot', '');
+  const lines = ['正解は ' + v.a];
+  if (v.win) lines.push('🏆 いちばん早かったのは ' + hztSanJs(v.win) + '（' + v.rt + '秒）');
+  else lines.push('だれも正解しなかったよ');
+  if (v.ok && v.ok.length > 1) lines.push('正解：' + v.ok.join('、'));
+  const me = r.members.find(m => m.me); if (me) lines.push('あなた：' + me.p + '点');
+  row.querySelector('.bub').textContent = lines.join('\n'); toBottom();
+  speakParts([{ t: '正解は、' + String(v.a).replace(/^([A-D])\. /, '$1、') + '。' + (v.win ? 'いちばん早かったのは、' + hztSanJs(v.win) + '。' : '') }], row, {});
+  micLabel('次の問題を待っています…');
+}
+function roomShowEnd(r){
+  roomStop();
+  const row = bubble('bot', '');
+  const L = ['【大会の結果】'];
+  r.members.forEach((m, i) => L.push((i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1) + '位 ') + ' ' + m.n + '　' + m.p + '点' + (m.me ? '（あなた）' : '')));
+  row.querySelector('.bub').textContent = L.join('\n');
+  addChips(row, ['大会をひらく', 'はじめる', 'グループにシェア']);
+  toBottom();
+  if (r.members[0]) speakParts([{ t: '大会おわり！ 1位は、' + hztSanJs(r.members[0].n) + '。おつかれさま！' }], row, {});
+  ROOM.code = ''; micLabel('押して話す');
 }
 
 /** 声が出ているはずなのに聞こえないとき用の一言（最初の3回だけ） */
@@ -1689,6 +1804,7 @@ async function recStart(opts){
         if (blob.size < 1200) { back(); showErr('短すぎました（' + blob.size + 'バイト）。押してから、1秒以上話してください。'); return; }
         const b64 = await toBase64(blob);
         if (!b64) { back(); showErr('音声を変換できませんでした。打ち込みで聞いてください。'); return; }
+        if (ROOM.code && ROOM.phase === 'ask' && !ROOM.answered) { back(); roomAnswer({ audio: b64, mime: usedMime.split(';')[0], rt: Math.round(((lastSpeechAt || Date.now()) - ROOM.shownAt) / 100) / 10 }); return; }   // 大会の答え
         ask({ audio: b64, mime: usedMime.split(';')[0], sec: Math.round((Date.now() - recT0) / 100) / 10, rt: lastRt || undefined });   // 秒数は、伝言をLINEに声で送るときに使う   // ここから先は ask が面倒を見ます
       } catch (err) {
         back();
@@ -1738,6 +1854,7 @@ async function micOpen(){
 /** マイクが使えないときの案内。理由ごとに言い分けて、［マイクを使えるようにする］ボタンを付ける */
 function micHelp(err){
   const name = String((err && err.name) || err || '');
+  if (ROOM.code) { micLabel(ROOM.mode === 'hard' ? '<b>マイクが使えません</b>　ハードは声で答えるモードです（通話中はイージーで遊んでね）' : '<b>マイクが使えません</b>　A〜Dのボタンで答えてね'); return; }
   let text;
   if (/NotAllowed|Security|Permission/.test(name)) text =
     'マイクの許可がオフになっています（' + name + '）。\n' +
@@ -2182,6 +2299,13 @@ document.addEventListener('click', (e) => {
   const c = e.target.closest('.chip');
   if (!c) return;
   if (c.dataset.guide) { guideAgain(); return; }
+  if (c.dataset.ract === 'start') { c.disabled = true; api({ api: 'room', act: 'start', code: ROOM.code }).then(d => { if (d && d.room) roomRender(d.room); }).catch(() => { c.disabled = false; }); return; }
+  if (c.dataset.rc !== undefined) {   // 大会のボタン（イージー）
+    if (ROOM.phase !== 'ask' || ROOM.answered) return;
+    autoCancel(); if (rec && rec.state === 'recording') recCancelQuiet(); stopAllVoice();
+    roomAnswer({ choice: Number(c.dataset.rc), rt: Math.round((Date.now() - ROOM.shownAt) / 100) / 10 });
+    return;
+  }
   if (TUTOR) { autoCancel(); autoMiss = 0; if (rec && rec.state === 'recording') recCancelQuiet(); stopAllVoice(); }
   send(c.textContent.trim());
 });
@@ -2243,9 +2367,15 @@ async function tutorStart(){
   if (matchMedia('(pointer: fine)').matches && $('typebar').style.display === 'none') $('bWrite').click();
   let greet = null;
   // 挑戦状（?c=）・チームのおさそい（?team=）のURLから開いたとき
-  const hp = { api: 'hello' }, pc = tutorParam('c'), pt = tutorParam('team');
-  if (pc) hp.c = pc; if (pt) hp.team = pt;
+  const hp = { api: 'hello' }, pc = tutorParam('c'), pt = tutorParam('team'), pr = tutorParam('room');
+  if (pc) hp.c = pc; if (pt) hp.team = pt; if (pr) hp.room = pr;
   try { greet = await api(hp); if (!greet || !greet.ok) greet = null; } catch (e) { greet = null; }
+  if (greet && greet.room && greet.room.code) {   // 大会のさそいから来た
+    splashOut(); clearHint();
+    const row = bubble('bot', ''); row.querySelector('.bub').textContent = greet.text || greet.answer || '';
+    toBottom(); roomStart(greet.room.code);
+    return;
+  }
   if (greet && greet.voice && greet.listen) {   // 挑戦状：あいさつの代わりに、その問題から始める
     splashOut(); clearHint();
     const row = bubble('bot', '');
