@@ -257,6 +257,8 @@
   .miclabel b{color:var(--tx);font-variant-numeric:tabular-nums}
 
   .gate{padding:44px var(--pad);text-align:center;color:var(--dim);line-height:2;white-space:pre-line}
+  .bigq{display:block;margin:10px 0 4px;font-size:34px;font-weight:800;letter-spacing:.06em;line-height:1.3;text-align:center;word-break:keep-all;overflow-wrap:anywhere}
+  .autol{display:inline-block;margin-left:6px;font-size:11px;opacity:.75}
   .gate img{width:64px;height:64px;border-radius:50%;background:#fff;margin:0 0 18px}
   .gate b{display:block;color:var(--tx);font-size:17px;margin-bottom:12px}
   .ver{text-align:center;color:#3c4354;font-size:10px;padding:0 0 4px}
@@ -441,7 +443,7 @@
 </div>
 <div class="modebar"><span id="modebar"></span></div>
 <div class="recbar" id="recbar"><span id="recbarText">録音しています</span></div>
-<div class="ver" id="ver">Harmonizer v2.33　2026-10-01</div>
+<div class="ver" id="ver">Harmonizer v2.40　2026-10-01</div>
 
 <script>
 /* ============================================================================
@@ -484,7 +486,7 @@ const CONFIG = {
   TTS_FIRST_MIN: 16,  // 最初のかたまりがこれより短いときも次とまとめる（すぐ読み終わって、次の声が間に合わなくなるのを防ぐ）
   TTS_PARALLEL: 4,    // 同時に作る数（家庭教師：問題と4つの選択肢を先に作っておき、読み上げのあいだを空けない）
   // 'device'＝端末の声（すぐ鳴る・0円）／'gemini'＝きれいな声（1文ずつ作る・少し待つ）。右上の［声］で人ごとに変えられます
-  VOICE: 'gemini',
+  VOICE: 'device',
   // 1文字あたりの速さ（ミリ秒）。小さいほど速い
   TYPE_MS: 16,        // 案内を打ち出す速さ
   ANSWER_MS: 9,       // 答えを打ち出す速さ
@@ -673,10 +675,12 @@ async function intro(name, greet){
   const text = (GUEST || TUTOR) && greet && greet.text ? greet.text : first ? GUIDE_FULL(name) + (greet && greet.text ? '\n\n' + greet.text.split('\n').slice(1).join('\n').trim() : '')
                      : (greet && greet.text ? greet.text : GUIDE_SHORT(name));
   // 声は、文字を打ち出すのと同時に作り始めます（打ち終わるころには鳴らせる）
-  if ((GUEST || TUTOR || !first) && greet && greet.speakable) speak(greet.speakable, row, '声で聞く');
+  if (TUTOR && greet && greet.voice) tutorSpeak(greet, row);
+  else if ((GUEST || TUTOR || !first) && greet && greet.speakable) speak(greet.speakable, row, '声で聞く');
   else if (TUTOR) { if (greet && greet.text) speak(voiceText(greet.text), row, '声で聞く'); }   // 家庭教師：SMFの使い方は読まない
   else speak(GUIDE_SPOKEN, row, '使い方を聞く', { cache: true });
-  await typeIn(b, text, CONFIG.TYPE_MS);
+  if (TUTOR) b.textContent = text;   // 家庭教師：すぐ全部出して、ボタンもすぐ出す
+  else await typeIn(b, text, CONFIG.TYPE_MS);
   if (greet && greet.text) { remember('a', greet.text); readReady(row); }
   try { localStorage.setItem('ops:seen', '1'); } catch (e) { /* 使えなくても続ける */ }
 
@@ -877,12 +881,20 @@ async function ask(payload, shownText){
     const text = String(d.answer || '');
     // 声は、文字を打ち出すのと同時に作り始めます
     // 読み上げは、ふだんは答えの全文。［声］で「要点だけ」（AIが付けた短い版）にもできる
-    const vtext = TUTOR ? (d.speakable || voiceText(text)) : prefs.read === 'short' ? (d.speakable || '') : voiceText(text);   // 家庭教師は読み上げ用の文（選択肢を「1、…」で読む）
+    if (TUTOR) {
+      // 家庭教師：文字もボタンもすぐ出して、すぐ読み始める（声のキャッチボールを止めない）
+      tutorShow(row, text, d);
+      meta(row, sec + (d.mode ? '　' + d.mode : ''));
+      addChips(row, d.chips);
+      toBottom();
+      tutorSpeak(d, row);
+    } else {
+    const vtext = prefs.read === 'short' ? (d.speakable || '') : voiceText(text);
     if (vtext) speak(vtext, row);
     if (text.length > CONFIG.ANSWER_MAX) row.querySelector('.bub').textContent = text;
     else await typeIn(row.querySelector('.bub'), text, CONFIG.ANSWER_MS);
     meta(row, sec);
-    if (TUTOR) addChips(row, d.chips);   // 家庭教師：選択肢・ヒント・つぎ を押せる
+    }
     // エージェントが作った資料（PDF・ドキュメント）を開くボタン
     (d.files || []).filter(f => f && f.url).forEach(f => {
       const a = document.createElement('a'); a.href = f.url; a.target = '_blank'; a.rel = 'noopener'; a.className = 'play';
@@ -1024,8 +1036,8 @@ const SILENT_LOOP = (() => {
   let bin = ''; for (let i = 0; i < b.length; i++) bin += String.fromCharCode(b[i]);
   return 'data:audio/wav;base64,' + btoa(bin);
 })();
-const VOICE_KEY = 'ops:voice';
-let prefs = { engine: CONFIG.VOICE || 'device', voice: '', rate: 1.1, read: 'full', gvoice: '', gstyle: '' };   // gvoice／gstyle＝きれいな声（Gemini）の種類と話し方
+const VOICE_KEY = TUTOR_LINE ? 'tutor:voice' : 'ops:voice';   // 家庭教師は運営用とは別に覚える（同じ github.io の中なので）
+let prefs = { engine: CONFIG.VOICE || 'device', voice: '', rate: 1.1, read: 'full', gvoice: '', gstyle: '', auto: true };   // auto＝読み終わったら自動で聞く（家庭教師）   // gvoice／gstyle＝きれいな声（Gemini）の種類と話し方
 try { Object.assign(prefs, JSON.parse(localStorage.getItem(VOICE_KEY) || '{}')); } catch (e) { /* 覚えていなくてもよい */ }
 /* 音の出口：録音のあとは iPhone が「電話の耳もと」から小さく鳴らすことがあるので、話す前にスピーカーへ戻す
  * playback は消音スイッチが入っていても鳴らせる（対応している iPhone のみ。LINEの中で効かないときは消音を切ってもらう） */
@@ -1275,6 +1287,217 @@ function speak(text, row, label, opts){
   btn.onclick = () => { if (seq.playing) seq.stop(); else seq.start(); };
 }
 
+/* ================================================================
+ *  家庭教師の声（v2.40）：声の部品を順に鳴らす
+ *   ・{t}        … 端末の声（待ち時間0）。［声］で「きれいな声」にしたときは Gemini
+ *   ・{t, url}   … 録音ずみの問題の声（寺小屋の audio_url）。鳴らせなければ端末の声
+ *   ・{t, lang}  … 英語（en-US）・韓国語（ko-KR）は、その言葉の端末の声
+ *  読み終わったら、自動でマイクを開いて答えを聞く（話し終わりは無音で判定）
+ * ================================================================ */
+let voiceEndAt = 0, lastRt = 0, lastListen = null, autoTimer = null, autoMiss = 0;
+function langVoice(lang){
+  if (!hasTTS()) return null;
+  const all = speechSynthesis.getVoices();
+  if (!lang || /^ja/.test(lang)) return pickVoice();
+  const k = lang.slice(0, 2);
+  const vs = all.filter(v => String(v.lang || '').toLowerCase().replace('_', '-').indexOf(k) === 0);
+  return vs.find(v => v.lang.replace('_', '-') === lang && /Samantha|Yuna|Google|Siri/i.test(v.name)) || vs.find(v => v.lang.replace('_', '-') === lang) || vs[0] || null;
+}
+function makePartsSeq(parts, rate){
+  const items = [];
+  const useGem = engineNow() === 'gemini';
+  parts.forEach(p => {
+    if (!p || !p.t && !p.url) return;
+    if (p.url) { items.push({ kind: 'url', url: p.url, t: p.t || '', rate: p.rate || 1 }); return; }
+    if (p.lang && !/^ja/.test(p.lang)) { items.push({ kind: 'dev', t: p.t, lang: p.lang, rate: p.rate || 1 }); return; }
+    splitSpeech(p.t).forEach(x => items.push({ kind: useGem ? 'gem' : 'dev', t: x, lang: 'ja-JP', rate: p.rate || 1 }));
+  });
+  const seq = { playing: false, onstate: () => {}, onfirst: () => {}, items };
+  let gen = 0, started = false;
+  // きれいな声は、先に全部作り始める（4つずつ）
+  if (useGem) {
+    let next = 0, inflight = 0;
+    const pump = () => {
+      while (inflight < 4 && next < items.length) {
+        const it = items[next++]; if (it.kind !== 'gem') continue;
+        inflight++;
+        api({ api: 'speak', text: it.t, voice: prefs.gvoice || '', style: prefs.gstyle || '' })
+          .then(d => { it.b64 = d && d.audio ? d.audio : ''; }).catch(() => { it.b64 = ''; })
+          .finally(() => { inflight--; if (it.wait) { const w = it.wait; it.wait = null; w(); } pump(); });
+      }
+    };
+    pump();
+  }
+  const playDev = (it, my, done) => {
+    if (!hasTTS()) { done(); return; }
+    const u = new SpeechSynthesisUtterance(it.t);
+    u.lang = it.lang || 'ja-JP';
+    const v = langVoice(u.lang); if (v) u.voice = v;
+    u.rate = Math.max(0.5, Math.min(1.8, (prefs.rate || 1.1) * (it.rate || 1) * (rate || 1)));
+    let fin = false;
+    const end = () => { if (fin) return; fin = true; clearTimeout(dog); if (my === gen) done(); };
+    // iPhone のLINEでは、読み終わりの合図が来ないことがある → 長さから見積もって先へ進む
+    const dog = setTimeout(end, 2500 + it.t.length * (/^ja/.test(u.lang) ? 190 : 110) / u.rate);
+    u.onstart = () => { if (my !== gen) return; if (!started) { started = true; seq.onstate('play'); } };
+    u.onend = end;
+    u.onerror = (e) => { if (e && /interrupted|canceled/.test(e.error || '')) { fin = true; clearTimeout(dog); return; } end(); };
+    speechSynthesis.speak(u);
+  };
+  const playAudio = (src, my, done, fallback) => {
+    const el = AEL; let fin = false;
+    const end = () => { if (fin) return; fin = true; if (my === gen) done(); };
+    el.onended = end;
+    el.onerror = () => { if (fin) return; fin = true; if (my === gen) fallback(); };
+    el.src = src;
+    const p = el.play();
+    if (p) p.then(() => { if (my === gen && !started) { started = true; seq.onstate('play'); } }).catch(() => { if (fin) return; fin = true; if (my === gen) fallback(); });
+  };
+  const playAt = (k, my) => {
+    if (my !== gen || !seq.playing) return;
+    if (k >= items.length) { seq.playing = false; seq.onstate('end'); return; }
+    const it = items[k], next = () => playAt(k + 1, my);
+    const asDev = () => it.t ? playDev({ t: it.t, lang: it.lang || 'ja-JP', rate: it.rate }, my, next) : next();
+    if (it.kind === 'url') { playAudio(it.url, my, next, asDev); return; }
+    if (it.kind === 'gem') {
+      if (it.b64 === undefined) { seq.onstate('wait'); it.wait = () => playAt(k, my); return; }
+      if (!it.b64) { asDev(); return; }
+      playAudio('data:audio/wav;base64,' + it.b64, my, next, asDev); return;
+    }
+    playDev(it, my, next);
+  };
+  seq.start = () => {
+    if (currentSeq && currentSeq !== seq) currentSeq.stop();
+    currentSeq = seq; audioOut('playback');
+    try { if (actx && actx.state === 'suspended') actx.resume(); } catch (e) { }
+    try { if (speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel(); } catch (e) { }
+    const my = ++gen; seq.playing = true; started = false;
+    setTimeout(() => playAt(0, my), 60);
+    // 2秒たっても鳴らなければ、この端末は触るまで鳴らせない → 押してもらう
+    setTimeout(() => { if (my === gen && !started && seq.playing && items.length && items[0].kind !== 'gem') { seq.stop(); seq.onstate('blocked'); } }, 2600);
+  };
+  seq.stop = () => {
+    if (!seq.playing) return; gen++; seq.playing = false;
+    try { speechSynthesis.cancel(); } catch (e) { }
+    try { AEL.pause(); } catch (e) { }
+    seq.onstate('stop');
+  };
+  setTimeout(() => seq.onfirst(true), 0);
+  return seq;
+}
+function speakParts(parts, row, opts){
+  opts = opts || {};
+  if (liveActive()) return;
+  const seq = makePartsSeq(parts, opts.rate);
+  if (!seq.items.length) { if (opts.onend) opts.onend(); return; }
+  const btn = document.createElement('button');
+  btn.className = 'play'; btn.type = 'button'; btn.textContent = '■ 止める';
+  row.appendChild(btn);
+  const ring = $('listenring');
+  seq.onstate = (st) => {
+    if (st === 'play' || st === 'wait') { btn.textContent = '■ 止める'; ring && ring.classList.add('busy'); }
+    if (st === 'end') { btn.textContent = '▶ もう一度'; ring && ring.classList.remove('busy'); voiceEndAt = Date.now(); if (opts.onend) opts.onend(); }
+    if (st === 'stop') { btn.textContent = '▶ 聞き直す'; ring && ring.classList.remove('busy'); }
+    if (st === 'blocked') { btn.textContent = '▶ 押すと読みます'; ring && ring.classList.remove('busy'); }
+  };
+  seq.onfirst = () => {
+    listenReady(seq);
+    if (opts.auto === false) { btn.textContent = '▶ 聞く'; return; }
+    if (micBusy()) { voiceHeld = seq; btn.textContent = '▶ 聞く（話し終わったら流します）'; }
+    else seq.start();
+  };
+  btn.onclick = () => { autoCancel(); if (seq.playing) seq.stop(); else seq.start(); };
+}
+/** 家庭教師の返事を画面に出す（大きく見せたい言葉は大きく） */
+function tutorShow(row, text, d){
+  const bub = row.querySelector('.bub');
+  let tx = String(text || '');
+  if (d.big && d.big !== '🎧') {
+    const lines = tx.split('\n');
+    if (lines.length && lines[lines.length - 1].trim() === d.big.trim()) { lines.pop(); tx = lines.join('\n').replace(/\n+$/, ''); }
+  }
+  bub.textContent = tx;
+  if (d.big) { const g = document.createElement('span'); g.className = 'bigq'; g.textContent = d.big; bub.appendChild(g); }
+}
+function tutorSpeak(d, row){
+  lastListen = d.listen || null;
+  const parts = d.voice && d.voice.length ? d.voice : (d.speakable ? [{ t: d.speakable }] : []);
+  speakParts(parts, row, { rate: d.rate || 1, onend: () => autoListen(d.listen) });
+}
+/** 読み終わったら、自動でマイクを開く（2回続けて何も聞こえなければ、休む） */
+function autoListen(L){
+  autoCancel();
+  if (!TUTOR || !L || prefs.auto === false || autoMiss >= 2) return;
+  if ($('typebar').style.display !== 'none' || liveActive()) return;
+  autoTimer = setTimeout(function tryStart(){
+    autoTimer = null;
+    if (busy || micBusy()) { autoTimer = setTimeout(tryStart, 250); return; }
+    if (currentSeq && currentSeq.playing) return;
+    recStart({ auto: true, listen: L });
+  }, 120);
+}
+function autoCancel(){ if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; } }
+
+/* 話し終わりを自動で見つける（音の大きさを50ミリ秒ごとに見る） */
+let vad = null;
+function vadStart(stream, L, auto){
+  vadStop();
+  L = L || lastListen || { end: 900, max: 12, wait: 8 };
+  const t0 = Date.now(), v = { speechAt: 0, lastLoud: 0, floor: 0, n: 0, auto: auto };
+  lastRt = 0;
+  try {
+    if (!actx) { const AC = window.AudioContext || window.webkitAudioContext; if (AC) actx = new AC(); }
+    if (actx && actx.state === 'suspended') actx.resume();
+    if (actx) {
+      v.src = actx.createMediaStreamSource(stream);
+      v.an = actx.createAnalyser(); v.an.fftSize = 1024;
+      v.src.connect(v.an); v.buf = new Float32Array(v.an.fftSize);
+    }
+  } catch (e) { v.an = null; }
+  v.timer = setInterval(() => {
+    const el = Date.now() - t0;
+    if (el > L.max * 1000) { vadStop(); recStop(); return; }                      // 長すぎ：ここで送る
+    if (!v.an || !actx || actx.state !== 'running') {                             // 音の大きさが測れない端末：時間で決める
+      if (auto && el > (L.wait + 3) * 1000) { vadStop(); recStop(); }
+      return;
+    }
+    v.an.getFloatTimeDomainData(v.buf);
+    let sum = 0; for (let i = 0; i < v.buf.length; i++) sum += v.buf[i] * v.buf[i];
+    const rms = Math.sqrt(sum / v.buf.length);
+    if (el < 300) { v.floor = (v.floor * v.n + rms) / (++v.n); return; }          // はじめの0.3秒でまわりの音を測る
+    const thr = Math.max(0.012, v.floor * 2.8);
+    if (rms > thr) {
+      v.loud = (v.loud || 0) + 1;
+      if (v.loud >= 2 && !v.speechAt) { v.speechAt = Date.now(); if (voiceEndAt && auto) lastRt = Math.max(0, (v.speechAt - voiceEndAt) / 1000 - 0.1); micLabel('<b>聞いています</b>　話し終わったら自動で送ります'); }
+      v.lastLoud = Date.now();
+    } else v.loud = 0;
+    if (v.speechAt && Date.now() - v.lastLoud > L.end) { vadStop(); autoMiss = 0; recStop(); return; }   // 話し終わった
+    if (!v.speechAt && auto && el > L.wait * 1000) { vadStop(); autoMiss++; recCancelQuiet(autoMiss >= 2 ? '押して話す（聞こえなかったので、マイクを休んでいます）' : '押して話す'); }
+  }, 50);
+  vad = v;
+}
+function vadStop(){
+  if (!vad) return;
+  clearInterval(vad.timer);
+  try { if (vad.src) vad.src.disconnect(); } catch (e) { }
+  vad = null;
+}
+/** 何も言わなかったとき：送らずに、そっと閉じる */
+function recCancelQuiet(label){
+  vadStop();
+  if (recTimer) { clearInterval(recTimer); recTimer = null; }
+  const r = rec; rec = null;
+  $('micring').classList.remove('rec', 'hold');
+  recLook(false); sendingLook(false);
+  if (r) {
+    r.ondataavailable = null;
+    r.onstop = () => { try { (recStream || r.stream).getTracks().forEach(t => t.stop()); } catch (e) { } recStream = null; };
+    try { if (r.state !== 'inactive') r.stop(); else r.onstop(); } catch (e) { r.onstop(); }
+  }
+  chunks = [];
+  micLabel(label || '押して話す');
+  releaseHeldVoice();
+}
+
 /** 声が出ているはずなのに聞こえないとき用の一言（最初の3回だけ） */
 function soundHint(row){
   let k = 0; try { k = Number(localStorage.getItem('ops:hint') || 0); } catch (e) { }
@@ -1363,6 +1586,8 @@ function voicePanel(){
     vs.map(v => opt(v.name.replace(/\s*\(.*\)$/, ''), eng === 'device' && pickVoice() && pickVoice().voiceURI === v.voiceURI, 'data-vv="' + v.voiceURI.replace(/"/g, '') + '"')).join('') +
     opt('きれいな声（少し待つ）', eng === 'gemini', 'data-vg="1"') + '</div>' +
     (vs.length ? '' : '<div class="meta">この端末には日本語の読み上げが入っていないので、きれいな声を使います</div>') +
+    (TUTOR ? '<div class="dh" style="margin-top:10px">読み終わったら自動で聞く</div><div class="chips" style="justify-content:flex-start;margin-top:6px">' +
+      opt('オン', prefs.auto !== false, 'data-au="1"') + opt('オフ（押して話す）', prefs.auto === false, 'data-au="0"') + '</div>' : '') +
     '<div class="dh" style="margin-top:10px">速さ</div><div class="chips" style="justify-content:flex-start;margin-top:6px">' +
     [['ゆっくり', 0.9], ['ふつう', 1.1], ['はやい', 1.35]].map(r => opt(r[0], Math.abs((prefs.rate || 1.1) - r[1]) < 0.01, 'data-vr="' + r[1] + '"')).join('') + '</div>' +
     '<div class="dh" style="margin-top:10px">読み上げ</div><div class="chips" style="justify-content:flex-start;margin-top:6px">' +
@@ -1403,6 +1628,7 @@ function voicePanel(){
     if (c.dataset.vg) { prefs.engine = 'gemini'; }
     if (c.dataset.vr) { prefs.rate = Number(c.dataset.vr); }
     if (c.dataset.rd) { prefs.read = c.dataset.rd; }
+    if (c.dataset.au !== undefined) { prefs.auto = c.dataset.au === '1'; autoMiss = 0; savePrefs(); b.querySelectorAll('[data-au]').forEach(x => x.classList.toggle('on', x.dataset.au === c.dataset.au)); return; }
     savePrefs();
     const e2 = engineNow(), pv = pickVoice();
     b.querySelectorAll('.chip').forEach(x => x.classList.toggle('on',
@@ -1426,8 +1652,10 @@ function pickMime(){
   return '';   // 指定なしで、ブラウザに任せる
 }
 
-async function recStart(){
-  if (busy) { showErr('いま前の質問を処理しています。'); return; }
+async function recStart(opts){
+  opts = opts || {};
+  if (busy) { if (!opts.auto) showErr('いま前の質問を処理しています。'); return; }
+  if (!opts.auto) { autoCancel(); autoMiss = 0; }
   if (currentSeq && currentSeq.playing) { voiceHeld = null; stopAllVoice(); }   // v2.30：話し始めたら、流れている声は止める
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     showErr('このブラウザではマイクが使えません。打ち込みで聞いてください。'); return;
@@ -1457,7 +1685,7 @@ async function recStart(){
         if (blob.size < 1200) { back(); showErr('短すぎました（' + blob.size + 'バイト）。押してから、1秒以上話してください。'); return; }
         const b64 = await toBase64(blob);
         if (!b64) { back(); showErr('音声を変換できませんでした。打ち込みで聞いてください。'); return; }
-        ask({ audio: b64, mime: usedMime.split(';')[0], sec: Math.round((Date.now() - recT0) / 100) / 10 });   // 秒数は、伝言をLINEに声で送るときに使う   // ここから先は ask が面倒を見ます
+        ask({ audio: b64, mime: usedMime.split(';')[0], sec: Math.round((Date.now() - recT0) / 100) / 10, rt: lastRt || undefined });   // 秒数は、伝言をLINEに声で送るときに使う   // ここから先は ask が面倒を見ます
       } catch (err) {
         back();
         showErr('送るところで止まりました：' + String(err.message || err).slice(0, 110));
@@ -1467,6 +1695,7 @@ async function recStart(){
     rec.start();
     micOpening = false;
     recT0 = Date.now();
+    if (TUTOR) vadStart(stream, opts.listen || lastListen, !!opts.auto);   // 話し終わりを自動で見つけて送る
     $('micring').classList.add('rec');
     recLook(true, 0);
     try { if (navigator.vibrate) navigator.vibrate([30, 40, 30]); } catch (e) { }
@@ -1474,6 +1703,7 @@ async function recStart(){
       const el = (Date.now() - recT0) / 1000;
       if (el >= CONFIG.REC_MAX_SEC) { recStop(); return; }   // 押し忘れても、ここで送ります
       recLook(true, el);
+      if (TUTOR) { if (!(vad && vad.speechAt)) micLabel('<b>どうぞ</b>　答えを言ってね（' + el.toFixed(0) + '秒）'); return; }
       micLabel('<b>' + el.toFixed(1) + '秒</b>　押すと送る／長押しで取り消し' + (CONFIG.REC_MAX_SEC - el < 10 ? '（あと' + Math.ceil(CONFIG.REC_MAX_SEC - el) + '秒で自動で送ります）' : ''));
     }, 100);
   } catch (err) {
@@ -1542,6 +1772,7 @@ function micHelp(err){
 }
 
 function recStop(){
+  vadStop();
   if (recTimer) { clearInterval(recTimer); recTimer = null; }
   $('micring').classList.remove('rec');
   recLook(false);
@@ -1573,12 +1804,13 @@ function toBase64(blob){
 function micTap(){
   if (holdCancelled) { holdCancelled = false; return; }   // 長押しで取り消した直後の click は無視
   if (rec && rec.state === 'recording') recStop();
-  else if (!$('mic').disabled) recStart();
+  else if (!$('mic').disabled) recStart({ listen: lastListen });
 }
 $('micring').addEventListener('click', micTap);
 
 /* 録音中に長押し（0.7秒）→ 送らずに取り消し。録音していないときの長押しは何もしません */
 function recCancel(){
+  vadStop(); autoCancel();
   if (recTimer) { clearInterval(recTimer); recTimer = null; }
   const r = rec; rec = null;
   $('micring').classList.remove('rec', 'hold');
@@ -1946,6 +2178,7 @@ document.addEventListener('click', (e) => {
   const c = e.target.closest('.chip');
   if (!c) return;
   if (c.dataset.guide) { guideAgain(); return; }
+  if (TUTOR) { autoCancel(); autoMiss = 0; if (rec && rec.state === 'recording') recCancelQuiet(); stopAllVoice(); }
   send(c.textContent.trim());
 });
 
