@@ -462,19 +462,17 @@
  *  ■ 直すのは下の CONFIG だけです
  * ========================================================================== */
 const CONFIG = {
-  // 運営用ミニアプリの LIFF ID（来場者向けとは別のチャネル）。
-  // 本番用・開発用・審査用のどれで開かれても通るように、順に試します。
-  // 寺小屋の家庭教師の LINEミニアプリの LIFF ID（本番用・開発用・審査用のどれでも。寺小屋のBOTと同じプロバイダーに作る）
+  // AI家庭教師＠AI寺小屋 の LINEミニアプリの LIFF ID。本番用・開発用・審査用のどれで開かれても通るように、順に試します
   LIFF_IDS: [
-    'ここに本番用のLIFF_ID',
-    'ここに開発用のLIFF_ID'
+    '2011807001-vmDj4dvc',   // 本番用
+    '2011806998-QOnly7WZ',   // 開発用
+    '2011806999-36WgcOCQ'    // 審査用
   ],
   // 家庭教師のページ（hz_tutor.gs が受ける）
   MODE: 'tutor-line',
-  // SMF BOT v3.3 のウェブアプリURL（/exec まで）。来場者向けミニアプリと同じものです
   // 寺小屋の本番GASのウェブアプリURL（/exec まで。LINEのWebhookと同じURL）
-  GAS_URL: 'ここに寺小屋のウェブアプリURL',
-  // ロゴ（来場者向けミニアプリのものをそのまま読みます）
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbxe-O1pMup7kUMVKVkmQemYknVSyTSq1ub3bHJqPI8-0QIAYG7o2eXKI_yQIk9tHwPz/exec',
+  // ロゴ（寺小屋の信長）
   LOGO: 'https://hiromitsu81.github.io/terakoya/nobunaga_1.png',
   // 最初に出す質問の見本
   CHIPS: ['はじめる', '英語にして', '数学にして', '国語にして'],
@@ -768,7 +766,17 @@ async function api(payload){
   if (GUEST || TUTOR) {   // 体験版・家庭教師：LINEのトークンは使わず、招待コードで
     let key = TUTOR ? { kind: 'ops', tutor: TUTOR } : { kind: 'ops', guest: GUEST };
     if (TUTOR_LINE) { let t = ''; try { t = liff.getIDToken() || ''; } catch (e) { } key = { kind: 'hz_tutor', idToken: t }; }   // 寺小屋のGAS（hz_tutor.gs）へ
-    const r = await fetch(CONFIG.GAS_URL, { method: 'POST', body: JSON.stringify(Object.assign(key, payload)) });
+    // 寺小屋のGASも、ときどき一時的に 404・405・5xx を返す。読むだけの呼び出しは 1.5秒・3秒 おいてやり直す
+    const safeT = /^(me|hello|voices|speak)$/.test(String(payload.api || ''));
+    let r = null, lastErr = null;
+    for (let k = 0; k < (safeT ? 3 : 1); k++) {
+      if (k) await new Promise(ok => setTimeout(ok, 1500 * k));
+      try {
+        r = await fetch(CONFIG.GAS_URL, { method: 'POST', credentials: 'omit', body: JSON.stringify(Object.assign({}, key, payload)) });
+        if (r.ok || !(r.status === 404 || r.status === 405 || r.status >= 500)) break;
+      } catch (e) { lastErr = e; r = null; }
+    }
+    if (!r) throw lastErr || new Error('つながりませんでした');
     if (!r.ok) throw new Error('つながりませんでした（' + r.status + '）');
     return await r.json();
   }
@@ -794,20 +802,22 @@ async function api(payload){
 async function diagnose(){
   const lines = [];
   try {
-    const r = await fetch(CONFIG.GAS_URL + '?api=ouen');
+    const r = await fetch(CONFIG.GAS_URL + '?api=ouen', { credentials: 'omit' });
     const t = await r.text();
-    if (r.ok && t.indexOf('{') === 0) lines.push('GASは読めています（' + r.status + '）');
-    else lines.push('GASの応答が想定外（' + r.status + '）：' + t.slice(0, 60));
+    if (r.ok && (t.indexOf('{') === 0 || (TUTOR_LINE && /<html|<!doctype/i.test(t)))) lines.push('GASは読めています（' + r.status + '）');
+    else lines.push('GASの応答が想定外（' + r.status + '）：' + t.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 60));
   } catch (err) {
     lines.push('GASに届きません：' + String(err.message || err).slice(0, 60));
     lines.push('→ デプロイの「アクセスできるユーザー」が「全員」か確かめてください');
     return lines.join('\n');
   }
   try {
-    const r = await fetch(CONFIG.GAS_URL, { method: 'POST', body: JSON.stringify({ kind: 'ops', api: 'me', idToken: 'x' }) });
+    const r = await fetch(CONFIG.GAS_URL, { method: 'POST', credentials: 'omit', body: JSON.stringify({ kind: TUTOR_LINE ? 'hz_tutor' : 'ops', api: 'me', idToken: 'x' }) });
     const t = await r.text();
+    if (!r.ok) lines.push('POSTの応答が想定外（' + r.status + '）：' + t.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 80));
     if (t.indexOf('login') >= 0) lines.push('運営の入口も生きています（本人確認で弾かれました＝正しい動き）');
     else if (t.indexOf('unknown api') >= 0) lines.push('doPost に ops の1行が入っていません（コード.gs）');
+    else if (TUTOR_LINE && r.ok && t.indexOf('{') !== 0) lines.push('家庭教師の入口につながっていません → 新しいバージョンでデプロイし直してください');
     else lines.push('POSTの応答：' + t.slice(0, 80));
   } catch (err) {
     lines.push('POSTだけ通りません：' + String(err.message || err).slice(0, 60));
