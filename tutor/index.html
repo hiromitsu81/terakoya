@@ -475,7 +475,7 @@ const CONFIG = {
   // ロゴ（寺小屋の信長）
   LOGO: 'https://hiromitsu81.github.io/terakoya/nobunaga_1.png',
   // 最初に出す質問の見本
-  CHIPS: ['はじめる', '英語にして', '数学にして', '国語にして'],
+  CHIPS: ['はじめる', '設定', '英語にして', '数学にして'],
   // 録音はこの秒数で自動で送ります（押しっぱなしで長くなり、文字起こしが遅く・高くなるのを防ぐ）
   REC_MAX_SEC: 60,
   // 声は1文ずつ作って、最初の1文ができたら鳴らし始めます（残りは鳴っているあいだに作る）
@@ -525,7 +525,7 @@ const GUEST = (() => {
     return g;
   } catch (e) { return ''; }
 })();
-if (TUTOR) CONFIG.CHIPS = ['はじめる', '英語にして', '数学にして', '国語にして'];
+if (TUTOR) CONFIG.CHIPS = ['はじめる', '設定', '英語にして', '数学にして'];
 else if (GUEST) CONFIG.CHIPS = ['Harmonizerで何ができる？', '今週が期限のタスクは？', '遅れているのはどこ？', '何を決めないと止まる？'];
 let busy = false;
 let rec = null, chunks = [], recMime = '', recT0 = 0, recTimer = null, recStream = null;
