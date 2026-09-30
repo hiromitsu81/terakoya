@@ -480,8 +480,9 @@ const CONFIG = {
   REC_MAX_SEC: 60,
   // 声は1文ずつ作って、最初の1文ができたら鳴らし始めます（残りは鳴っているあいだに作る）
   TTS_MAX: 70,        // 1かたまりの最大文字数（長い文は読点で分ける）
-  TTS_MIN: 18,        // これより短いかたまりは次とまとめる（2つめ以降）
-  TTS_PARALLEL: 2,    // 同時に作る数
+  TTS_MIN: 18,        // これより短いかたまりは次とまとめる
+  TTS_FIRST_MIN: 16,  // 最初のかたまりがこれより短いときも次とまとめる（すぐ読み終わって、次の声が間に合わなくなるのを防ぐ）
+  TTS_PARALLEL: 4,    // 同時に作る数（家庭教師：問題と4つの選択肢を先に作っておき、読み上げのあいだを空けない）
   // 'device'＝端末の声（すぐ鳴る・0円）／'gemini'＝きれいな声（1文ずつ作る・少し待つ）。右上の［声］で人ごとに変えられます
   VOICE: 'gemini',
   // 1文字あたりの速さ（ミリ秒）。小さいほど速い
@@ -1079,7 +1080,8 @@ function splitSpeech(text){
   const m = [];
   out.forEach(p => {
     const last = m[m.length - 1];
-    if (m.length >= 2 && last.length < CONFIG.TTS_MIN && last.length + p.length <= CONFIG.TTS_MAX) m[m.length - 1] = last + p;
+    const min = m.length === 1 ? (CONFIG.TTS_FIRST_MIN || 0) : CONFIG.TTS_MIN;
+    if (m.length >= 1 && last.length < min && last.length + p.length <= CONFIG.TTS_MAX) m[m.length - 1] = last + p;
     else m.push(p);
   });
   return m;
