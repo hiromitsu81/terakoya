@@ -443,7 +443,7 @@
 </div>
 <div class="modebar"><span id="modebar"></span></div>
 <div class="recbar" id="recbar"><span id="recbarText">録音しています</span></div>
-<div class="ver" id="ver">Harmonizer v2.44　2026-10-01</div>
+<div class="ver" id="ver">Harmonizer v2.45　2026-10-01</div>
 
 <script>
 /* ============================================================================
@@ -1058,11 +1058,14 @@ function jaVoices(){
 }
 function pickVoice(){
   const vs = jaVoices();
-  return vs.find(v => v.voiceURI === prefs.voice) || vs.find(v => /Kyoko|O-ren|Google/i.test(v.name)) || vs[0] || null;
+  // ネットの声（Google 日本語 など）は鳴らないことがあるので、端末に入っている声を先に選ぶ（v2.45）
+  return vs.find(v => v.voiceURI === prefs.voice) || vs.find(v => v.localService && /Kyoko|O-ren|Otoya|Haruka|Ayumi|Ichiro|Sayaka|Nanami/i.test(v.name))
+    || vs.find(v => v.localService) || vs.find(v => /Kyoko|O-ren|Google/i.test(v.name)) || vs[0] || null;
 }
 if (hasTTS()) { try { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => {}; } catch (e) { } }
 let GEMINI_DOWN = '';   // きれいな声が上限などで作れなかった（この画面のあいだは端末の声にする）
-function engineNow(){ if (GEMINI_DOWN && hasTTS() && jaVoices().length) return 'device'; return prefs.engine === 'gemini' || !hasTTS() || !jaVoices().length ? 'gemini' : 'device'; }
+let DEVICE_SILENT = false;   // 端末の声が鳴らなかった（この画面のあいだは、きれいな声で読む）
+function engineNow(){ if (DEVICE_SILENT && !GEMINI_DOWN) return 'gemini'; if (GEMINI_DOWN && hasTTS() && jaVoices().length) return 'device'; return prefs.engine === 'gemini' || !hasTTS() || !jaVoices().length ? 'gemini' : 'device'; }
 
 /* 鳴らす用の <audio> を1つだけ持つ。最初に触ったときに無音を一度鳴らして「鳴らしてよい」にしておく
  * （iPhoneは消音スイッチが入っていても <audio> は鳴る。端末の声と Web Audio は消音で黙る） */
@@ -1333,17 +1336,36 @@ function makePartsSeq(parts, rate){
     };
     pump();
   }
+  // 端末の声が鳴らないとき用：その1かたまりを、きれいな声（GASで作る）で鳴らす
+  const playGemOne = (it, my, done) => {
+    api({ api: 'speak', text: it.t, voice: prefs.gvoice || '', style: prefs.gstyle || '' })
+      .then(d => {
+        if (my !== gen) return;
+        if (d && d.audio) playAudio('data:audio/wav;base64,' + d.audio, my, done, done);
+        else { seq.why = (d && (d.msg || d.error)) || '空'; seq.failed = (seq.failed || 0) + 1; done(); }
+      })
+      .catch(e => { if (my !== gen) return; seq.why = '通信 ' + String((e && e.message) || e).slice(0, 60); seq.failed = (seq.failed || 0) + 1; done(); });
+  };
   const playDev = (it, my, done) => {
-    if (!hasTTS()) { done(); return; }
+    const ja = /^ja/.test(it.lang || 'ja');
+    if (!hasTTS() || (DEVICE_SILENT && ja)) { if (ja) { playGemOne(it, my, done); return; } done(); return; }
     const u = new SpeechSynthesisUtterance(it.t);
     u.lang = it.lang || 'ja-JP';
     const v = langVoice(u.lang); if (v) u.voice = v;
     u.rate = Math.max(0.5, Math.min(1.8, (prefs.rate || 1.1) * (it.rate || 1) * (rate || 1)));
-    let fin = false;
-    const end = () => { if (fin) return; fin = true; clearTimeout(dog); if (my === gen) done(); };
+    let fin = false, began = false;
+    const end = () => { if (fin) return; fin = true; clearTimeout(dog); clearTimeout(probe); if (my === gen) done(); };
+    // 1.8秒たっても鳴り始めなければ、この端末の声は使えないとみなして、きれいな声に切りかえる（v2.45）
+    const probe = setTimeout(() => {
+      if (fin || began || my !== gen || !ja) return;
+      fin = true; clearTimeout(dog); DEVICE_SILENT = true;
+      try { speechSynthesis.cancel(); } catch (e) { }
+      modeToast('端末の声が出ないので、きれいな声で読みます');
+      playGemOne(it, my, done);
+    }, 1800);
     // iPhone のLINEでは、読み終わりの合図が来ないことがある → 長さから見積もって先へ進む
     const dog = setTimeout(end, 2500 + it.t.length * (/^ja/.test(u.lang) ? 190 : 110) / u.rate);
-    u.onstart = () => { if (my !== gen) return; if (!started) { started = true; seq.onstate('play'); } };
+    u.onstart = () => { began = true; if (my !== gen) return; if (!started) { started = true; seq.onstate('play'); } };
     u.onend = end;
     u.onerror = (e) => { if (e && /interrupted|canceled/.test(e.error || '')) { fin = true; clearTimeout(dog); return; } end(); };
     speechSynthesis.speak(u);
@@ -1356,10 +1378,11 @@ function makePartsSeq(parts, rate){
     el.src = src;
     const p = el.play();
     if (p) p.then(() => { if (my === gen && !started) { started = true; seq.onstate('play'); } }).catch(() => { if (fin) return; fin = true; if (my === gen) fallback(); });
+    else if (!started) { started = true; seq.onstate('play'); }
   };
   const playAt = (k, my) => {
     if (my !== gen || !seq.playing) return;
-    if (k >= items.length) { seq.playing = false; seq.onstate('end'); return; }
+    if (k >= items.length) { seq.playing = false; seq.onstate(!started && seq.failed ? 'none' : 'end'); return; }
     const it = items[k], next = () => playAt(k + 1, my);
     const asDev = () => it.t ? playDev({ t: it.t, lang: it.lang || 'ja-JP', rate: it.rate }, my, next) : next();
     if (it.kind === 'url') { playAudio(it.url, my, next, asDev); return; }
@@ -1378,7 +1401,7 @@ function makePartsSeq(parts, rate){
     const my = ++gen; seq.playing = true; started = false;
     setTimeout(() => playAt(0, my), 60);
     // 2秒たっても鳴らなければ、この端末は触るまで鳴らせない → 押してもらう
-    setTimeout(() => { if (my === gen && !started && seq.playing && items.length && items[0].kind !== 'gem') { seq.stop(); seq.onstate('blocked'); } }, 2600);
+    setTimeout(() => { if (my === gen && !started && seq.playing && items.length && items[0].kind !== 'gem' && !DEVICE_SILENT) { seq.stop(); seq.onstate('blocked'); } }, 9000);
   };
   seq.stop = () => {
     if (!seq.playing) return; gen++; seq.playing = false;
@@ -1403,6 +1426,12 @@ function speakParts(parts, row, opts){
     if (st === 'end') { btn.textContent = '▶ もう一度'; ring && ring.classList.remove('busy'); voiceEndAt = Date.now(); if (opts.onend) opts.onend(); }
     if (st === 'stop') { btn.textContent = '▶ 聞き直す'; ring && ring.classList.remove('busy'); }
     if (st === 'blocked') { btn.textContent = '▶ 押すと読みます'; ring && ring.classList.remove('busy'); }
+    if (st === 'none') {   // 何も鳴らせなかった：理由を出す（黙ったままにしない）
+      btn.textContent = '▶ もう一度ためす'; ring && ring.classList.remove('busy');
+      if (!row.querySelector('.vwhy')) { const d = document.createElement('div'); d.className = 'meta vwhy'; d.style.cssText = 'margin-top:4px;font-size:12px;opacity:.85';
+        d.textContent = '声を出せませんでした：' + String(seq.why || '端末の声が鳴りませんでした').slice(0, 80) + '（右上の［声］→「音のテスト」で、どれが鳴るか確かめられます）'; row.appendChild(d); }
+      voiceEndAt = Date.now(); if (opts.onend) opts.onend();
+    }
   };
   seq.onfirst = () => {
     listenReady(seq);
