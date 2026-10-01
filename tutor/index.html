@@ -443,7 +443,7 @@
 </div>
 <div class="modebar"><span id="modebar"></span></div>
 <div class="recbar" id="recbar"><span id="recbarText">録音しています</span></div>
-<div class="ver" id="ver">Harmonizer v2.49　2026-10-01</div>
+<div class="ver" id="ver">Harmonizer v2.50　2026-10-01</div>
 
 <script>
 /* ============================================================================
@@ -502,6 +502,23 @@ let idToken = '';
    コードは覚えない（その回だけ）。LINEの外では開けない */
 /* v2.32：CONFIG.MODE が 'tutor-line' のページ（寺小屋の家庭教師 tutor.html）は、招待コードではなく LINE のログインで入る */
 const TUTOR_LINE = CONFIG.MODE === 'tutor-line';
+/* v2.50：LINEなしの入口（ゲスト）。URL の ?k=合言葉 で開いたときだけ。端末ごとの番号（DEV）で1人と数える */
+const TGUEST = (() => {
+  if (!TUTOR_LINE) return '';
+  try {
+    const u = new URL(location.href);
+    let k = (u.searchParams.get('k') || '').replace(/[^A-Za-z0-9]/g, '');
+    if (k) { try { sessionStorage.setItem('tutor:gk', k); } catch (e) { } }
+    else { try { k = sessionStorage.getItem('tutor:gk') || ''; } catch (e) { } }   // 同じ画面の読み直し
+    return k;
+  } catch (e) { return ''; }
+})();
+const DEV = (() => {
+  if (!TGUEST) return '';
+  const mk = () => { const a = new Uint8Array(12); (window.crypto || {}).getRandomValues ? crypto.getRandomValues(a) : a.forEach((x, i) => a[i] = Math.random() * 256 | 0); return Array.from(a, b => b.toString(16).padStart(2, '0')).join(''); };
+  try { let d = localStorage.getItem('tutor:dev'); if (!d) { d = mk(); localStorage.setItem('tutor:dev', d); } return d; }
+  catch (e) { try { let d = sessionStorage.getItem('tutor:dev'); if (!d) { d = mk(); sessionStorage.setItem('tutor:dev', d); } return d; } catch (x) { return mk(); } }
+})();
 const TUTOR = (() => {
   if (TUTOR_LINE) return 'line';
   try {
@@ -770,7 +787,8 @@ function relogin(){
 async function api(payload){
   if (GUEST || TUTOR) {   // 体験版・家庭教師：LINEのトークンは使わず、招待コードで
     let key = TUTOR ? { kind: 'ops', tutor: TUTOR } : { kind: 'ops', guest: GUEST };
-    if (TUTOR_LINE) {
+    if (TUTOR_LINE && TGUEST) key = { kind: 'hz_tutor', guest: TGUEST, dev: DEV };   // LINEなし（ゲスト）
+    else if (TUTOR_LINE) {
       if (!isInLine() && idExpiring() && relogin()) return new Promise(() => { });   // ブラウザ：IDトークンの期限（1時間）が近い → ログインし直す
       let t = ''; try { t = liff.getIDToken() || ''; } catch (e) { } key = { kind: 'hz_tutor', idToken: t };
     }   // 寺小屋のGAS（hz_tutor.gs）へ
@@ -843,7 +861,9 @@ const ERR = {
   'too big':  '録音が長すぎます。短くしてもう一度お願いします。',
   empty:      '聞き取れませんでした。もう一度お願いします。',
   transcribe: '文字にできませんでした。もう一度お願いします。',
-  closed:     TUTOR_LINE ? 'いまは使えません。寺小屋の先生（管理者）にお知らせください。' : 'いまは使えません。'
+  closed:     TUTOR_LINE ? 'いまは使えません。寺小屋の先生（管理者）にお知らせください。' : 'いまは使えません。',
+  guest_off:  'LINEなしの入口は、いま閉じています。LINEで開くか、寺小屋の先生（管理者）にお知らせください。',
+  guest_key:  'このURLは使えません（合言葉がちがうか、変わりました）。新しいURLを寺小屋の先生（管理者）にもらってください。'
 };
 
 /* ---------------------------------------------------------------- 聞く */
@@ -2378,12 +2398,13 @@ function gate(msg){
 async function tutorStart(){
   $('ver').textContent = $('ver').textContent + '　/ 家庭教師';
   let inLine = false;
-  if (typeof liff !== 'undefined') {
+  if (TGUEST) { /* LINEなし：LINEにはつながない */ }
+  else if (typeof liff !== 'undefined') {
     say('LINEにつないでいます…', 1);
     for (const id of CONFIG.LIFF_IDS) { try { await liff.init({ liffId: id }); break; } catch (e) { } }
     try { inLine = !!liff.isInClient(); } catch (e) { }
   }
-  if (!inLine) {
+  if (!inLine && !TGUEST) {
     // v2.41：LINEの外（PC・スマホのブラウザ）でも、LINEでログインすれば使える（LINEのIDは同じなので、記録もそのまま）
     let loggedIn = false;
     try { loggedIn = typeof liff !== 'undefined' && liff.isLoggedIn(); } catch (e) { }
@@ -2406,7 +2427,8 @@ async function tutorStart(){
     'AI寺小屋の問題を、声で出して、声で答え合わせをします。\n' +
     'まちがえたら、答えを言わずにヒントを出します。\n' +
     '（保護者の方へ）話した声は文字にしたら捨てます。残すのは、どの問題に正解したかだけです。\n' +
-    (TUTOR_LINE ? 'LINEのログインで、寺小屋の記録（前にまちがえた問題・苦手な単元）を使って問題を選びます。\n' : '') +
+    (TGUEST ? 'LINEなしで使っています。記録はこの端末ごとに残ります（寺小屋のLINEの記録とはつながりません）。\n' :
+     TUTOR_LINE ? 'LINEのログインで、寺小屋の記録（前にまちがえた問題・苦手な単元）を使って問題を選びます。\n' : '') +
     'LINEにお知らせを送ることはありません。1日に出す問題の数には上限があります。\n' +
     'マイクの許可を聞かれたら「許可」を選んでください。\n' +
     '<button class="play" id="tOk" type="button" style="margin-top:16px;font-size:16px;padding:10px 22px">はじめる</button></div>';
