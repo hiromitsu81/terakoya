@@ -443,7 +443,7 @@
 </div>
 <div class="modebar"><span id="modebar"></span></div>
 <div class="recbar" id="recbar"><span id="recbarText">録音しています</span></div>
-<div class="ver" id="ver">Harmonizer v2.46　2026-10-01</div>
+<div class="ver" id="ver">Harmonizer v2.47　2026-10-01</div>
 
 <script>
 /* ============================================================================
@@ -1093,7 +1093,8 @@ document.addEventListener('pointerdown', () => {
     if (!actx) { const AC = window.AudioContext || window.webkitAudioContext; if (AC) actx = new AC(); }
     if (actx && actx.state === 'suspended') actx.resume();
   } catch (e) { }
-  try { if (!liveActive() && hasTTS() && !(currentSeq && currentSeq.playing)) { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } } catch (e) { }   // オープンモード中は触らない（iPhoneで音の出口を取り合わないように）
+  // v2.47：音量0の空読みは、iPhone・Macで次の読み上げまで無音にしてしまうことがあるので、音量1の空白（音は出ない）にする
+  try { if (!liveActive() && hasTTS() && !(currentSeq && currentSeq.playing)) { const u = new SpeechSynthesisUtterance(' '); u.volume = 1; speechSynthesis.speak(u); } } catch (e) { }   // オープンモード中は触らない（iPhoneで音の出口を取り合わないように）
 }, { capture: true });
 
 /** 読み上げる文を、1文ずつのかたまりに分ける */
@@ -1134,7 +1135,7 @@ function makeDeviceSeq(chunks){
     const sayAt = (i) => {
       if (my !== gen || !seq.playing) return;
       if (i >= chunks.length) { seq.playing = false; seq.onstate('end'); return; }
-      const u = new SpeechSynthesisUtterance(chunks[i]);
+      const u = new SpeechSynthesisUtterance(chunks[i]); u.volume = 1;
       u.lang = 'ja-JP'; if (v) u.voice = v; u.rate = prefs.rate || 1.1;
       u.onstart = () => { if (my !== gen) return; if (!started) { started = true; seq.onstate('play'); } };
       u.onend = () => { if (my === gen) sayAt(i + 1); };
@@ -1360,7 +1361,7 @@ function makePartsSeq(parts, rate){
   const playDev = (it, my, done) => {
     const ja = /^ja/.test(it.lang || 'ja');
     if (!hasTTS() || (DEVICE_SILENT && ja)) { if (ja) { playGemOne(it, my, done); return; } done(); return; }
-    const u = new SpeechSynthesisUtterance(it.t);
+    const u = new SpeechSynthesisUtterance(it.t); u.volume = 1;
     u.lang = it.lang || 'ja-JP';
     const v = langVoice(u.lang); if (v) u.voice = v;
     u.rate = Math.max(0.5, Math.min(1.8, (prefs.rate || 1.1) * (it.rate || 1) * (rate || 1)));
@@ -1710,7 +1711,7 @@ function soundTest(n, row){
     if (!hasTTS()) { diag('この画面では端末の声が使えません'); return; }
     try {
       speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance('端末の声のテストです。');
+      const u = new SpeechSynthesisUtterance('端末の声のテストです。'); u.volume = 1;
       u.lang = 'ja-JP'; const v = pickVoice(); if (v) u.voice = v;
       let st = false;
       u.onstart = () => { st = true; diag('話し始めました'); };
