@@ -443,7 +443,7 @@
 </div>
 <div class="modebar"><span id="modebar"></span></div>
 <div class="recbar" id="recbar"><span id="recbarText">録音しています</span></div>
-<div class="ver" id="ver">Harmonizer v2.47　2026-10-01</div>
+<div class="ver" id="ver">Harmonizer v2.48　2026-10-01</div>
 
 <script>
 /* ============================================================================
@@ -1491,18 +1491,19 @@ function vadStart(stream, L, auto){
   const t0 = Date.now(), v = { speechAt: 0, lastLoud: 0, floor: 0, n: 0, auto: auto };
   lastRt = 0;
   try {
-    if (!actx) { const AC = window.AudioContext || window.webkitAudioContext; if (AC) actx = new AC(); }
-    if (actx && actx.state === 'suspended') actx.resume();
-    if (actx) {
-      v.src = actx.createMediaStreamSource(stream);
-      v.an = actx.createAnalyser(); v.an.fftSize = 1024;
+    // v2.48：マイクの音は、鳴らす用（actx）とは別の箱で測る。同じ箱を使うと、iPad・iPhoneで録音のあと声が割れる
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) {
+      v.ctx = new AC(); if (v.ctx.state === 'suspended') v.ctx.resume();
+      v.src = v.ctx.createMediaStreamSource(stream);
+      v.an = v.ctx.createAnalyser(); v.an.fftSize = 1024;
       v.src.connect(v.an); v.buf = new Float32Array(v.an.fftSize);
     }
   } catch (e) { v.an = null; }
   v.timer = setInterval(() => {
     const el = Date.now() - t0;
     if (el > L.max * 1000) { vadStop(); recStop(); return; }                      // 長すぎ：ここで送る
-    if (!v.an || !actx || actx.state !== 'running') {                             // 音の大きさが測れない端末：時間で決める
+    if (!v.an || !v.ctx || v.ctx.state !== 'running') {                             // 音の大きさが測れない端末：時間で決める
       if (auto && el > (L.wait + 3) * 1000) { vadStop(); recStop(); }
       return;
     }
@@ -1525,7 +1526,17 @@ function vadStop(){
   if (!vad) return;
   clearInterval(vad.timer);
   try { if (vad.src) vad.src.disconnect(); } catch (e) { }
+  try { if (vad.ctx) vad.ctx.close(); } catch (e) { }
   vad = null;
+  freshAudio();
+}
+/* iPad・iPhone：マイクを開くと音の出口が「通話向け」に変わり、その間に動いていた鳴らす用の箱は、
+ * マイクを閉じたあとも音が割れたままになる → 一度閉じて、次に鳴らすとき新しく作る（v2.48） */
+const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+function freshAudio(){
+  if (!IS_IOS || !actx) return;
+  try { actx.close(); } catch (e) { }
+  actx = null;
 }
 /** 何も言わなかったとき：送らずに、そっと閉じる */
 function recCancelQuiet(label){
