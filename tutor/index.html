@@ -443,7 +443,7 @@
 </div>
 <div class="modebar"><span id="modebar"></span></div>
 <div class="recbar" id="recbar"><span id="recbarText">録音しています</span></div>
-<div class="ver" id="ver">Harmonizer v2.48　2026-10-01</div>
+<div class="ver" id="ver">Harmonizer v2.49　2026-10-01</div>
 
 <script>
 /* ============================================================================
@@ -1328,7 +1328,7 @@ function makePartsSeq(parts, rate){
   const useGem = engineNow() === 'gemini';
   parts.forEach(p => {
     if (!p || !p.t && !p.url) return;
-    if (p.url) { items.push({ kind: 'url', url: p.url, t: p.t || '', rate: p.rate || 1 }); return; }
+    if (p.url) { items.push({ kind: 'url', url: p.url, t: p.t || '', lang: p.lang || '', rate: p.rate || 1 }); return; }   // lang：録音が鳴らないとき、その言葉の声で読む（v2.49）
     if (p.lang && !/^ja/.test(p.lang)) { items.push({ kind: 'dev', t: p.t, lang: p.lang, rate: p.rate || 1 }); return; }
     splitSpeech(p.t).forEach(x => items.push({ kind: useGem ? 'gem' : 'dev', t: x, lang: 'ja-JP', rate: p.rate || 1 }));
   });
