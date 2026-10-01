@@ -443,7 +443,7 @@
 </div>
 <div class="modebar"><span id="modebar"></span></div>
 <div class="recbar" id="recbar"><span id="recbarText">録音しています</span></div>
-<div class="ver" id="ver">Harmonizer v2.50　2026-10-01</div>
+<div class="ver" id="ver">Harmonizer v2.51　2026-10-01</div>
 
 <script>
 /* ============================================================================
@@ -1490,9 +1490,23 @@ function tutorSpeak(d, row){
   speakParts(parts, row, { rate: d.rate || 1, onend: () => autoListen(d.listen) });
 }
 /** 読み終わったら、自動でマイクを開く（2回続けて何も聞こえなければ、休む） */
+/* v2.51：放っておかれたときは、マイクを自動で開かない
+ *  ・3分のあいだ画面にさわっていない（テレビや話し声で答えが進み続けないように）
+ *  ・画面を閉じた／ほかのアプリにした（そのときは録音も止める） */
+const IDLE_MS = 3 * 60 * 1000;
+let lastTouch = Date.now();
+['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, () => { lastTouch = Date.now(); }, { capture: true }));
+document.addEventListener('visibilitychange', () => {
+  if (!TUTOR || document.visibilityState !== 'hidden') return;
+  autoCancel();
+  try { if (rec && rec.state === 'recording') recCancelQuiet('押して話す'); } catch (e) { }
+  try { stopAllVoice(); } catch (e) { }
+});
 function autoListen(L){
   autoCancel();
   if (!TUTOR || !L || prefs.auto === false || autoMiss >= 2) return;
+  if (document.visibilityState === 'hidden') return;
+  if (Date.now() - lastTouch > IDLE_MS) { micLabel('押して話す（しばらく操作がないので、マイクを休んでいます）'); return; }
   if ($('typebar').style.display !== 'none' || liveActive()) return;
   autoTimer = setTimeout(function tryStart(){
     autoTimer = null;
