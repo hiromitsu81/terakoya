@@ -443,7 +443,7 @@
 </div>
 <div class="modebar"><span id="modebar"></span></div>
 <div class="recbar" id="recbar"><span id="recbarText">録音しています</span></div>
-<div class="ver" id="ver">Harmonizer v2.45　2026-10-01</div>
+<div class="ver" id="ver">Harmonizer v2.46　2026-10-01</div>
 
 <script>
 /* ============================================================================
@@ -1044,6 +1044,10 @@ const SILENT_LOOP = (() => {
 const VOICE_KEY = TUTOR_LINE ? 'tutor:voice' : 'ops:voice';   // 家庭教師は運営用とは別に覚える（同じ github.io の中なので）
 let prefs = { engine: CONFIG.VOICE || 'device', voice: '', rate: 1.1, read: 'full', gvoice: '', gstyle: '', auto: true };   // auto＝読み終わったら自動で聞く（家庭教師）   // gvoice／gstyle＝きれいな声（Gemini）の種類と話し方
 try { Object.assign(prefs, JSON.parse(localStorage.getItem(VOICE_KEY) || '{}')); } catch (e) { /* 覚えていなくてもよい */ }
+/* v2.46：おすすめの声を最初の設定にする。前の版で覚えた声（鳴らないネットの声など）は一度だけ消して、おすすめに戻す
+ * （速さ・読み上げ・自動で聞く などはそのまま。この後に自分で選んだ声はそのまま覚える） */
+const PREFS_VER = 2;
+if (prefs.pv !== PREFS_VER) { prefs.voice = ''; prefs.engine = CONFIG.VOICE || 'device'; prefs.pv = PREFS_VER; try { localStorage.setItem(VOICE_KEY, JSON.stringify(prefs)); } catch (e) { } }
 /* 音の出口：録音のあとは iPhone が「電話の耳もと」から小さく鳴らすことがあるので、話す前にスピーカーへ戻す
  * playback は消音スイッチが入っていても鳴らせる（対応している iPhone のみ。LINEの中で効かないときは消音を切ってもらう） */
 function audioOut(kind){
@@ -1056,11 +1060,18 @@ function jaVoices(){
   if (!hasTTS()) return [];
   return speechSynthesis.getVoices().filter(v => /^ja/i.test(v.lang));
 }
+/* おすすめの声：端末に入っている日本語の声を、聞きやすい順に選ぶ（v2.46）
+ * iPhone・Mac＝Kyoko → O-ren、Windows＝Haruka → Nanami → Ayumi → Sayaka、Android＝端末の Google 日本語。男性の声は最後
+ * ネットの声（Google 日本語 のパソコン版など）は鳴らないことがあるので、端末の声が無いときだけ使う */
+const RECO_ORDER = [/Kyoko/i, /O-ren/i, /Haruka/i, /Nanami/i, /Ayumi/i, /Sayaka/i, /Google/i, /Otoya/i, /Ichiro/i, /Keita/i];
+function recoVoice(){
+  const vs = jaVoices(), loc = vs.filter(v => v.localService);
+  for (const re of RECO_ORDER) { const v = loc.find(x => re.test(x.name) && !/Online/i.test(x.name)); if (v) return v; }
+  return loc[0] || vs.find(v => /Kyoko|O-ren|Google/i.test(v.name)) || vs[0] || null;
+}
 function pickVoice(){
   const vs = jaVoices();
-  // ネットの声（Google 日本語 など）は鳴らないことがあるので、端末に入っている声を先に選ぶ（v2.45）
-  return vs.find(v => v.voiceURI === prefs.voice) || vs.find(v => v.localService && /Kyoko|O-ren|Otoya|Haruka|Ayumi|Ichiro|Sayaka|Nanami/i.test(v.name))
-    || vs.find(v => v.localService) || vs.find(v => /Kyoko|O-ren|Google/i.test(v.name)) || vs[0] || null;
+  return vs.find(v => v.voiceURI === prefs.voice) || recoVoice();
 }
 if (hasTTS()) { try { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => {}; } catch (e) { } }
 let GEMINI_DOWN = '';   // きれいな声が上限などで作れなかった（この画面のあいだは端末の声にする）
@@ -1730,9 +1741,9 @@ function voicePanel(){
   const vs = jaVoices();
   const opt = (label, on, data) => '<button class="chip' + (on ? ' on' : '') + '" ' + data + '>' + label + '</button>';
   const eng = engineNow();
-  b.innerHTML = '<b>声を選ぶ</b><div class="meta" style="margin:2px 0 8px">押すと試しに話します。この端末に覚えておきます</div>' +
+  b.innerHTML = '<b>声を選ぶ</b><div class="meta" style="margin:2px 0 8px">押すと試しに話します。この端末に覚えておきます。★おすすめ＝この端末で一番聞きやすい声（最初はこれ）</div>' +
     '<div class="dh">声の種類</div><div class="chips" style="justify-content:flex-start;margin-top:6px">' +
-    vs.map(v => opt(v.name.replace(/\s*\(.*\)$/, ''), eng === 'device' && pickVoice() && pickVoice().voiceURI === v.voiceURI, 'data-vv="' + v.voiceURI.replace(/"/g, '') + '"')).join('') +
+    (() => { const rv = recoVoice(); return (rv ? [rv].concat(vs.filter(v => v !== rv)) : vs).map(v => opt((v === rv ? '★おすすめ・' : '') + v.name.replace(/\s*\(.*\)$/, ''), eng === 'device' && pickVoice() && pickVoice().voiceURI === v.voiceURI, 'data-vv="' + v.voiceURI.replace(/"/g, '') + '"')).join(''); })() +
     opt('きれいな声（少し待つ）', eng === 'gemini', 'data-vg="1"') + '</div>' +
     (vs.length ? '' : '<div class="meta">この端末には日本語の読み上げが入っていないので、きれいな声を使います</div>') +
     (TUTOR ? '<div class="dh" style="margin-top:10px">読み終わったら自動で聞く</div><div class="chips" style="justify-content:flex-start;margin-top:6px">' +
