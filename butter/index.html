@@ -52,23 +52,81 @@ h1 { font-family: var(--display); font-weight: 800; font-size: 22px; margin: 0; 
 .stage svg { width: 100%; max-width: 760px; max-height: 100%; aspect-ratio: 720 / 420; }
 [hidden] { display: none !important; }
 .talkbtn { display: none; }
-/* UFOキャッチャー */
-.ufo-pop { position: absolute; inset: 0; z-index: 6; display: grid; grid-template-rows: auto 1fr auto; gap: 6px; padding: 8px; border-radius: 24px;
-  background: color-mix(in srgb, var(--bg) 88%, transparent); }
-.ufo-pop .uhead { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-family: var(--display); font-weight: 800; }
-.ufo-pop .uhead b { font-size: 18px; color: #d9483b; }
-.ufo-pop .uhead span { font-size: 13px; color: var(--soft); }
-.ufo-pop svg { width: 100%; height: 100%; min-height: 0; }
-.ucontrols { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
-.ucontrols button { font-family: var(--display); font-weight: 800; font-size: 18px; padding: 10px 18px; border-radius: 16px; border: 3px solid #2b2310; background: var(--card); color: var(--ink); cursor: pointer; }
-.ucontrols #uDrop { background: #d9483b; color: #fff; min-width: 120px; }
-.ucontrols #uClose { font-size: 14px; border-width: 2px; }
-.umsg { position: absolute; left: 50%; top: 40%; translate: -50% -50%; font-family: var(--display); font-weight: 800; font-size: 40px; color: #fff;
-  text-shadow: 0 3px 0 #d9483b, 0 0 14px rgba(0,0,0,.35); opacity: 0; pointer-events: none; white-space: nowrap; }
-.umsg.show { animation: umsg 1.6s ease-out forwards; }
-@keyframes umsg { 0% { opacity: 0; transform: scale(.4); } 20% { opacity: 1; transform: scale(1.15); } 30% { transform: scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }
-#uLamp circle { animation: lamp .6s steps(2) infinite; } #uLamp circle:nth-child(even) { animation-delay: .3s; }
-@keyframes lamp { 50% { fill: #fff6c2; } }
+/* UFOキャッチャー（全画面・今どき演出） */
+.ufo-pop { position: fixed; inset: 0; z-index: 40; display: grid; grid-template-rows: auto 1fr auto; gap: 10px; overflow: hidden;
+  padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+  background: #1b1440; color: #fff; font-family: var(--display); }
+.ufo-pop .aurora { position: absolute; inset: -20%; z-index: 0; filter: blur(60px); opacity: .9; pointer-events: none; }
+.aurora i { position: absolute; width: 50vmax; height: 50vmax; border-radius: 50%; mix-blend-mode: screen; animation: blob 12s ease-in-out infinite alternate; }
+.aurora i:nth-child(1) { left: 0; top: 10%; background: #ff5fa2; }
+.aurora i:nth-child(2) { right: 0; top: 0; background: #7b5cff; animation-delay: -4s; }
+.aurora i:nth-child(3) { left: 30%; bottom: -10%; background: #22d3ee; animation-delay: -8s; }
+@keyframes blob { 0% { transform: translate(0,0) scale(1); } 50% { transform: translate(8vmax,-6vmax) scale(1.2); } 100% { transform: translate(-6vmax,6vmax) scale(.9); } }
+.ufo-pop > .uhead, .ufo-pop > .ucam, .ufo-pop > .ucontrols { position: relative; z-index: 1; }
+.ufo-pop > .ucine, .ufo-pop > .uflash, .ufo-pop > .umsg, .ufo-pop > .ucard { position: absolute; }
+.uhead { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.uhead b { font-size: clamp(22px, 4vw, 40px); font-weight: 800; letter-spacing: .04em;
+  background: linear-gradient(90deg, #fff, #ffd6f0, #b8f2ff, #fff); background-size: 300% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: shine 4s linear infinite; text-shadow: 0 0 24px rgba(255,120,220,.35); }
+@keyframes shine { to { background-position: 300% 0; } }
+.uhead span { font-size: clamp(12px, 1.6vw, 16px); padding: 6px 14px; border-radius: 999px; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.3); backdrop-filter: blur(10px); }
+.ucam { min-height: 0; display: grid; place-items: center; overflow: hidden; border-radius: 28px;
+  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.25); backdrop-filter: blur(14px); box-shadow: 0 20px 60px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.08); }
+.ucam svg { height: 100%; max-width: 100%; aspect-ratio: 400 / 290; transition: transform .6s cubic-bezier(.2,.8,.2,1); }
+.ucontrols { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.ucontrols button { font-family: var(--display); font-weight: 800; font-size: clamp(18px, 2.6vw, 28px); padding: 14px 26px; border-radius: 20px; cursor: pointer;
+  color: #fff; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.4); backdrop-filter: blur(10px); transition: transform .1s; }
+.ucontrols button:active { transform: scale(.94); }
+.ucontrols #uDrop { min-width: 180px; background: linear-gradient(135deg, #ff5fa2, #ff8a3d); border: 0; box-shadow: 0 0 24px rgba(255,95,162,.7); animation: pulseBtn 1.2s ease-in-out infinite; }
+@keyframes pulseBtn { 50% { box-shadow: 0 0 40px rgba(255,138,61,.9); transform: scale(1.04); } }
+.ucontrols #uClose { font-size: 15px; padding: 10px 16px; }
+#uLamp circle { animation: lamp .6s steps(2) infinite; filter: drop-shadow(0 0 4px #ffd36b); } #uLamp circle:nth-child(even) { animation-delay: .3s; }
+@keyframes lamp { 50% { fill: #ff5fa2; } }
+/* シネマ風の黒帯（持ち上げるとき） */
+.ufo-pop::before, .ufo-pop::after { content: ''; position: absolute; left: 0; right: 0; height: 0; background: #000; z-index: 3; transition: height .4s; pointer-events: none; }
+.ufo-pop::before { top: 0; } .ufo-pop::after { bottom: 0; }
+.ufo-pop.cine::before, .ufo-pop.cine::after { height: 10vh; }
+.ucine { position: absolute; left: 0; right: 0; bottom: 3vh; z-index: 4; text-align: center; font-size: clamp(16px, 2.4vw, 26px); letter-spacing: .3em; opacity: 0; transition: opacity .3s; }
+.cine .ucine { opacity: 1; animation: blinkT 1s ease-in-out infinite; }
+@keyframes blinkT { 50% { opacity: .4; } }
+.ufo-pop.shake { animation: shakeScr .45s; }
+@keyframes shakeScr { 10%, 90% { transform: translate(-2px, 1px); } 20%, 80% { transform: translate(5px, -3px); } 30%, 50%, 70% { transform: translate(-8px, 4px); } 40%, 60% { transform: translate(8px, -4px); } }
+.uflash { position: absolute; inset: 0; z-index: 5; background: #fff; opacity: 0; pointer-events: none; }
+.uflash.on { animation: flash .5s ease-out; }
+.umsg { position: absolute; left: 50%; top: 42%; translate: -50% -50%; z-index: 6; font-size: clamp(48px, 10vw, 120px); font-weight: 800; white-space: nowrap; pointer-events: none; opacity: 0;
+  background: linear-gradient(180deg, #fff 20%, #ffd6f0 60%, #ff5fa2); -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 6px 0 #7b2b8f) drop-shadow(0 0 30px rgba(255,95,162,.8)); }
+.umsg.show { animation: umsg 1.4s cubic-bezier(.2,1.6,.4,1) forwards; }
+@keyframes umsg { 0% { opacity: 0; transform: scale(.2) rotate(-10deg); } 25% { opacity: 1; transform: scale(1.15) rotate(3deg); } 40% { transform: scale(1) rotate(0); } 80% { opacity: 1; } 100% { opacity: 0; transform: scale(1.05); } }
+/* ホロのアイテムカード */
+.ucard { position: absolute; left: 50%; top: 50%; z-index: 7; width: min(70vw, 340px); aspect-ratio: 3 / 4; translate: -50% -50%; perspective: 900px; pointer-events: none; }
+.ucard .face { position: absolute; inset: 0; border-radius: 26px; padding: 18px; display: grid; grid-template-rows: auto 1fr auto auto; gap: 6px; text-align: center; color: #2b2310;
+  background: linear-gradient(160deg, #fff, #fff4fb); box-shadow: 0 30px 80px rgba(0,0,0,.5); transform: rotateY(90deg) scale(.6); opacity: 0; overflow: hidden; }
+.ucard.in .face { animation: cardin .9s cubic-bezier(.2,1.4,.4,1) forwards; }
+@keyframes cardin { 0% { transform: rotateY(-120deg) scale(.5); opacity: 0; } 60% { opacity: 1; } 100% { transform: rotateY(0) scale(1); opacity: 1; } }
+.ucard .face::after { content: ''; position: absolute; inset: -50%; background: conic-gradient(from 0deg, rgba(255,0,150,.25), rgba(0,200,255,.25), rgba(255,240,0,.25), rgba(120,255,120,.25), rgba(255,0,150,.25));
+  mix-blend-mode: color-dodge; animation: holo 3s linear infinite; pointer-events: none; }
+@keyframes holo { to { transform: rotate(360deg); } }
+.ucard .tag { font-size: 14px; font-weight: 800; letter-spacing: .2em; color: #7b5cff; }
+.ucard svg { width: 100%; height: 100%; }
+.ucard .nm { font-size: clamp(20px, 3vw, 28px); font-weight: 800; }
+.ucard .sub { font-size: 13px; color: #6b5b7b; }
+.ucard .new { position: absolute; right: -6px; top: 14px; z-index: 2; padding: 4px 14px; border-radius: 999px; background: #ff5fa2; color: #fff; font-weight: 800; font-size: 16px; transform: rotate(12deg); box-shadow: 0 4px 12px rgba(255,95,162,.6); }
+/* もちもの */
+.inv { position: fixed; inset: 0; z-index: 35; display: grid; place-items: center; padding: 16px; background: rgba(20,16,40,.55); backdrop-filter: blur(8px); }
+.inv .panel { width: min(100%, 760px); max-height: 92vh; overflow-y: auto; border-radius: 24px; padding: 18px; background: var(--card); border: 1px solid var(--line); display: grid; gap: 12px; }
+.inv h2 { margin: 0; font-family: var(--display); font-size: 22px; display: flex; justify-content: space-between; align-items: center; }
+.inv h3 { margin: 6px 0 0; font-family: var(--display); font-size: 15px; color: var(--soft); }
+.invgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; }
+.icard { position: relative; border: 2px solid var(--line); border-radius: 16px; padding: 8px; background: var(--bg); cursor: pointer; display: grid; gap: 4px; text-align: center; font-family: var(--display); color: var(--ink); }
+.icard svg { width: 100%; aspect-ratio: 1; }
+.icard .n { font-size: 12px; font-weight: 700; line-height: 1.3; }
+.icard .r { position: absolute; left: 6px; top: 6px; font-size: 11px; font-weight: 800; padding: 1px 7px; border-radius: 999px; background: #4c8ff0; color: #fff; }
+.icard .r.R { background: #d9483b; } .icard .r.SR { background: linear-gradient(90deg, #f5c518, #ff8a3d); } .icard .r.UFO { background: #7b5cff; }
+.icard.on { border-color: var(--butter-deep); box-shadow: 0 0 0 3px color-mix(in srgb, var(--butter) 60%, transparent); }
+.icard.on::after { content: 'つけてる'; position: absolute; right: 6px; top: 6px; font-size: 11px; font-weight: 800; padding: 1px 7px; border-radius: 999px; background: var(--butter); color: #2b2310; }
+.icard.lock { cursor: default; opacity: .45; filter: grayscale(1); }
+.icard.lock svg { filter: brightness(0) opacity(.25); }
 .liffmode .talkbtn { display: grid; place-items: center; justify-self: center; position: relative; width: 112px; height: 112px; border-radius: 50%;
   border: 4px solid var(--butter-deep); background: var(--butter); color: #2b2310; font-family: var(--display); font-weight: 800; font-size: 16px; cursor: pointer; }
 .talkbtn i { position: absolute; inset: -4px; border-radius: 50%; border: 4px solid var(--mic-live); opacity: 0; transition: transform .1s; }
@@ -473,15 +531,18 @@ body.big form.typed { display: none; }
       <canvas id="confetti"></canvas>
     </div>
     <div class="ufo-pop" id="ufoPop" hidden>
-      <div class="uhead"><b>UFOキャッチャー</b><span id="uInfo">「ストップ」でおろすよ。「みぎ」「ひだり」で少しうごく</span></div>
+      <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="uhead"><b>UFOキャッチャー</b><span id="uInfo">「ストップ」でおろすよ</span></div>
+      <div class="ucam">
       <svg id="ufoSvg" viewBox="0 0 400 290" aria-label="UFOキャッチャー">
-        <rect x="6" y="6" width="388" height="278" rx="16" fill="#7fc8f8" opacity=".25" stroke="#2b2310" stroke-width="5"/>
-        <g id="uLamp" fill="#ffd36b" stroke="#2b2310" stroke-width="2">
+        <defs><linearGradient id="uGlass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bfe9ff" stop-opacity=".55"/><stop offset="1" stop-color="#ffd6f0" stop-opacity=".45"/></linearGradient></defs>
+        <rect x="6" y="6" width="388" height="278" rx="16" fill="url(#uGlass)" stroke="#ff5fa2" stroke-width="4" style="filter: drop-shadow(0 0 8px #ff5fa2)"/>
+        <g id="uLamp" fill="#ffd36b">
           <circle cx="40" cy="20" r="6"/><circle cx="80" cy="20" r="6"/><circle cx="120" cy="20" r="6"/><circle cx="160" cy="20" r="6"/><circle cx="200" cy="20" r="6"/>
           <circle cx="240" cy="20" r="6"/><circle cx="280" cy="20" r="6"/><circle cx="320" cy="20" r="6"/><circle cx="360" cy="20" r="6"/>
         </g>
         <rect x="16" y="34" width="368" height="8" rx="4" fill="#2b2310"/>
-        <rect x="16" y="252" width="368" height="22" rx="6" fill="#f2c4d0" stroke="#2b2310" stroke-width="3"/>
+        <rect x="16" y="252" width="368" height="22" rx="6" fill="#ff9fcf" stroke="#2b2310" stroke-width="3"/>
         <rect x="20" y="150" width="62" height="104" fill="#2b2310" opacity=".85"/>
         <rect x="16" y="146" width="70" height="10" rx="4" fill="#ffd36b" stroke="#2b2310" stroke-width="3"/>
         <text x="51" y="210" text-anchor="middle" font-size="13" font-weight="800" fill="#fff">とりだし</text>
@@ -490,25 +551,39 @@ body.big form.typed { display: none; }
           <line id="uRope" x1="0" y1="42" x2="0" y2="70" stroke="#2b2310" stroke-width="3"/>
           <g id="uHead">
             <rect x="-22" y="0" width="44" height="18" rx="7" fill="#d9483b" stroke="#2b2310" stroke-width="3"/>
+            <circle cx="0" cy="9" r="4" fill="#ffd36b"/>
             <g id="uArmL"><path d="M-14 16 L-26 40 L-14 52" fill="none" stroke="#2b2310" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></g>
             <g id="uArmR"><path d="M14 16 L26 40 L14 52" fill="none" stroke="#2b2310" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></g>
           </g>
           <g id="uHeld"></g>
         </g>
       </svg>
+      </div>
       <div class="ucontrols">
         <button id="uLeft" type="button">◀ ひだり</button>
         <button id="uDrop" type="button">ストップ！</button>
         <button id="uRight" type="button">みぎ ▶</button>
         <button id="uClose" type="button">やめる</button>
       </div>
+      <div class="ucine">ド キ ド キ …</div>
+      <div class="uflash" id="uFlash"></div>
       <div class="umsg" id="uMsg"></div>
+      <div class="ucard" id="uCard"><div class="face"><span class="tag">GET!</span><div id="uCardArt"></div><span class="nm" id="uCardName"></span><span class="sub">もちものに入ったよ</span></div></div>
+    </div>
+    <div class="inv" id="inv" hidden>
+      <div class="panel" role="dialog" aria-modal="true" aria-labelledby="invTitle">
+        <h2 id="invTitle">もちもの <button class="btn" id="invClose" type="button">とじる</button></h2>
+        <p class="note">タップでつける／はずす。ガチャとUFOキャッチャーで集めよう。</p>
+        <h3>きせかえ（ガチャ）</h3><div class="invgrid" id="invGacha"></div>
+        <h3>かざり（UFOキャッチャー）</h3><div class="invgrid" id="invUfo"></div>
+      </div>
+    </div>
     </div>
   </div>
 
   <section class="meters" aria-label="育ちぐあい">
     <div class="meter">
-      <div class="top"><span>バターちゃん：<b id="meltName">ひんやり</b></span><span><span id="careNote"></span> <button class="mini" id="gachaBtn" type="button">ガチャ</button><button class="mini" id="ufoBtn" type="button">UFO</button></span></div>
+      <div class="top"><span>バターちゃん：<b id="meltName">ひんやり</b></span><span><span id="careNote"></span> <button class="mini" id="gachaBtn" type="button">ガチャ</button><button class="mini" id="ufoBtn" type="button">UFO</button><button class="mini" id="invBtn" type="button">もちもの</button></span></div>
       <div class="bar" id="coldBar"><i style="width:100%"></i></div>
       <small id="evoNote">話しかけたり、LINEで宿題や日記を報告するとひんやりするよ。ほうっておくと溶けちゃう。</small>
     </div>
@@ -827,8 +902,8 @@ body.big form.typed { display: none; }
   const sleep = ms => new Promise(res => setTimeout(res, ms));
 
   // 出たアイテムの絵（画面のバターちゃん・チーちゃんの部品をそのまま使う）
-  function drawItemPreview(id) {
-    const box = $('gitem'); box.innerHTML = '';
+  function drawItemPreview(id, target) {
+    const box = target || $('gitem'); box.innerHTML = '';
     const NS = 'http://www.w3.org/2000/svg';
     if (id === 'goldplate' || id === 'goldcollar') {
       box.setAttribute('viewBox', '0 0 100 100');
@@ -915,6 +990,49 @@ body.big form.typed { display: none; }
     requestAnimationFrame(step);
   }
 
+  // ===== アイテムの一覧と絵 =====
+  const ITEMS = [
+    { id: 'straw', name: 'むぎわらぼうし', slot: 'head', rare: 'N' }, { id: 'chef', name: 'コックさんのぼうし', slot: 'head', rare: 'R' },
+    { id: 'santa', name: 'サンタぼうし', slot: 'head', rare: 'R' }, { id: 'glasses', name: 'まるめがね', slot: 'face', rare: 'N' },
+    { id: 'shades', name: 'サングラス', slot: 'face', rare: 'R' }, { id: 'bowtie', name: 'ちょうネクタイ', slot: 'neck', rare: 'N' },
+    { id: 'ribbon', name: 'ピンクのリボン', slot: 'neck', rare: 'N' }, { id: 'goldplate', name: 'きんのバターざら', slot: 'plate', rare: 'SR' },
+    { id: 'bandana', name: 'チーちゃんのあおいバンダナ', slot: 'chiNeck', rare: 'N' }, { id: 'goldcollar', name: 'チーちゃんのきんのくびわ', slot: 'chiNeck', rare: 'SR' },
+    { id: 'ball', name: 'チーちゃんのあかいボール', slot: 'chiToy', rare: 'N' }, { id: 'bone', name: 'チーちゃんのほね', slot: 'chiToy', rare: 'N' },
+    { id: 'frisbee', name: 'チーちゃんのフリスビー', slot: 'chiToy', rare: 'R' },
+  ];
+  const PRIZES = [
+    { id: 'plush', name: 'チーちゃんのぬいぐるみ' }, { id: 'jamjar', name: 'ジャムちゃんのびん' }, { id: 'toast', name: 'こんがりトースト' },
+    { id: 'milk', name: 'ミルクパパのびん' }, { id: 'star', name: 'きらきらスター' },
+  ];
+  function itemArt(id) {                         // アイテムの絵を <svg> の文字で
+    if (PRIZES.some(p => p.id === id)) return '<svg viewBox="-30 -52 60 58">' + prizeSvg(id) + '</svg>';
+    const tmp = document.createElement('div');
+    tmp.innerHTML = '<svg></svg>';
+    const box = tmp.firstChild;
+    drawItemPreview(id, box);
+    return tmp.innerHTML;
+  }
+  function openInv() {
+    const g = (pet && pet.gacha) || {}, u = (pet && pet.ufo) || {};
+    const owned = g.ownedIds || [], prizes = u.prizeIds || [], on = Object.values(g.equip || {});
+    const card = (id, name, badge, has) => '<button class="icard' + (has ? '' : ' lock') + (on.indexOf(id) >= 0 ? ' on' : '') + '" data-id="' + id + '" type="button"' + (has ? '' : ' disabled') + '>'
+      + '<span class="r ' + badge + '">' + (badge === 'UFO' ? 'UFO' : badge) + '</span>' + itemArt(id) + '<span class="n">' + (has ? name : '？？？') + '</span></button>';
+    $('invGacha').innerHTML = ITEMS.map(it => card(it.id, it.name, it.rare, owned.indexOf(it.id) >= 0)).join('');
+    $('invUfo').innerHTML = PRIZES.map(p => card(p.id, p.name, 'UFO', prizes.indexOf(p.id) >= 0)).join('');
+    $('inv').hidden = false;
+  }
+  $('inv').addEventListener('click', async ev => {
+    const b = ev.target.closest('.icard');
+    if (ev.target === $('inv')) { $('inv').hidden = true; return; }
+    if (!b || b.disabled) return;
+    const id = b.dataset.id, turnOn = !b.classList.contains('on');
+    b.style.opacity = '.6';
+    try { const r = await callGas({ action: 'equip', id, on: turnOn }); if (r && r.state) applyPet(r.state, true); } catch (e) {}
+    sfx.notes(turnOn ? [784, 1047] : [523, 392], 0.08, 'triangle', 0.12);
+    openInv();
+  });
+  $('invClose').addEventListener('click', () => { $('inv').hidden = true; });
+
   // ===== UFOキャッチャー =====
   // 景品の絵（下のまん中が 0,0。高さ40くらい）
   function prizeSvg(id, k) {
@@ -940,6 +1058,14 @@ body.big form.typed { display: none; }
     $('uHeld').innerHTML = U.held ? `<g transform="translate(0 ${U.y + 66})">${prizeSvg(U.held.id)}</g>` : '';
     $('uPrizes').innerHTML = U.prizes.filter(p => p !== U.held && !p.got).map(p => `<g transform="translate(${p.x} 252)">${prizeSvg(p.id)}</g>`).join('');
   }
+  function uCam(zoom) {                          // カメラ：アームに寄る
+    const svg = $('ufoSvg');
+    if (!zoom) { svg.style.transform = ''; return; }
+    svg.style.transformOrigin = (U.x / 400 * 100) + '% ' + ((U.y + 60) / 290 * 100) + '%';
+    svg.style.transform = 'scale(' + zoom + ')';
+  }
+  function uFlash() { const f = $('uFlash'); f.classList.remove('on'); void f.offsetWidth; f.classList.add('on'); }
+  function uShake() { const p = $('ufoPop'); p.classList.remove('shake'); void p.offsetWidth; p.classList.add('shake'); try { navigator.vibrate && navigator.vibrate([60, 40, 120]); } catch (e) {} }
   function uMsg(t) { const m = $('uMsg'); m.textContent = t; m.classList.remove('show'); void m.offsetWidth; m.classList.add('show'); }
   function uHum(on) {
     try {
@@ -986,7 +1112,8 @@ body.big form.typed { display: none; }
   async function uDrop() {
     if (U.phase !== 'move') return;
     U.phase = 'drop'; uHum(false); sfx.notes([392, 330, 262], 0.12, 'triangle', 0.08);
-    while (U.y < UFLOOR) { U.y += 3.2; await sleep(16); }
+    $('uDrop').style.animation = 'none';
+    while (U.y < UFLOOR) { U.y += 3.2; uCam(1 + (U.y - UTOP) / (UFLOOR - UTOP) * 0.7); await sleep(16); }
     U.phase = 'grab'; sfx.clack(); await sleep(350);
     const near = U.prizes.filter(p => !p.got).map(p => ({ p, d: Math.abs(p.x - U.x) })).sort((a, b) => a.d - b.d)[0];
     const chance = !near ? 0 : near.d < 16 ? 0.85 : near.d < 32 ? 0.45 : 0;
@@ -995,13 +1122,19 @@ body.big form.typed { display: none; }
     uDraw();
     sfx.rise(0.9, 0.5);
     U.phase = 'lift';
+    if (U.held) { $('ufoPop').classList.add('cine'); sfx.heart(); }
+    let beatT = 0;
     while (U.y > UTOP) {
-      U.y -= 2.6; await sleep(16);
+      U.y -= U.held ? 1.6 : 2.6; await sleep(16);           // つかんでいるときはスローモーション
+      uCam(1 + Math.max(0, (U.y - UTOP) / (UFLOOR - UTOP)) * 0.7);
+      if (U.held && (beatT += 16) > 520) { beatT = 0; sfx.heart(); }
       if (U.held && !win && U.y < 150) {                   // おしい！とちゅうで落ちる
         const p = U.held; U.held = null; p.x = Math.max(UMIN, Math.min(UMAX, p.x + (Math.random() < .5 ? -14 : 14)));
-        sfx.notes([330, 262], 0.15, 'triangle', 0.12); uMsg('おしい！'); setEmo('surprise', 2500);
+        sfx.notes([330, 262], 0.15, 'triangle', 0.12); uMsg('おしい！'); setEmo('surprise', 2500); uShake();
+        $('ufoPop').classList.remove('cine');
       }
     }
+    $('ufoPop').classList.remove('cine'); uCam(0);
     if (U.held && win) {
       U.phase = 'carry'; uHum(true);
       while (U.x > 51) { U.x -= 2.4; await sleep(16); }
@@ -1009,10 +1142,19 @@ body.big form.typed { display: none; }
       const got = U.held; got.got = true;
       U.phase = 'release'; uDraw(); sfx.clack();
       await sleep(250); U.held = null; uDraw();
-      sfx.pop(); sfx.fanfare('R'); confettiIn($('ufoPop'), 90); uMsg('GET!');
+      uFlash(); uShake(); sfx.pop(); sfx.fanfare('SR'); confettiIn($('ufoPop'), 160); uMsg('GET!');
       setEmo('excited', 5000);
       let rr = null; try { rr = await callGas({ action: 'ufo_win', prize: got.id }); } catch (e) {}
       if (rr && rr.state) applyPet(rr.state, true);
+      // ホロのカードで見せる
+      await sleep(900);
+      $('uCardArt').innerHTML = itemArt(got.id);
+      $('uCardName').textContent = got.name;
+      const card = $('uCard'); card.querySelector('.new') && card.querySelector('.new').remove();
+      if (!(rr && rr.dup)) card.querySelector('.face').insertAdjacentHTML('afterbegin', '<span class="new">NEW!</span>');
+      card.classList.remove('in'); void card.offsetWidth; card.classList.add('in');
+      sfx.notes([1047, 1319, 1568, 2093], 0.07, 'sine', 0.1);
+      await sleep(2200);
       const t = (rr && rr.dup ? got.name + 'がまたとれたよ！' : 'やったー！' + got.name + 'をゲット！') + 'おへやに飾ったよ。';
       addBubble('バターちゃん', t, 'her'); speak(t, 'excited');
       await sleep(2600);
@@ -1024,7 +1166,7 @@ body.big form.typed { display: none; }
     }
     ufoClose();
   }
-  function ufoClose() { clearInterval(U.timer); uHum(false); U.on = false; U.phase = 'idle'; $('ufoPop').hidden = true; }
+  function ufoClose() { clearInterval(U.timer); uHum(false); U.on = false; U.phase = 'idle'; $('ufoPop').hidden = true; $('ufoPop').classList.remove('cine', 'shake'); $('uCard').classList.remove('in'); uCam(0); $('uDrop').style.animation = ''; }
   function confettiIn(host, n) {
     const cv = document.createElement('canvas');
     cv.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none';
@@ -1506,6 +1648,7 @@ body.big form.typed { display: none; }
   });
   $('gachaBtn').addEventListener('click', () => doGacha('ガチャ回して'));
   $('ufoBtn').addEventListener('click', () => doUfo('UFOキャッチャー'));
+  $('invBtn').addEventListener('click', openInv);
   $('uLeft').addEventListener('click', () => uNudge(-28));
   $('uRight').addEventListener('click', () => uNudge(28));
   $('uDrop').addEventListener('click', () => uDrop());
