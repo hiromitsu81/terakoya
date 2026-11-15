@@ -365,7 +365,7 @@ body.big form.typed { display: none; }
 <div class="overlay" id="startOverlay">
   <div class="sheet">
     <h2>バターちゃんをおこす</h2>
-    <p class="note">最初に1回だけ押してください。あとはボタンなしで、「バターちゃん」と呼ぶと答えます。「チーちゃん、おて」と言うとチーちゃんが芸をします。</p>
+    <p class="note">最初に1回だけ押してください（マイクを使います）。お話しはClaudeアプリのバターちゃんと。この画面は声に合わせて口や表情が動き、「チーちゃん、おて」「バターちゃん、ガチャ回して」に反応します。⚙で「このページが話す」にも切りかえられます。</p>
     <p class="err" id="startErr" hidden></p>
     <button class="btn primary" id="startBtn">おこす</button>
     <button class="btn" id="startSettings">設定をひらく</button>
@@ -383,6 +383,19 @@ body.big form.typed { display: none; }
       <label for="pass">家族の合言葉</label>
       <input id="pass" type="password" autocomplete="off">
       <p class="note">GASの BUTTER_PASS と同じことば。この端末にだけ保存されます。</p>
+    </div>
+    <div class="field">
+      <label for="modeSel">だれがお話しする？</label>
+      <select id="modeSel">
+        <option value="show">Claudeアプリのバターちゃん（このページは見た目担当・おすすめ）</option>
+        <option value="talk">このページ（GASのClaudeが答えて、ブラウザの声で話す）</option>
+      </select>
+      <p class="note">見た目担当のとき：同じ部屋でClaudeアプリ（プロジェクト「バターちゃん」）の音声モードを使います。このページはマイクの音で口を動かし、聞こえた言葉で表情を変え、「チーちゃん、おて」「バターちゃん、ガチャ回して」に反応します。</p>
+    </div>
+    <div class="field" id="micField">
+      <label for="micRange">口の動きのびんかんさ <span id="micVal">5</span></label>
+      <input id="micRange" type="range" min="1" max="10" step="1" value="5">
+      <p class="note">子どもの声でも口が動きすぎるときは小さく、バターちゃんの声で動かないときは大きく。</p>
     </div>
     <div class="field">
       <label for="wakeSel">話しかけ方</label>
@@ -428,7 +441,9 @@ body.big form.typed { display: none; }
   const cfg = {
     url: store.get('url', ''), pass: store.get('pass', ''), wake: store.get('wake', 'wake'),
     voice: store.get('voice', ''), rate: store.get('rate', 1), pitch: store.get('pitch', 1.1), sleepAfter: store.get('sleepAfter', 180),
+    mode: store.get('mode', 'show'), mic: store.get('mic', 5),
   };
+  const SHOW = () => cfg.mode === 'show';
 
   const WAKE = /(バターちゃん|ばたーちゃん|バタちゃん|ばたちゃん|バターさん|バター|ばたー)/;
   const CHI = /(チーちゃん|ちーちゃん|チーチャン|チイちゃん|ちいちゃん|チーズちゃん)/;
@@ -616,6 +631,7 @@ body.big form.typed { display: none; }
 
   // ===== 状態 =====
   const LABEL = { idle: 'まってるよ', listening: 'きいてるよ', thinking: 'かんがえ中', speaking: 'おはなし中', sleeping: 'ねてるよ' };
+  const LABEL_SHOW = { idle: 'まってるよ', listening: 'みんなといっしょ', thinking: 'ちょっとまってね', speaking: 'おはなし中', sleeping: 'ねてるよ' };
   let sleepTimer = null;
   function armSleep() {
     clearTimeout(sleepTimer);
@@ -625,7 +641,7 @@ body.big form.typed { display: none; }
   function setState(s) {
     const prev = state;
     state = s;
-    chip.dataset.s = s; chip.textContent = LABEL[s];
+    chip.dataset.s = s; chip.textContent = (SHOW() ? LABEL_SHOW : LABEL)[s];
     butter.classList.toggle('listening', s === 'listening' && Date.now() < convoUntil);
     butter.classList.toggle('thinking', s === 'thinking');
     butter.classList.toggle('talking', s === 'speaking');
@@ -635,7 +651,7 @@ body.big form.typed { display: none; }
     if (s === 'sleeping' || s === 'thinking' || prev === 'sleeping' || (prev === 'thinking' && s !== 'speaking')) setEmo(baseEmo());
   }
   setInterval(() => {
-    if (state !== 'speaking') return;
+    if (state !== 'speaking' || SHOW()) return;
     const r = Math.random();
     butter.classList.toggle('talking', r > 0.18);
     butter.classList.toggle('mouth-small', r < 0.5);
@@ -658,7 +674,8 @@ body.big form.typed { display: none; }
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   let rec = null, recOn = false;
   function startRec() {
-    if (!SR || recOn || !started || state === 'speaking' || state === 'thinking') return;
+    if (!SR || recOn || !started) return;
+    if (!SHOW() && (state === 'speaking' || state === 'thinking')) return;
     rec = new SR();
     rec.lang = 'ja-JP'; rec.continuous = true; rec.interimResults = true;
     rec.onresult = ev => {
@@ -677,11 +694,12 @@ body.big form.typed { display: none; }
       }
     };
     rec.onend = () => { recOn = false; if (started) setTimeout(startRec, 300); };
-    try { rec.start(); recOn = true; if (state !== 'sleeping') setState('listening'); } catch (e) { recOn = false; }
+    try { rec.start(); recOn = true; if (state !== 'sleeping' && state !== 'speaking') setState('listening'); } catch (e) { recOn = false; }
   }
-  function stopRec() { if (rec) { rec.onend = null; try { rec.abort(); } catch (e) {} } recOn = false; }
+  function stopRec() { if (SHOW()) return; if (rec) { rec.onend = null; try { rec.abort(); } catch (e) {} } recOn = false; }
 
   function showPartial(text) {
+    if (SHOW()) { hint.textContent = '聞こえたこと：' + text.slice(-40); return; }
     const called = WAKE.test(text) || CHI.test(text);
     if (state === 'sleeping' && !called) return;
     if (cfg.wake === 'wake' && Date.now() > convoUntil && !called) return;
@@ -690,8 +708,33 @@ body.big form.typed { display: none; }
   }
   function clearPartial() { if (partialEl) { partialEl.parentElement.remove(); partialEl = null; } }
 
+  // 見た目モード：聞こえた言葉で表情を変える（バターちゃんの声も子どもの声も）
+  const MOODS = [
+    ['laugh', /(あはは|ははは|わはは|おもしろい|面白い|ウケる|うける)/],
+    ['excited', /(すごい|やったー|やった|わーい|最高|さいこう|おめでとう|たのしい|楽しい|じょうず|上手)/],
+    ['surprise', /(えっ|ええ|びっくり|なんと|ほんと|本当に)/],
+    ['sad', /(ごめん|かなしい|悲しい|ざんねん|残念|さみしい|寂しい|いたい|痛い)/],
+    ['shy', /(ありがとう|てれる|照れ|かわいい|大好き)/],
+    ['think', /(うーん|かんがえ|考え|なんだろう|どうしよう|クイズ|問題)/],
+  ];
+  let lastTouch = 0;
+  function onHeardShow(text) {
+    hint.textContent = '聞こえたこと：' + text.slice(-40);
+    if (state === 'sleeping') setState('listening');
+    armSleep();
+    if (Date.now() - lastTouch > 5 * 60 * 1000 && cfg.url && cfg.pass) {
+      lastTouch = Date.now();
+      callGas({ action: 'touch' }).then(r => { if (r && r.state) applyPet(r.state, true); }).catch(() => {});
+    }
+    if (CHI.test(text) && TRICKS.some(t => t.re.test(text))) { handleChi(text); return; }
+    if (WAKE.test(text) && /(ガチャ|がちゃ)/.test(text)) { doGacha(text); return; }
+    const m = MOODS.find(([, re]) => re.test(text));
+    if (m) setEmo(m[0], 6000);
+  }
+
   function onHeard(text) {
     clearPartial();
+    if (SHOW()) { onHeardShow(text); return; }
     const called = WAKE.test(text);
     const dog = CHI.test(text);
     if (dog && !called) { if (state === 'sleeping') setState('listening'); handleChi(text); return; }
@@ -752,6 +795,7 @@ body.big form.typed { display: none; }
       || vs.find(v => /Google/.test(v.name)) || vs[0] || null;
   }
   function speak(text, mood) {
+    if (SHOW()) { setEmo(mood || 'smile', 6000); if (state === 'thinking') setState('listening'); startRec(); return; }
     if (!text) { setState('idle'); startRec(); return; }
     stopRec();
     speechSynthesis.cancel();
@@ -775,9 +819,48 @@ body.big form.typed { display: none; }
     });
   }
 
+  // ===== 見た目モード：マイクの音で口を動かす =====
+  let micStream = null, analyser = null, loud = 0, quiet = 0;
+  async function startMic() {
+    if (micStream || !navigator.mediaDevices) return;
+    try {
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: true, autoGainControl: false } });
+      const ac = new (window.AudioContext || window.webkitAudioContext)();
+      const src = ac.createMediaStreamSource(micStream);
+      analyser = ac.createAnalyser(); analyser.fftSize = 512;
+      src.connect(analyser);
+      micLoop();
+    } catch (e) {
+      hint.textContent = 'マイクが使えません。アドレスバーの鍵マークから、マイクを「許可」にしてください。';
+    }
+  }
+  function micLoop() {
+    const buf = new Uint8Array(analyser.fftSize);
+    const tick = () => {
+      if (!SHOW()) { butter.classList.remove('talking'); requestAnimationFrame(tick); return; }
+      analyser.getByteTimeDomainData(buf);
+      let sum = 0;
+      for (let i = 0; i < buf.length; i++) { const v = (buf[i] - 128) / 128; sum += v * v; }
+      const rms = Math.sqrt(sum / buf.length);
+      const th = 0.11 - Number(cfg.mic || 5) * 0.009;       // びんかんさ 1〜10
+      if (rms > th) { loud++; quiet = 0; } else { quiet++; loud = 0; }
+      const talking = loud > 3 || (state === 'speaking' && quiet < 18);
+      if (talking) {
+        if (state !== 'speaking') { if (state === 'sleeping' && loud < 60) { requestAnimationFrame(tick); return; } setState('speaking'); }
+        butter.classList.toggle('talking', rms > th * 0.8);
+        butter.classList.toggle('mouth-small', rms < th * 1.8);
+      } else if (state === 'speaking') {
+        butter.classList.remove('talking', 'mouth-small');
+        setState('listening');
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+
   // ===== LINE の「バターちゃん 〇〇」と、様子の更新 =====
   function announce(text) {
-    if (state === 'speaking' || state === 'thinking') { sayQueue.push(text); return; }
+    if (!SHOW() && (state === 'speaking' || state === 'thinking')) { sayQueue.push(text); return; }
     addBubble('バターちゃん', text, 'her');
     history.push({ role: 'user', content: '（パパかママからのお知らせを読み上げて）' }, { role: 'assistant', content: text });
     speak(text, 'excited');
@@ -813,6 +896,7 @@ body.big form.typed { display: none; }
     $('rateRange').value = cfg.rate; $('rateVal').textContent = Number(cfg.rate).toFixed(1);
     $('pitchRange').value = cfg.pitch; $('pitchVal').textContent = Number(cfg.pitch).toFixed(1);
     $('sleepSel').value = String(cfg.sleepAfter);
+    $('modeSel').value = cfg.mode; $('micRange').value = cfg.mic; $('micVal').textContent = cfg.mic;
     fillVoices();
     $('settings').hidden = false;
   }
@@ -826,6 +910,7 @@ body.big form.typed { display: none; }
   }
   speechSynthesis.onvoiceschanged = () => { if (!$('settings').hidden) fillVoices(); };
   $('rateRange').addEventListener('input', e => { $('rateVal').textContent = Number(e.target.value).toFixed(1); });
+  $('micRange').addEventListener('input', e => { $('micVal').textContent = e.target.value; });
   $('pitchRange').addEventListener('input', e => { $('pitchVal').textContent = Number(e.target.value).toFixed(1); });
   $('testVoice').addEventListener('click', () => {
     speechSynthesis.cancel();
@@ -838,9 +923,11 @@ body.big form.typed { display: none; }
     cfg.url = $('gasUrl').value.trim(); cfg.pass = $('pass').value; cfg.wake = $('wakeSel').value;
     cfg.voice = $('voiceSel').value; cfg.rate = Number($('rateRange').value); cfg.pitch = Number($('pitchRange').value);
     cfg.sleepAfter = Number($('sleepSel').value);
+    cfg.mode = $('modeSel').value; cfg.mic = Number($('micRange').value);
+    if (SHOW() && started) startMic();
     Object.keys(cfg).forEach(k => store.set(k, cfg[k]));
     $('settings').hidden = true;
-    hint.textContent = cfg.wake === 'wake' ? '「バターちゃん」と呼んでから話しかけてね。' : '話しかけると答えるよ。';
+    setHint();
     armSleep();
     poll();
   });
@@ -857,6 +944,7 @@ body.big form.typed { display: none; }
     speechSynthesis.speak(new SpeechSynthesisUtterance(''));
     if (!cfg.url || !cfg.pass) openSettings();
     startRec();
+    if (SHOW()) { startMic(); setEmo('excited', 4000); bark(); try { navigator.wakeLock && navigator.wakeLock.request('screen').catch(() => {}); } catch (e) {} return; }
     const m = pet ? pet.melt : 0;
     const hello = m >= 3 ? 'うう…とけちゃったよ〜。お話しして、ひんやりさせて！'
       : m >= 2 ? 'あつくて、とろとろだよ〜。お話ししてくれたら元気になるよ。'
@@ -877,7 +965,11 @@ body.big form.typed { display: none; }
   document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) document.body.classList.remove('big'); });
   document.addEventListener('visibilitychange', () => { if (!document.hidden && started) { startRec(); poll(); } });
 
-  hint.textContent = cfg.wake === 'wake' ? '「バターちゃん」と呼んでから話しかけてね。' : '話しかけると答えるよ。';
+  function setHint() {
+    hint.textContent = SHOW() ? 'お話しはClaudeアプリのバターちゃんと。「チーちゃん、おて」「バターちゃん、ガチャ回して」もできるよ。'
+      : cfg.wake === 'wake' ? '「バターちゃん」と呼んでから話しかけてね。' : '話しかけると答えるよ。';
+  }
+  setHint();
   addBubble('バターちゃん', 'こんにちは！バターちゃんだよ。となりは柴犬のチーちゃん！', 'her');
   setState('idle');
   applyPet(null, false);
