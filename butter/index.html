@@ -51,6 +51,9 @@ h1 { font-family: var(--display); font-weight: 800; font-size: 22px; margin: 0; 
 .stage { min-height: 0; display: grid; place-items: center; }
 .stage svg { width: 100%; max-width: 760px; max-height: 100%; aspect-ratio: 720 / 420; }
 [hidden] { display: none !important; }
+.lvlbox { position: relative; height: 12px; border-radius: 6px; background: var(--tile); overflow: hidden; }
+.lvlbox i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: #4caf50; }
+.lvlbox b { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--mic-live); left: 50%; }
 
 /* ===== バターちゃん ===== */
 .butter { transform-origin: 250px 340px; transform-box: view-box; animation: sway 3.6s ease-in-out infinite; }
@@ -395,7 +398,8 @@ body.big form.typed { display: none; }
     <div class="field" id="micField">
       <label for="micRange">口の動きのびんかんさ <span id="micVal">5</span></label>
       <input id="micRange" type="range" min="1" max="10" step="1" value="5">
-      <p class="note">子どもの声でも口が動きすぎるときは小さく、バターちゃんの声で動かないときは大きく。</p>
+      <div class="lvlbox" aria-hidden="true"><i id="lvl"></i><b id="lvlTh"></b></div>
+      <p class="note">緑のバーがいまの音の大きさ、線が「口が動く」さかいめ。バターちゃんの声で線をこえるように合わせます。子どもの声でも動きすぎるときは小さく、動かないときは大きく。</p>
     </div>
     <div class="field">
       <label for="wakeSel">話しかけ方</label>
@@ -824,8 +828,10 @@ body.big form.typed { display: none; }
   async function startMic() {
     if (micStream || !navigator.mediaDevices) return;
     try {
-      micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: true, autoGainControl: false } });
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true } });
       const ac = new (window.AudioContext || window.webkitAudioContext)();
+      if (ac.state === 'suspended') ac.resume().catch(() => {});
+      document.addEventListener('click', () => { if (ac.state === 'suspended') ac.resume().catch(() => {}); });
       const src = ac.createMediaStreamSource(micStream);
       analyser = ac.createAnalyser(); analyser.fftSize = 512;
       src.connect(analyser);
@@ -834,28 +840,33 @@ body.big form.typed { display: none; }
       hint.textContent = 'マイクが使えません。アドレスバーの鍵マークから、マイクを「許可」にしてください。';
     }
   }
+  let floor = 0.01;
   function micLoop() {
-    const buf = new Uint8Array(analyser.fftSize);
-    const tick = () => {
-      if (!SHOW()) { butter.classList.remove('talking'); requestAnimationFrame(tick); return; }
-      analyser.getByteTimeDomainData(buf);
+    const buf = new Float32Array(analyser.fftSize);
+    const meter = $('lvl'), meterTh = $('lvlTh');
+    // 画面がうしろに回っても止まらないように setInterval（50ミリ秒ごと）
+    setInterval(() => {
+      if (!SHOW()) { butter.classList.remove('talking'); return; }
+      analyser.getFloatTimeDomainData(buf);
       let sum = 0;
-      for (let i = 0; i < buf.length; i++) { const v = (buf[i] - 128) / 128; sum += v * v; }
+      for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
       const rms = Math.sqrt(sum / buf.length);
-      const th = 0.11 - Number(cfg.mic || 5) * 0.009;       // びんかんさ 1〜10
+      // まわりの静かなときの音（床）をおぼえて、それより大きい音を「声」とみなす
+      floor = rms < floor ? floor * 0.8 + rms * 0.2 : floor * 0.998 + rms * 0.002;
+      const sens = Number(cfg.mic || 5);                          // びんかんさ 1〜10
+      const th = Math.max(floor * (4 - sens * 0.25), 0.002 + (10 - sens) * 0.0025);
+      if (meter) { meter.style.width = Math.min(100, rms / 0.15 * 100) + '%'; meterTh.style.left = Math.min(100, th / 0.15 * 100) + '%'; }
       if (rms > th) { loud++; quiet = 0; } else { quiet++; loud = 0; }
-      const talking = loud > 3 || (state === 'speaking' && quiet < 18);
+      const talking = loud > 2 || (state === 'speaking' && quiet < 8);
       if (talking) {
-        if (state !== 'speaking') { if (state === 'sleeping' && loud < 60) { requestAnimationFrame(tick); return; } setState('speaking'); }
-        butter.classList.toggle('talking', rms > th * 0.8);
-        butter.classList.toggle('mouth-small', rms < th * 1.8);
+        if (state !== 'speaking') { if (state === 'sleeping' && loud < 20) return; setState('speaking'); }
+        butter.classList.toggle('talking', rms > th);
+        butter.classList.toggle('mouth-small', rms < th * 2.2);
       } else if (state === 'speaking') {
         butter.classList.remove('talking', 'mouth-small');
         setState('listening');
       }
-      requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
+    }, 50);
   }
 
   // ===== LINE の「バターちゃん 〇〇」と、様子の更新 =====
