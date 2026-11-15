@@ -85,6 +85,13 @@
   - `バターちゃんのおうち日記.txt`：会話モードでの会話の要約（GAS）
   - どちらのキャラクターも、話す前に様子と最近の日記を読む
 
+## LINEミニアプリ版（スマホ1台）
+- エンドポイントURL：このページに `?liff=1&g=<GASのデプロイID>&liffId=<LIFF ID>` をつけたもの
+- 本人確認：LIFFのIDトークンをGASが `https://api.line.me/oauth2/v2.1/verify` で確かめ、メンバー表にいる人だけ使える（合言葉なし）
+  - LINEログインのチャネルは、ボットと**同じプロバイダー**に作る（ユーザーIDがそろう）
+- 話す：「おして話す」→ 16kHzの音をGASへ → Google Speech-to-Text → Claude → Google Text-to-Speech → ページで再生（自分で鳴らす声なので口がずれない）
+- GASの設定：`butterGoogleKeySetup`（GOOGLE_SPEECH_KEY）、`butterLiffSetup`（LIFF_CHANNEL_ID）、声は `TTS_VOICE`（`butterVoiceList` で一覧）
+
 ## バターちゃんの世界（子どもたちが決めた設定）
 `butter.gs` の `BUTTER_PERSONA` に入れてあり、毎回同じに答える。
 
@@ -130,4 +137,5 @@
 - 2026-11-15 表情7種・溶ける4段階・柴犬チーちゃんと芸・Edge Nanami声
 - 2026-11-15 進化・ガチャと着せかえ・子どもたちの設定・SwitchBot下準備
 - 2026-11-15 記憶：おうち日記とおさんぽ日記。チーちゃんはお出かけ担当（Claudeアプリ）
+- 2026-11-15 ガチャのドキドキ演出、LINEミニアプリ版
 - 2026-11-15 見た目モード（話すのはClaudeアプリ、ページは口・表情・芸・ガチャ）。様子ファイル
