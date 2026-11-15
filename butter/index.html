@@ -125,6 +125,20 @@ h1 { font-family: var(--display); font-weight: 800; font-size: 22px; margin: 0; 
 .icard .r.R { background: #d9483b; } .icard .r.SR { background: linear-gradient(90deg, #f5c518, #ff8a3d); } .icard .r.UFO { background: #7b5cff; }
 .icard.on { border-color: var(--butter-deep); box-shadow: 0 0 0 3px color-mix(in srgb, var(--butter) 60%, transparent); }
 .icard.on::after { content: 'つけてる'; position: absolute; right: 6px; top: 6px; font-size: 11px; font-weight: 800; padding: 1px 7px; border-radius: 999px; background: var(--butter); color: #2b2310; }
+.pick { position: fixed; inset: 0; z-index: 55; display: grid; place-items: center; padding: 16px; background: rgba(20,16,40,.6); backdrop-filter: blur(10px); }
+.pick .panel { width: min(100%, 640px); border-radius: 28px; padding: 22px; background: rgba(255,255,255,.95); display: grid; gap: 14px; text-align: center; }
+.pick h2 { margin: 0; font-family: var(--display); font-size: clamp(22px, 3.4vw, 32px); }
+.pickgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; }
+.pickgrid button { font-family: var(--display); font-weight: 800; font-size: clamp(20px, 3vw, 30px); padding: 18px 8px; border-radius: 22px; border: 0; color: #fff; cursor: pointer; display: grid; gap: 4px; }
+.pickgrid button small { font-size: 13px; font-weight: 700; opacity: .9; }
+.pickgrid button:nth-child(4n+1) { background: linear-gradient(135deg, #4c8ff0, #22d3ee); }
+.pickgrid button:nth-child(4n+2) { background: linear-gradient(135deg, #ff8a3d, #ffd23f); }
+.pickgrid button:nth-child(4n+3) { background: linear-gradient(135deg, #ff5fa2, #b197fc); }
+.pickgrid button:nth-child(4n+4) { background: linear-gradient(135deg, #3fbf7f, #8ce99a); }
+.invtabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.invtabs button { font-family: var(--display); font-weight: 800; font-size: 14px; padding: 8px 14px; border-radius: 999px; border: 2px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; }
+.invtabs button.sel { background: var(--butter); border-color: var(--butter-deep); color: #2b2310; }
+.icard .who { position: absolute; right: 6px; bottom: 34%; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 999px; background: #2b2310; color: #fff; }
 .icard.lock { cursor: default; opacity: .45; filter: grayscale(1); }
 .icard.lock svg { filter: brightness(0) opacity(.25); }
 .liffmode .talkbtn { display: grid; place-items: center; justify-self: center; position: relative; width: 112px; height: 112px; border-radius: 50%;
@@ -578,12 +592,20 @@ body.big form.typed { display: none; }
       <div class="ucine">ド キ ド キ …</div>
       <div class="uflash" id="uFlash"></div>
       <div class="umsg" id="uMsg"></div>
-      <div class="ucard" id="uCard"><div class="face"><span class="tag">GET!</span><div id="uCardArt"></div><span class="nm" id="uCardName"></span><span class="sub">もちものに入ったよ</span></div></div>
+      <div class="ucard" id="uCard"><div class="face"><span class="tag">GET!</span><div id="uCardArt"></div><span class="nm" id="uCardName"></span><span class="sub" id="uCardSub">もちものに入ったよ</span></div></div>
+    </div>
+    <div class="pick" id="pick" hidden>
+      <div class="panel" role="dialog" aria-modal="true" aria-labelledby="pickTitle">
+        <h2 id="pickTitle">だれがあそぶ？</h2>
+        <div class="pickgrid" id="pickGrid"></div>
+        <button class="btn" id="pickCancel" type="button">やめる</button>
+      </div>
     </div>
     <div class="inv" id="inv" hidden>
       <div class="panel" role="dialog" aria-modal="true" aria-labelledby="invTitle">
         <h2 id="invTitle">もちもの <button class="btn" id="invClose" type="button">とじる</button></h2>
-        <p class="note">タップでつける／はずす。ガチャとUFOキャッチャーで集めよう。</p>
+        <div class="invtabs" id="invTabs"></div>
+        <p class="note" id="invNote">タップでバターちゃんたちに貸してあげる／返してもらう。ガチャとUFOキャッチャーで集めよう。</p>
         <h3>きせかえ（ガチャ）</h3><div class="invgrid" id="invGacha"></div>
         <h3>かざり（UFOキャッチャー）</h3><div class="invgrid" id="invUfo"></div>
       </div>
@@ -821,12 +843,22 @@ body.big form.typed { display: none; }
     $('decor').innerHTML = g.equip && g.equip.decor ? prizeSvg(g.equip.decor, 1.3) : '';
     $('careNote').textContent = 'れんぞく' + ev.streak + '日・ガチャ券' + g.tickets + '枚';
     $('evoNote').textContent = 'いまの姿：' + ev.name + '。' + (ev.next ? 'あと' + ev.toNext + '日つづけて報連相すると「' + ev.next + '」に進化！' : 'さいこうの姿！') +
-      (ev.doneToday ? '' : '今日の報告がまだだよ。') + ' 着せかえ ' + g.owned + '/' + g.total + '。「ガチャ回して」でガチャ（あと' + g.toNextTicket + 'ptで次の券）。';
+      (ev.doneToday ? '' : '今日の報告がまだだよ。') + ' 着せかえ ' + g.owned + '/' + g.total + '。' + lentText(g);
+  }
+  function lentText(g) {
+    const eq = g.equip || {}, ow = g.owner || {};
+    const list = Object.keys(eq).map(k => { const it = ITEMS.find(x => x.id === eq[k]) || PRIZES.find(x => x.id === eq[k]); return it ? (ow[k] ? ow[k] + 'の' : '') + it.name : ''; }).filter(Boolean);
+    return list.length ? '貸してもらっているもの：' + list.join('、') + '。' : '「ガチャ回して」でガチャ。';
   }
   let gachaBusy = false;
-  async function doGacha(said) {
+  async function doGacha(said, whoIn) {
     if (gachaBusy) return;
     addBubble('あなた', said || 'ガチャ回して', 'me');
+    gachaBusy = true;
+    const who = whoIn || nameIn(said) || await choosePlayer('ガチャ');
+    gachaBusy = false;
+    if (!who && playerNames().length) return;
+    $('gachaPop').querySelector('.gtitle').textContent = who ? who + 'のガチャ' : 'GACHA ガチャ';
     if (!canCall()) { speak('設定でGASのURLと合言葉を入れてね。', 'sad'); return; }
     gachaBusy = true;
     stopRec(); setState('thinking');
@@ -838,7 +870,7 @@ body.big form.typed { display: none; }
     const gWait = sleep(1100);
     let r;
     let why = '';
-    try { r = await callGas({ action: 'gacha' }); } catch (e) { r = null; why = String(e.message || e); }
+    try { r = await callGas({ action: 'gacha', who: who }); } catch (e) { r = null; why = String(e.message || e); }
     gachaBusy = false;
     if (!r || !r.ok) {
       why = why || (r && (r.detail || r.error)) || 'unknown';
@@ -854,7 +886,7 @@ body.big form.typed { display: none; }
     const g = r.gacha || {};
     await gWait;                                   // ハンドルが回りおわるまで待つ
     if (g.none) {
-      const t = 'ガチャ券がまだないよ。あと' + g.toNextTicket + 'ポイントでもらえるよ。宿題や日記をLINEで報告してね！';
+      const t = (who ? who + 'の' : '') + 'ガチャ券がまだないよ。あと' + g.toNextTicket + 'ポイントでもらえるよ。宿題や日記をLINEで報告してね！';
       pop.classList.remove('turning'); pop.classList.add('noticket');
       $('gachaRare').textContent = 'ガチャ券がないよ';
       $('gachaText').textContent = 'あと' + g.toNextTicket + 'ptで1枚';
@@ -904,7 +936,7 @@ body.big form.typed { display: none; }
     if (rare !== 'N') confetti(rare === 'SR' ? 180 : 80);
     applyPet(r.state, true);
     butter.classList.remove('cooled'); void butter.getBBox(); butter.classList.add('cooled');
-    const t = g.dup ? it.name + 'がまた出たよ！おそろいだね。' : 'やったー！' + it.name + 'が出たよ！' + (rare === 'SR' ? 'スーパーレアだよ！' : 'さっそくつけてみたよ。');
+    const t = (who ? who + 'の' : '') + (g.dup ? it.name + 'がまた出たよ！' : it.name + 'が出たよ！' + (rare === 'SR' ? 'スーパーレアだよ！' : '')) + 'さっそくバターちゃんに貸してくれたね。';
     addBubble('バターちゃん', t, 'her');
     speak(t, rare === 'SR' ? 'surprise' : 'excited');
     setTimeout(() => { pop.hidden = true; cap.classList.remove('glow'); }, rare === 'SR' ? 7000 : 5500);
@@ -1001,6 +1033,27 @@ body.big form.typed { display: none; }
     requestAnimationFrame(step);
   }
 
+  // ===== だれが遊ぶか（一人ずつのおさいふともちもの） =====
+  let meName = '';                               // LINEミニアプリで開いた人
+  const players = () => (pet && pet.players) || [];
+  const playerNames = () => players().map(p => p.name);
+  function nameIn(text) { return playerNames().find(n => n && String(text || '').indexOf(n) >= 0) || ''; }
+  let pickRes = null;
+  function choosePlayer(what) {
+    const known = playerNames();
+    if (meName && known.indexOf(meName) >= 0) return Promise.resolve(meName);
+    if (!known.length) return Promise.resolve('');
+    $('pickTitle').textContent = 'だれの' + what + '？';
+    $('pickGrid').innerHTML = players().filter(p => p.name !== 'みんな' || p.owned.length || p.prizes.length).map(p =>
+      '<button type="button" data-n="' + p.name + '">' + p.name + '<small>' + p.coins + 'pt' + (what === 'UFOキャッチャー' && p.ufoFree ? '・おためしOK' : '') + '</small></button>').join('');
+    $('pick').hidden = false;
+    sfx.notes([659, 784], 0.08, 'triangle', 0.1);
+    return new Promise(res => { pickRes = n => { pickRes = null; $('pick').hidden = true; res(n); }; });
+  }
+  $('pickGrid').addEventListener('click', ev => { const b = ev.target.closest('button'); if (b && pickRes) pickRes(b.dataset.n); });
+  $('pickCancel').addEventListener('click', () => { if (pickRes) pickRes(''); });
+  function pickHear(text) { if (!pickRes) return false; const n = nameIn(text); if (n) { pickRes(n); return true; } if (/(やめる|やめ)/.test(text)) { pickRes(''); return true; } return true; }
+
   // ===== アイテムの一覧と絵 =====
   const ITEMS = [
     { id: 'straw', name: 'むぎわらぼうし', slot: 'head', rare: 'N' }, { id: 'chef', name: 'コックさんのぼうし', slot: 'head', rare: 'R' },
@@ -1023,22 +1076,32 @@ body.big form.typed { display: none; }
     drawItemPreview(id, box);
     return tmp.innerHTML;
   }
-  function openInv() {
-    const g = (pet && pet.gacha) || {}, u = (pet && pet.ufo) || {};
-    const owned = g.ownedIds || [], prizes = u.prizeIds || [], on = Object.values(g.equip || {});
-    const card = (id, name, badge, has) => '<button class="icard' + (has ? '' : ' lock') + (on.indexOf(id) >= 0 ? ' on' : '') + '" data-id="' + id + '" type="button"' + (has ? '' : ' disabled') + '>'
-      + '<span class="r ' + badge + '">' + (badge === 'UFO' ? 'UFO' : badge) + '</span>' + itemArt(id) + '<span class="n">' + (has ? name : '？？？') + '</span></button>';
-    $('invGacha').innerHTML = ITEMS.map(it => card(it.id, it.name, it.rare, owned.indexOf(it.id) >= 0)).join('');
-    $('invUfo').innerHTML = PRIZES.map(p => card(p.id, p.name, 'UFO', prizes.indexOf(p.id) >= 0)).join('');
+  let invWho = '';
+  function openInv(who) {
+    const ps = players().filter(p => p.name !== 'みんな' || p.owned.length || p.prizes.length);
+    invWho = who || invWho || (meName && playerNames().indexOf(meName) >= 0 ? meName : (ps[0] && ps[0].name) || '');
+    const me = ps.find(p => p.name === invWho) || { owned: [], prizes: [], coins: 0 };
+    const g = (pet && pet.gacha) || {}, eq = g.equip || {}, ow = g.owner || {};
+    const onBy = id => { const slot = Object.keys(eq).find(k => eq[k] === id); return slot ? (ow[slot] || '') : null; };
+    $('invTabs').innerHTML = ps.map(p => '<button type="button" class="' + (p.name === invWho ? 'sel' : '') + '" data-who="' + p.name + '">' + p.name + '（' + (p.owned.length + p.prizes.length) + '）</button>').join('');
+    $('invNote').textContent = invWho + 'のおさいふ：' + me.coins + 'pt（ガチャ10pt・UFO5pt）。タップでバターちゃんたちに貸す／返してもらう。';
+    const card = (id, name, badge, has) => {
+      const by = onBy(id), mine = by !== null && by === invWho;
+      return '<button class="icard' + (has ? '' : ' lock') + (mine ? ' on' : '') + '" data-id="' + id + '" type="button"' + (has ? '' : ' disabled') + '>'
+        + '<span class="r ' + badge + '">' + badge + '</span>' + itemArt(id) + '<span class="n">' + (has ? name : '？？？') + '</span></button>';
+    };
+    $('invGacha').innerHTML = ITEMS.map(it => card(it.id, it.name, it.rare, me.owned.indexOf(it.id) >= 0)).join('');
+    $('invUfo').innerHTML = PRIZES.map(p => card(p.id, p.name, 'UFO', me.prizes.indexOf(p.id) >= 0)).join('');
     $('inv').hidden = false;
   }
+  $('invTabs').addEventListener('click', ev => { const b = ev.target.closest('button'); if (b) openInv(b.dataset.who); });
   $('inv').addEventListener('click', async ev => {
     const b = ev.target.closest('.icard');
     if (ev.target === $('inv')) { $('inv').hidden = true; return; }
     if (!b || b.disabled) return;
     const id = b.dataset.id, turnOn = !b.classList.contains('on');
     b.style.opacity = '.6';
-    try { const r = await callGas({ action: 'equip', id, on: turnOn }); if (r && r.state) applyPet(r.state, true); } catch (e) {}
+    try { const r = await callGas({ action: 'equip', id, on: turnOn, who: invWho }); if (r && r.state) applyPet(r.state, true); } catch (e) {}
     sfx.notes(turnOn ? [784, 1047] : [523, 392], 0.08, 'triangle', 0.12);
     openInv();
   });
@@ -1091,14 +1154,19 @@ body.big form.typed { display: none; }
     clearTimeout(el._t); el._t = setTimeout(() => { el.style.opacity = '0'; }, 4500);
   }
   let ufoBusy = false;
-  async function doUfo(said) {
+  async function doUfo(said, whoIn) {
     if (ufoBusy || U.on) return;
     addBubble('あなた', said || 'UFOキャッチャー', 'me');
-    toast('UFOキャッチャーをじゅんびちゅう…');
+    ufoBusy = true;
+    const who = whoIn || nameIn(said) || await choosePlayer('UFOキャッチャー');
+    ufoBusy = false;
+    if (!who && playerNames().length) return;
+    U.who = who;
+    toast((who ? who + 'の' : '') + 'UFOキャッチャーをじゅんびちゅう…');
     if (!canCall()) { speak('設定でGASのURLと合言葉を入れてね。', 'sad'); return; }
     ufoBusy = true;
     let r = null, why = '';
-    try { r = await callGas({ action: 'ufo' }); } catch (e) { why = String(e.message || e); }
+    try { r = await callGas({ action: 'ufo', who: who }); } catch (e) { why = String(e.message || e); }
     ufoBusy = false;
     if (!r || !r.ok) {
       const w = why || (r && (r.detail || r.error)) || 'unknown';
@@ -1106,14 +1174,14 @@ body.big form.typed { display: none; }
       addBubble('バターちゃん', 'UFOキャッチャーがうごかなかったよ。（パパへ：原因 ' + w + '）', 'her'); speak('UFOキャッチャーがうごかなかったよ。', 'sad'); return;
     }
     if (r.state) applyPet(r.state, true);
-    if (r.ufo.none) { toast('UFOキャッチャーは1回5pt。あと' + r.ufo.need + 'ptで遊べるよ'); const t = 'UFOキャッチャーは1回5ポイントだよ。あと' + r.ufo.need + 'ポイントで遊べるよ。今日のおためしはもう使ったね。'; addBubble('バターちゃん', t, 'her'); speak(t, 'shy'); return; }
+    if (r.ufo.none) { toast((who ? who + 'は' : '') + 'あと' + r.ufo.need + 'ptで遊べるよ（1回5pt）'); const t = 'UFOキャッチャーは1回5ポイントだよ。あと' + r.ufo.need + 'ポイントで遊べるよ。今日のおためしはもう使ったね。'; addBubble('バターちゃん', t, 'her'); speak(t, 'shy'); return; }
     // 景品を4つならべる
     const list = r.ufo.prizes.slice().sort(() => Math.random() - .5).slice(0, 4);
     const xs = [130, 190, 255, 330].map(x => x + Math.round(Math.random() * 16 - 8));
     U.prizes = list.map((p, i) => ({ id: p.id, name: p.name, x: xs[i] }));
     Object.assign(U, { on: true, x: 200, y: UTOP, dir: 1, phase: 'move', held: null });
     $('ufoPop').hidden = false;
-    $('uInfo').textContent = (r.ufo.free ? '今日のおためし（無料）！ ' : '5ptつかったよ。 ') + '「ストップ」でおろす・「みぎ」「ひだり」';
+    $('uInfo').textContent = (who ? who + '　' : '') + (r.ufo.free ? '今日のおためし（無料）！ ' : '5ptつかったよ。 ') + '「ストップ」でおろす・「みぎ」「ひだり」';
     stopRec(); startRec();
     sfx.notes([523, 659, 784, 659, 784, 1047], 0.08, 'square', 0.06);
     setEmo('excited');
@@ -1166,18 +1234,19 @@ body.big form.typed { display: none; }
       await sleep(250); U.held = null; uDraw();
       uFlash(); uShake(); sfx.pop(); sfx.fanfare('SR'); confettiIn($('ufoPop'), 160); uMsg('GET!');
       setEmo('excited', 5000);
-      let rr = null; try { rr = await callGas({ action: 'ufo_win', prize: got.id }); } catch (e) {}
+      let rr = null; try { rr = await callGas({ action: 'ufo_win', prize: got.id, who: U.who }); } catch (e) {}
       if (rr && rr.state) applyPet(rr.state, true);
       // ホロのカードで見せる
       await sleep(900);
       $('uCardArt').innerHTML = itemArt(got.id);
       $('uCardName').textContent = got.name;
+      $('uCardSub').textContent = (U.who ? U.who + 'の' : '') + 'もちものに入ったよ';
       const card = $('uCard'); card.querySelector('.new') && card.querySelector('.new').remove();
       if (!(rr && rr.dup)) card.querySelector('.face').insertAdjacentHTML('afterbegin', '<span class="new">NEW!</span>');
       card.classList.remove('in'); void card.offsetWidth; card.classList.add('in');
       sfx.notes([1047, 1319, 1568, 2093], 0.07, 'sine', 0.1);
       await sleep(2200);
-      const t = (rr && rr.dup ? got.name + 'がまたとれたよ！' : 'やったー！' + got.name + 'をゲット！') + 'おへやに飾ったよ。';
+      const t = (U.who ? U.who + '、' : '') + (rr && rr.dup ? got.name + 'がまたとれたよ！' : 'やったー！' + got.name + 'をゲット！') + 'おへやに飾ったよ。';
       addBubble('バターちゃん', t, 'her'); speak(t, 'excited');
       await sleep(2600);
     } else {
@@ -1321,6 +1390,7 @@ body.big form.typed { display: none; }
   function stopRec() { if (SHOW()) return; if (rec) { rec.onend = null; try { rec.abort(); } catch (e) {} } recOn = false; }
 
   function showPartial(text) {
+    if (pickRes && nameIn(text)) { pickHear(text); return; }
     if (U.on && ufoHear(text, false)) return;
     if (SHOW()) { srHeard = Date.now(); srOK = true; mouthPulse(); if (!partialEl) partialEl = addBubble('聞こえてる…', '', 'me partial'); partialEl.textContent = text; return; }
     const called = WAKE.test(text) || CHI.test(text);
@@ -1360,6 +1430,7 @@ body.big form.typed { display: none; }
 
   function onHeard(text) {
     clearPartial();
+    if (pickRes && pickHear(text)) return;
     if (U.on && ufoHear(text, true)) return;
     if (SHOW()) { onHeardShow(text); return; }
     const called = WAKE.test(text);
@@ -1649,6 +1720,7 @@ body.big form.typed { display: none; }
     if (!canCall() || document.hidden) return;
     try {
       const r = await callGas({ action: 'poll' });
+      if (r && r.me) meName = r.me;
       if (r && r.state) applyPet(r.state, true);
       if (started) (r && r.say || []).forEach(t => announce(String(t)));
     } catch (e) {}
@@ -1670,7 +1742,7 @@ body.big form.typed { display: none; }
   });
   $('gachaBtn').addEventListener('click', () => doGacha('ガチャ回して'));
   $('ufoBtn').addEventListener('click', () => doUfo('UFOキャッチャー'));
-  $('invBtn').addEventListener('click', openInv);
+  $('invBtn').addEventListener('click', () => openInv());
   $('uLeft').addEventListener('click', () => uNudge(-28));
   $('uRight').addEventListener('click', () => uNudge(28));
   $('uDrop').addEventListener('click', () => uDrop());
