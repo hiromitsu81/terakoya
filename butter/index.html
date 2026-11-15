@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>バターちゃん</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* 台所のタイル壁の前に立つバターちゃん。ボタンなしで、呼びかけると答える */
+:root {
+  --bg: #e9f2f4; --tile: #dbe8ec; --ink: #23303b; --soft: #5b6b78; --card: #ffffff; --line: #c9d8de;
+  --butter: #f7d46a; --butter-deep: #e7b73e; --mic: #2f6fd0; --mic-live: #d9483b; --think: #8a63d2;
+  --display: "M PLUS Rounded 1c", "Hiragino Maru Gothic ProN", "Yu Gothic", sans-serif;
+  --body: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #131a22; --tile: #18212b; --ink: #e8eef2; --soft: #9fb0bd; --card: #1d2732; --line: #2c3a47;
+    --butter: #f2cd5c; --butter-deep: #d9a92f; --mic: #5b93ea; --mic-live: #ef6a5d; --think: #a989e6;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px;
+  background-image: linear-gradient(var(--tile) 2px, transparent 2px), linear-gradient(90deg, var(--tile) 2px, transparent 2px);
+  background-size: 48px 48px;
+}
+.app {
+  height: 100%; display: grid; grid-template-rows: auto 1fr auto; gap: 12px; max-width: 900px; margin: 0 auto;
+  padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+}
+header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+h1 { font-family: var(--display); font-weight: 800; font-size: 22px; margin: 0; }
+.chip {
+  font-family: var(--display); font-weight: 700; font-size: 13px; padding: 6px 12px; border-radius: 999px;
+  background: var(--card); border: 1px solid var(--line); color: var(--soft); white-space: nowrap;
+}
+.chip[data-s="listening"] { color: var(--mic-live); border-color: var(--mic-live); }
+.chip[data-s="thinking"] { color: var(--think); border-color: var(--think); }
+.chip[data-s="speaking"] { color: var(--butter-deep); border-color: var(--butter-deep); }
+.chip[data-s="sleeping"] { border-style: dashed; }
+.icon-btn { background: var(--card); border: 1px solid var(--line); color: var(--ink); border-radius: 12px; width: 40px; height: 40px; font-size: 18px; cursor: pointer; }
+.stage { min-height: 0; display: grid; place-items: center; }
+.stage svg, .stage video { width: min(100%, 440px); max-height: 100%; aspect-ratio: 1; object-fit: contain; }
+.stage video { border-radius: 24px; }
+[hidden] { display: none !important; }
+
+#mouthOpen { opacity: 0; transform-origin: 200px 255px; transform-box: view-box; }
+.talking #mouthOpen { opacity: 1; }
+.talking #mouthClosed { opacity: 0; }
+.mouth-small #mouthOpen { transform: scaleY(.45); }
+.eye { transform-origin: center; transform-box: fill-box; animation: blink 4.2s infinite; }
+@keyframes blink { 0%, 94%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.1); } }
+.pupil { transition: transform .3s; }
+.thinking .pupil { transform: translate(4px, -6px); }
+.body-wrap { transform-origin: 200px 330px; animation: sway 3.6s ease-in-out infinite; }
+@keyframes sway { 0%, 100% { transform: rotate(-1.5deg); } 50% { transform: rotate(1.5deg); } }
+.ring { opacity: 0; transform-origin: 200px 220px; transform-box: view-box; }
+.listening .ring { opacity: 1; animation: pulse 1.6s ease-out infinite; }
+@keyframes pulse { from { transform: scale(.94); opacity: .5; } to { transform: scale(1.1); opacity: 0; } }
+.dots { opacity: 0; } .thinking .dots { opacity: 1; }
+.dots circle { animation: dot 1s infinite; }
+.dots circle:nth-child(2) { animation-delay: .15s; } .dots circle:nth-child(3) { animation-delay: .3s; }
+@keyframes dot { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+.eye-closed, .zzz { opacity: 0; transition: opacity .4s; }
+.sleeping .eye { opacity: 0; }
+.sleeping .eye-closed, .sleeping .zzz { opacity: 1; }
+.sleeping .body-wrap { animation: breathe 4.8s ease-in-out infinite; }
+@keyframes breathe { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.025); } }
+.zzz text { font-family: var(--display); font-weight: 800; fill: var(--soft); animation: float 3.6s ease-in-out infinite; }
+.zzz text:nth-child(2) { animation-delay: 1.2s; } .zzz text:nth-child(3) { animation-delay: 2.4s; }
+@keyframes float { 0% { transform: translate(0,0); opacity: 0; } 30% { opacity: 1; } 100% { transform: translate(24px,-46px); opacity: 0; } }
+.sleeping { filter: saturate(.8) brightness(.94); }
+@media (prefers-reduced-motion: reduce) { .eye, .body-wrap, .ring, .dots circle, .zzz text { animation: none; } }
+
+.talk { display: grid; gap: 10px; }
+.bubbles { display: grid; gap: 8px; max-height: 30vh; overflow-y: auto; }
+.bubble { padding: 10px 14px; border-radius: 16px; line-height: 1.6; max-width: 90%; border: 1px solid var(--line); background: var(--card); overflow-wrap: anywhere; }
+.bubble.me { justify-self: end; border-bottom-right-radius: 4px; }
+.bubble.her { justify-self: start; border-bottom-left-radius: 4px; border-color: var(--butter-deep); }
+.bubble .who { display: block; font-family: var(--display); font-size: 12px; color: var(--soft); margin-bottom: 2px; }
+.bubble.partial { color: var(--soft); font-style: italic; }
+.hint { color: var(--soft); font-size: 14px; text-align: center; margin: 0; }
+form.typed { display: flex; gap: 8px; }
+form.typed input { flex: 1; min-width: 0; font: inherit; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
+.btn { font-family: var(--display); font-weight: 700; padding: 12px 16px; border-radius: 14px; cursor: pointer; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
+.btn.primary { background: var(--butter); border-color: var(--butter-deep); color: #2b2310; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid var(--butter-deep); outline-offset: 2px; }
+
+.overlay { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px; background: color-mix(in srgb, var(--bg) 88%, transparent); }
+.sheet { width: min(100%, 480px); background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 20px; display: grid; gap: 14px; max-height: 92vh; overflow-y: auto; }
+.sheet h2 { font-family: var(--display); margin: 0; font-size: 20px; }
+.field { display: grid; gap: 6px; }
+.field label { font-weight: 700; font-size: 13px; }
+.field input[type="text"], .field input[type="password"], .field input[type="url"], .field select { font: inherit; padding: 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); width: 100%; }
+.row { display: flex; gap: 8px; align-items: center; }
+.note { font-size: 12px; color: var(--soft); line-height: 1.6; margin: 0; }
+.err { color: var(--mic-live); font-size: 13px; margin: 0; }
+
+body.big .app { max-width: none; }
+body.big header { opacity: .6; }
+body.big .stage svg, body.big .stage video { width: min(100%, 64vh); }
+body.big .bubble { font-size: 26px; max-width: 80%; }
+body.big .bubble .who { font-size: 16px; }
+body.big .bubbles .bubble:not(:nth-last-child(-n+2)) { display: none; }
+body.big .hint { font-size: 18px; }
+body.big form.typed { display: none; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>バターちゃん</h1>
+    <div class="row">
+      <span class="chip" id="chip" data-s="idle" role="status" aria-live="polite">まってるよ</span>
+      <button class="icon-btn" id="bigBtn" aria-label="プロジェクター表示" title="プロジェクター表示">⛶</button>
+      <button class="icon-btn" id="openSettings" aria-label="設定" title="設定">⚙</button>
+    </div>
+  </header>
+
+  <div class="stage">
+    <svg id="char" viewBox="0 0 400 400" role="img" aria-label="バターちゃん">
+      <circle class="ring" cx="200" cy="220" r="150" fill="none" stroke="var(--mic-live)" stroke-width="6"/>
+      <g class="body-wrap">
+        <ellipse cx="200" cy="350" rx="140" ry="22" fill="var(--line)"/>
+        <ellipse cx="200" cy="330" rx="150" ry="30" fill="var(--card)" stroke="var(--line)" stroke-width="4"/>
+        <path d="M95 150 Q95 120 125 118 L285 112 Q312 112 312 140 L318 300 Q318 322 292 324 L112 326 Q88 326 88 302 Z" fill="var(--butter)" stroke="var(--butter-deep)" stroke-width="5"/>
+        <path d="M95 150 Q150 135 200 140 T312 140" fill="none" stroke="var(--butter-deep)" stroke-width="4" opacity=".55"/>
+        <path d="M118 128 Q140 122 160 124" stroke="#fff" stroke-width="8" stroke-linecap="round" opacity=".55"/>
+        <ellipse cx="135" cy="245" rx="20" ry="12" fill="#f39a8c" opacity=".55"/>
+        <ellipse cx="265" cy="245" rx="20" ry="12" fill="#f39a8c" opacity=".55"/>
+        <g class="eye"><ellipse cx="155" cy="205" rx="17" ry="21" fill="#2b2310"/><circle class="pupil" cx="160" cy="198" r="6" fill="#fff"/></g>
+        <g class="eye"><ellipse cx="245" cy="205" rx="17" ry="21" fill="#2b2310"/><circle class="pupil" cx="250" cy="198" r="6" fill="#fff"/></g>
+        <path class="eye-closed" d="M138 208 Q155 222 172 208" fill="none" stroke="#2b2310" stroke-width="6" stroke-linecap="round"/>
+        <path class="eye-closed" d="M228 208 Q245 222 262 208" fill="none" stroke="#2b2310" stroke-width="6" stroke-linecap="round"/>
+        <path id="mouthClosed" d="M182 250 Q200 266 218 250" fill="none" stroke="#2b2310" stroke-width="6" stroke-linecap="round"/>
+        <g id="mouthOpen">
+          <path d="M176 246 Q200 244 224 246 Q222 282 200 284 Q178 282 176 246 Z" fill="#7a2e22" stroke="#2b2310" stroke-width="5"/>
+          <ellipse cx="200" cy="272" rx="12" ry="7" fill="#e86b6b"/>
+        </g>
+        <g class="zzz"><text x="296" y="104" font-size="30">Z</text><text x="316" y="84" font-size="38">Z</text><text x="340" y="62" font-size="46">Z</text></g>
+        <g class="dots" fill="var(--think)"><circle cx="300" cy="90" r="9"/><circle cx="326" cy="70" r="9"/><circle cx="352" cy="50" r="9"/></g>
+      </g>
+    </svg>
+    <video id="vIdle" muted loop playsinline hidden></video>
+    <video id="vTalk" muted loop playsinline hidden></video>
+    <video id="vSleep" muted loop playsinline hidden></video>
+  </div>
+
+  <section class="talk" aria-label="おしゃべり">
+    <div class="bubbles" id="bubbles" aria-live="polite"></div>
+    <p class="hint" id="hint">「バターちゃん」と呼んでから話しかけてね。</p>
+    <form class="typed" id="typed">
+      <input id="typedInput" type="text" placeholder="文字でもOK" autocomplete="off" aria-label="バターちゃんに送る文字">
+      <button class="btn primary" type="submit">送る</button>
+    </form>
+  </section>
+</div>
+
+<!-- はじめる（マイクと声を使うには、最初に1回だけ押す必要があります） -->
+<div class="overlay" id="startOverlay">
+  <div class="sheet">
+    <h2>バターちゃんをおこす</h2>
+    <p class="note">最初に1回だけ押してください。あとはボタンなしで、「バターちゃん」と呼ぶと答えます。</p>
+    <p class="err" id="startErr" hidden></p>
+    <button class="btn primary" id="startBtn">おこす</button>
+    <button class="btn" id="startSettings">設定をひらく</button>
+  </div>
+</div>
+
+<div class="overlay" id="settings" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="setTitle">
+    <h2 id="setTitle">設定</h2>
+    <div class="field">
+      <label for="gasUrl">GASのURL（ススムくんのウェブアプリの /exec）</label>
+      <input id="gasUrl" type="url" placeholder="https://script.google.com/macros/s/…/exec">
+    </div>
+    <div class="field">
+      <label for="pass">家族の合言葉</label>
+      <input id="pass" type="password" autocomplete="off">
+      <p class="note">GASのスクリプトプロパティ BUTTER_PASS と同じことばを入れます。この端末にだけ保存されます。</p>
+    </div>
+    <div class="field">
+      <label for="wakeSel">話しかけ方</label>
+      <select id="wakeSel">
+        <option value="wake">「バターちゃん」と呼んだときだけ答える（おすすめ）</option>
+        <option value="always">聞こえたことに全部答える</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="voiceSel">声</label>
+      <select id="voiceSel"></select>
+    </div>
+    <div class="field">
+      <label for="rateRange">話す速さ <span id="rateVal">1.0</span></label>
+      <input id="rateRange" type="range" min="0.7" max="1.5" step="0.1" value="1">
+    </div>
+    <div class="field">
+      <label for="sleepSel">だれも話しかけないとねむるまで</label>
+      <select id="sleepSel">
+        <option value="60">1分</option><option value="180">3分</option><option value="600">10分</option><option value="0">ねない</option>
+      </select>
+    </div>
+    <p class="note">動画にしたいときは、このページと同じフォルダに idle.mp4（待っているとき）、talk.mp4（しゃべるとき）、sleep.mp4（ねているとき・なくてもOK）を置くと、自動で動画に切りかわります。</p>
+    <button class="btn primary" id="closeSettings">保存してとじる</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const char = $('char'), chip = $('chip'), bubbles = $('bubbles'), hint = $('hint');
+  const vIdle = $('vIdle'), vTalk = $('vTalk'), vSleep = $('vSleep');
+
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem('butter.' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem('butter.' + k, JSON.stringify(v)); } catch (e) {} },
+  };
+  const cfg = {
+    url: store.get('url', ''), pass: store.get('pass', ''), wake: store.get('wake', 'wake'),
+    voice: store.get('voice', ''), rate: store.get('rate', 1), sleepAfter: store.get('sleepAfter', 180),
+  };
+
+  const WAKE = /(バターちゃん|ばたーちゃん|バタちゃん|ばたちゃん|バターさん|バター|ばたー)/;
+  let state = 'idle';
+  let history = [];
+  let convoUntil = 0;           // 呼びかけのあと、この時刻までは名前なしで話せる
+  let partialEl = null;
+  let sayQueue = [];
+  let started = false;
+
+  // ===== 見た目と状態 =====
+  const LABEL = { idle: 'まってるよ', listening: 'きいてるよ', thinking: 'かんがえ中', speaking: 'おはなし中', sleeping: 'ねてるよ' };
+  let sleepTimer = null;
+  function armSleep() {
+    clearTimeout(sleepTimer);
+    if (!cfg.sleepAfter) return;
+    sleepTimer = setTimeout(() => { if (state === 'listening' || state === 'idle') setState('sleeping'); }, cfg.sleepAfter * 1000);
+  }
+  function setState(s) {
+    state = s;
+    chip.dataset.s = s; chip.textContent = LABEL[s];
+    char.classList.toggle('listening', s === 'listening' && Date.now() < convoUntil);
+    char.classList.toggle('thinking', s === 'thinking');
+    char.classList.toggle('talking', s === 'speaking');
+    char.classList.toggle('sleeping', s === 'sleeping');
+    if (s === 'listening' || s === 'idle') armSleep(); else if (s !== 'sleeping') clearTimeout(sleepTimer);
+    updateVideo();
+  }
+  setInterval(() => {
+    if (state !== 'speaking') return;
+    const r = Math.random();
+    char.classList.toggle('talking', r > 0.18);
+    char.classList.toggle('mouth-small', r < 0.5);
+  }, 110);
+  setInterval(() => { char.classList.toggle('listening', state === 'listening' && Date.now() < convoUntil); }, 500);
+
+  function addBubble(who, text, cls) {
+    const b = document.createElement('div');
+    b.className = 'bubble ' + cls;
+    const w = document.createElement('span'); w.className = 'who'; w.textContent = who;
+    const p = document.createElement('span'); p.textContent = text;
+    b.append(w, p);
+    bubbles.append(b);
+    while (bubbles.children.length > 8) bubbles.firstChild.remove();
+    bubbles.scrollTop = bubbles.scrollHeight;
+    return p;
+  }
+
+  // ===== 動画（同じフォルダに idle.mp4 / talk.mp4 / sleep.mp4 があれば使う） =====
+  const vids = { idle: false, talk: false, sleep: false };
+  [['idle', vIdle], ['talk', vTalk], ['sleep', vSleep]].forEach(([k, el]) => {
+    el.addEventListener('loadeddata', () => { vids[k] = true; updateVideo(); }, { once: true });
+    el.addEventListener('error', () => { vids[k] = false; updateVideo(); }, { once: true });
+    el.src = k + '.mp4';
+  });
+  function updateVideo() {
+    const use = vids.idle && vids.talk;
+    char.hidden = use;
+    const sleepV = use && state === 'sleeping' && vids.sleep;
+    vIdle.hidden = !use || state === 'speaking' || sleepV;
+    vTalk.hidden = !use || state !== 'speaking';
+    vSleep.hidden = !sleepV;
+    vIdle.style.filter = use && state === 'sleeping' && !sleepV ? 'brightness(.7) saturate(.7)' : '';
+    if (use) (state === 'speaking' ? vTalk : sleepV ? vSleep : vIdle).play().catch(() => {});
+  }
+
+  // ===== 聞く（ずっと聞きつづける。しゃべる間と考える間だけ止める） =====
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let rec = null, recOn = false;
+  function startRec() {
+    if (!SR || recOn || !started || state === 'speaking' || state === 'thinking') return;
+    rec = new SR();
+    rec.lang = 'ja-JP'; rec.continuous = true; rec.interimResults = true;
+    rec.onresult = ev => {
+      let interim = '', fin = '';
+      for (let i = ev.resultIndex; i < ev.results.length; i++) {
+        const r = ev.results[i];
+        if (r.isFinal) fin += r[0].transcript; else interim += r[0].transcript;
+      }
+      if (interim) showPartial(interim);
+      if (fin) onHeard(fin.trim());
+    };
+    rec.onerror = e => {
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+        hint.textContent = 'マイクが使えません。ブラウザのアドレスバーの鍵マークから、マイクを「許可」にしてください。';
+        started = false;
+      }
+    };
+    rec.onend = () => { recOn = false; if (started) setTimeout(startRec, 300); };
+    try { rec.start(); recOn = true; if (state !== 'sleeping') setState('listening'); } catch (e) { recOn = false; }
+  }
+  function stopRec() { if (rec) { rec.onend = null; try { rec.abort(); } catch (e) {} } recOn = false; }
+
+  function showPartial(text) {
+    if (state === 'sleeping' && !WAKE.test(text)) return;
+    if (cfg.wake === 'wake' && Date.now() > convoUntil && !WAKE.test(text)) return;
+    if (!partialEl) partialEl = addBubble('聞き取り中', '', 'me partial');
+    partialEl.textContent = text;
+  }
+  function clearPartial() { if (partialEl) { partialEl.parentElement.remove(); partialEl = null; } }
+
+  function onHeard(text) {
+    clearPartial();
+    const called = WAKE.test(text);
+    if (cfg.wake === 'wake' && !called && Date.now() > convoUntil) return;   // 呼ばれていない会話は聞き流す
+    if (state === 'sleeping' && !called) return;
+    if (state === 'sleeping') setState('listening');
+    const body = text.replace(/^(ねえ|ねぇ|おーい|おい)?[、,\s]*/, '').replace(WAKE, '').replace(/^[、,。\s]+/, '').trim();
+    convoUntil = Date.now() + 25000;
+    if (!body) { speak('はーい！なあに？'); return; }
+    ask(body);
+  }
+
+  // ===== 考える（GAS の Claude に聞く） =====
+  async function callGas(payload) {
+    if (!cfg.url || !cfg.pass) throw new Error('setup');
+    const res = await fetch(cfg.url, {
+      method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(Object.assign({ app: 'butter', pass: cfg.pass }, payload)),
+    });
+    return res.json();
+  }
+  async function ask(text) {
+    addBubble('あなた', text, 'me');
+    history.push({ role: 'user', content: text });
+    if (history.length > 12) history = history.slice(-12);
+    while (history.length && history[0].role !== 'user') history.shift();
+    stopRec();
+    setState('thinking');
+    const out = addBubble('バターちゃん', '…', 'her');
+    let answer = '';
+    try {
+      const r = await callGas({ action: 'chat', messages: history });
+      if (!r.ok) throw new Error(r.error || 'error');
+      answer = String(r.text || '').trim();
+    } catch (e) {
+      answer = e.message === 'setup' ? '設定でGASのURLと合言葉を入れてね。'
+        : e.message === 'pass' ? '合言葉がちがうみたい。設定を見てね。'
+        : e.message === 'limit' ? '今日はたくさんお話ししたから、また明日ね。'
+        : 'うまくお返事できなかったよ。もう一回言ってみて。';
+      history.pop();
+    }
+    out.textContent = answer;
+    if (answer && history.length && history[history.length - 1].role === 'user') history.push({ role: 'assistant', content: answer });
+    speak(answer);
+  }
+
+  // ===== しゃべる（読み上げに合わせて口が動く） =====
+  function pickVoice() {
+    const vs = speechSynthesis.getVoices().filter(v => /^ja/i.test(v.lang));
+    return vs.find(v => v.name === cfg.voice) || vs.find(v => /Google/.test(v.name)) || vs[0] || null;
+  }
+  function speak(text) {
+    if (!text) { setState('idle'); startRec(); return; }
+    stopRec();
+    speechSynthesis.cancel();
+    const parts = String(text).replace(/[*#`_>]/g, '').split(/(?<=[。！？!?\n])/).map(s => s.trim()).filter(Boolean);
+    const voice = pickVoice();
+    parts.forEach((p, i) => {
+      const u = new SpeechSynthesisUtterance(p);
+      u.lang = 'ja-JP'; if (voice) u.voice = voice; u.rate = Number(cfg.rate) || 1;
+      if (i === 0) u.onstart = () => setState('speaking');
+      if (i === parts.length - 1) {
+        u.onend = u.onerror = () => {
+          convoUntil = Date.now() + 25000;
+          setState('listening');
+          setTimeout(() => { if (sayQueue.length) announce(sayQueue.shift()); else startRec(); }, 400);
+        };
+      }
+      speechSynthesis.speak(u);
+    });
+  }
+
+  // ===== LINE の「バターちゃん 〇〇」を受け取って読み上げる =====
+  function announce(text) {
+    if (state === 'speaking' || state === 'thinking') { sayQueue.push(text); return; }
+    addBubble('バターちゃん', text, 'her');
+    history.push({ role: 'user', content: '（パパかママからのお知らせを読み上げて）' }, { role: 'assistant', content: text });
+    speak(text);
+  }
+  setInterval(async () => {
+    if (!started || !cfg.url || !cfg.pass || document.hidden) return;
+    try {
+      const r = await callGas({ action: 'poll' });
+      (r && r.say || []).forEach(t => announce(String(t)));
+    } catch (e) {}
+  }, 15000);
+
+  // ===== 文字で送る =====
+  $('typed').addEventListener('submit', e => {
+    e.preventDefault();
+    const v = $('typedInput').value.trim();
+    if (!v) return;
+    $('typedInput').value = '';
+    convoUntil = Date.now() + 25000;
+    if (state === 'sleeping') setState('listening');
+    ask(v);
+  });
+
+  // ===== はじめる・設定・全画面 =====
+  function openSettings() {
+    $('gasUrl').value = cfg.url; $('pass').value = cfg.pass; $('wakeSel').value = cfg.wake;
+    $('rateRange').value = cfg.rate; $('rateVal').textContent = Number(cfg.rate).toFixed(1);
+    $('sleepSel').value = String(cfg.sleepAfter);
+    fillVoices();
+    $('settings').hidden = false;
+  }
+  function fillVoices() {
+    const sel = $('voiceSel');
+    const vs = speechSynthesis.getVoices().filter(v => /^ja/i.test(v.lang));
+    sel.innerHTML = '';
+    vs.forEach(v => { const o = document.createElement('option'); o.value = v.name; o.textContent = v.name; sel.append(o); });
+    if (!vs.length) { const o = document.createElement('option'); o.textContent = '（日本語の声が見つかりません）'; sel.append(o); }
+    const cur = pickVoice(); if (cur) sel.value = cur.name;
+  }
+  speechSynthesis.onvoiceschanged = () => { if (!$('settings').hidden) fillVoices(); };
+  $('rateRange').addEventListener('input', e => { $('rateVal').textContent = Number(e.target.value).toFixed(1); });
+  $('closeSettings').addEventListener('click', () => {
+    cfg.url = $('gasUrl').value.trim(); cfg.pass = $('pass').value; cfg.wake = $('wakeSel').value;
+    cfg.voice = $('voiceSel').value; cfg.rate = Number($('rateRange').value); cfg.sleepAfter = Number($('sleepSel').value);
+    Object.keys(cfg).forEach(k => store.set(k, cfg[k]));
+    $('settings').hidden = true;
+    hint.textContent = cfg.wake === 'wake' ? '「バターちゃん」と呼んでから話しかけてね。' : '話しかけると答えるよ。';
+    armSleep();
+  });
+  $('openSettings').addEventListener('click', openSettings);
+  $('startSettings').addEventListener('click', openSettings);
+
+  $('startBtn').addEventListener('click', () => {
+    if (!SR) {
+      $('startErr').hidden = false;
+      $('startErr').textContent = 'このブラウザでは声が使えません。PCのChromeで開いてください（文字では話せます）。';
+    }
+    started = true;
+    $('startOverlay').hidden = true;
+    speechSynthesis.speak(new SpeechSynthesisUtterance(''));   // 読み上げをこの操作で有効にしておく
+    if (!cfg.url || !cfg.pass) openSettings();
+    startRec();
+    speak('おはよう！バターちゃんだよ。呼んでくれたらお話しするね。');
+    try { navigator.wakeLock && navigator.wakeLock.request('screen').catch(() => {}); } catch (e) {}
+  });
+
+  $('bigBtn').addEventListener('click', () => {
+    const on = !document.body.classList.contains('big');
+    document.body.classList.toggle('big', on);
+    try {
+      if (on && !document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
+      else if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    } catch (e) {}
+  });
+  document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) document.body.classList.remove('big'); });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && started) startRec(); });
+
+  hint.textContent = cfg.wake === 'wake' ? '「バターちゃん」と呼んでから話しかけてね。' : '話しかけると答えるよ。';
+  addBubble('バターちゃん', 'こんにちは！バターちゃんだよ。', 'her');
+  setState('idle');
+})();
+</script>
+</body>
+</html>
