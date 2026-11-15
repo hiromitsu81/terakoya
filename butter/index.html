@@ -166,6 +166,33 @@ h1 { font-family: var(--display); font-weight: 800; font-size: 22px; margin: 0; 
 .rare-R .gtext .rare { color: #d9483b; } .rare-SR .gtext .rare { color: #fff; text-shadow: 0 0 6px #e0a412, 0 2px 0 #b07a00; font-size: 22px; }
 .gtext #gachaText { margin: 2px 0 0; font-family: var(--display); font-weight: 800; font-size: 28px; color: var(--ink); }
 .rare-SR .gtext .rare { color: #b07a00; text-shadow: none; }
+/* ドキドキ演出 */
+.gacha-pop::after { content: ''; position: absolute; inset: 0; background: rgba(10,12,20,.0); transition: background .5s; pointer-events: none; }
+.gacha-pop.dim::after { background: rgba(10,12,20,.55); }
+.gacha-pop.reveal::after { background: rgba(10,12,20,0); }
+.gstage { z-index: 1; }
+.dim .gcap { filter: drop-shadow(0 0 18px rgba(255,255,255,.7)); }
+.beat .gcap { animation: heartbeat .55s ease-in-out infinite; opacity: 1; top: 40%; }
+@keyframes heartbeat { 0%, 100% { transform: scale(1); } 15% { transform: scale(1.14); } 30% { transform: scale(1); } 45% { transform: scale(1.1); } }
+.gcap.glow::before { content: ''; position: absolute; left: -24px; right: -24px; top: 38px; height: 16px; border-radius: 8px;
+  background: radial-gradient(ellipse, #fff, rgba(255,240,170,.0) 70%); animation: leak .4s ease-in-out infinite alternate; }
+@keyframes leak { from { opacity: .4; transform: scaleX(.7); } to { opacity: 1; transform: scaleX(1.2); } }
+.gflash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 3; }
+.gflash.on { animation: flash .45s ease-out; }
+@keyframes flash { 0% { opacity: .95; } 100% { opacity: 0; } }
+.gtap { position: absolute; left: 50%; top: 66%; translate: -50% 0; z-index: 2; font-family: var(--display); font-weight: 800; font-size: 20px; color: #fff;
+  text-shadow: 0 2px 6px rgba(0,0,0,.5); opacity: 0; transition: opacity .3s; white-space: nowrap; }
+.waiting .gtap { opacity: 1; animation: tapblink .8s ease-in-out infinite alternate; }
+@keyframes tapblink { from { transform: scale(.95); } to { transform: scale(1.08); } }
+.gget { position: absolute; right: 6%; top: 10%; z-index: 2; font-family: var(--display); font-weight: 800; font-size: 34px; color: #d9483b;
+  border: 5px solid #d9483b; border-radius: 12px; padding: 0 12px; background: rgba(255,255,255,.9); opacity: 0; transform: rotate(-14deg) scale(2.4); }
+.reveal .gget { animation: stamp .35s .9s cubic-bezier(.3,1.5,.6,1) forwards; }
+@keyframes stamp { to { opacity: 1; transform: rotate(-14deg) scale(1); } }
+.gspark { position: absolute; left: 50%; top: 42%; width: 0; height: 0; z-index: 1; }
+.gspark i { position: absolute; width: 14px; height: 14px; margin: -7px; opacity: 0;
+  background: radial-gradient(circle, #fff 0 25%, rgba(255,230,120,.95) 26% 40%, transparent 41%); }
+.reveal .gspark i { animation: sparkfly 1.4s ease-out infinite; }
+@keyframes sparkfly { 0% { opacity: 0; transform: translate(0,0) scale(.3); } 20% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1.2); } }
 #confetti { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .butter.newitem::after { content: ''; }
 @media (prefers-reduced-motion: reduce) { .gcap, .gburst, .grays, .gitemwrap, #ghandle { animation: none !important; } }
@@ -398,7 +425,11 @@ body.big form.typed { display: none; }
         <div class="gcap" id="gcap"><span class="top"></span><span class="bottom"></span></div>
         <div class="gitemwrap"><svg id="gitem" viewBox="0 0 100 100"></svg></div>
         <div class="gtext"><span class="rare" id="gachaRare"></span><p id="gachaText"></p></div>
+        <div class="gspark"><i style="--dx:-120px;--dy:-90px"></i><i style="--dx:110px;--dy:-100px;animation-delay:.2s"></i><i style="--dx:-140px;--dy:40px;animation-delay:.4s"></i><i style="--dx:150px;--dy:30px;animation-delay:.6s"></i><i style="--dx:-40px;--dy:-150px;animation-delay:.8s"></i><i style="--dx:60px;--dy:-150px;animation-delay:1s"></i></div>
+        <div class="gtap">タップしてあけてね！</div>
+        <div class="gget">GET!</div>
       </div>
+      <div class="gflash" id="gflash"></div>
       <canvas id="confetti"></canvas>
     </div>
   </div>
@@ -632,8 +663,8 @@ body.big form.typed { display: none; }
     pop.className = 'gacha-pop turning'; pop.hidden = false;
     $('gachaRare').textContent = ''; $('gachaText').textContent = '';
     setEmo('excited');
-    chime([392, 440, 494, 523], 0.09);
-    const gWait = sleep(1000);
+    sfx.roll(1.1);
+    const gWait = sleep(1100);
     let r;
     try { r = await callGas({ action: 'gacha' }); } catch (e) { r = null; }
     gachaBusy = false;
@@ -645,31 +676,58 @@ body.big form.typed { display: none; }
       pop.classList.remove('turning'); pop.classList.add('noticket');
       $('gachaRare').textContent = 'ガチャ券がないよ';
       $('gachaText').textContent = 'あと' + g.toNextTicket + 'ptで1枚';
-      chime([330, 262], 0.18);
+      sfx.notes([392, 330, 262], 0.16, 'triangle', 0.18);
       setTimeout(() => { pop.hidden = true; }, 3500);
       addBubble('バターちゃん', t, 'her'); applyPet(r.state, true); speak(t, 'shy'); return;
     }
     const it = g.item, rare = it.rare;
-    pop.classList.add('rare-' + rare);
-    pop.style.setProperty('--capc', rare === 'SR' ? '#ffd23f' : rare === 'R' ? '#d9483b' : '#4c8ff0');
-    $('gcap').style.setProperty('--capc', rare === 'SR' ? '#ffd23f' : rare === 'R' ? '#d9483b' : '#4c8ff0');
+    const COL = { N: '#4c8ff0', R: '#d9483b', SR: '#ffd23f' };
+    const cap = $('gcap');
+    cap.style.setProperty('--capc', COL.N);                // 最初はみんな青いカプセル
     drawItemPreview(it.id);
     $('gachaRare').textContent = (rare === 'SR' ? '★★★ ' : rare === 'R' ? '★★ ' : '★ ') + (RARE[rare] || '');
     $('gachaText').textContent = it.name;
-    pop.classList.remove('turning'); pop.classList.add('dropping'); chime([523], 0.12);
+    // 1) カプセルがコロン
+    pop.classList.remove('turning'); pop.classList.add('dropping');
+    sfx.clack(); setTimeout(() => sfx.clack(0.6), 380);
     await sleep(800);
-    pop.classList.remove('dropping'); pop.classList.add('shaking');
-    await sleep(rare === 'SR' ? 1500 : 950);
-    pop.classList.remove('shaking'); pop.classList.add('reveal');
-    chime(rare === 'SR' ? [523, 659, 784, 1047, 1319] : rare === 'R' ? [523, 659, 784, 1047] : [523, 659, 784], 0.13);
-    if (rare !== 'N') confetti(rare === 'SR' ? 160 : 70);
+    // 2) 暗くなって、ドキドキ（心臓の音）
+    pop.classList.remove('dropping'); pop.classList.add('dim', 'beat');
+    $('gachaRare').textContent = ''; 
+    const beats = rare === 'SR' ? 4 : rare === 'R' ? 3 : 2;
+    for (let i = 0; i < beats; i++) { sfx.heart(); await sleep(560 - i * 40); }
+    // 3) 昇格演出：レアは赤に、スーパーレアは赤→金に変わる
+    const flash = () => { const f = $('gflash'); f.classList.remove('on'); void f.offsetWidth; f.classList.add('on'); };
+    if (rare !== 'N') {
+      flash(); sfx.rise(0.5); cap.style.setProperty('--capc', COL.R); await sleep(700);
+      if (rare === 'SR') { sfx.heart(); await sleep(500); flash(); sfx.rise(0.8, 2); cap.style.setProperty('--capc', COL.SR); cap.classList.add('glow'); await sleep(900); }
+    }
+    cap.classList.add('glow');
+    // 4) タップであける（待たずに4秒で自動）
+    pop.classList.remove('beat'); pop.classList.add('shaking', 'waiting');
+    sfx.roll(0.9, 0.12);
+    await new Promise(res => {
+      let done = false;
+      const go = () => { if (done) return; done = true; pop.removeEventListener('click', go); res(); };
+      pop.addEventListener('click', go);
+      setTimeout(go, 4000);
+      tapOpen = go;
+    });
+    tapOpen = null;
+    // 5) パカッ！
+    pop.classList.remove('shaking', 'waiting', 'dim'); flash(); sfx.pop();
+    $('gachaRare').textContent = (rare === 'SR' ? '★★★ ' : rare === 'R' ? '★★ ' : '★ ') + (RARE[rare] || '');
+    pop.classList.add('rare-' + rare, 'reveal');
+    sfx.fanfare(rare);
+    if (rare !== 'N') confetti(rare === 'SR' ? 180 : 80);
     applyPet(r.state, true);
     butter.classList.remove('cooled'); void butter.getBBox(); butter.classList.add('cooled');
     const t = g.dup ? it.name + 'がまた出たよ！おそろいだね。' : 'やったー！' + it.name + 'が出たよ！' + (rare === 'SR' ? 'スーパーレアだよ！' : 'さっそくつけてみたよ。');
     addBubble('バターちゃん', t, 'her');
     speak(t, rare === 'SR' ? 'surprise' : 'excited');
-    setTimeout(() => { pop.hidden = true; }, rare === 'SR' ? 6500 : 5000);
+    setTimeout(() => { pop.hidden = true; cap.classList.remove('glow'); }, rare === 'SR' ? 7000 : 5500);
   }
+  let tapOpen = null;
   const sleep = ms => new Promise(res => setTimeout(res, ms));
 
   // 出たアイテムの絵（画面のバターちゃん・チーちゃんの部品をそのまま使う）
@@ -695,20 +753,56 @@ body.big form.typed { display: none; }
     box.appendChild(c);
   }
 
-  // 効果音（ブラウザで鳴らす小さな音）
+  // 効果音（ブラウザで作る音。著作権のある曲は使わない、オリジナルの短いフレーズ）
   let actx = null;
-  function chime(notes, len) {
-    try {
-      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
-      if (actx.state === 'suspended') actx.resume();
-      notes.forEach((f, i) => {
-        const o = actx.createOscillator(), gn = actx.createGain(), t0 = actx.currentTime + i * len;
-        o.type = 'triangle'; o.frequency.value = f; o.connect(gn); gn.connect(actx.destination);
-        gn.gain.setValueAtTime(0.0001, t0); gn.gain.exponentialRampToValueAtTime(0.25, t0 + 0.02); gn.gain.exponentialRampToValueAtTime(0.0001, t0 + len * 1.8);
-        o.start(t0); o.stop(t0 + len * 2);
-      });
-    } catch (e) {}
+  const AC = () => { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); return actx; };
+  function tone(f, t0, len, type, vol, slideTo) {
+    const a = AC(), o = a.createOscillator(), g = a.createGain();
+    o.type = type || 'triangle'; o.frequency.setValueAtTime(f, t0);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t0 + len);
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol || 0.2, t0 + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+    o.connect(g); g.connect(a.destination); o.start(t0); o.stop(t0 + len + 0.05);
   }
+  function noise(t0, len, vol, hp) {
+    const a = AC(), n = Math.floor(a.sampleRate * len), buf = a.createBuffer(1, n, a.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+    const src = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
+    src.buffer = buf; f.type = 'highpass'; f.frequency.value = hp || 1200; g.gain.value = vol || 0.2;
+    src.connect(f); f.connect(g); g.connect(a.destination); src.start(t0);
+  }
+  const sfx = {
+    notes(fs, len, type, vol) { try { const t = AC().currentTime; fs.forEach((f, i) => tone(f, t + i * len, len * 1.6, type, vol)); } catch (e) {} },
+    roll(sec, vol) {            // ドラムロール（だんだん大きく）
+      try { const a = AC(), t = a.currentTime, n = Math.floor(sec / 0.045); for (let i = 0; i < n; i++) noise(t + i * 0.045, 0.04, (vol || 0.08) * (0.4 + 0.6 * i / n), 1800); } catch (e) {}
+    },
+    clack(v) { try { const t = AC().currentTime; tone(1800, t, 0.05, 'square', 0.06 * (v || 1)); noise(t, 0.03, 0.08 * (v || 1), 3000); } catch (e) {} },
+    heart() {                   // ドクン、ドクン
+      try { const t = AC().currentTime; tone(70, t, 0.16, 'sine', 0.5, 45); tone(65, t + 0.2, 0.14, 'sine', 0.35, 40); } catch (e) {}
+    },
+    rise(sec, oct) {            // きゅいーん（昇格）
+      try { const t = AC().currentTime; tone(400, t, sec, 'sawtooth', 0.06, 400 * Math.pow(2, 1 + (oct || 1))); tone(800, t, sec, 'triangle', 0.08, 800 * Math.pow(2, 1 + (oct || 1))); noise(t + sec * 0.8, 0.2, 0.1, 4000); } catch (e) {}
+    },
+    pop() { try { const t = AC().currentTime; noise(t, 0.12, 0.3, 600); tone(900, t, 0.15, 'square', 0.12, 220); } catch (e) {} },
+    fanfare(rare) {             // オリジナルのファンファーレ
+      try {
+        const t = AC().currentTime + 0.05, q = 0.13;
+        const play = (seq, type, vol) => { let x = t; seq.forEach(([f, d]) => { if (f) tone(f, x, d * q * 1.4, type, vol); x += d * q; }); return x; };
+        if (rare === 'N') { play([[523, 1], [659, 1], [784, 1], [1047, 3]], 'triangle', 0.18); return; }
+        if (rare === 'R') {
+          play([[392, 1], [523, 1], [659, 1], [784, 2], [659, 1], [784, 4]], 'square', 0.07);
+          play([[0, 3], [262, 2], [330, 1], [392, 4]], 'triangle', 0.12);
+          return;
+        }
+        // SR：きらきら → ファンファーレ → 和音
+        for (let i = 0; i < 10; i++) tone(1568 + Math.random() * 1200, t + i * 0.05, 0.12, 'sine', 0.06);
+        const end = play([[0, 4], [523, 1], [523, 1], [523, 1], [698, 3], [659, 1], [698, 1], [784, 2], [1047, 6]], 'sawtooth', 0.05);
+        play([[0, 4], [523, 1], [523, 1], [523, 1], [698, 3], [659, 1], [698, 1], [784, 2], [1047, 6]], 'square', 0.04);
+        [523, 659, 784, 1047].forEach(f => tone(f, end - 6 * q, 1.4, 'triangle', 0.09));
+        for (let i = 0; i < 12; i++) tone(2093 + Math.random() * 1500, end - 4 * q + i * 0.07, 0.1, 'sine', 0.05);
+      } catch (e) {}
+    },
+  };
+  const chime = (fs, len) => sfx.notes(fs, len);
 
   // 紙ふぶき
   function confetti(n) {
@@ -866,6 +960,7 @@ body.big form.typed { display: none; }
       lastTouch = Date.now();
       callGas({ action: 'touch' }).then(r => { if (r && r.state) applyPet(r.state, true); }).catch(() => {});
     }
+    if (tapOpen && /(あけて|開けて|ひらいて|オープン|あけろ)/.test(text)) { tapOpen(); return; }
     if (CHI.test(text) && TRICKS.some(t => t.re.test(text))) { handleChi(text); return; }
     if (/(ガチャ|がちゃ)[をは、\s]*(回|まわ|ひ|引|やり|やる)/.test(text) || (WAKE.test(text) && /(ガチャ|がちゃ)/.test(text))) { doGacha(text); return; }
     const m = MOODS.find(([, re]) => re.test(text));
