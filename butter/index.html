@@ -379,7 +379,13 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 
 body.big .app { max-width: none; }
 body.big header { opacity: .6; }
-body.big .stage svg { max-width: none; width: min(100%, 120vh); }
+body.big .app { height: 100vh; grid-template-rows: auto minmax(0, 1fr) auto auto; overflow: hidden; }
+body.big .stage { min-height: 0; overflow: hidden; }
+body.big .stage svg { max-width: 100%; width: auto; height: 100%; max-height: 100%; }
+body.big .meters { grid-template-columns: 1fr 1fr; gap: 8px; }
+body.big .meter { padding: 6px 12px; }
+body.big .meter small { display: none; }
+body.big .bubbles { max-height: none; overflow: hidden; }
 body.big .bubble { font-size: 26px; max-width: 80%; }
 body.big .bubble .who { font-size: 16px; }
 body.big .bubbles .bubble:not(:nth-last-child(-n+2)) { display: none; }
@@ -609,7 +615,6 @@ body.big form.typed { display: none; }
         <h3>きせかえ（ガチャ）</h3><div class="invgrid" id="invGacha"></div>
         <h3>かざり（UFOキャッチャー）</h3><div class="invgrid" id="invUfo"></div>
       </div>
-    </div>
     </div>
   </div>
 
