@@ -701,6 +701,10 @@ body.big form.typed { display: none; }
         <option value="60">1分</option><option value="180">3分</option><option value="600">10分</option><option value="0">ねない</option>
       </select>
     </div>
+    <div class="field">
+      <label><input type="checkbox" id="testChk"> テストモード（パパ用）</label>
+      <p class="note">ガチャとUFOキャッチャーを、ポイントを使わずに何回でもためせます。出たものはもちものに入りません。ためし終わったらオフにしてください。</p>
+    </div>
     <button class="btn primary" id="closeSettings">保存してとじる</button>
   </div>
 </div>
@@ -718,7 +722,7 @@ body.big form.typed { display: none; }
   const cfg = {
     url: store.get('url', ''), pass: store.get('pass', ''), wake: store.get('wake', 'wake'),
     voice: store.get('voice', ''), rate: store.get('rate', 1), pitch: store.get('pitch', 1.1), sleepAfter: store.get('sleepAfter', 180),
-    mode: store.get('mode', 'show'), mic: store.get('mic', 5),
+    mode: store.get('mode', 'show'), mic: store.get('mic', 5), test: store.get('test', false),
   };
   // LINEミニアプリ（LIFF）で開かれたとき：?liff=1&g=<GASのデプロイID>&liffId=<LIFF ID>
   const Q = new URLSearchParams(location.search.replace(/^\?liff\.state=[^&]*&?/, '?'));
@@ -858,7 +862,7 @@ body.big form.typed { display: none; }
     const who = whoIn || nameIn(said) || await choosePlayer('ガチャ');
     gachaBusy = false;
     if (!who && playerNames().length) return;
-    $('gachaPop').querySelector('.gtitle').textContent = who ? who + 'のガチャ' : 'GACHA ガチャ';
+    $('gachaPop').querySelector('.gtitle').textContent = (cfg.test ? '【テスト】' : '') + (who ? who + 'のガチャ' : 'GACHA ガチャ');
     if (!canCall()) { speak('設定でGASのURLと合言葉を入れてね。', 'sad'); return; }
     gachaBusy = true;
     stopRec(); setState('thinking');
@@ -1181,7 +1185,7 @@ body.big form.typed { display: none; }
     U.prizes = list.map((p, i) => ({ id: p.id, name: p.name, x: xs[i] }));
     Object.assign(U, { on: true, x: 200, y: UTOP, dir: 1, phase: 'move', held: null });
     $('ufoPop').hidden = false;
-    $('uInfo').textContent = (who ? who + '　' : '') + (r.ufo.free ? '今日のおためし（無料）！ ' : '5ptつかったよ。 ') + '「ストップ」でおろす・「みぎ」「ひだり」';
+    $('uInfo').textContent = (r.ufo.test ? '【テスト】' : '') + (who ? who + '　' : '') + (r.ufo.free ? '今日のおためし（無料）！ ' : '5ptつかったよ。 ') + '「ストップ」でおろす・「みぎ」「ひだり」';
     stopRec(); startRec();
     sfx.notes([523, 659, 784, 659, 784, 1047], 0.08, 'square', 0.06);
     setEmo('excited');
@@ -1452,7 +1456,7 @@ body.big form.typed { display: none; }
     if (!canCall()) throw new Error('setup');
     const res = await fetch(cfg.url, {
       method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(Object.assign({ app: 'butter' }, LIFF ? { idToken: idToken() } : { pass: cfg.pass }, payload)),
+      body: JSON.stringify(Object.assign({ app: 'butter' }, LIFF ? { idToken: idToken() } : { pass: cfg.pass }, cfg.test && !LIFF ? { test: true } : {}, payload)),
     });
     return res.json();
   }
@@ -1757,6 +1761,7 @@ body.big form.typed { display: none; }
     $('rateRange').value = cfg.rate; $('rateVal').textContent = Number(cfg.rate).toFixed(1);
     $('pitchRange').value = cfg.pitch; $('pitchVal').textContent = Number(cfg.pitch).toFixed(1);
     $('sleepSel').value = String(cfg.sleepAfter);
+    $('testChk').checked = !!cfg.test;
     $('modeSel').value = cfg.mode; $('micRange').value = cfg.mic; $('micVal').textContent = cfg.mic;
     fillVoices();
     $('settings').hidden = false;
@@ -1784,7 +1789,7 @@ body.big form.typed { display: none; }
     cfg.url = $('gasUrl').value.trim(); cfg.pass = $('pass').value; cfg.wake = $('wakeSel').value;
     cfg.voice = $('voiceSel').value; cfg.rate = Number($('rateRange').value); cfg.pitch = Number($('pitchRange').value);
     cfg.sleepAfter = Number($('sleepSel').value);
-    cfg.mode = $('modeSel').value; cfg.mic = Number($('micRange').value);
+    cfg.mode = $('modeSel').value; cfg.mic = Number($('micRange').value); cfg.test = $('testChk').checked;
     if (SHOW() && started) startMic();
     Object.keys(cfg).forEach(k => store.set(k, cfg[k]));
     $('settings').hidden = true;
