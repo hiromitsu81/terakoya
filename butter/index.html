@@ -51,6 +51,7 @@ h1 { font-family: var(--display); font-weight: 800; font-size: 22px; margin: 0; 
 .stage { min-height: 0; display: grid; place-items: center; }
 .stage svg { width: 100%; max-width: 760px; max-height: 100%; aspect-ratio: 720 / 420; }
 [hidden] { display: none !important; }
+.mini { font-family: var(--display); font-weight: 700; font-size: 12px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--butter-deep); background: var(--butter); color: #2b2310; cursor: pointer; margin-left: 6px; }
 .lvlbox { position: relative; height: 12px; border-radius: 6px; background: var(--tile); overflow: hidden; }
 .lvlbox i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: #4caf50; }
 .lvlbox b { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--mic-live); left: 50%; }
@@ -344,7 +345,7 @@ body.big form.typed { display: none; }
 
   <section class="meters" aria-label="育ちぐあい">
     <div class="meter">
-      <div class="top"><span>バターちゃん：<b id="meltName">ひんやり</b></span><span id="careNote"></span></div>
+      <div class="top"><span>バターちゃん：<b id="meltName">ひんやり</b></span><span><span id="careNote"></span> <button class="mini" id="gachaBtn" type="button">ガチャ</button></span></div>
       <div class="bar" id="coldBar"><i style="width:100%"></i></div>
       <small id="evoNote">話しかけたり、LINEで宿題や日記を報告するとひんやりするよ。ほうっておくと溶けちゃう。</small>
     </div>
@@ -574,6 +575,14 @@ body.big form.typed { display: none; }
     const g = r.gacha || {};
     if (g.none) {
       const t = 'ガチャ券がまだないよ。あと' + g.toNextTicket + 'ポイントでもらえるよ。宿題や日記をLINEで報告してね！';
+      const pop0 = $('gachaPop');
+      pop0.classList.remove('open');
+      $('gachaText').innerHTML = '';
+      const rr = document.createElement('span'); rr.className = 'rare'; rr.textContent = 'ガチャ券がないよ';
+      $('gachaText').append(rr, document.createTextNode('あと' + g.toNextTicket + 'ptで1枚'));
+      pop0.hidden = false;
+      setTimeout(() => { pop0.classList.add('open'); }, 1200);
+      setTimeout(() => { pop0.hidden = true; }, 4500);
       addBubble('バターちゃん', t, 'her'); applyPet(r.state, true); speak(t, 'shy'); return;
     }
     const pop = $('gachaPop');
@@ -734,7 +743,7 @@ body.big form.typed { display: none; }
       callGas({ action: 'touch' }).then(r => { if (r && r.state) applyPet(r.state, true); }).catch(() => {});
     }
     if (CHI.test(text) && TRICKS.some(t => t.re.test(text))) { handleChi(text); return; }
-    if (WAKE.test(text) && /(ガチャ|がちゃ)/.test(text)) { doGacha(text); return; }
+    if (/(ガチャ|がちゃ)[をは、\s]*(回|まわ|ひ|引|やり|やる)/.test(text) || (WAKE.test(text) && /(ガチャ|がちゃ)/.test(text))) { doGacha(text); return; }
     const m = MOODS.find(([, re]) => re.test(text));
     if (m) setEmo(m[0], 6000);
   }
@@ -921,6 +930,7 @@ body.big form.typed { display: none; }
     if (/(ガチャ|がちゃ)/.test(v)) doGacha(v);
     else if (CHI.test(v) && !WAKE.test(v)) handleChi(v); else ask(v.replace(WAKE, '').replace(/^[、,。\s]+/, '') || v);
   });
+  $('gachaBtn').addEventListener('click', () => doGacha('ガチャ回して'));
   $('scene').addEventListener('click', ev => {
     if (chi.contains(ev.target)) { chiDo('sit'); bark(); }
   });
