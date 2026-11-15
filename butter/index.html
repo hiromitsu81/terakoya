@@ -358,7 +358,7 @@ body.big form.typed { display: none; }
     let answer = '';
     try {
       const r = await callGas({ action: 'chat', messages: history });
-      if (!r.ok) throw new Error(r.error || 'error');
+      if (!r.ok) { hint.textContent = r.detail ? '（パパへ：原因 ' + r.detail + '）' : hint.textContent; throw new Error(r.error || 'error'); }
       answer = String(r.text || '').trim();
     } catch (e) {
       answer = e.message === 'setup' ? '設定でGASのURLと合言葉を入れてね。'
