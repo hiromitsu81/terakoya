@@ -51,6 +51,26 @@ h1 { font-family: var(--display); font-weight: 800; font-size: 22px; margin: 0; 
 .stage { min-height: 0; display: grid; place-items: center; }
 .stage svg { width: 100%; max-width: 760px; max-height: 100%; aspect-ratio: 720 / 420; }
 [hidden] { display: none !important; }
+.talkbtn { display: none; }
+.liffmode .talkbtn { display: grid; place-items: center; justify-self: center; position: relative; width: 112px; height: 112px; border-radius: 50%;
+  border: 4px solid var(--butter-deep); background: var(--butter); color: #2b2310; font-family: var(--display); font-weight: 800; font-size: 16px; cursor: pointer; }
+.talkbtn i { position: absolute; inset: -4px; border-radius: 50%; border: 4px solid var(--mic-live); opacity: 0; transition: transform .1s; }
+.talkbtn.rec { background: #ffe1dd; border-color: var(--mic-live); }
+.talkbtn.rec i { opacity: .6; }
+.talkbtn.wait { background: color-mix(in srgb, var(--think) 25%, var(--card)); border-color: var(--think); }
+.talkbtn b { position: relative; white-space: nowrap; font-size: 15px; }
+.liffmode #openSettings, .liffmode #bigBtn { display: none; }
+.liffmode .bubbles { max-height: 16vh; }
+.liffmode h1 { font-size: 17px; }
+.liffmode .app { gap: 8px; }
+.liffmode .stage { min-height: 34vh; }
+.liffmode .meters { grid-template-columns: 1fr 1fr; gap: 6px; }
+.liffmode .meter { padding: 8px 10px; gap: 4px; }
+.liffmode .meter small, .liffmode #careNote { display: none; }
+.liffmode .meter .top { font-size: 12px; flex-wrap: wrap; }
+.liffmode .meter .top span:last-child { font-size: 11px; }
+.liffmode .hint { font-size: 12px; }
+.liffmode .talkbtn { width: 96px; height: 96px; }
 .mini { font-family: var(--display); font-weight: 700; font-size: 12px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--butter-deep); background: var(--butter); color: #2b2310; cursor: pointer; margin-left: 6px; }
 .lvlbox { position: relative; height: 12px; border-radius: 6px; background: var(--tile); overflow: hidden; }
 .lvlbox i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: #4caf50; }
@@ -451,6 +471,7 @@ body.big form.typed { display: none; }
     <div class="bubbles" id="bubbles" aria-live="polite"></div>
     <p class="hint" id="diag" hidden></p>
     <p class="hint" id="hint">「バターちゃん」と呼んでから話しかけてね。</p>
+    <button class="talkbtn" id="talkBtn" type="button"><i id="lvlLive"></i><b>おして話す</b></button>
     <form class="typed" id="typed">
       <input id="typedInput" type="text" placeholder="文字でもOK（チーちゃん、おて など）" autocomplete="off" aria-label="バターちゃんに送る文字">
       <button class="btn primary" type="submit">送る</button>
@@ -540,7 +561,19 @@ body.big form.typed { display: none; }
     voice: store.get('voice', ''), rate: store.get('rate', 1), pitch: store.get('pitch', 1.1), sleepAfter: store.get('sleepAfter', 180),
     mode: store.get('mode', 'show'), mic: store.get('mic', 5),
   };
+  // LINEミニアプリ（LIFF）で開かれたとき：?liff=1&g=<GASのデプロイID>&liffId=<LIFF ID>
+  const Q = new URLSearchParams(location.search.replace(/^\?liff\.state=[^&]*&?/, '?'));
+  const LIFF = Q.get('liff') === '1';
+  const LIFF_ID = Q.get('liffId') || store.get('liffId', '');
+  if (LIFF) {
+    cfg.mode = 'liff';
+    if (Q.get('g')) cfg.url = 'https://script.google.com/macros/s/' + Q.get('g') + '/exec';
+    if (Q.get('liffId')) store.set('liffId', Q.get('liffId'));
+    document.body.classList.add('liffmode');
+  }
   const SHOW = () => cfg.mode === 'show';
+  const canCall = () => !!cfg.url && (LIFF ? !!idToken() : !!cfg.pass);
+  const idToken = () => { try { return window.liff && liff.getIDToken && liff.getIDToken(); } catch (e) { return null; } };
 
   const WAKE = /(バターちゃん|ばたーちゃん|バタちゃん|ばたちゃん|バターさん|バター|ばたー)/;
   const CHI = /(チーちゃん|ちーちゃん|チーチャン|チイちゃん|ちいちゃん|チーズちゃん)/;
@@ -656,7 +689,7 @@ body.big form.typed { display: none; }
   async function doGacha(said) {
     if (gachaBusy) return;
     addBubble('あなた', said || 'ガチャ回して', 'me');
-    if (!cfg.url || !cfg.pass) { speak('設定でGASのURLと合言葉を入れてね。', 'sad'); return; }
+    if (!canCall()) { speak('設定でGASのURLと合言葉を入れてね。', 'sad'); return; }
     gachaBusy = true;
     stopRec(); setState('thinking');
     const pop = $('gachaPop');
@@ -666,9 +699,19 @@ body.big form.typed { display: none; }
     sfx.roll(1.1);
     const gWait = sleep(1100);
     let r;
-    try { r = await callGas({ action: 'gacha' }); } catch (e) { r = null; }
+    let why = '';
+    try { r = await callGas({ action: 'gacha' }); } catch (e) { r = null; why = String(e.message || e); }
     gachaBusy = false;
-    if (!r || !r.ok) { pop.hidden = true; speak('ガチャがうまく回らなかったよ。もう一回言ってみて。', 'sad'); return; }
+    if (!r || !r.ok) {
+      why = why || (r && (r.detail || r.error)) || 'unknown';
+      await gWait;
+      pop.classList.remove('turning'); pop.classList.add('noticket');
+      $('gachaRare').textContent = 'うまく回らなかったよ';
+      $('gachaText').textContent = 'もう一回ためしてね';
+      setTimeout(() => { pop.hidden = true; }, 3500);
+      addBubble('バターちゃん', 'ガチャがうまく回らなかったよ。（パパへ：原因 ' + why + '）', 'her');
+      speak('ガチャがうまく回らなかったよ。もう一回言ってみて。', 'sad'); return;
+    }
     const g = r.gacha || {};
     await gWait;                                   // ハンドルが回りおわるまで待つ
     if (g.none) {
@@ -956,7 +999,7 @@ body.big form.typed { display: none; }
     addBubble('聞こえたこと', text, 'her');
     if (state === 'sleeping') setState('listening');
     armSleep();
-    if (Date.now() - lastTouch > 5 * 60 * 1000 && cfg.url && cfg.pass) {
+    if (Date.now() - lastTouch > 5 * 60 * 1000 && canCall()) {
       lastTouch = Date.now();
       callGas({ action: 'touch' }).then(r => { if (r && r.state) applyPet(r.state, true); }).catch(() => {});
     }
@@ -985,10 +1028,10 @@ body.big form.typed { display: none; }
 
   // ===== 考える =====
   async function callGas(payload) {
-    if (!cfg.url || !cfg.pass) throw new Error('setup');
+    if (!canCall()) throw new Error('setup');
     const res = await fetch(cfg.url, {
       method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(Object.assign({ app: 'butter', pass: cfg.pass }, payload)),
+      body: JSON.stringify(Object.assign({ app: 'butter' }, LIFF ? { idToken: idToken() } : { pass: cfg.pass }, payload)),
     });
     return res.json();
   }
@@ -1002,7 +1045,8 @@ body.big form.typed { display: none; }
     const out = addBubble('バターちゃん', '…', 'her');
     let answer = '', mood = 'smile';
     try {
-      const r = await callGas({ action: 'chat', messages: history });
+      const r = await callGas(LIFF ? { action: 'chat', tts: true, messages: history } : { action: 'chat', messages: history });
+      nextAudio = r.audio || null;
       if (!r.ok) { if (r.detail) hint.textContent = '（パパへ：原因 ' + r.detail + '）'; throw new Error(r.error || 'error'); }
       answer = String(r.text || '').replace(/^[\[［][^\]］]{1,6}[\]］]\s*/, '').trim();
       mood = r.emotion || 'smile';
@@ -1010,6 +1054,7 @@ body.big form.typed { display: none; }
     } catch (e) {
       answer = e.message === 'setup' ? '設定でGASのURLと合言葉を入れてね。'
         : e.message === 'pass' ? '合言葉がちがうみたい。設定を見てね。'
+        : e.message === 'auth' ? 'LINEの確認ができなかったよ。ミニアプリを開き直してね。'
         : e.message === 'limit' ? '今日はたくさんお話ししたから、また明日ね。'
         : 'うまくお返事できなかったよ。もう一回言ってみて。';
       mood = 'sad';
@@ -1018,6 +1063,126 @@ body.big form.typed { display: none; }
     out.textContent = answer;
     if (answer && history.length && history[history.length - 1].role === 'user') history.push({ role: 'assistant', content: answer });
     speak(answer, mood);
+  }
+
+  // ===== LINEミニアプリ：声で話す（押して話す → GASで文字に → Claude → 声で返す） =====
+  let nextAudio = null, recBusy = false, curSrc = null;
+  async function liffSpeak(text, mood) {
+    setEmo(mood || 'smile');
+    if (!text) { setState('idle'); return; }
+    let b64 = nextAudio; nextAudio = null;
+    if (!b64) { try { const r = await callGas({ action: 'tts', text }); b64 = r && r.audio; } catch (e) {} }
+    if (!b64) { setState('idle'); setEmo(mood || 'smile', 5000); return; }
+    await playMp3(b64);
+    setEmo(mood || 'smile', 5000);
+  }
+  async function playMp3(b64) {
+    const a = AC();
+    const bin = atob(b64), u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    let buf;
+    try { buf = await a.decodeAudioData(u8.buffer); } catch (e) { return; }
+    return new Promise(res => {
+      try { if (curSrc) curSrc.stop(); } catch (e) {}
+      const src = a.createBufferSource(), an = a.createAnalyser();
+      an.fftSize = 512; src.buffer = buf; src.connect(an); an.connect(a.destination);
+      curSrc = src;
+      const data = new Float32Array(an.fftSize);
+      setState('speaking');
+      const iv = setInterval(() => {              // 自分で鳴らした声に合わせて口を動かす（ずれない）
+        an.getFloatTimeDomainData(data);
+        let sum = 0; for (let i = 0; i < data.length; i++) sum += data[i] * data[i];
+        const rms = Math.sqrt(sum / data.length);
+        butter.classList.toggle('talking', rms > 0.02);
+        butter.classList.toggle('mouth-small', rms < 0.08);
+      }, 40);
+      src.onended = () => { clearInterval(iv); butter.classList.remove('talking', 'mouth-small'); setState('idle'); curSrc = null; res(); };
+      src.start();
+    });
+  }
+
+  // マイクの音を16kHzの数字にして集める。話し終わって1.2秒しずかになったら止まる
+  let liffStream = null;
+  async function recordVoice(btn) {
+    const a = AC();
+    liffStream = liffStream || await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    const src = a.createMediaStreamSource(liffStream);
+    const proc = a.createScriptProcessor(4096, 1, 1);
+    const chunks = [];
+    let heardVoice = false, quietMs = 0, totalMs = 0, stop = false;
+    btn._stop = () => { stop = true; };
+    return new Promise(res => {
+      proc.onaudioprocess = ev => {
+        const d = ev.inputBuffer.getChannelData(0);
+        chunks.push(new Float32Array(d));
+        let sum = 0; for (let i = 0; i < d.length; i++) sum += d[i] * d[i];
+        const rms = Math.sqrt(sum / d.length), ms = d.length / a.sampleRate * 1000;
+        totalMs += ms;
+        $('lvlLive').style.transform = 'scale(' + (1 + Math.min(rms * 8, 0.5)) + ')';
+        if (rms > 0.02) { heardVoice = true; quietMs = 0; } else quietMs += ms;
+        if (stop || totalMs > 12000 || (heardVoice && quietMs > 1200) || (!heardVoice && totalMs > 6000)) {
+          proc.disconnect(); src.disconnect(); proc.onaudioprocess = null;
+          res(heardVoice ? to16k(chunks, a.sampleRate) : null);
+        }
+      };
+      src.connect(proc); proc.connect(a.destination);
+    });
+  }
+  function to16k(chunks, rate) {
+    const len = chunks.reduce((n, c) => n + c.length, 0), all = new Float32Array(len);
+    let o = 0; chunks.forEach(c => { all.set(c, o); o += c.length; });
+    const ratio = rate / 16000, n = Math.floor(len / ratio), pcm = new Int16Array(n);
+    for (let i = 0; i < n; i++) {
+      const s0 = Math.floor(i * ratio), s1 = Math.min(len, Math.floor((i + 1) * ratio));
+      let v = 0; for (let j = s0; j < s1; j++) v += all[j]; v /= Math.max(1, s1 - s0);
+      pcm[i] = Math.max(-1, Math.min(1, v)) * 0x7fff;
+    }
+    const u8 = new Uint8Array(pcm.buffer);
+    let bin = ''; for (let i = 0; i < u8.length; i += 0x8000) bin += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+    return btoa(bin);
+  }
+  async function talkOnce() {
+    const btn = $('talkBtn');
+    if (recBusy) { btn._stop && btn._stop(); return; }
+    try { if (curSrc) curSrc.stop(); } catch (e) {}
+    recBusy = true; btn.classList.add('rec'); btn.querySelector('b').textContent = 'きいてるよ';
+    setState('listening');
+    let audio = null;
+    try { audio = await recordVoice(btn); } catch (e) { hint.textContent = 'マイクが使えません。LINEの設定でマイクを許可してください。'; }
+    btn.classList.remove('rec'); recBusy = false;
+    if (!audio) { btn.querySelector('b').textContent = 'おして話す'; setState('idle'); return; }
+    btn.classList.add('wait'); btn.querySelector('b').textContent = 'かんがえ中';
+    setState('thinking');
+    const out = addBubble('バターちゃん', '…', 'her');
+    let r = null;
+    try { r = await callGas({ action: 'voice', audio, messages: history.slice(-12) }); } catch (e) {}
+    btn.classList.remove('wait'); btn.querySelector('b').textContent = 'おして話す';
+    if (!r || !r.ok) { out.textContent = r && r.error === 'auth' ? 'LINEの確認ができなかったよ。開き直してね。' : 'うまく聞こえなかったよ。もう一回おしてね。'; setState('idle'); setEmo('sad', 4000); return; }
+    if (!r.heard) { out.textContent = 'ん？もう一回言ってみて。'; setState('idle'); setEmo('think', 3000); return; }
+    // 聞こえた言葉で、ページだけでできることを先に
+    if (/(ガチャ|がちゃ)/.test(r.heard)) { out.parentElement.remove(); doGacha(r.heard); return; }
+    out.parentElement.before(Object.assign(document.createElement('div'), { className: 'bubble me', innerHTML: '<span class="who">あなた</span>' }));
+    out.parentElement.previousSibling.append(document.createTextNode(r.heard));
+    if (CHI.test(r.heard) && TRICKS.some(t => t.re.test(r.heard))) { const t = TRICKS.find(x => x.re.test(r.heard)); if ((pet && pet.chi && pet.chi.tricks || []).indexOf(t.name) >= 0) { chiDo(t.pose); bark(); } }
+    history.push({ role: 'user', content: r.heard }, { role: 'assistant', content: r.text });
+    if (history.length > 12) history = history.slice(-12);
+    out.textContent = r.text;
+    if (r.state) applyPet(r.state, true);
+    nextAudio = r.audio || null;
+    liffSpeak(r.text, r.emotion || 'smile');
+  }
+  async function liffBoot() {
+    if (!LIFF) return;
+    hint.textContent = 'まんなかの「おして話す」をおして、バターちゃんに話しかけてね。';
+    try {
+      await new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'https://static.line-scdn.net/liff/edge/2/sdk.js'; sc.onload = res; sc.onerror = rej; document.head.append(sc); });
+      if (!LIFF_ID) throw new Error('LIFF IDがありません');
+      await liff.init({ liffId: LIFF_ID });
+      if (!liff.isLoggedIn()) { liff.login({ redirectUri: location.href }); return; }
+      poll();
+    } catch (e) {
+      hint.textContent = 'ミニアプリの準備ができませんでした（' + (e.message || e) + '）';
+    }
   }
 
   // ===== しゃべる =====
@@ -1030,6 +1195,7 @@ body.big form.typed { display: none; }
       || vs.find(v => /Google/.test(v.name)) || vs[0] || null;
   }
   function speak(text, mood) {
+    if (LIFF) { liffSpeak(text, mood); return; }
     if (SHOW()) { setEmo(mood || 'smile', 6000); if (state === 'thinking') setState('listening'); startRec(); return; }
     if (!text) { setState('idle'); startRec(); return; }
     stopRec();
@@ -1129,7 +1295,7 @@ body.big form.typed { display: none; }
     speak(text, 'excited');
   }
   async function poll() {
-    if (!cfg.url || !cfg.pass || document.hidden) return;
+    if (!canCall() || document.hidden) return;
     try {
       const r = await callGas({ action: 'poll' });
       if (r && r.state) applyPet(r.state, true);
@@ -1199,6 +1365,12 @@ body.big form.typed { display: none; }
   $('startSettings').addEventListener('click', openSettings);
 
   $('startBtn').addEventListener('click', () => {
+    if (LIFF) {
+      started = true; $('startOverlay').hidden = true; AC();
+      const m = pet ? pet.melt : 0;
+      speak(m >= 2 ? 'あつくて、とろとろだよ〜。お話しして、ひんやりさせて！' : 'やっほー！バターちゃんだよ。まんなかのボタンをおして、お話ししてね。', m >= 2 ? 'melty' : 'excited');
+      return;
+    }
     if (!SR) {
       $('startErr').hidden = false;
       $('startErr').textContent = 'このブラウザでは声が使えません。PCのEdgeかChromeで開いてください（文字では話せます）。';
@@ -1227,13 +1399,15 @@ body.big form.typed { display: none; }
     } catch (e) {}
   });
   document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) document.body.classList.remove('big'); });
-  document.addEventListener('visibilitychange', () => { if (!document.hidden && started) { startRec(); poll(); } });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && started) { if (!LIFF) startRec(); poll(); } });
 
   function setHint() {
     hint.textContent = SHOW() ? 'お話しはClaudeアプリのバターちゃんと。「チーちゃん、おて」「バターちゃん、ガチャ回して」もできるよ。'
       : cfg.wake === 'wake' ? '「バターちゃん」と呼んでから話しかけてね。' : '話しかけると答えるよ。';
   }
   setHint();
+  $('talkBtn').addEventListener('click', talkOnce);
+  liffBoot();
   addBubble('バターちゃん', 'こんにちは！バターちゃんだよ。となりは柴犬のチーちゃん！', 'her');
   setState('idle');
   applyPet(null, false);
