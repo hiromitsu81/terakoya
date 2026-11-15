@@ -848,6 +848,7 @@ body.big form.typed { display: none; }
       $('gachaText').textContent = 'もう一回ためしてね';
       setTimeout(() => { pop.hidden = true; }, 3500);
       addBubble('バターちゃん', 'ガチャがうまく回らなかったよ。（パパへ：原因 ' + why + '）', 'her');
+      toast('ガチャがうまく回らなかったよ（原因：' + why + '）');
       speak('ガチャがうまく回らなかったよ。もう一回言ってみて。', 'sad'); return;
     }
     const g = r.gacha || {};
@@ -1083,18 +1084,29 @@ body.big form.typed { display: none; }
       if (!on && U.hum) { U.hum.o.stop(); U.hum = null; }
     } catch (e) {}
   }
+  function toast(t) {
+    let el = $('toast');
+    if (!el) { el = document.createElement('div'); el.id = 'toast'; el.style.cssText = 'position:fixed;left:50%;top:18%;translate:-50% 0;z-index:60;max-width:90vw;padding:16px 24px;border-radius:20px;background:rgba(27,20,64,.92);color:#fff;font:800 clamp(18px,3vw,28px)/1.4 var(--display);text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.4);transition:opacity .4s'; document.body.append(el); }
+    el.textContent = t; el.style.opacity = '1';
+    clearTimeout(el._t); el._t = setTimeout(() => { el.style.opacity = '0'; }, 4500);
+  }
   let ufoBusy = false;
   async function doUfo(said) {
     if (ufoBusy || U.on) return;
     addBubble('あなた', said || 'UFOキャッチャー', 'me');
+    toast('UFOキャッチャーをじゅんびちゅう…');
     if (!canCall()) { speak('設定でGASのURLと合言葉を入れてね。', 'sad'); return; }
     ufoBusy = true;
     let r = null, why = '';
     try { r = await callGas({ action: 'ufo' }); } catch (e) { why = String(e.message || e); }
     ufoBusy = false;
-    if (!r || !r.ok) { addBubble('バターちゃん', 'UFOキャッチャーがうごかなかったよ。（パパへ：原因 ' + (why || (r && (r.detail || r.error)) || 'unknown') + '）', 'her'); speak('UFOキャッチャーがうごかなかったよ。', 'sad'); return; }
+    if (!r || !r.ok) {
+      const w = why || (r && (r.detail || r.error)) || 'unknown';
+      toast('UFOキャッチャーがうごかなかったよ（原因：' + (w === 'action' ? 'GASが古いまま。新しいバージョンでデプロイしてね' : w) + '）');
+      addBubble('バターちゃん', 'UFOキャッチャーがうごかなかったよ。（パパへ：原因 ' + w + '）', 'her'); speak('UFOキャッチャーがうごかなかったよ。', 'sad'); return;
+    }
     if (r.state) applyPet(r.state, true);
-    if (r.ufo.none) { const t = 'UFOキャッチャーは1回5ポイントだよ。あと' + r.ufo.need + 'ポイントで遊べるよ。今日のおためしはもう使ったね。'; addBubble('バターちゃん', t, 'her'); speak(t, 'shy'); return; }
+    if (r.ufo.none) { toast('UFOキャッチャーは1回5pt。あと' + r.ufo.need + 'ptで遊べるよ'); const t = 'UFOキャッチャーは1回5ポイントだよ。あと' + r.ufo.need + 'ポイントで遊べるよ。今日のおためしはもう使ったね。'; addBubble('バターちゃん', t, 'her'); speak(t, 'shy'); return; }
     // 景品を4つならべる
     const list = r.ufo.prizes.slice().sort(() => Math.random() - .5).slice(0, 4);
     const xs = [130, 190, 255, 330].map(x => x + Math.round(Math.random() * 16 - 8));
@@ -1194,7 +1206,7 @@ body.big form.typed { display: none; }
     if (/(やめる|おわり|終わり)/.test(fresh) && U.phase === 'move') { ufoClose(); return true; }
     return true;                                            // UFOの間はほかの会話にしない
   }
-  const UFO_RE = /(UFO|ＵＦＯ|ユーフォー|ゆーふぉー|ユーホー|クレーン|キャッチャー)/i;
+  const UFO_RE = /(UFO|ＵＦＯ|ユーフォ|ゆーふぉ|ユーホー|ゆーほー|ゆうほう|クレーン|キャッチャー|きゃっちゃー)/i;
 
   // ===== チーちゃんの芸 =====
   let poseTimer = null;
