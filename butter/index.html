@@ -357,6 +357,7 @@ body.big form.typed { display: none; }
 
   <section class="talk" aria-label="おしゃべり">
     <div class="bubbles" id="bubbles" aria-live="polite"></div>
+    <p class="hint" id="diag" hidden></p>
     <p class="hint" id="hint">「バターちゃん」と呼んでから話しかけてね。</p>
     <form class="typed" id="typed">
       <input id="typedInput" type="text" placeholder="文字でもOK（チーちゃん、おて など）" autocomplete="off" aria-label="バターちゃんに送る文字">
@@ -692,6 +693,7 @@ body.big form.typed { display: none; }
       if (fin) onHeard(fin.trim());
     };
     rec.onerror = e => {
+      if (SHOW() && e.error !== 'no-speech' && e.error !== 'aborted') srOK = false, micOK = micOK === 'OK' ? 'OK' : micOK, hint.textContent = '聞き取りエラー：' + e.error;
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
         hint.textContent = 'マイクが使えません。アドレスバーの鍵マークから、マイクを「許可」にしてください。';
         started = false;
@@ -703,7 +705,7 @@ body.big form.typed { display: none; }
   function stopRec() { if (SHOW()) return; if (rec) { rec.onend = null; try { rec.abort(); } catch (e) {} } recOn = false; }
 
   function showPartial(text) {
-    if (SHOW()) { hint.textContent = '聞こえたこと：' + text.slice(-40); return; }
+    if (SHOW()) { srHeard = Date.now(); srOK = true; mouthPulse(); if (!partialEl) partialEl = addBubble('聞こえてる…', '', 'me partial'); partialEl.textContent = text; return; }
     const called = WAKE.test(text) || CHI.test(text);
     if (state === 'sleeping' && !called) return;
     if (cfg.wake === 'wake' && Date.now() > convoUntil && !called) return;
@@ -723,7 +725,8 @@ body.big form.typed { display: none; }
   ];
   let lastTouch = 0;
   function onHeardShow(text) {
-    hint.textContent = '聞こえたこと：' + text.slice(-40);
+    srOK = true;
+    addBubble('聞こえたこと', text, 'her');
     if (state === 'sleeping') setState('listening');
     armSleep();
     if (Date.now() - lastTouch > 5 * 60 * 1000 && cfg.url && cfg.pass) {
@@ -835,12 +838,32 @@ body.big form.typed { display: none; }
       const src = ac.createMediaStreamSource(micStream);
       analyser = ac.createAnalyser(); analyser.fftSize = 512;
       src.connect(analyser);
+      micOK = 'OK';
       micLoop();
     } catch (e) {
-      hint.textContent = 'マイクが使えません。アドレスバーの鍵マークから、マイクを「許可」にしてください。';
+      micOK = 'だめ（' + (e.name || 'error') + '）';
+      hint.textContent = 'マイクが使えません。アドレスバーの鍵マークでマイクを「許可」、Macの「システム設定→プライバシーとセキュリティ→マイク」でEdgeをオンにしてください。';
     }
   }
-  let floor = 0.01;
+  let floor = 0.01, srHeard = 0, srOK = false, micOK = 'まだ', lastRms = 0, pulseTimer = null;
+  // マイクの音量がとれないときの予備：聞き取りが進んでいるあいだ口を動かす
+  function mouthPulse() {
+    if (!SHOW()) return;
+    if (state === 'sleeping') setState('listening');
+    if (state !== 'speaking') setState('speaking');
+    clearTimeout(pulseTimer);
+    pulseTimer = setTimeout(() => { if (Date.now() - srHeard > 700 && loud === 0) { butter.classList.remove('talking', 'mouth-small'); if (state === 'speaking') setState('listening'); } }, 800);
+  }
+  setInterval(() => {
+    if (!SHOW() || state !== 'speaking' || Date.now() - srHeard > 800) return;
+    const r = Math.random(); butter.classList.toggle('talking', r > 0.2); butter.classList.toggle('mouth-small', r < 0.5);
+  }, 120);
+  setInterval(() => {
+    const d = $('diag'); if (!d) return;
+    d.hidden = !SHOW() || !started;
+    const bars = '▮'.repeat(Math.min(10, Math.round(lastRms / 0.01))) || '・';
+    d.textContent = 'マイク：' + micOK + '　音：' + bars + '　聞き取り：' + (!SR ? 'このブラウザは非対応' : srOK ? 'OK' : (recOn ? '待ってる' : '止まってる'));
+  }, 300);
   function micLoop() {
     const buf = new Float32Array(analyser.fftSize);
     const meter = $('lvl'), meterTh = $('lvlTh');
@@ -851,6 +874,7 @@ body.big form.typed { display: none; }
       let sum = 0;
       for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
       const rms = Math.sqrt(sum / buf.length);
+      lastRms = rms;
       // まわりの静かなときの音（床）をおぼえて、それより大きい音を「声」とみなす
       floor = rms < floor ? floor * 0.8 + rms * 0.2 : floor * 0.998 + rms * 0.002;
       const sens = Number(cfg.mic || 5);                          // びんかんさ 1〜10
@@ -862,7 +886,7 @@ body.big form.typed { display: none; }
         if (state !== 'speaking') { if (state === 'sleeping' && loud < 20) return; setState('speaking'); }
         butter.classList.toggle('talking', rms > th);
         butter.classList.toggle('mouth-small', rms < th * 2.2);
-      } else if (state === 'speaking') {
+      } else if (state === 'speaking' && Date.now() - srHeard > 800) {
         butter.classList.remove('talking', 'mouth-small');
         setState('listening');
       }
