@@ -9,10 +9,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
 <style>
-/* 台所のタイル壁の前に立つバターちゃん。ボタンなしで、呼びかけると答える */
+/* 台所のタイル壁の前に、バターちゃんと柴犬の子犬チーちゃん。話しかけないとバターちゃんは溶けていく */
 :root {
   --bg: #e9f2f4; --tile: #dbe8ec; --ink: #23303b; --soft: #5b6b78; --card: #ffffff; --line: #c9d8de;
   --butter: #f7d46a; --butter-deep: #e7b73e; --mic: #2f6fd0; --mic-live: #d9483b; --think: #8a63d2;
+  --shiba: #d9823b; --shiba-deep: #b5652a; --shiba-white: #fff6ea; --collar: #d9483b; --cold: #3f8fd6;
   --display: "M PLUS Rounded 1c", "Hiragino Maru Gothic ProN", "Yu Gothic", sans-serif;
   --body: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
   color-scheme: light;
@@ -21,6 +22,7 @@
   :root {
     --bg: #131a22; --tile: #18212b; --ink: #e8eef2; --soft: #9fb0bd; --card: #1d2732; --line: #2c3a47;
     --butter: #f2cd5c; --butter-deep: #d9a92f; --mic: #5b93ea; --mic-live: #ef6a5d; --think: #a989e6;
+    --shiba: #d27d38; --shiba-deep: #a85d25; --shiba-white: #f6ecdf; --collar: #e0574a; --cold: #66a8e6;
     color-scheme: dark;
   }
 }
@@ -32,7 +34,7 @@ body {
   background-size: 48px 48px;
 }
 .app {
-  height: 100%; display: grid; grid-template-rows: auto 1fr auto; gap: 12px; max-width: 900px; margin: 0 auto;
+  height: 100%; display: grid; grid-template-rows: auto 1fr auto auto; gap: 10px; max-width: 980px; margin: 0 auto;
   padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
 }
 header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -47,43 +49,98 @@ h1 { font-family: var(--display); font-weight: 800; font-size: 22px; margin: 0; 
 .chip[data-s="sleeping"] { border-style: dashed; }
 .icon-btn { background: var(--card); border: 1px solid var(--line); color: var(--ink); border-radius: 12px; width: 40px; height: 40px; font-size: 18px; cursor: pointer; }
 .stage { min-height: 0; display: grid; place-items: center; }
-.stage svg, .stage video { width: min(100%, 440px); max-height: 100%; aspect-ratio: 1; object-fit: contain; }
-.stage video { border-radius: 24px; }
+.stage svg { width: 100%; max-width: 760px; max-height: 100%; aspect-ratio: 720 / 420; }
 [hidden] { display: none !important; }
 
-#mouthOpen { opacity: 0; transform-origin: 200px 255px; transform-box: view-box; }
-.talking #mouthOpen { opacity: 1; }
-.talking #mouthClosed { opacity: 0; }
-.mouth-small #mouthOpen { transform: scaleY(.45); }
+/* ===== バターちゃん ===== */
+.butter { transform-origin: 250px 340px; transform-box: view-box; animation: sway 3.6s ease-in-out infinite; }
+@keyframes sway { 0%, 100% { transform: rotate(-1.5deg); } 50% { transform: rotate(1.5deg); } }
+.melt-shape { opacity: 0; transition: opacity .9s ease; }
+.butter[data-melt="0"] .m0, .butter[data-melt="1"] .m1, .butter[data-melt="2"] .m2, .butter[data-melt="3"] .m3 { opacity: 1; }
+#face { transform-origin: 250px 205px; transform-box: view-box; transition: transform .9s ease; }
+.drips { opacity: 0; transition: opacity .6s; }
+.butter[data-melt="2"] .drips, .butter[data-melt="3"] .drips { opacity: 1; }
+.drip { animation: drip 2.6s ease-in infinite; }
+.drip:nth-child(2) { animation-delay: .9s; } .drip:nth-child(3) { animation-delay: 1.7s; }
+@keyframes drip { 0% { transform: translateY(0); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(26px); opacity: 0; } }
+.butter[data-melt="3"] { animation: none; }
+.frost { opacity: 0; }
+.butter.cooled .frost { animation: frost 1.6s ease-out; }
+@keyframes frost { 0% { opacity: 0; transform: scale(.6); } 30% { opacity: 1; } 100% { opacity: 0; transform: scale(1.2); } }
+.frost { transform-origin: 250px 200px; transform-box: view-box; }
+
 .eye { transform-origin: center; transform-box: fill-box; animation: blink 4.2s infinite; }
 @keyframes blink { 0%, 94%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.1); } }
-.pupil { transition: transform .3s; }
-.thinking .pupil { transform: translate(4px, -6px); }
-.body-wrap { transform-origin: 200px 330px; animation: sway 3.6s ease-in-out infinite; }
-@keyframes sway { 0%, 100% { transform: rotate(-1.5deg); } 50% { transform: rotate(1.5deg); } }
-.ring { opacity: 0; transform-origin: 200px 220px; transform-box: view-box; }
+#mouthOpen { opacity: 0; transform-origin: 250px 255px; transform-box: view-box; }
+.talking #mouthOpen { opacity: 1; }
+.talking #mouth { opacity: 0; }
+.mouth-small #mouthOpen { transform: scaleY(.45); }
+.blush { transition: opacity .4s; opacity: .5; }
+.butter[data-emo="shy"] .blush, .butter[data-emo="excited"] .blush, .butter[data-emo="laugh"] .blush { opacity: .95; }
+.butter[data-emo="excited"], .butter[data-emo="laugh"] { animation: hop .5s ease-in-out 3, sway 3.6s ease-in-out 1.5s infinite; }
+.butter[data-emo="surprise"] { animation: jolt .35s ease-out 1, sway 3.6s ease-in-out .35s infinite; }
+@keyframes hop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
+@keyframes jolt { 0% { transform: scale(1); } 40% { transform: scale(1.06, .95) translateY(-8px); } 100% { transform: scale(1); } }
+.sweat { opacity: 0; transition: opacity .4s; }
+.butter[data-emo="sad"] .sweat, .butter[data-emo="think"] .sweat { opacity: 1; }
+.ring { opacity: 0; transform-origin: 250px 225px; transform-box: view-box; }
 .listening .ring { opacity: 1; animation: pulse 1.6s ease-out infinite; }
 @keyframes pulse { from { transform: scale(.94); opacity: .5; } to { transform: scale(1.1); opacity: 0; } }
 .dots { opacity: 0; } .thinking .dots { opacity: 1; }
 .dots circle { animation: dot 1s infinite; }
 .dots circle:nth-child(2) { animation-delay: .15s; } .dots circle:nth-child(3) { animation-delay: .3s; }
 @keyframes dot { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
-.eye-closed, .zzz { opacity: 0; transition: opacity .4s; }
-.sleeping .eye { opacity: 0; }
-.sleeping .eye-closed, .sleeping .zzz { opacity: 1; }
-.sleeping .body-wrap { animation: breathe 4.8s ease-in-out infinite; }
-@keyframes breathe { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.025); } }
+.zzz { opacity: 0; transition: opacity .4s; }
+.sleeping .zzz { opacity: 1; }
 .zzz text { font-family: var(--display); font-weight: 800; fill: var(--soft); animation: float 3.6s ease-in-out infinite; }
 .zzz text:nth-child(2) { animation-delay: 1.2s; } .zzz text:nth-child(3) { animation-delay: 2.4s; }
 @keyframes float { 0% { transform: translate(0,0); opacity: 0; } 30% { opacity: 1; } 100% { transform: translate(24px,-46px); opacity: 0; } }
-.sleeping { filter: saturate(.8) brightness(.94); }
-@media (prefers-reduced-motion: reduce) { .eye, .body-wrap, .ring, .dots circle, .zzz text { animation: none; } }
+.sleeping { filter: saturate(.85) brightness(.95); }
+
+/* ===== チーちゃん（柴犬の子犬） ===== */
+#chi { transform-origin: 565px 345px; transform-box: view-box; transition: transform .8s ease; }
+#chiPose { transform-origin: 565px 300px; transform-box: view-box; transition: transform .45s ease; }
+#chiHead { transform-origin: 562px 250px; transform-box: view-box; animation: tilt 5s ease-in-out infinite; }
+@keyframes tilt { 0%, 70%, 100% { transform: rotate(0); } 78%, 90% { transform: rotate(-9deg); } }
+#tail { transform-origin: 606px 292px; transform-box: view-box; }
+.wag #tail { animation: wag .22s ease-in-out infinite alternate; }
+@keyframes wag { from { transform: rotate(-14deg); } to { transform: rotate(16deg); } }
+#paw { transform-origin: 569px 318px; transform-box: view-box; transition: transform .35s ease; }
+.tongue { opacity: 0; transition: opacity .3s; }
+.wag .tongue { opacity: 1; }
+#chiPose.paw #paw { transform: translateY(-18px) rotate(-38deg); }
+#chiPose.down { transform: translateY(26px) scaleY(.82); }
+#chiPose.spin { animation: spin .9s ease-in-out; }
+#chiPose.jump { animation: jump .8s ease-out; }
+@keyframes spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+@keyframes jump { 0%, 100% { transform: translateY(0); } 45% { transform: translateY(-80px) rotate(-6deg); } }
+#chi.worry #chiHead { animation: none; transform: rotate(6deg) translateY(6px); }
+.bark { opacity: 0; font-family: var(--display); font-weight: 800; fill: var(--shiba-deep); }
+.barking .bark { animation: barkpop .9s ease-out; }
+@keyframes barkpop { 0% { opacity: 0; transform: translateY(6px); } 25% { opacity: 1; } 100% { opacity: 0; transform: translateY(-18px); } }
+.heart { opacity: 0; transform-origin: 600px 150px; transform-box: view-box; }
+.learned .heart { animation: heart 1.6s ease-out; }
+@keyframes heart { 0% { opacity: 0; transform: scale(.4); } 30% { opacity: 1; transform: scale(1.1); } 100% { opacity: 0; transform: scale(1) translateY(-30px); } }
+@media (prefers-reduced-motion: reduce) { .eye, .butter, .ring, .dots circle, .zzz text, #chiHead, .wag #tail, .drip { animation: none !important; } }
+
+/* ===== 育ちメーター ===== */
+.meters { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.meter { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 10px 14px; display: grid; gap: 6px; min-width: 0; }
+.meter .top { display: flex; justify-content: space-between; gap: 8px; font-family: var(--display); font-weight: 700; font-size: 14px; }
+.meter .top span:last-child { color: var(--soft); font-weight: 500; font-size: 13px; text-align: right; }
+.bar { height: 10px; border-radius: 99px; background: var(--tile); overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 99px; transition: width .8s ease; }
+#coldBar i { background: linear-gradient(90deg, var(--butter-deep), var(--cold)); }
+#chiBar i { background: var(--shiba); }
+.meter small { color: var(--soft); font-size: 12px; line-height: 1.5; }
+@media (max-width: 560px) { .meters { grid-template-columns: 1fr; } }
 
 .talk { display: grid; gap: 10px; }
-.bubbles { display: grid; gap: 8px; max-height: 30vh; overflow-y: auto; }
+.bubbles { display: grid; gap: 8px; max-height: 26vh; overflow-y: auto; }
 .bubble { padding: 10px 14px; border-radius: 16px; line-height: 1.6; max-width: 90%; border: 1px solid var(--line); background: var(--card); overflow-wrap: anywhere; }
 .bubble.me { justify-self: end; border-bottom-right-radius: 4px; }
 .bubble.her { justify-self: start; border-bottom-left-radius: 4px; border-color: var(--butter-deep); }
+.bubble.dog { justify-self: start; border-bottom-left-radius: 4px; border-color: var(--shiba); }
 .bubble .who { display: block; font-family: var(--display); font-size: 12px; color: var(--soft); margin-bottom: 2px; }
 .bubble.partial { color: var(--soft); font-style: italic; }
 .hint { color: var(--soft); font-size: 14px; text-align: center; margin: 0; }
@@ -105,18 +162,19 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 
 body.big .app { max-width: none; }
 body.big header { opacity: .6; }
-body.big .stage svg, body.big .stage video { width: min(100%, 64vh); }
+body.big .stage svg { max-width: none; width: min(100%, 120vh); }
 body.big .bubble { font-size: 26px; max-width: 80%; }
 body.big .bubble .who { font-size: 16px; }
 body.big .bubbles .bubble:not(:nth-last-child(-n+2)) { display: none; }
 body.big .hint { font-size: 18px; }
+body.big .meter .top { font-size: 18px; }
 body.big form.typed { display: none; }
 </style>
 </head>
 <body>
 <div class="app">
   <header>
-    <h1>バターちゃん</h1>
+    <h1>バターちゃんとチーちゃん</h1>
     <div class="row">
       <span class="chip" id="chip" data-s="idle" role="status" aria-live="polite">まってるよ</span>
       <button class="icon-btn" id="bigBtn" aria-label="プロジェクター表示" title="プロジェクター表示">⛶</button>
@@ -125,49 +183,131 @@ body.big form.typed { display: none; }
   </header>
 
   <div class="stage">
-    <svg id="char" viewBox="0 0 400 400" role="img" aria-label="バターちゃん">
-      <circle class="ring" cx="200" cy="220" r="150" fill="none" stroke="var(--mic-live)" stroke-width="6"/>
-      <g class="body-wrap">
-        <ellipse cx="200" cy="350" rx="140" ry="22" fill="var(--line)"/>
-        <ellipse cx="200" cy="330" rx="150" ry="30" fill="var(--card)" stroke="var(--line)" stroke-width="4"/>
-        <path d="M95 150 Q95 120 125 118 L285 112 Q312 112 312 140 L318 300 Q318 322 292 324 L112 326 Q88 326 88 302 Z" fill="var(--butter)" stroke="var(--butter-deep)" stroke-width="5"/>
-        <path d="M95 150 Q150 135 200 140 T312 140" fill="none" stroke="var(--butter-deep)" stroke-width="4" opacity=".55"/>
-        <path d="M118 128 Q140 122 160 124" stroke="#fff" stroke-width="8" stroke-linecap="round" opacity=".55"/>
-        <ellipse cx="135" cy="245" rx="20" ry="12" fill="#f39a8c" opacity=".55"/>
-        <ellipse cx="265" cy="245" rx="20" ry="12" fill="#f39a8c" opacity=".55"/>
-        <g class="eye"><ellipse cx="155" cy="205" rx="17" ry="21" fill="#2b2310"/><circle class="pupil" cx="160" cy="198" r="6" fill="#fff"/></g>
-        <g class="eye"><ellipse cx="245" cy="205" rx="17" ry="21" fill="#2b2310"/><circle class="pupil" cx="250" cy="198" r="6" fill="#fff"/></g>
-        <path class="eye-closed" d="M138 208 Q155 222 172 208" fill="none" stroke="#2b2310" stroke-width="6" stroke-linecap="round"/>
-        <path class="eye-closed" d="M228 208 Q245 222 262 208" fill="none" stroke="#2b2310" stroke-width="6" stroke-linecap="round"/>
-        <path id="mouthClosed" d="M182 250 Q200 266 218 250" fill="none" stroke="#2b2310" stroke-width="6" stroke-linecap="round"/>
-        <g id="mouthOpen">
-          <path d="M176 246 Q200 244 224 246 Q222 282 200 284 Q178 282 176 246 Z" fill="#7a2e22" stroke="#2b2310" stroke-width="5"/>
-          <ellipse cx="200" cy="272" rx="12" ry="7" fill="#e86b6b"/>
+    <svg id="scene" viewBox="0 0 720 420" role="img" aria-label="バターちゃんと柴犬のチーちゃん">
+      <!-- 床 -->
+      <ellipse cx="360" cy="372" rx="340" ry="26" fill="var(--line)" opacity=".5"/>
+
+      <!-- ===== バターちゃん ===== -->
+      <g id="butter" class="butter" data-melt="0" data-emo="smile">
+        <circle class="ring" cx="250" cy="225" r="150" fill="none" stroke="var(--mic-live)" stroke-width="6"/>
+        <ellipse cx="250" cy="352" rx="150" ry="22" fill="var(--line)"/>
+        <ellipse cx="250" cy="334" rx="165" ry="30" fill="var(--card)" stroke="var(--line)" stroke-width="4"/>
+        <!-- 溶けぐあい 0〜3 -->
+        <g class="melt-shape m0">
+          <path d="M145 150 Q145 120 175 118 L335 112 Q362 112 362 140 L368 300 Q368 322 342 324 L162 326 Q138 326 138 302 Z" fill="var(--butter)" stroke="var(--butter-deep)" stroke-width="5"/>
+          <path d="M145 150 Q200 135 250 140 T362 140" fill="none" stroke="var(--butter-deep)" stroke-width="4" opacity=".55"/>
+          <path d="M168 128 Q190 122 210 124" stroke="#fff" stroke-width="8" stroke-linecap="round" opacity=".6"/>
         </g>
-        <g class="zzz"><text x="296" y="104" font-size="30">Z</text><text x="316" y="84" font-size="38">Z</text><text x="340" y="62" font-size="46">Z</text></g>
-        <g class="dots" fill="var(--think)"><circle cx="300" cy="90" r="9"/><circle cx="326" cy="70" r="9"/><circle cx="352" cy="50" r="9"/></g>
+        <g class="melt-shape m1">
+          <path d="M150 178 Q150 148 182 146 L322 142 Q352 144 354 172 L372 300 Q378 322 400 328 Q380 338 330 336 L170 338 Q112 338 104 328 Q126 320 130 300 Z" fill="var(--butter)" stroke="var(--butter-deep)" stroke-width="5"/>
+          <path d="M175 156 Q195 151 214 153" stroke="#fff" stroke-width="8" stroke-linecap="round" opacity=".5"/>
+        </g>
+        <g class="melt-shape m2">
+          <path d="M96 334 Q92 318 122 312 Q124 236 172 214 Q250 184 328 214 Q376 236 378 312 Q410 318 404 334 Q250 346 96 334 Z" fill="var(--butter)" stroke="var(--butter-deep)" stroke-width="5"/>
+          <path d="M184 224 Q206 214 228 214" stroke="#fff" stroke-width="8" stroke-linecap="round" opacity=".45"/>
+        </g>
+        <g class="melt-shape m3">
+          <path d="M84 334 Q90 300 150 296 Q190 272 250 272 Q312 272 350 296 Q414 300 418 334 Q250 352 84 334 Z" fill="var(--butter)" stroke="var(--butter-deep)" stroke-width="5"/>
+          <path d="M200 282 Q222 276 244 277" stroke="#fff" stroke-width="7" stroke-linecap="round" opacity=".4"/>
+        </g>
+        <g class="drips" fill="var(--butter)" stroke="var(--butter-deep)" stroke-width="3">
+          <path class="drip" d="M128 318 q6 10 0 16 q-6 -6 0 -16Z"/>
+          <path class="drip" d="M370 316 q6 10 0 16 q-6 -6 0 -16Z"/>
+          <path class="drip" d="M300 326 q5 9 0 14 q-5 -5 0 -14Z"/>
+        </g>
+        <!-- 顔（溶けるにつれて下へ） -->
+        <g id="face">
+          <ellipse class="blush" cx="185" cy="248" rx="20" ry="12" fill="#f39a8c"/>
+          <ellipse class="blush" cx="315" cy="248" rx="20" ry="12" fill="#f39a8c"/>
+          <g id="brows" fill="none" stroke="#2b2310" stroke-width="5" stroke-linecap="round"></g>
+          <g id="eyes"></g>
+          <g id="mouth"></g>
+          <g id="mouthOpen">
+            <path d="M226 246 Q250 244 274 246 Q272 282 250 284 Q228 282 226 246 Z" fill="#7a2e22" stroke="#2b2310" stroke-width="5"/>
+            <ellipse cx="250" cy="272" rx="12" ry="7" fill="#e86b6b"/>
+          </g>
+          <path class="sweat" d="M338 168 q10 16 0 24 q-10 -8 0 -24Z" fill="#9fd3f5" stroke="#5aa6d8" stroke-width="2"/>
+        </g>
+        <g class="frost" fill="none" stroke="var(--cold)" stroke-width="4" stroke-linecap="round">
+          <path d="M110 120 v28 M96 134 h28 M100 124 l20 20 M120 124 l-20 20"/>
+          <path d="M392 150 v22 M381 161 h22"/>
+          <path d="M150 80 v18 M141 89 h18"/>
+        </g>
+        <g class="zzz"><text x="346" y="104" font-size="30">Z</text><text x="366" y="84" font-size="38">Z</text><text x="390" y="62" font-size="46">Z</text></g>
+        <g class="dots" fill="var(--think)"><circle cx="350" cy="90" r="9"/><circle cx="376" cy="70" r="9"/><circle cx="402" cy="50" r="9"/></g>
+      </g>
+
+      <!-- ===== チーちゃん（オリジナルの柴犬の子犬） ===== -->
+      <g id="chi" class="wag">
+        <g id="chiPose">
+          <ellipse cx="575" cy="348" rx="70" ry="10" fill="var(--line)" opacity=".8"/>
+          <!-- くるんとしたしっぽ -->
+          <g id="tail">
+            <path d="M604 296 Q650 284 650 252 Q648 226 624 230 Q606 236 614 252 Q628 252 626 262 Q620 276 598 282 Z" fill="var(--shiba)" stroke="var(--shiba-deep)" stroke-width="3"/>
+            <path d="M622 240 Q634 238 636 250" fill="none" stroke="var(--shiba-white)" stroke-width="6" stroke-linecap="round"/>
+          </g>
+          <!-- からだ -->
+          <ellipse cx="612" cy="334" rx="24" ry="13" fill="var(--shiba)" stroke="var(--shiba-deep)" stroke-width="3"/>
+          <ellipse cx="568" cy="304" rx="54" ry="44" fill="var(--shiba)" stroke="var(--shiba-deep)" stroke-width="3"/>
+          <ellipse cx="556" cy="312" rx="28" ry="32" fill="var(--shiba-white)"/>
+          <!-- 前足 -->
+          <path d="M530 312 h18 v30 q-9 6 -18 0 Z" fill="var(--shiba-white)" stroke="var(--shiba-deep)" stroke-width="3"/>
+          <g id="paw"><path d="M560 312 h18 v30 q-9 6 -18 0 Z" fill="var(--shiba-white)" stroke="var(--shiba-deep)" stroke-width="3"/></g>
+          <!-- あたま -->
+          <g id="chiHead">
+            <path d="M508 200 L514 144 L550 180 Z" fill="var(--shiba)" stroke="var(--shiba-deep)" stroke-width="3" stroke-linejoin="round"/>
+            <path d="M518 186 L520 160 L538 180 Z" fill="#f1b68a"/>
+            <path d="M616 200 L610 144 L574 180 Z" fill="var(--shiba)" stroke="var(--shiba-deep)" stroke-width="3" stroke-linejoin="round"/>
+            <path d="M606 186 L604 160 L586 180 Z" fill="#f1b68a"/>
+            <ellipse cx="562" cy="216" rx="62" ry="52" fill="var(--shiba)" stroke="var(--shiba-deep)" stroke-width="3"/>
+            <path d="M516 236 Q522 204 548 214 Q562 222 576 214 Q602 204 608 236 Q604 268 562 270 Q520 268 516 236 Z" fill="var(--shiba-white)"/>
+            <ellipse cx="540" cy="190" rx="8" ry="5" fill="var(--shiba-white)"/>
+            <ellipse cx="584" cy="190" rx="8" ry="5" fill="var(--shiba-white)"/>
+            <g class="eye"><circle cx="540" cy="208" r="8" fill="#2b2310"/><circle cx="543" cy="205" r="2.6" fill="#fff"/></g>
+            <g class="eye"><circle cx="584" cy="208" r="8" fill="#2b2310"/><circle cx="587" cy="205" r="2.6" fill="#fff"/></g>
+            <ellipse cx="562" cy="231" rx="9" ry="6" fill="#2b2310"/>
+            <path d="M552 242 Q557 249 562 242 Q567 249 572 242" fill="none" stroke="#2b2310" stroke-width="3" stroke-linecap="round"/>
+            <ellipse class="tongue" cx="562" cy="252" rx="6" ry="7" fill="#ee7f8a"/>
+            <ellipse cx="530" cy="236" rx="9" ry="5" fill="#f39a8c" opacity=".55"/>
+            <ellipse cx="594" cy="236" rx="9" ry="5" fill="#f39a8c" opacity=".55"/>
+            <!-- 首輪とバター色の名札 -->
+            <path d="M524 262 Q562 280 600 262" fill="none" stroke="var(--collar)" stroke-width="8" stroke-linecap="round"/>
+            <circle cx="562" cy="280" r="7" fill="var(--butter)" stroke="var(--butter-deep)" stroke-width="2"/>
+          </g>
+        </g>
+        <text class="bark" x="628" y="170" font-size="30">ワン！</text>
+        <path class="heart" d="M600 160 c-10 -14 -30 -4 -20 12 l20 18 l20 -18 c10 -16 -10 -26 -20 -12Z" fill="#ee6b7c"/>
       </g>
     </svg>
-    <video id="vIdle" muted loop playsinline hidden></video>
-    <video id="vTalk" muted loop playsinline hidden></video>
-    <video id="vSleep" muted loop playsinline hidden></video>
   </div>
+
+  <section class="meters" aria-label="育ちぐあい">
+    <div class="meter">
+      <div class="top"><span>バターちゃん：<b id="meltName">ひんやり</b></span><span id="careNote"></span></div>
+      <div class="bar" id="coldBar"><i style="width:100%"></i></div>
+      <small>話しかけたり、LINEで宿題や日記を報告するとひんやりするよ。ほうっておくと溶けちゃう。</small>
+    </div>
+    <div class="meter">
+      <div class="top"><span>チーちゃん <b id="chiLv">Lv0</b> <span id="chiName"></span></span><span id="chiNext"></span></div>
+      <div class="bar" id="chiBar"><i style="width:0%"></i></div>
+      <small id="chiTricks">家族のポイントで大きくなって、芸を覚えるよ。「チーちゃん、おすわり」って言ってみて。</small>
+    </div>
+  </section>
 
   <section class="talk" aria-label="おしゃべり">
     <div class="bubbles" id="bubbles" aria-live="polite"></div>
     <p class="hint" id="hint">「バターちゃん」と呼んでから話しかけてね。</p>
     <form class="typed" id="typed">
-      <input id="typedInput" type="text" placeholder="文字でもOK" autocomplete="off" aria-label="バターちゃんに送る文字">
+      <input id="typedInput" type="text" placeholder="文字でもOK（チーちゃん、おて など）" autocomplete="off" aria-label="バターちゃんに送る文字">
       <button class="btn primary" type="submit">送る</button>
     </form>
   </section>
 </div>
 
-<!-- はじめる（マイクと声を使うには、最初に1回だけ押す必要があります） -->
 <div class="overlay" id="startOverlay">
   <div class="sheet">
     <h2>バターちゃんをおこす</h2>
-    <p class="note">最初に1回だけ押してください。あとはボタンなしで、「バターちゃん」と呼ぶと答えます。</p>
+    <p class="note">最初に1回だけ押してください。あとはボタンなしで、「バターちゃん」と呼ぶと答えます。「チーちゃん、おて」と言うとチーちゃんが芸をします。</p>
     <p class="err" id="startErr" hidden></p>
     <button class="btn primary" id="startBtn">おこす</button>
     <button class="btn" id="startSettings">設定をひらく</button>
@@ -184,7 +324,7 @@ body.big form.typed { display: none; }
     <div class="field">
       <label for="pass">家族の合言葉</label>
       <input id="pass" type="password" autocomplete="off">
-      <p class="note">GASのスクリプトプロパティ BUTTER_PASS と同じことばを入れます。この端末にだけ保存されます。</p>
+      <p class="note">GASの BUTTER_PASS と同じことば。この端末にだけ保存されます。</p>
     </div>
     <div class="field">
       <label for="wakeSel">話しかけ方</label>
@@ -196,10 +336,16 @@ body.big form.typed { display: none; }
     <div class="field">
       <label for="voiceSel">声</label>
       <select id="voiceSel"></select>
+      <p class="note">Edgeなら「Nanami」（Natural）がいちばん自然です。</p>
+      <button class="btn" id="testVoice" type="button">声をためす</button>
     </div>
     <div class="field">
       <label for="rateRange">話す速さ <span id="rateVal">1.0</span></label>
       <input id="rateRange" type="range" min="0.7" max="1.5" step="0.1" value="1">
+    </div>
+    <div class="field">
+      <label for="pitchRange">声の高さ <span id="pitchVal">1.1</span></label>
+      <input id="pitchRange" type="range" min="0.8" max="1.6" step="0.1" value="1.1">
     </div>
     <div class="field">
       <label for="sleepSel">だれも話しかけないとねむるまで</label>
@@ -207,7 +353,6 @@ body.big form.typed { display: none; }
         <option value="60">1分</option><option value="180">3分</option><option value="600">10分</option><option value="0">ねない</option>
       </select>
     </div>
-    <p class="note">動画にしたいときは、このページと同じフォルダに idle.mp4（待っているとき）、talk.mp4（しゃべるとき）、sleep.mp4（ねているとき・なくてもOK）を置くと、自動で動画に切りかわります。</p>
     <button class="btn primary" id="closeSettings">保存してとじる</button>
   </div>
 </div>
@@ -215,8 +360,8 @@ body.big form.typed { display: none; }
 <script>
 (() => {
   const $ = id => document.getElementById(id);
-  const char = $('char'), chip = $('chip'), bubbles = $('bubbles'), hint = $('hint');
-  const vIdle = $('vIdle'), vTalk = $('vTalk'), vSleep = $('vSleep');
+  const scene = $('scene'), butter = $('butter'), chi = $('chi'), chiPose = $('chiPose');
+  const chip = $('chip'), bubbles = $('bubbles'), hint = $('hint');
 
   const store = {
     get(k, d) { try { const v = localStorage.getItem('butter.' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
@@ -224,18 +369,145 @@ body.big form.typed { display: none; }
   };
   const cfg = {
     url: store.get('url', ''), pass: store.get('pass', ''), wake: store.get('wake', 'wake'),
-    voice: store.get('voice', ''), rate: store.get('rate', 1), sleepAfter: store.get('sleepAfter', 180),
+    voice: store.get('voice', ''), rate: store.get('rate', 1), pitch: store.get('pitch', 1.1), sleepAfter: store.get('sleepAfter', 180),
   };
 
   const WAKE = /(バターちゃん|ばたーちゃん|バタちゃん|ばたちゃん|バターさん|バター|ばたー)/;
+  const CHI = /(チーちゃん|ちーちゃん|チーチャン|チイちゃん|ちいちゃん|チーズちゃん)/;
+  const TRICKS = [
+    { name: 'おすわり', re: /(おすわり|お座り|おすわる)/, pose: 'sit' },
+    { name: 'おて', re: /(おて|お手|おてて)/, pose: 'paw' },
+    { name: 'ふせ', re: /(ふせ|伏せ)/, pose: 'down' },
+    { name: 'まわれ', re: /(まわれ|回れ|くるっと|くるくる|回って|まわって)/, pose: 'spin' },
+    { name: 'ジャンプ', re: /(ジャンプ|じゃんぷ|とんで|跳んで|飛んで)/, pose: 'jump' },
+  ];
   let state = 'idle';
   let history = [];
-  let convoUntil = 0;           // 呼びかけのあと、この時刻までは名前なしで話せる
+  let convoUntil = 0;
   let partialEl = null;
   let sayQueue = [];
   let started = false;
+  let pet = store.get('pet', null);     // GAS から届く { melt, meltName, chi:{level,name,xp,tricks,nextTrick,toNext} }
 
-  // ===== 見た目と状態 =====
+  // ===== 表情 =====
+  const EX = [205, 295], EY = 205;
+  const eyeNormal = (rx, ry, hx, hy) => EX.map(x => `<g class="eye"><ellipse cx="${x}" cy="${EY}" rx="${rx}" ry="${ry}" fill="#2b2310"/><circle cx="${x + hx}" cy="${EY + hy}" r="6" fill="#fff"/></g>`).join('');
+  const arc = (dy1, dy2, w) => EX.map(x => `<path d="M${x - 16} ${EY + dy1} Q${x} ${EY + dy2} ${x + 16} ${EY + dy1}" fill="none" stroke="#2b2310" stroke-width="${w || 6}" stroke-linecap="round"/>`).join('');
+  const star = () => EX.map(x => `<path d="M${x} ${EY - 22} Q${x + 4} ${EY - 4} ${x + 20} ${EY} Q${x + 4} ${EY + 4} ${x} ${EY + 22} Q${x - 4} ${EY + 4} ${x - 20} ${EY} Q${x - 4} ${EY - 4} ${x} ${EY - 22}Z" fill="#2b2310"/><circle cx="${x + 5}" cy="${EY - 6}" r="4" fill="#fff"/>`).join('');
+  const FACES = {
+    smile:    { eyes: eyeNormal(17, 21, 5, -7), mouth: '<path d="M232 250 Q250 266 268 250" fill="none" stroke="#2b2310" stroke-width="6" stroke-linecap="round"/>', brows: '' },
+    laugh:    { eyes: arc(8, -12), mouth: '<path d="M226 245 L274 245 Q272 282 250 284 Q228 282 226 245Z" fill="#7a2e22" stroke="#2b2310" stroke-width="5"/><ellipse cx="250" cy="272" rx="12" ry="7" fill="#e86b6b"/>', brows: '' },
+    surprise: { eyes: EX.map(x => `<g class="eye"><circle cx="${x}" cy="${EY}" r="22" fill="#fff" stroke="#2b2310" stroke-width="5"/><circle cx="${x}" cy="${EY + 2}" r="10" fill="#2b2310"/></g>`).join(''),
+                mouth: '<ellipse cx="250" cy="260" rx="11" ry="14" fill="#7a2e22" stroke="#2b2310" stroke-width="5"/>',
+                brows: EX.map(x => `<path d="M${x - 16} ${EY - 40} Q${x} ${EY - 52} ${x + 16} ${EY - 40}"/>`).join('') },
+    sad:      { eyes: eyeNormal(14, 17, 4, -5), mouth: '<path d="M234 264 Q250 250 266 264" fill="none" stroke="#2b2310" stroke-width="6" stroke-linecap="round"/>',
+                brows: `<path d="M190 176 L218 168"/><path d="M282 168 L310 176"/>` },
+    shy:      { eyes: arc(-2, 10), mouth: '<path d="M238 256 Q244 262 250 256 Q256 262 262 256" fill="none" stroke="#2b2310" stroke-width="5" stroke-linecap="round"/>', brows: '' },
+    think:    { eyes: eyeNormal(15, 19, 6, -10), mouth: '<path d="M238 260 L264 252" fill="none" stroke="#2b2310" stroke-width="6" stroke-linecap="round"/>',
+                brows: `<path d="M188 176 Q205 166 222 174"/><path d="M280 170 Q296 172 312 178"/>` },
+    excited:  { eyes: star(), mouth: '<path d="M224 246 Q250 250 276 246 Q272 286 250 288 Q228 286 224 246Z" fill="#7a2e22" stroke="#2b2310" stroke-width="5"/><ellipse cx="250" cy="275" rx="13" ry="7" fill="#e86b6b"/>', brows: '' },
+    sleep:    { eyes: arc(0, 14), mouth: '<path d="M240 256 Q250 262 260 256" fill="none" stroke="#2b2310" stroke-width="5" stroke-linecap="round"/>', brows: '' },
+    melty:    { eyes: EX.map(x => `<g class="eye"><ellipse cx="${x}" cy="${EY + 4}" rx="15" ry="13" fill="#2b2310"/><circle cx="${x + 4}" cy="${EY}" r="4" fill="#fff"/></g>`).join(''),
+                mouth: '<path d="M232 258 Q241 252 250 258 Q259 264 268 258" fill="none" stroke="#2b2310" stroke-width="6" stroke-linecap="round"/>',
+                brows: `<path d="M190 178 L218 172"/><path d="M282 172 L310 178"/>` },
+  };
+  let emo = 'smile', emoTimer = null;
+  function baseEmo() {
+    if (state === 'sleeping') return 'sleep';
+    if (state === 'thinking') return 'think';
+    const m = pet ? pet.melt : 0;
+    return m >= 2 ? 'melty' : 'smile';
+  }
+  function setEmo(e, holdMs) {
+    clearTimeout(emoTimer);
+    emo = FACES[e] ? e : 'smile';
+    const f = FACES[emo];
+    $('eyes').innerHTML = f.eyes; $('mouth').innerHTML = f.mouth; $('brows').innerHTML = f.brows;
+    butter.dataset.emo = emo;
+    if (holdMs) emoTimer = setTimeout(() => setEmo(baseEmo()), holdMs);
+  }
+
+  // ===== 溶けぐあいとチーちゃんの成長 =====
+  const FACE_POS = [[0, 1], [16, .96], [46, .86], [84, .72]];
+  let lastMelt = null;
+  function applyPet(p, fromServer) {
+    if (p) { pet = p; store.set('pet', p); }
+    const m = pet ? Math.max(0, Math.min(3, pet.melt | 0)) : 0;
+    butter.dataset.melt = m;
+    const [dy, s] = FACE_POS[m];
+    $('face').style.transform = `translateY(${dy}px) scale(${s})`;
+    $('meltName').textContent = pet ? pet.meltName : 'ひんやり';
+    $('coldBar').firstElementChild.style.width = (100 - m * 30) + '%';
+    $('careNote').textContent = pet && pet.reportsToday ? '今日の報告 ' + pet.reportsToday + '件' : '';
+    if (fromServer && lastMelt !== null && m < lastMelt) {
+      butter.classList.remove('cooled'); void butter.getBBox(); butter.classList.add('cooled');
+    }
+    lastMelt = m;
+    chi.classList.toggle('worry', m >= 2);
+
+    const c = pet && pet.chi ? pet.chi : { level: 0, name: 'あかちゃん', xp: 0, tricks: [], nextTrick: 'おすわり', toNext: 10 };
+    $('chiLv').textContent = 'Lv' + c.level;
+    $('chiName').textContent = c.name;
+    $('chiNext').textContent = c.nextTrick ? 'あと' + c.toNext + 'ptで「' + c.nextTrick + '」' : '芸をぜんぶ覚えたよ';
+    const span = c.nextTrick ? (c.xp + c.toNext) : c.xp || 1;
+    $('chiBar').firstElementChild.style.width = Math.min(100, Math.round(c.xp / span * 100)) + '%';
+    $('chiTricks').textContent = c.tricks.length ? 'できる芸：' + c.tricks.join('・') + '。「チーちゃん、' + c.tricks[c.tricks.length - 1] + '」って言ってみて。'
+      : 'まだ芸はできないけど、家族のポイントで大きくなって芸を覚えるよ。';
+    chi.style.transform = `scale(${0.82 + c.level * 0.04})`;
+    if (fromServer && prevLevel !== null && c.level > prevLevel) {
+      chi.classList.remove('learned'); void chi.getBBox(); chi.classList.add('learned');
+      const t = CHI_LEVELS_TEXT(c);
+      if (started) announce(t);
+    }
+    prevLevel = c.level;
+    if (state !== 'speaking') setEmo(baseEmo());
+  }
+  let prevLevel = null;
+  const CHI_LEVELS_TEXT = c => 'すごい！チーちゃんが「' + c.tricks[c.tricks.length - 1] + '」を覚えたよ！みんながんばったからだね。';
+
+  // ===== チーちゃんの芸 =====
+  let poseTimer = null;
+  function chiDo(pose) {
+    clearTimeout(poseTimer);
+    chiPose.classList.remove('paw', 'down', 'spin', 'jump');
+    void chiPose.getBBox();
+    if (pose && pose !== 'sit') chiPose.classList.add(pose);
+    chi.classList.add('wag');
+    poseTimer = setTimeout(() => chiPose.classList.remove('paw', 'down', 'spin', 'jump'), pose === 'down' || pose === 'paw' ? 3500 : 1200);
+  }
+  function bark() {
+    chi.classList.remove('barking'); void chi.getBBox(); chi.classList.add('barking');
+    try {
+      const u = new SpeechSynthesisUtterance('ワン！');
+      u.lang = 'ja-JP'; u.pitch = 2; u.rate = 1.3; const v = pickVoice(); if (v) u.voice = v;
+      speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+  function handleChi(text) {
+    const known = pet && pet.chi ? pet.chi.tricks : [];
+    const t = TRICKS.find(x => x.re.test(text));
+    addBubble('あなた', text, 'me');
+    if (!t) { chiDo('sit'); bark(); addBubble('チーちゃん', 'ワン！（しっぽふりふり）', 'dog'); afterLocal(); return; }
+    if (known.indexOf(t.name) >= 0) {
+      chiDo(t.pose); bark();
+      addBubble('チーちゃん', 'ワン！（' + t.name + '）', 'dog');
+      setEmo('excited', 4000);
+      afterLocal();
+    } else {
+      const c = pet && pet.chi;
+      const order = TRICKS.findIndex(x => x === t);
+      const msg = c && c.nextTrick === t.name
+        ? 'チーちゃんは「' + t.name + '」をれんしゅう中！あと' + c.toNext + 'ポイントで覚えるよ。宿題や日記をLINEで報告してね。'
+        : 'チーちゃんはまだ「' + t.name + '」を覚えてないよ。' + (order > 0 ? '先に「' + TRICKS[order - 1].name + '」からだね。' : '家族のポイントで覚えるよ。');
+      chiDo('sit');
+      addBubble('バターちゃん', msg, 'her');
+      setEmo('shy');
+      speak(msg, 'shy');
+    }
+  }
+  function afterLocal() { convoUntil = Date.now() + 25000; if (state !== 'speaking') { setState('listening'); startRec(); } }
+
+  // ===== 状態 =====
   const LABEL = { idle: 'まってるよ', listening: 'きいてるよ', thinking: 'かんがえ中', speaking: 'おはなし中', sleeping: 'ねてるよ' };
   let sleepTimer = null;
   function armSleep() {
@@ -244,22 +516,24 @@ body.big form.typed { display: none; }
     sleepTimer = setTimeout(() => { if (state === 'listening' || state === 'idle') setState('sleeping'); }, cfg.sleepAfter * 1000);
   }
   function setState(s) {
+    const prev = state;
     state = s;
     chip.dataset.s = s; chip.textContent = LABEL[s];
-    char.classList.toggle('listening', s === 'listening' && Date.now() < convoUntil);
-    char.classList.toggle('thinking', s === 'thinking');
-    char.classList.toggle('talking', s === 'speaking');
-    char.classList.toggle('sleeping', s === 'sleeping');
+    butter.classList.toggle('listening', s === 'listening' && Date.now() < convoUntil);
+    butter.classList.toggle('thinking', s === 'thinking');
+    butter.classList.toggle('talking', s === 'speaking');
+    scene.classList.toggle('sleeping', s === 'sleeping');
+    chi.classList.toggle('wag', s !== 'sleeping' && !(pet && pet.melt >= 2));
     if (s === 'listening' || s === 'idle') armSleep(); else if (s !== 'sleeping') clearTimeout(sleepTimer);
-    updateVideo();
+    if (s === 'sleeping' || s === 'thinking' || prev === 'sleeping' || (prev === 'thinking' && s !== 'speaking')) setEmo(baseEmo());
   }
   setInterval(() => {
     if (state !== 'speaking') return;
     const r = Math.random();
-    char.classList.toggle('talking', r > 0.18);
-    char.classList.toggle('mouth-small', r < 0.5);
+    butter.classList.toggle('talking', r > 0.18);
+    butter.classList.toggle('mouth-small', r < 0.5);
   }, 110);
-  setInterval(() => { char.classList.toggle('listening', state === 'listening' && Date.now() < convoUntil); }, 500);
+  setInterval(() => { butter.classList.toggle('listening', state === 'listening' && Date.now() < convoUntil); }, 500);
 
   function addBubble(who, text, cls) {
     const b = document.createElement('div');
@@ -273,25 +547,7 @@ body.big form.typed { display: none; }
     return p;
   }
 
-  // ===== 動画（同じフォルダに idle.mp4 / talk.mp4 / sleep.mp4 があれば使う） =====
-  const vids = { idle: false, talk: false, sleep: false };
-  [['idle', vIdle], ['talk', vTalk], ['sleep', vSleep]].forEach(([k, el]) => {
-    el.addEventListener('loadeddata', () => { vids[k] = true; updateVideo(); }, { once: true });
-    el.addEventListener('error', () => { vids[k] = false; updateVideo(); }, { once: true });
-    el.src = k + '.mp4';
-  });
-  function updateVideo() {
-    const use = vids.idle && vids.talk;
-    char.hidden = use;
-    const sleepV = use && state === 'sleeping' && vids.sleep;
-    vIdle.hidden = !use || state === 'speaking' || sleepV;
-    vTalk.hidden = !use || state !== 'speaking';
-    vSleep.hidden = !sleepV;
-    vIdle.style.filter = use && state === 'sleeping' && !sleepV ? 'brightness(.7) saturate(.7)' : '';
-    if (use) (state === 'speaking' ? vTalk : sleepV ? vSleep : vIdle).play().catch(() => {});
-  }
-
-  // ===== 聞く（ずっと聞きつづける。しゃべる間と考える間だけ止める） =====
+  // ===== 聞く =====
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   let rec = null, recOn = false;
   function startRec() {
@@ -309,7 +565,7 @@ body.big form.typed { display: none; }
     };
     rec.onerror = e => {
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-        hint.textContent = 'マイクが使えません。ブラウザのアドレスバーの鍵マークから、マイクを「許可」にしてください。';
+        hint.textContent = 'マイクが使えません。アドレスバーの鍵マークから、マイクを「許可」にしてください。';
         started = false;
       }
     };
@@ -319,8 +575,9 @@ body.big form.typed { display: none; }
   function stopRec() { if (rec) { rec.onend = null; try { rec.abort(); } catch (e) {} } recOn = false; }
 
   function showPartial(text) {
-    if (state === 'sleeping' && !WAKE.test(text)) return;
-    if (cfg.wake === 'wake' && Date.now() > convoUntil && !WAKE.test(text)) return;
+    const called = WAKE.test(text) || CHI.test(text);
+    if (state === 'sleeping' && !called) return;
+    if (cfg.wake === 'wake' && Date.now() > convoUntil && !called) return;
     if (!partialEl) partialEl = addBubble('聞き取り中', '', 'me partial');
     partialEl.textContent = text;
   }
@@ -329,16 +586,18 @@ body.big form.typed { display: none; }
   function onHeard(text) {
     clearPartial();
     const called = WAKE.test(text);
-    if (cfg.wake === 'wake' && !called && Date.now() > convoUntil) return;   // 呼ばれていない会話は聞き流す
+    const dog = CHI.test(text);
+    if (dog && !called) { if (state === 'sleeping') setState('listening'); handleChi(text); return; }
+    if (cfg.wake === 'wake' && !called && Date.now() > convoUntil) return;
     if (state === 'sleeping' && !called) return;
     if (state === 'sleeping') setState('listening');
     const body = text.replace(/^(ねえ|ねぇ|おーい|おい)?[、,\s]*/, '').replace(WAKE, '').replace(/^[、,。\s]+/, '').trim();
     convoUntil = Date.now() + 25000;
-    if (!body) { speak('はーい！なあに？'); return; }
+    if (!body) { setEmo('excited', 3000); speak('はーい！なあに？'); return; }
     ask(body);
   }
 
-  // ===== 考える（GAS の Claude に聞く） =====
+  // ===== 考える =====
   async function callGas(payload) {
     if (!cfg.url || !cfg.pass) throw new Error('setup');
     const res = await fetch(cfg.url, {
@@ -355,42 +614,52 @@ body.big form.typed { display: none; }
     stopRec();
     setState('thinking');
     const out = addBubble('バターちゃん', '…', 'her');
-    let answer = '';
+    let answer = '', mood = 'smile';
     try {
       const r = await callGas({ action: 'chat', messages: history });
-      if (!r.ok) { hint.textContent = r.detail ? '（パパへ：原因 ' + r.detail + '）' : hint.textContent; throw new Error(r.error || 'error'); }
-      answer = String(r.text || '').trim();
+      if (!r.ok) { if (r.detail) hint.textContent = '（パパへ：原因 ' + r.detail + '）'; throw new Error(r.error || 'error'); }
+      answer = String(r.text || '').replace(/^[\[［][^\]］]{1,6}[\]］]\s*/, '').trim();
+      mood = r.emotion || 'smile';
+      if (r.state) applyPet(r.state, true);
     } catch (e) {
       answer = e.message === 'setup' ? '設定でGASのURLと合言葉を入れてね。'
         : e.message === 'pass' ? '合言葉がちがうみたい。設定を見てね。'
         : e.message === 'limit' ? '今日はたくさんお話ししたから、また明日ね。'
         : 'うまくお返事できなかったよ。もう一回言ってみて。';
+      mood = 'sad';
       history.pop();
     }
     out.textContent = answer;
     if (answer && history.length && history[history.length - 1].role === 'user') history.push({ role: 'assistant', content: answer });
-    speak(answer);
+    speak(answer, mood);
   }
 
-  // ===== しゃべる（読み上げに合わせて口が動く） =====
+  // ===== しゃべる =====
+  function jaVoices() { return speechSynthesis.getVoices().filter(v => /^ja/i.test(v.lang)); }
   function pickVoice() {
-    const vs = speechSynthesis.getVoices().filter(v => /^ja/i.test(v.lang));
-    return vs.find(v => v.name === cfg.voice) || vs.find(v => /Google/.test(v.name)) || vs[0] || null;
+    const vs = jaVoices();
+    return vs.find(v => v.name === cfg.voice)
+      || vs.find(v => /Nanami/i.test(v.name))
+      || vs.find(v => /Natural|Online/i.test(v.name))
+      || vs.find(v => /Google/.test(v.name)) || vs[0] || null;
   }
-  function speak(text) {
+  function speak(text, mood) {
     if (!text) { setState('idle'); startRec(); return; }
     stopRec();
     speechSynthesis.cancel();
+    setEmo(mood || 'smile');
     const parts = String(text).replace(/[*#`_>]/g, '').split(/(?<=[。！？!?\n])/).map(s => s.trim()).filter(Boolean);
     const voice = pickVoice();
     parts.forEach((p, i) => {
       const u = new SpeechSynthesisUtterance(p);
-      u.lang = 'ja-JP'; if (voice) u.voice = voice; u.rate = Number(cfg.rate) || 1;
+      u.lang = 'ja-JP'; if (voice) u.voice = voice;
+      u.rate = Number(cfg.rate) || 1; u.pitch = Number(cfg.pitch) || 1.1;
       if (i === 0) u.onstart = () => setState('speaking');
       if (i === parts.length - 1) {
         u.onend = u.onerror = () => {
           convoUntil = Date.now() + 25000;
           setState('listening');
+          setEmo(mood || 'smile', 5000);
           setTimeout(() => { if (sayQueue.length) announce(sayQueue.shift()); else startRec(); }, 400);
         };
       }
@@ -398,20 +667,22 @@ body.big form.typed { display: none; }
     });
   }
 
-  // ===== LINE の「バターちゃん 〇〇」を受け取って読み上げる =====
+  // ===== LINE の「バターちゃん 〇〇」と、様子の更新 =====
   function announce(text) {
     if (state === 'speaking' || state === 'thinking') { sayQueue.push(text); return; }
     addBubble('バターちゃん', text, 'her');
     history.push({ role: 'user', content: '（パパかママからのお知らせを読み上げて）' }, { role: 'assistant', content: text });
-    speak(text);
+    speak(text, 'excited');
   }
-  setInterval(async () => {
-    if (!started || !cfg.url || !cfg.pass || document.hidden) return;
+  async function poll() {
+    if (!cfg.url || !cfg.pass || document.hidden) return;
     try {
       const r = await callGas({ action: 'poll' });
-      (r && r.say || []).forEach(t => announce(String(t)));
+      if (r && r.state) applyPet(r.state, true);
+      if (started) (r && r.say || []).forEach(t => announce(String(t)));
     } catch (e) {}
-  }, 15000);
+  }
+  setInterval(poll, 15000);
 
   // ===== 文字で送る =====
   $('typed').addEventListener('submit', e => {
@@ -421,34 +692,48 @@ body.big form.typed { display: none; }
     $('typedInput').value = '';
     convoUntil = Date.now() + 25000;
     if (state === 'sleeping') setState('listening');
-    ask(v);
+    if (CHI.test(v) && !WAKE.test(v)) handleChi(v); else ask(v.replace(WAKE, '').replace(/^[、,。\s]+/, '') || v);
+  });
+  $('scene').addEventListener('click', ev => {
+    if (chi.contains(ev.target)) { chiDo('sit'); bark(); }
   });
 
-  // ===== はじめる・設定・全画面 =====
+  // ===== 設定・はじめる・全画面 =====
   function openSettings() {
     $('gasUrl').value = cfg.url; $('pass').value = cfg.pass; $('wakeSel').value = cfg.wake;
     $('rateRange').value = cfg.rate; $('rateVal').textContent = Number(cfg.rate).toFixed(1);
+    $('pitchRange').value = cfg.pitch; $('pitchVal').textContent = Number(cfg.pitch).toFixed(1);
     $('sleepSel').value = String(cfg.sleepAfter);
     fillVoices();
     $('settings').hidden = false;
   }
   function fillVoices() {
     const sel = $('voiceSel');
-    const vs = speechSynthesis.getVoices().filter(v => /^ja/i.test(v.lang));
+    const vs = jaVoices();
     sel.innerHTML = '';
     vs.forEach(v => { const o = document.createElement('option'); o.value = v.name; o.textContent = v.name; sel.append(o); });
-    if (!vs.length) { const o = document.createElement('option'); o.textContent = '（日本語の声が見つかりません）'; sel.append(o); }
+    if (!vs.length) { const o = document.createElement('option'); o.value = ''; o.textContent = '（日本語の声が見つかりません）'; sel.append(o); }
     const cur = pickVoice(); if (cur) sel.value = cur.name;
   }
   speechSynthesis.onvoiceschanged = () => { if (!$('settings').hidden) fillVoices(); };
   $('rateRange').addEventListener('input', e => { $('rateVal').textContent = Number(e.target.value).toFixed(1); });
+  $('pitchRange').addEventListener('input', e => { $('pitchVal').textContent = Number(e.target.value).toFixed(1); });
+  $('testVoice').addEventListener('click', () => {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance('こんにちは、バターちゃんだよ。チーちゃんもいっしょだよ。');
+    const v = jaVoices().find(x => x.name === $('voiceSel').value); if (v) u.voice = v;
+    u.lang = 'ja-JP'; u.rate = Number($('rateRange').value); u.pitch = Number($('pitchRange').value);
+    speechSynthesis.speak(u);
+  });
   $('closeSettings').addEventListener('click', () => {
     cfg.url = $('gasUrl').value.trim(); cfg.pass = $('pass').value; cfg.wake = $('wakeSel').value;
-    cfg.voice = $('voiceSel').value; cfg.rate = Number($('rateRange').value); cfg.sleepAfter = Number($('sleepSel').value);
+    cfg.voice = $('voiceSel').value; cfg.rate = Number($('rateRange').value); cfg.pitch = Number($('pitchRange').value);
+    cfg.sleepAfter = Number($('sleepSel').value);
     Object.keys(cfg).forEach(k => store.set(k, cfg[k]));
     $('settings').hidden = true;
     hint.textContent = cfg.wake === 'wake' ? '「バターちゃん」と呼んでから話しかけてね。' : '話しかけると答えるよ。';
     armSleep();
+    poll();
   });
   $('openSettings').addEventListener('click', openSettings);
   $('startSettings').addEventListener('click', openSettings);
@@ -456,14 +741,19 @@ body.big form.typed { display: none; }
   $('startBtn').addEventListener('click', () => {
     if (!SR) {
       $('startErr').hidden = false;
-      $('startErr').textContent = 'このブラウザでは声が使えません。PCのChromeで開いてください（文字では話せます）。';
+      $('startErr').textContent = 'このブラウザでは声が使えません。PCのEdgeかChromeで開いてください（文字では話せます）。';
     }
     started = true;
     $('startOverlay').hidden = true;
-    speechSynthesis.speak(new SpeechSynthesisUtterance(''));   // 読み上げをこの操作で有効にしておく
+    speechSynthesis.speak(new SpeechSynthesisUtterance(''));
     if (!cfg.url || !cfg.pass) openSettings();
     startRec();
-    speak('おはよう！バターちゃんだよ。呼んでくれたらお話しするね。');
+    const m = pet ? pet.melt : 0;
+    const hello = m >= 3 ? 'うう…とけちゃったよ〜。お話しして、ひんやりさせて！'
+      : m >= 2 ? 'あつくて、とろとろだよ〜。お話ししてくれたら元気になるよ。'
+      : 'おはよう！バターちゃんだよ。チーちゃんもいっしょだよ。呼んでくれたらお話しするね。';
+    speak(hello, m >= 2 ? 'melty' : 'excited');
+    bark();
     try { navigator.wakeLock && navigator.wakeLock.request('screen').catch(() => {}); } catch (e) {}
   });
 
@@ -476,11 +766,14 @@ body.big form.typed { display: none; }
     } catch (e) {}
   });
   document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) document.body.classList.remove('big'); });
-  document.addEventListener('visibilitychange', () => { if (!document.hidden && started) startRec(); });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && started) { startRec(); poll(); } });
 
   hint.textContent = cfg.wake === 'wake' ? '「バターちゃん」と呼んでから話しかけてね。' : '話しかけると答えるよ。';
-  addBubble('バターちゃん', 'こんにちは！バターちゃんだよ。', 'her');
+  addBubble('バターちゃん', 'こんにちは！バターちゃんだよ。となりは柴犬のチーちゃん！', 'her');
   setState('idle');
+  applyPet(null, false);
+  poll();
+  if (/[?&]debug=1/.test(location.search)) window.__butter = { setEmo, applyPet, chiDo };
 })();
 </script>
 </body>
