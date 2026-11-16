@@ -326,13 +326,13 @@ function session(ws) {
   /** 三人モード：まわりが静かになるまで少し待ってから話しはじめる */
   async function waitQuiet(gen, utt) {
     if (!S.trio) return;
+    // まわり（Claudeアプリのバターちゃんなど）が話しているあいだは待つ。8びょう待っても静かにならなければ話す
     const t0 = Date.now();
-    while (gen === S.gen && Date.now() - S.lastPartial < S.waitMs && Date.now() - t0 < 5000) {
+    let told = false;
+    while (gen === S.gen && Date.now() - S.lastPartial < S.waitMs && Date.now() - t0 < 8000) {
+      if (!told && Date.now() - t0 > 600) { told = true; send({ type: 'waiting', gen }); }
       await new Promise(r => setTimeout(r, 120));
-      if (S.utt !== utt) break;
     }
-    // 待っているあいだに、だれかが次の話をした → 古い話への返事になるので、言わずにやめる
-    if (gen === S.gen && S.utt !== utt) stopReply('stale');
   }
 
   /* --- 返事：Claudeを流しながら、一文ずつ読み上げて送る --- */
@@ -394,6 +394,7 @@ function session(ws) {
       sp.end();
       await chain;
     } catch (e) {
+      if (!capped) console.error('ai error', String(e.message || e).slice(0, 300));
       if (gen === S.gen && !capped) { send({ type: 'notice', why: 'ai', detail: String(e.message || e).slice(0, 80) }); }
     }
     if (gen !== S.gen) return;

@@ -2029,10 +2029,14 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
         break;
       case 'emotion': if (m.gen === J.gen) setEmo(m.emotion); break;
       case 'reply_text': if (m.gen === J.gen && J.out) { J.outText += m.text; J.out.textContent = J.outText; } break;
-      case 'audio': if (m.gen === J.gen) { J.queue.push(m); jrPump(); } break;
+      case 'waiting': if (m.gen === J.gen) hint.textContent = 'まわりの話がおわるのを待ってから話すよ…'; break;
+      case 'audio':
+        if (m.gen === J.gen) { J.queue.push(m); jrPump(); }
+        if (J.trio && /待ってから/.test(hint.textContent)) hint.textContent = '三人モード：「ジュニア」と呼んだときだけ答えるよ。';
+        break;
       case 'reply_end':
         if (m.gen !== J.gen) break;
-        if (J.out) J.out.textContent = m.text || J.outText || '…';
+        if (J.out) J.out.textContent = m.text || J.outText || '（うまく答えられなかったよ。もう一回呼んでね）';
         if (m.text && history.length && history[history.length - 1].role === 'user') { history.push({ role: 'assistant', content: m.text }); if (history.length > 12) history = history.slice(-12); }
         J.endEmo = m.emotion || 'smile';
         jrDrain();

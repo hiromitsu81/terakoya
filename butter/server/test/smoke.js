@@ -128,17 +128,18 @@ function client(port, hello) {
   const tr = await c.until(m => m.type === 'trio' && m.waitMs > 700);
   assert.strictEqual(tr.waitMs, 1300);
   // 三人モードは2文まで
-  const g0 = (await c.until(m => m.type === 'reply_end')).gen;
+  await new Promise(r => setTimeout(r, 300));
+  const g0 = Math.max(0, ...c.msgs.filter(m => m.gen != null).map(m => m.gen));
   c.ws.send(JSON.stringify({ type: 'text', text: 'ジュニア、お話しして' }));
-  const e2 = await c.until(m => m.type === 'reply_end' && m.gen > g0);
+  const s2 = await c.until(m => m.type === 'reply_start' && m.gen > g0);
+  const e2 = await c.until(m => m.type === 'reply_end' && m.gen === s2.gen);
   const au = c.msgs.filter(m => m.type === 'audio' && m.gen === e2.gen);
   assert.ok(au.length >= 1 && au.length <= 2, '2文まで: ' + au.length);
-  // 待っているあいだに次の話が来たら、古い返事は言わない
+  // 呼ばれたあと、ほかの人が話しても返事はやめない（待ってから話す）
   c.ws.send(JSON.stringify({ type: 'text', text: 'ジュニア、どうかな？' }));
   const st = await c.until(m => m.type === 'reply_start' && m.gen > e2.gen);
-  c.ws.send(JSON.stringify({ type: 'text', text: 'ヒロさん、それでね' }));
-  await c.until(m => m.type === 'stopped' && m.why === 'stale');
-  assert.ok(!c.msgs.some(m => m.type === 'audio' && m.gen === st.gen), '古い返事は話さない');
+  c.ws.send(JSON.stringify({ type: 'text', text: 'あの子の返事を待ってるね' }));
+  await c.until(m => m.type === 'audio' && m.gen === st.gen, 5000);
   c.ws.send(JSON.stringify({ type: 'text', text: 'ジュニアって呼んだときだけ答えるんだね' }));
   await new Promise(r => setTimeout(r, 150));
   const nStart = c.msgs.filter(m => m.type === 'reply_start').length;
