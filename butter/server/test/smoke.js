@@ -18,6 +18,9 @@ const gasSrv = http.createServer((req, res) => {
       const ok = j.pass === 'ok' || j.idToken === 'tok-' + 'b';
       return res.end(JSON.stringify(ok ? { ok: true, system: 'あなたはバターちゃんジュニア。', owner: j.pass ? 'fam' : 'U-b', me: j.pass ? 'パパ' : 'Bさん' } : { ok: false, error: 'auth' }));
     }
+    if (j.action === 'mail') return res.end(JSON.stringify(j.idToken === 'tok-b' ? { ok: true, mails: [{ from: 'たくちゃん', subject: '清掃シートの件', snippet: '明日見てください' }] } : { ok: false, error: 'owner' }));
+    if (j.action === 'minutes') return res.end(JSON.stringify({ ok: true, url: 'https://drive.google.com/file/d/minutes' }));
+    if (j.action === 'media') return res.end(JSON.stringify({ ok: true, url: 'https://drive.google.com/file/d/photo' }));
     res.end(JSON.stringify({ ok: true }));
   });
 }).listen(0);
@@ -267,6 +270,52 @@ function client(port, hello) {
   assert.ok(/いまいる場所/.test(lastParams.system) && lastParams.tools, '近くは位置を基準に調べる');
   deps.claude.messages.stream = os5;
 
-  console.log('OK：会話・気持ち・一文ずつの声・写真・記録の分け方・ご縁つなぎ・割りこみ・三人モード・呼ばれただけ・会話のつづき・ジュニア日記・やりなおし・窓口と案件メモ・紹介のつながり・窓口のお休み・いいとこ取りと検索・近くの場所');
+  // 11こ：覚える・メールはヒロさんだけ・議事録・写真の保存・調べた先のリンク・質問のあとの続き
+  {
+    const f = await client(port, { type: 'hello', pass: 'ok', mode: 'family' });
+    await f.until(m => m.type === 'ready');
+    let sy = ''; const o = deps.claude.messages.stream;
+    deps.claude.messages.stream = p => { sy = p.system; lastMessages = p.messages; return o(p); };
+    f.ws.send(JSON.stringify({ type: 'text', text: 'ジュニア、カイトの好きなポケモンはピカチュウって覚えて' }));
+    await f.until(m => m.type === 'reply_end' && /覚えたぜ/.test(m.text || ''));
+    f.ws.send(JSON.stringify({ type: 'text', text: 'カイトの好きなのは？' }));
+    await f.until(m => m.type === 'reply_end' && !/覚えた/.test(m.text || ''));
+    assert.ok(/教わったこと/.test(sy) && /ピカチュウ/.test(sy), '教わったことを使う');
+    assert.ok(/かたい敬語は使わない/.test(sy), 'いつも江戸っ子');
+    f.ws.send(JSON.stringify({ type: 'text', text: 'メール来てる？' }));
+    await f.until(m => m.type === 'reply_end' && /ヒロさんにしか/.test(m.text || ''));
+    const h = await client(port, { type: 'hello', idToken: 'tok-b', mode: 'family' });
+    await h.until(m => m.type === 'ready');
+    const nlog = gasCalls.filter(c => c.action === 'log').length;
+    h.ws.send(JSON.stringify({ type: 'text', text: 'メール来てる？' }));
+    await h.until(m => m.type === 'reply_end' && !/ヒロさんにしか/.test(m.text || ''));
+    assert.ok(/清掃シートの件/.test(JSON.stringify(lastMessages[lastMessages.length - 1])), 'ヒロさんにはメールを渡す');
+    await new Promise(r => setTimeout(r, 50));
+    assert.strictEqual(gasCalls.filter(c => c.action === 'log').length, nlog, 'メールは記録しない');
+    f.ws.send(JSON.stringify({ type: 'text', text: '議事録を作って' }));
+    const lk = await f.until(m => m.type === 'links' && /議事録/.test(m.links[0].title));
+    assert.ok(gasCalls.some(c => c.action === 'minutes' && c.text && /^\d{4}-/.test(c.title)), '議事録をGASへ');
+    f.ws.send(JSON.stringify({ type: 'save_media', kind: 'photo', mime: 'image/jpeg', data: 'data:image/jpeg;base64,AAAA' }));
+    await f.until(m => m.type === 'links' && /写真/.test(m.links[0].title));
+    // 調べた先のリンク
+    deps.claude.messages.stream = p => ({ async *[Symbol.asyncIterator]() {
+      yield { type: 'content_block_start', content_block: { type: 'web_search_tool_result', content: [{ url: 'https://tenki.jp/x', title: 'tenki.jp' }] } };
+      for (const ch of ['あしたは', '晴れだぜ。']) yield { type: 'content_block_delta', delta: { type: 'text_delta', text: ch } };
+    } });
+    f.ws.send(JSON.stringify({ type: 'text', text: 'あしたの天気を調べて' }));
+    const ln = await f.until(m => m.type === 'links' && m.links.some(x => /tenki/.test(x.url)));
+    // 三人モード：ジュニアが質問したら、つぎの1回は名前がなくても答える
+    deps.claude.messages.stream = () => fakeStream('[わくわく]どれが好きなんだい？');
+    const t = await client(port, { type: 'hello', pass: 'ok', mode: 'family', trio: true });
+    await t.until(m => m.type === 'ready');
+    t.ws.send(JSON.stringify({ type: 'text', text: 'ジュニア、なにか聞いて' }));
+    const q = await t.until(m => m.type === 'reply_end');
+    await new Promise(r => setTimeout(r, 1500));
+    t.ws.send(JSON.stringify({ type: 'text', text: 'メロンが好き' }));
+    await t.until(m => m.type === 'reply_start' && m.gen > q.gen, 12000);
+    deps.claude.messages.stream = o;
+    [f, h, t].forEach(x => x.ws.close());
+  }
+  console.log('OK：覚える・メールはヒロさんだけ・議事録・写真の保存・調べた先のリンク・質問のあとの続き・会話・気持ち・一文ずつの声・写真・記録の分け方・ご縁つなぎ・割りこみ・三人モード・呼ばれただけ・会話のつづき・ジュニア日記・やりなおし・窓口と案件メモ・紹介のつながり・窓口のお休み・いいとこ取りと検索・近くの場所');
   process.exit(0);
 })().catch(e => { console.error('NG', e); process.exit(1); });

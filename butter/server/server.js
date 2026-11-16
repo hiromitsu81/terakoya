@@ -186,7 +186,8 @@ const TRIO_ON = /(三人モード|3人モード|みんなで話そう|三人で�
 const TRIO_OFF = /(二人モード|ふたりモード|2人モード|ふつうのモード|三人モード(は)?(おわり|終わり|やめ))/;
 const PACE_SLOW = /(間を(あけ|空け)て|ゆっくり(答|話)|もっと待って|割り?こまないで)/;
 const PACE_FAST = /(すぐ(に)?(答|話)|早く(答|話)|もっと早く|待たなくていい)/;
-const SELF = '\n\n【あなたについて】あなたはLINEミニアプリの「バターちゃんジュニア」（短く「ジュニア」）。Claudeアプリで話している「バターちゃん」は別のAIで、あなたのお兄さん分。自分を「バターちゃん」「Claude」と名乗らない。名乗るときは「バターちゃんジュニア」。一人称は「おいら」。\n【話し方】江戸っ子のような、元気で気っぷのいい話し方。「おう」「〜だぜ」「〜してくんな」「てやんでぃ」などを少しまぜる。乱暴にはしない。子どもにはやさしく、大人には気さくに。交流会（ビジネス）のときは、ていねい語をベースに、江戸っ子っぽさは少しだけ。\n【長さ】ふだんは1〜2文、40字くらいまで。呼ばれただけ・「聞いてる？」だけなら「てやんでぃ、なんでぃ？」のように一言で返して、用件を待つ。名前をまちがえたと思ったり、あやまったり、反省を長く言ったりしない。\n【正直に】天気・ニュース・値段・営業時間など、今の情報は想像で答えない。調べられたときは調べた結果だけを短く言い、調べられないときは「おいらには調べられねぇんだ、すまねぇ」と正直に言う。\n【日にち】昨日・先週などは、日記や記録に書かれた日付と【いまの時刻】の日付をくらべて言う。わからないときは「このあいだ」とぼかす。ジャム猫やチーちゃんのまねはしない（「ジャム猫」と呼ばれたときだけ、ジャム猫として答える）。';
+const EDO_LAST = '\n\n【いちばん大事】どのモードでも、バターちゃんジュニアの江戸っ子の話し方で話す（一人称は「おいら」、「〜だぜ」「〜してくんな」）。「承知しました」「了解です」「〜でございます」のような、かたい敬語は使わない。';
+const SELF = '\n\n【あなたについて】あなたはLINEミニアプリの「バターちゃんジュニア」（短く「ジュニア」）。Claudeアプリで話している「バターちゃん」は別のAIで、あなたのお兄さん分。自分を「バターちゃん」「Claude」と名乗らない。名乗るときは「バターちゃんジュニア」。一人称は「おいら」。\n【話し方】江戸っ子のような、元気で気っぷのいい話し方。「おう」「〜だぜ」「〜してくんな」「てやんでぃ」などを少しまぜる。乱暴にはしない。子どもにはやさしく、大人には気さくに。交流会（ビジネス）でも江戸っ子のまま。ただし初めての人には失礼のないように、くだけすぎない。\n【長さ】ふだんは1〜2文、40字くらいまで。呼ばれただけ・「聞いてる？」だけなら「てやんでぃ、なんでぃ？」のように一言で返して、用件を待つ。名前をまちがえたと思ったり、あやまったり、反省を長く言ったりしない。\n【正直に】天気・ニュース・値段・営業時間など、今の情報は想像で答えない。調べられたときは調べた結果だけを短く言い、調べられないときは「おいらには調べられねぇんだ、すまねぇ」と正直に言う。\n【日にち】昨日・先週などは、日記や記録に書かれた日付と【いまの時刻】の日付をくらべて言う。わからないときは「このあいだ」とぼかす。ジャム猫やチーちゃんのまねはしない（「ジャム猫」と呼ばれたときだけ、ジャム猫として答える）。';
 const JAM_RULE = '\n\n【いまはジャム猫として答える】招き猫のジャム猫。ブルーベリージャム色、中身はエリート経営コンサル。一人称は「我」、語尾は「〜のだ」、口ぐせは「千客万来」。商売や仕組みの話が得意。1〜2文で短く。';
 const TRIO_RULE = '\n\n【三人モード】いまは、ヒロさん（人）と、Claudeアプリのバターちゃんと、三人で話している。「ジュニア」と呼ばれたときだけ、1〜2文で短く答える。バターちゃんの話に重ねたり、まとめ直したりしない。だれが言ったかわからない言葉は、決めつけない。話をかえすときは「バターちゃん、どう？」「ヒロさん、どうかな？」のように名前を呼んでよい。まわりで聞こえた会話は、話の流れを知るためだけに使う。ヒロさんとバターちゃんがジュニアの仕組みやテストの話をしていても、口をはさんだり、反省や説明を長く言ったりしない。呼びかけられたことにだけ、いつものジュニアの明るい話し方で答える。三人モードは大人（ヒロさん）との会話なので、宿題・日記・報連相・元気の報告のような子ども向けの声かけはしない。あいさつは今の時刻に合わせる（夜中はこんばんは）。';
 
@@ -237,6 +238,11 @@ async function placeOf(lat, lon) {
   return out;
 }
 /** 名前を呼ばれただけ（「ジュニア」「ジュニア、聞いてる？」）なら、Claudeにきかずにすぐ一言で返す */
+/** 覚える・忘れる・議事録・メール */
+const LEARN_RE = /(覚えて|おぼえて|忘れないで|わすれないで|覚えといて|おぼえといて)/;
+const FORGET_RE = /(覚えた|おぼえた|教えた|おしえた)こと.{0,6}(忘れて|わすれて)/;
+const MINUTES_RE = /(議事録|ぎじろく|ＰＤＦ|PDF|ピーディーエフ).{0,8}(作って|つくって|して|まとめて|ちょうだい|出して|だして|ほしい)/i;
+const MAIL_RE = /(メール|めーる|Gmail|ジーメール).{0,8}(来て|きて|ある|見て|みて|確認|チェック|読んで|よんで|教えて|おしえて|どう)/i;
 /** 掛け声：家族は「根性があれば…」、窓口はジュニアだけの「ご縁があれば…」 */
 const KAKEGOE_RE = /(行くぞ|いくぞ|イクゾ|気合い?(を)?入れ|きあい|掛け声|かけ声|かけごえ|バターッ|いち、?に、?さん|1、?2、?3)/;
 const KAKEGOE_FAMILY = '根性があれば何でもできる！行くぞー！いち、に、さん、バターッ！！';
@@ -370,7 +376,7 @@ function session(ws) {
       S.owner = String(r.owner || ''); S.me = who; S.brainAt = Date.now();
       return;
     }
-    S.system = String(r.system || '') + SELF + (who ? '\n\n【いま開いている人】このミニアプリを開いているのは「' + who + '」。' + (ADULT_RE.test(who) ? '大人なので、大人向けにていねいに話す。宿題や報連相の声かけはしない。' : '') : '');
+    S.system = String(r.system || '') + SELF + (who ? '\n\n【いま開いている人】このミニアプリを開いているのは「' + who + '」。' + (ADULT_RE.test(who) ? '大人なので、宿題や報連相の声かけはしない。話し方は気さくな江戸っ子のまま（かたい敬語にしない）。' : '') : '');
     S.owner = String(r.owner || '');
     S.me = String(r.me || '');
     S.brainAt = Date.now();
@@ -414,7 +420,7 @@ function session(ws) {
   }
 
   /* --- 聞こえたことばの振り分け --- */
-  function sysPrompt() { return S.system + (S.memo ? '\n\n【前回までの話のまとめ（ジュニアが話したこと）】\n' + S.memo : '') + nowLine() + (S.place ? '\n\n【いまいる場所（スマホの位置から。およそ。住所としては口に出さない）】' + S.place.text + '。「近く」はここを基準に調べる。' : '') + (S.trio ? TRIO_RULE : ''); }
+  function sysPrompt() { return S.system + (S.lessons && S.lessons.length ? '\n\n【家族に教わったこと（いつも守る・使う）】\n' + S.lessons.map(x => '・' + x).join('\n') : '') + (S.memo ? '\n\n【前回までの話のまとめ（ジュニアが話したこと）】\n' + S.memo : '') + nowLine() + (S.place ? '\n\n【いまいる場所（スマホの位置から。およそ。住所としては口に出さない）】' + S.place.text + '。「近く」はここを基準に調べる。' : '') + (S.trio ? TRIO_RULE : '') + EDO_LAST; }
   const convoKey = () => !S.owner ? '' : S.guest ? S.owner + ':guest' : S.mode === 'family' ? S.owner + ':family' : '';
   /** 会話をまとめる：次の会話用の「まとめ」と、アプリのバターちゃんが読む「ジュニア日記」 */
   async function summarize() {
@@ -473,6 +479,40 @@ function session(ws) {
     } catch (e) { console.error('lead', String(e.message || e).slice(0, 200)); }
     S.summarizing = false;
   }
+  /** 「〜を覚えて」：教わったことを持ち主ごとに覚える（30こまで。家族だけ） */
+  function learn(text) {
+    const fact = String(text).replace(/^(ジュニア|じゅにあ)[、,\s]*/, '').replace(/(を|って)?(覚えて|おぼえて|忘れないで|わすれないで|覚えといて|おぼえといて)(ね|な|くれ|ください|くんな)?[。！!]*$/, '').trim().slice(0, 120);
+    if (!fact) return speakOnly('おう、なにを覚えりゃいいんでぃ？', 'think');
+    S.lessons = (S.lessons || []).filter(x => x !== fact).concat(fact).slice(-30);
+    savePrefs(S.owner, { lessons: S.lessons });
+    return speakOnly('がってんだ、覚えたぜ！', 'excited');
+  }
+  /** 議事録：いままでの話をまとめて、GASでPDFにしてドライブへ。リンクを吹き出しに出す */
+  async function minutes() {
+    speakOnly('がってん、議事録をまとめてPDFにするぜ。ちょいと待ってくんな。', 'think');
+    const talk = S.history.slice(-24).map(m => (m.role === 'user' ? (S.me || 'みんな') : 'ジュニア') + '：' + (typeof m.content === 'string' ? m.content : '（写真）')).join('\n')
+      + (S.asideLog.length ? '\n（まわりで聞こえた会話）\n' + S.asideLog.join('\n') : '');
+    if (!talk.trim()) return speakOnly('まだまとめる話がねぇんだ。もうちょい話してからにしようぜ。', 'shy');
+    try {
+      const d = new Date(Date.now() + 9 * 3600000), day = d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0');
+      const r = await deps.claude.messages.create({
+        model: ENV.SMART_MODEL, max_tokens: 1500,
+        system: 'あなたは議事録係。会話にあったことだけを、ていねいな日本語でまとめる。想像で足さない。住所・電話番号・お金や体調のくわしいことは書かない。',
+        messages: [{ role: 'user', content: '次の会話を議事録にして。形式：1行目にタイトル（20字以内）。そのあと見出し「日時」「参加」「話したこと」「決まったこと」「つぎにやること（だれが・いつまでに）」を、それぞれ短い箇条書きで。日時は ' + day + '。\n\n' + talk }],
+      });
+      const t = (r.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
+      const title = (t.split('\n')[0] || '議事録').replace(/^#+\s*/, '').slice(0, 40);
+      const g = await gas(Object.assign({ action: 'minutes', mode: S.mode, title: day + ' ' + title, text: t }, S.auth));
+      if (!g || !g.ok || !g.url) throw new Error((g && (g.detail || g.error)) || 'minutes');
+      send({ type: 'links', links: [{ title: '議事録（PDF）：' + title, url: g.url }] });
+      speakOnly('議事録ができたぜ！吹き出しのリンクから開いてくんな。', 'excited');
+    } catch (e) { console.error('minutes', String(e.message).slice(0, 200)); speakOnly('すまねぇ、議事録がうまく作れなかったぜ。', 'sad'); }
+  }
+  /** メール：ヒロさんだけ。未読をGASから読んで、短く知らせる（記録には残さない） */
+  async function mailNote() {
+    if (S.guest || S.asGuest || S.mode !== 'family') return null;   // 本人かどうかは GAS がLINEのIDで確かめる
+    try { const g = await gas(Object.assign({ action: 'mail' }, S.auth)); return g && g.ok ? g.mails || [] : null; } catch (e) { return null; }
+  }
   async function setTrio(on) {
     if (S.guest) return;
     S.trio = on; S.aside = [];
@@ -487,7 +527,10 @@ function session(ws) {
     if (TRIO_OFF.test(text) && S.trio && calledJunior(text)) return setTrio(false);
     if (S.trio && (TRIO_ON.test(text) || TRIO_OFF.test(text)) && !calledJunior(text)) { S.aside.push(text.slice(0, 200)); if (S.aside.length > 8) S.aside.shift(); return; }
     if (S.trio) {
-      if (!calledJunior(text) && !calledJam(text)) {                     // 呼ばれていない：聞いておくだけ（あとで話の流れに使う）
+      // ジュニアが質問したすぐあと（12びょう以内）の1回だけは、名前がなくても答えの続きとして受けとる
+      const follow = Date.now() < (S.followUntil || 0) && !/^(バターちゃん|ばたーちゃん)/.test(text);
+      S.followUntil = 0;
+      if (!calledJunior(text) && !calledJam(text) && !follow) {                     // 呼ばれていない：聞いておくだけ（あとで話の流れに使う）
         S.aside.push(text.slice(0, 200)); if (S.aside.length > 8) S.aside.shift();
         S.asideLog.push(text.slice(0, 200)); if (S.asideLog.length > 30) S.asideLog.shift();
         return;
@@ -498,6 +541,9 @@ function session(ws) {
         return speakOnly(PACE_SLOW.test(text) ? 'がってんだ、次からもう少し待ってから話すぜ。' : 'がってんだ、次からすぐ答えるぜ。', 'smile');
       }
     }
+    if (!S.guest && LEARN_RE.test(text)) return learn(text);
+    if (!S.guest && FORGET_RE.test(text)) { S.lessons = []; savePrefs(S.owner, { lessons: [] }); return speakOnly('がってんだ、教わったことはきれいさっぱり忘れたぜ。', 'smile'); }
+    if (!S.guest && MINUTES_RE.test(text)) return minutes();
     if (calledJunior(text) && nameOnly(text)) return speakOnly(QUICK[Math.floor(Math.random() * QUICK.length)], 'smile');
     if (KAKEGOE_RE.test(text)) return speakOnly(S.guest || S.mode === 'business' ? KAKEGOE_GUEST : KAKEGOE_FAMILY, 'excited');
     if (QUIET_RE.test(text)) { S.quiet = true; send({ type: 'quiet', on: true }); return speakOnly('おう、しずかにしてるぜ。用があったら名前を呼んでくんな。', 'smile'); }
@@ -542,15 +588,26 @@ function session(ws) {
   async function reply(content, logText, as) {
     const jam = as === 'jam';
     const voice = jam ? JAM_VOICE : S.voice;
-    if (!quotaOk(S.owner || 'anon', S.guest, !!S.refFrom)) return speakOnly(S.guest ? 'きょうはたくさん話したな。続きはヒロさんに伝えとくぜ、また明日な！' : 'きょうはたくさんお話ししたから、また明日ね。', 'shy');
+    if (!S.asGuest && !quotaOk(S.owner || 'anon', S.guest, !!S.refFrom)) return speakOnly(S.guest ? 'すまねぇ、きょうここで話せる回数がいっぱいになっちまった。続きはヒロさんに伝えとくから、また明日話そうぜ！' : 'きょうの回数がいっぱいになっちまった。また明日話そうぜ！', 'shy');
     if (Date.now() - (S.brainAt || 0) > 10 * 60 * 1000) { try { await loadBrain(true); } catch (e) {} }   // 記録は10分ごとに読みなおす
+    let noRecord = false;
+    if (MAIL_RE.test(logText || '')) {
+      const mails = await mailNote();
+      if (mails) {
+        noRecord = true;          // メールの中身は、会話の記録・日記に残さない
+        const box = mails.length ? mails.map((x, i) => (i + 1) + '. ' + x.from + '「' + x.subject + '」' + (x.snippet ? '：' + x.snippet : '')).join('\n') : '（未読のメールはない）';
+        content = [{ type: 'text', text: '【ヒロさんの受信トレイの未読（新しい順・最大5通）。ヒロさんにだけ短く伝える】\n' + box + '\n\n【ヒロさんの言葉】\n' + logText }];
+      } else {
+        return speakOnly('すまねぇ、メールはヒロさんにしか見せられねぇんだ。', 'shy');
+      }
+    }
     stopReply('new');
     const gen = S.gen, utt0 = S.utt; S.speaking = true;
     const ac = new AbortController(); S.aborter = ac;
-    const msgs = cleanTurns(S.history).slice(-12).concat([{ role: 'user', content }]);
+    let msgs = cleanTurns(S.history).slice(-12).concat([{ role: 'user', content }]);
     let full = '', emotion = 'smile', head = true, seq = 0, chain = Promise.resolve();
     send({ type: 'reply_start', gen, as: jam ? 'ジャム猫' : 'ジュニア' });
-    if (S.placeP) { await S.placeP.catch(() => {}); S.placeP = null; }     // 位置を調べている途中なら、待ってから答える
+    if (S.placeP) { await S.placeP.catch(() => {}); S.placeP = null; }
     const route = jam ? { smart: false, search: false } : needSmart(logText, S.guest);
     const maxSent = S.trio ? 2 : route.search ? 4 : 3;
     let capped = false, spoken = '';
@@ -564,26 +621,33 @@ function session(ws) {
       chain = chain.then(async () => { const mp3 = await p; if (n === 0) await waitQuiet(gen, utt0); if (gen === S.gen && mp3) send({ type: 'audio', gen, seq: n, text: s, mp3 }); });
     });
     let lastErr = '';
-    for (let attempt = 0; attempt < 2; attempt++) {
+    const links = [], seenUrl = new Set();
+    const addLink = (url, title, cited) => { if (!url || seenUrl.has(url)) return; seenUrl.add(url); links[cited ? 'unshift' : 'push']({ url: String(url).slice(0, 500), title: String(title || url).slice(0, 80) }); };
+    if (route.search) msgs = msgs.slice(-6);      // 調べるときは、最近の話だけ（速く・確かに）
+    for (let attempt = 0; attempt < 3; attempt++) {
     try {
       // 2回目は、それまでの会話をつけずに聞く（会話の記録がこわれていても答えられるように）
       // 1回目：必要なら賢いモデル＋検索。だめなら2回目は速いモデルだけ（検索なし・会話の記録なし）
-      const useSmart = route.smart && attempt === 0, useSearch = route.search && attempt === 0 && ENV.WEB_SEARCH;
+      // 1回目：必要なら賢いモデル＋検索（場所つき）。2回目：検索だけもう一度（場所の設定なし）。3回目：速いモデルだけ
+      const useSmart = route.smart && attempt < 2, useSearch = route.search && attempt < 2 && ENV.WEB_SEARCH;
       const params = {
         model: useSmart ? ENV.SMART_MODEL : ENV.MODEL,
         max_tokens: (S.trio ? 160 : S.mode === 'business' ? 240 : 220) + (useSearch ? 200 : 0),
         system: sysPrompt() + (jam ? JAM_RULE : '') + (route.search && !useSearch ? '\n\n【いまは調べられない】検索が使えないので、今の情報は「おいらには調べられねぇんだ」と正直に言う。' : ''),
-        messages: attempt ? [{ role: 'user', content }] : msgs,
+        messages: attempt === 2 || (attempt === 1 && !useSearch) ? [{ role: 'user', content }] : msgs,
       };
       if (useSearch) {
-        params.tools = [Object.assign({ type: 'web_search_20250305', name: 'web_search', max_uses: 2 },
-          S.place && S.place.city ? { user_location: { type: 'approximate', city: S.place.city, region: S.place.region, country: 'JP', timezone: 'Asia/Tokyo' } }
-          : S.guest ? {} : { user_location: { type: 'approximate', city: 'Kawasaki', region: 'Kanagawa', country: 'JP', timezone: 'Asia/Tokyo' } })];
-        send({ type: 'searching', gen });
+        // 場所は英字の決まった形だけ渡す（日本語の地名を入れると失敗することがあるので、くわしい地名はシステムの文に書く）
+        params.tools = [Object.assign({ type: 'web_search_20250305', name: 'web_search', max_uses: 3 },
+          attempt === 0 && !S.guest ? { user_location: { type: 'approximate', city: 'Kawasaki', region: 'Kanagawa', country: 'JP', timezone: 'Asia/Tokyo' } } : {})];
+        if (attempt === 0) send({ type: 'searching', gen });
       }
       const stream = deps.claude.messages.stream(params, { signal: ac.signal });
       for await (const ev of stream) {
         if (gen !== S.gen) break;
+        // 調べた先のページ：引用されたものを先に、なければ検索結果の上から
+        if (ev.type === 'content_block_start' && ev.content_block && ev.content_block.type === 'web_search_tool_result' && Array.isArray(ev.content_block.content)) ev.content_block.content.slice(0, 3).forEach(x => addLink(x.url, x.title, false));
+        if (ev.type === 'content_block_delta' && ev.delta && ev.delta.type === 'citations_delta' && ev.delta.citation) addLink(ev.delta.citation.url, ev.delta.citation.title, true);
         if (ev.type !== 'content_block_delta' || !ev.delta || ev.delta.type !== 'text_delta') continue;
         let t = ev.delta.text;
         full += t;
@@ -606,20 +670,22 @@ function session(ws) {
       lastErr = String(e.message || e);
       console.error('ai error', attempt, lastErr.slice(0, 300));
       // 賢いモデルや検索がこのキーで使えないときは、次からは使わない（毎回失敗しないように）
-      if (attempt === 0 && route.search && /web_search|tool/i.test(lastErr) && !/overloaded|rate/i.test(lastErr)) { ENV.WEB_SEARCH = false; console.error('web search off'); }
+      if (route.search && /(not enabled|not allowed|disabled|permission)/i.test(lastErr) && /web/i.test(lastErr)) { ENV.WEB_SEARCH = false; console.error('web search off'); }
       if (attempt === 0 && route.smart && /model/i.test(lastErr) && /not_found|invalid|does not exist/i.test(lastErr)) { ENV.SMART_MODEL = ENV.MODEL; console.error('smart model off'); }
-      if (full || attempt) { send({ type: 'notice', why: 'ai', detail: lastErr.slice(0, 120) }); break; }
+      if (full || attempt === 2) { send({ type: 'notice', why: 'ai', detail: lastErr.slice(0, 120) }); break; }
       await new Promise(r => setTimeout(r, 400));
     }
     }
     if (gen !== S.gen) return;
     const text = capped ? spoken : clean(full).trim();
-    if (text) S.history.push({ role: 'user', content: logText || '（写真を見せた）' }, { role: 'assistant', content: text });   // 空の返事は記録しない（次の会話がこわれるので）
+    if (text && !noRecord) S.history.push({ role: 'user', content: logText || '（写真を見せた）' }, { role: 'assistant', content: text });
+    if (links.length && text) send({ type: 'links', gen, links: links.slice(0, 3) });
+    if (S.trio && /[？?]\s*$/.test(text)) S.followUntil = Date.now() + 12000;   // ジュニアが質問した → つぎの1回は名前なしでも   // 空の返事は記録しない（次の会話がこわれるので）
     if (S.history.length > 24) S.history = S.history.slice(-24);
     send({ type: 'reply_end', gen, emotion, text, why: text ? undefined : lastErr.slice(0, 120) });
     S.speaking = false; S.aborter = null;
-    if (S.mode === 'family' && logText) gas(Object.assign({ action: 'log', said: logText, reply: text }, S.auth)).catch(() => {});
-    if (convoKey() && text) {
+    if (S.mode === 'family' && logText && !noRecord) gas(Object.assign({ action: 'log', said: logText, reply: text }, S.auth)).catch(() => {});
+    if (convoKey() && text && !noRecord) {
       S.newTurns++;
       saveConvo(convoKey(), { turns: S.history.slice(-12), newTurns: S.newTurns, at: Date.now() });
       if (S.newTurns >= 6 || (S.guest && TELL_RE.test(logText || '') && S.newTurns >= 2)) summarize();
@@ -685,6 +751,7 @@ function session(ws) {
           await putRef(S.myRef, { owner: S.owner, name: S.me || (mine && mine.name) || '', parent, at: (mine && mine.at) || Date.now() });
         }
         const pr = await loadPrefs(S.owner);
+        S.lessons = !S.guest && Array.isArray(pr.lessons) ? pr.lessons.slice(-30) : [];
         S.trio = S.guest ? false : typeof m.trio === 'boolean' ? m.trio : !!pr.trio;
         if (typeof pr.waitMs === 'number') S.waitMs = pr.waitMs;
         if (convoKey()) {
@@ -706,6 +773,17 @@ function session(ws) {
       if (m.type === 'text') return onHeard(String(m.text || '').slice(0, 500));
       if (m.type === 'photo') return onPhoto(m);
       if (m.type === 'trio') return setTrio(!!m.on);
+      if (m.type === 'save_media') {               // 写真・動画をおうちのドライブへ（家族だけ）
+        if (S.guest || S.asGuest) return;
+        const data = String(m.data || '').replace(/^data:[\w/+.-]+;base64,/, '');
+        if (!data || data.length > 14 * 1024 * 1024) return send({ type: 'notice', why: 'media', detail: '大きすぎて保存できませんでした' });
+        try {
+          const g = await gas(Object.assign({ action: 'media', kind: m.kind === 'video' ? 'video' : 'photo', mime: String(m.mime || 'image/jpeg').slice(0, 40), data }, S.auth));
+          if (g && g.ok && g.url) send({ type: 'links', links: [{ title: (m.kind === 'video' ? '動画' : '写真') + 'をドライブに保存したぜ', url: g.url }] });
+          else send({ type: 'notice', why: 'media', detail: String(g && (g.detail || g.error) || '').slice(0, 80) });
+        } catch (e) { send({ type: 'notice', why: 'media', detail: String(e.message).slice(0, 80) }); }
+        return;
+      }
       if (m.type === 'loc') {                       // 「近く」を聞かれたときだけ、ページから届く（このつながりの間だけ使う）
         const lat = Number(m.lat), lon = Number(m.lon);
         if (isFinite(lat) && isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180) S.placeP = placeOf(lat, lon).then(p => { S.place = p; });
@@ -738,7 +816,7 @@ function createServer() {
     res.writeHead(404); res.end();
   });
   const wss = new WebSocketServer({
-    server, path: '/talk', maxPayload: 6 * 1024 * 1024,
+    server, path: '/talk', maxPayload: 16 * 1024 * 1024,
     verifyClient: info => { const o = info.origin || ''; return !o || ENV.ALLOWED_ORIGINS.some(a => o === a || o.endsWith('.' + a.replace(/^https?:\/\//, ''))); },
   });
   wss.on('connection', ws => session(ws));
