@@ -1999,8 +1999,11 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     const giveUp = setTimeout(() => { if (!J.ready) { try { ws.close(); } catch (e) {} } }, 20000);   // サーバーが起きて家族の記録を読むまで待つ
     if (!J.greeted) hint.textContent = 'サーバーにつないでいるよ…（数びょう）';
     const tr = store.get('jrTrio', null);
-    const ref = String(Q.get('ref') || store.get('jrRef', '')).replace(/[^\w-]/g, '').slice(0, 20);
-    if (Q.get('ref')) store.set('jrRef', ref);
+    // 紹介元（?ref=mac）。LINEのURLから来たときは liff.state の中にあることもある
+    let r0 = new URLSearchParams(location.search).get('ref') || Q.get('ref');
+    if (!r0) { try { const st = new URLSearchParams(location.search).get('liff.state'); if (st) r0 = new URLSearchParams(decodeURIComponent(st).split('?')[1] || '').get('ref'); } catch (e) {} }
+    const ref = String(r0 || store.get('jrRef', '')).replace(/[^\w-]/g, '').slice(0, 20);
+    if (r0) store.set('jrRef', ref);
     ws.onopen = () => jrSend(Object.assign({ type: 'hello', mode: BIZ() ? 'business' : 'family', greet: !J.greeted, ref }, typeof tr === 'boolean' ? { trio: tr } : {}, LIFF ? { idToken: idToken() } : { pass: cfg.pass }));
     ws.onmessage = ev => { let m; try { m = JSON.parse(ev.data); } catch (e) { return; } if (m.type === 'ready') clearTimeout(giveUp); jrOn(m); };
     ws.onclose = () => {
