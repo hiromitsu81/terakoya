@@ -180,7 +180,7 @@ function client(port, hello) {
   deps.claude.messages.stream = p => { streamed++; sys = p.system; return os2(p); };
   q.ws.send(JSON.stringify({ type: 'text', text: 'ジュニア、聞いてる？' }));
   const qe = await q.until(m => m.type === 'reply_end');
-  assert.ok(/なんでぃ|聞いてるぜ|どうした/.test(qe.text) && streamed === 0, '名前だけはすぐ返事');
+  assert.ok(/てやんでぃ/.test(qe.text) && streamed === 0, '名前だけはすぐ返事');
   // 話したことは、切っても次につづく（まとめ・ジュニア日記）
   q.ws.send(JSON.stringify({ type: 'text', text: 'ピョン吉のトレーナー買ったよ' }));
   await q.until(m => m.type === 'reply_end' && m !== qe);
