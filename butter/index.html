@@ -392,6 +392,27 @@ body.big .bubbles .bubble:not(:nth-last-child(-n+2)) { display: none; }
 body.big .hint { font-size: 18px; }
 body.big .meter .top { font-size: 18px; }
 body.big form.typed { display: none; }
+
+/* 台本モード（ステージ・スマホ1台）：?stage=1 */
+.stagebar { display: none; }
+body.stagemode .meters, body.stagemode .talk, body.stagemode #bigBtn { display: none; }
+body.stagemode .app { height: 100dvh; grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden; }
+body.stagemode .stage { min-height: 0; overflow: hidden; }
+body.stagemode .stage svg { width: auto; height: 100%; max-width: 100%; max-height: 100%; }
+body.stagemode .stagebar { display: grid; gap: 8px; }
+.stagebar .line { min-height: 3.2em; padding: 10px 14px; border-radius: 16px; background: var(--card); border: 1px solid var(--butter-deep); line-height: 1.6; font-size: 16px; }
+.stagebar .cue { min-height: 1.6em; text-align: center; font-family: var(--display); font-weight: 800; font-size: 17px; color: var(--mic-live); }
+.stagebar .next { font-family: var(--display); font-weight: 800; font-size: 22px; padding: 18px; border-radius: 20px; border: 2px solid var(--butter-deep); background: var(--butter); color: #2b2310; cursor: pointer; touch-action: manipulation; }
+.stagebar .next.speaking { background: var(--card); }
+.stagebar .row { justify-content: center; }
+.stagebar .row .btn { padding: 8px 12px; font-size: 13px; }
+#scriptText { font: inherit; font-size: 14px; line-height: 1.6; width: 100%; min-height: 220px; padding: 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+@media (orientation: landscape) and (max-height: 500px) {
+  body.stagemode .app { grid-template-rows: minmax(0, 1fr) auto; gap: 4px; }
+  body.stagemode header { display: none; }
+  .stagebar .line { min-height: 2.4em; font-size: 14px; padding: 6px 10px; }
+  .stagebar .next { padding: 10px; font-size: 18px; }
+}
 </style>
 </head>
 <body>
@@ -641,6 +662,17 @@ body.big form.typed { display: none; }
       <button class="btn primary" type="submit">送る</button>
     </form>
   </section>
+
+  <section class="stagebar" aria-label="台本">
+    <div class="line" id="stageLine" aria-live="polite">ボタンをおすと、バターちゃんが話しはじめるよ。</div>
+    <div class="cue" id="stageCue"></div>
+    <button class="next" id="stageNext" type="button">▶ スタート</button>
+    <div class="row">
+      <button class="btn" id="stageReset" type="button">最初から</button>
+      <button class="btn" id="stageEdit" type="button">台本をなおす</button>
+      <button class="btn" id="stageExit" type="button">ふつうの画面へ</button>
+    </div>
+  </section>
 </div>
 
 <div class="overlay" id="startOverlay">
@@ -650,6 +682,19 @@ body.big form.typed { display: none; }
     <p class="err" id="startErr" hidden></p>
     <button class="btn primary" id="startBtn">おこす</button>
     <button class="btn" id="startSettings">設定をひらく</button>
+    <button class="btn" id="startStage" type="button">ステージ（台本）モードにする</button>
+  </div>
+</div>
+
+<div class="overlay" id="scriptBox" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="scriptTitle">
+    <h2 id="scriptTitle">台本</h2>
+    <p class="note">1行に1つのセリフ。ふつうの行はバターちゃんが話します。「ヒロ：」ではじまる行は話さずに、画面に「ヒロさんの番」として出ます。行のはじめに【わくわく】【わらう】【てれる】【びっくり】【えがお】【かんがえ】【しょんぼり】をつけると表情が変わります。</p>
+    <textarea id="scriptText" aria-label="台本"></textarea>
+    <div class="row">
+      <button class="btn" id="scriptDefault" type="button">はじめの台本にもどす</button>
+      <button class="btn primary" id="scriptSave" type="button">保存してとじる</button>
+    </div>
   </div>
 </div>
 
@@ -739,6 +784,9 @@ body.big form.typed { display: none; }
     if (Q.get('liffId')) store.set('liffId', Q.get('liffId'));
     document.body.classList.add('liffmode');
   }
+  // 台本モード（ステージ・スマホ1台）：?stage=1。マイクもGASも使わず、タップでセリフを話す
+  const STAGE = !LIFF && Q.get('stage') === '1';
+  if (STAGE) { cfg.mode = 'talk'; cfg.sleepAfter = 0; document.body.classList.add('stagemode'); }
   const SHOW = () => cfg.mode === 'show';
   const canCall = () => !!cfg.url && (LIFF ? !!idToken() : !!cfg.pass);
   const idToken = () => { try { return window.liff && liff.getIDToken && liff.getIDToken(); } catch (e) { return null; } };
@@ -1373,7 +1421,7 @@ body.big form.typed { display: none; }
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   let rec = null, recOn = false;
   function startRec() {
-    if (!SR || recOn || !started) return;
+    if (STAGE || !SR || recOn || !started) return;
     if (!SHOW() && (state === 'speaking' || state === 'thinking')) return;
     rec = new SR();
     rec.lang = 'ja-JP'; rec.continuous = true; rec.interimResults = true;
@@ -1726,7 +1774,7 @@ body.big form.typed { display: none; }
     speak(text, 'excited');
   }
   async function poll() {
-    if (!canCall() || document.hidden) return;
+    if (STAGE || !canCall() || document.hidden) return;
     try {
       const r = await callGas({ action: 'poll' });
       if (r && r.me) meName = r.me;
@@ -1796,7 +1844,8 @@ body.big form.typed { display: none; }
     cfg.sleepAfter = Number($('sleepSel').value);
     cfg.mode = $('modeSel').value; cfg.mic = Number($('micRange').value); cfg.test = $('testChk').checked;
     if (SHOW() && started) startMic();
-    Object.keys(cfg).forEach(k => store.set(k, cfg[k]));
+    if (STAGE) cfg.mode = 'talk';
+    Object.keys(cfg).forEach(k => { if (STAGE && k === 'mode') return; store.set(k, cfg[k]); });
     $('settings').hidden = true;
     setHint();
     armSleep();
@@ -1805,7 +1854,91 @@ body.big form.typed { display: none; }
   $('openSettings').addEventListener('click', openSettings);
   $('startSettings').addEventListener('click', openSettings);
 
+
+  // ===== 台本モード =====
+  const DEFAULT_SCRIPT = [
+    '【わくわく】こんばんは、バターちゃんです！こちらは、AIでぼくを作ったヒロさん！お祭りの企画から、お店や会社のDXまで、仕組みづくりの名人なんだよ！',
+    'ヒロ：名人は言いすぎ！',
+    '【てれる】えへへ。それでね、溝の口でお祭りの仲間を探してるんだって。ぼくも手伝うよ！',
+    'ヒロ：君は溶けちゃうからね',
+    '【わらう】だから交流会で、ぼくに話しかけに来てね。溶ける前に！バタバタ〜！',
+  ].join('\n');
+  const EMO_JA = { 'わくわく': 'excited', 'わらう': 'laugh', 'てれる': 'shy', 'びっくり': 'surprise', 'えがお': 'smile', 'かんがえ': 'think', 'しょんぼり': 'sad' };
+  function parseScript(txt) {
+    const steps = [];
+    String(txt || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean).forEach(l => {
+      const cue = l.match(/^(ヒロ|パパ|ひろ)\s*[:：]\s*(.*)$/);
+      if (cue) { if (steps.length) steps[steps.length - 1].cue = cue[2]; else steps.push({ text: '', cue: cue[2], mood: 'smile' }); return; }
+      const m = l.match(/^[【\[]([^】\]]+)[】\]]\s*(.*)$/);
+      steps.push({ text: m ? m[2] : l, mood: (m && EMO_JA[m[1]]) || 'smile', cue: '' });
+    });
+    return steps;
+  }
+  let stageSteps = parseScript(store.get('script', DEFAULT_SCRIPT)), stageI = 0, stageBusy = false, stageGuard = null;
+  function stageShow() {
+    const n = stageSteps.length, btn = $('stageNext');
+    btn.classList.toggle('speaking', stageBusy);
+    if (stageBusy) { btn.textContent = '■ とめる'; return; }
+    btn.textContent = stageI >= n ? '↺ もう一回（最初から）' : stageI === 0 ? '▶ スタート（1/' + n + '）' : '▶ つぎ（' + (stageI + 1) + '/' + n + '）';
+  }
+  function stageDone(step) {
+    if (!stageBusy) return;
+    stageBusy = false; clearTimeout(stageGuard);
+    butter.classList.remove('talking', 'mouth-small');
+    setState('idle'); setEmo(step.mood, 8000);
+    $('stageCue').textContent = step.cue ? 'ヒロさんの番：「' + step.cue + '」' : (stageI >= stageSteps.length ? 'おしまい！' : '');
+    if (stageI >= stageSteps.length) chiDo('jump');
+    stageShow();
+  }
+  function stagePlay() {
+    if (stageBusy) { speechSynthesis.cancel(); stageDone(stageSteps[stageI - 1] || { mood: 'smile', cue: '' }); return; }
+    if (stageI >= stageSteps.length) { stageI = 0; $('stageCue').textContent = ''; }
+    const step = stageSteps[stageI++];
+    if (!step) return;
+    $('stageLine').textContent = step.text || '（ヒロさんから）';
+    $('stageCue').textContent = '';
+    if (!step.text) { stageBusy = true; stageDone(step); return; }
+    stageBusy = true; stageShow();
+    speechSynthesis.cancel();
+    setEmo(step.mood, 60000); setState('speaking');
+    chiDo(step.mood === 'laugh' || step.mood === 'excited' ? 'spin' : 'sit');
+    const parts = step.text.split(/(?<=[。！？!?])/).map(t => t.trim()).filter(Boolean);
+    const voice = pickVoice();
+    parts.forEach((t, i) => {
+      const u = new SpeechSynthesisUtterance(t);
+      u.lang = 'ja-JP'; if (voice) u.voice = voice;
+      u.rate = Number(cfg.rate) || 1; u.pitch = Number(cfg.pitch) || 1.1;
+      if (i === parts.length - 1) u.onend = u.onerror = () => stageDone(step);
+      speechSynthesis.speak(u);
+    });
+    // スマホで onend が来ないときの予備
+    stageGuard = setTimeout(() => stageDone(step), 2500 + step.text.length * 230 / (Number(cfg.rate) || 1));
+  }
+  if (STAGE) {
+    $('stageNext').addEventListener('click', stagePlay);
+    $('stageReset').addEventListener('click', () => { speechSynthesis.cancel(); stageBusy = false; stageI = 0; $('stageLine').textContent = 'ボタンをおすと、バターちゃんが話しはじめるよ。'; $('stageCue').textContent = ''; setState('idle'); setEmo('smile'); stageShow(); });
+    $('stageEdit').addEventListener('click', () => { $('scriptText').value = store.get('script', DEFAULT_SCRIPT); $('scriptBox').hidden = false; });
+    $('stageExit').addEventListener('click', () => { location.href = location.pathname; });
+    $('scriptDefault').addEventListener('click', () => { $('scriptText').value = DEFAULT_SCRIPT; });
+    $('scriptSave').addEventListener('click', () => {
+      store.set('script', $('scriptText').value); stageSteps = parseScript($('scriptText').value);
+      stageI = 0; $('scriptBox').hidden = true; $('stageCue').textContent = ''; stageShow();
+    });
+    $('startOverlay').querySelector('h2').textContent = 'ステージ（台本）モード';
+    $('startOverlay').querySelector('.note').textContent = 'スマホ1台で、ボタンをおすとバターちゃんが台本のセリフを話します。マイクは使いません。iPhoneはマナーモード（消音）を切って、音量を上げてください。セリフは「台本をなおす」で変えられます。';
+    $('startStage').hidden = true;
+    stageShow();
+  }
+  $('startStage').addEventListener('click', () => { location.href = location.pathname + '?stage=1'; });
+
   $('startBtn').addEventListener('click', () => {
+    if (STAGE) {
+      started = true; $('startOverlay').hidden = true;
+      speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+      setEmo('excited', 3000); bark();
+      try { navigator.wakeLock && navigator.wakeLock.request('screen').catch(() => {}); } catch (e) {}
+      return;
+    }
     if (LIFF) {
       started = true; $('startOverlay').hidden = true; AC();
       const m = pet ? pet.melt : 0;
