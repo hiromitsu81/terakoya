@@ -1800,7 +1800,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     const src = a.createMediaStreamSource(liffStream);
     const proc = a.createScriptProcessor(4096, 1, 1);
     const chunks = [];
-    let heardVoice = false, quietMs = 0, totalMs = 0, stop = false;
+    let heardVoice = false, quietMs = 0, totalMs = 0, stop = false, floorR = 0, voiceMs = 0;
     btn._stop = () => { stop = true; };
     return new Promise(res => {
       proc.onaudioprocess = ev => {
@@ -1810,8 +1810,12 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
         const rms = Math.sqrt(sum / d.length), ms = d.length / a.sampleRate * 1000;
         totalMs += ms;
         $('lvlLive').style.transform = 'scale(' + (1 + Math.min(rms * 8, 0.5)) + ')';
-        if (rms > 0.02) { heardVoice = true; quietMs = 0; } else quietMs += ms;
-        if (stop || totalMs > 12000 || (heardVoice && quietMs > 1200) || (!heardVoice && totalMs > 6000)) {
+        // まわりの音の大きさ（床）をおぼえて、それより大きい音を声とみなす。話しおわって0.9秒静かなら自動で止める
+        if (totalMs < 350) { floorR = Math.max(floorR, rms); return; }
+        floorR = rms < floorR ? floorR * 0.9 + rms * 0.1 : floorR * 0.995 + rms * 0.005;
+        const th = Math.max(0.012, floorR * 2.2);
+        if (rms > th) { voiceMs += ms; if (voiceMs > 150) heardVoice = true; quietMs = 0; } else quietMs += ms;
+        if (stop || totalMs > 10000 || (heardVoice && quietMs > 900) || (!heardVoice && totalMs > 7000)) {
           proc.disconnect(); src.disconnect(); proc.onaudioprocess = null;
           res(heardVoice ? to16k(chunks, a.sampleRate) : null);
         }
@@ -1861,7 +1865,9 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     out.textContent = r.text;
     if (r.state) applyPet(r.state, true);
     nextAudio = r.audio || null;
-    liffSpeak(r.text, r.emotion || 'smile');
+    await liffSpeak(r.text, r.emotion || 'smile');
+    // 会話モード：答えおわったら、ボタンを押さなくても続けて聞く（だれも話さなければ止まる）
+    if (store.get('liffConv', true) && document.visibilityState === 'visible') setTimeout(() => { if (!recBusy) talkOnce(); }, 350);
   }
   async function liffBoot() {
     if (!LIFF) return;
