@@ -1756,7 +1756,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
       setState('speaking');
     });
   }
-  const LIFF_BROWSER_VOICE = () => store.get('liffVoice', 'browser') === 'browser' && jaVoices().length > 0;
+  const LIFF_BROWSER_VOICE = () => store.get('liffVoice', 'google') === 'browser' && jaVoices().length > 0;
   async function liffSpeak(text, mood) {
     setEmo(mood || 'smile');
     if (!text) { setState('idle'); return; }
