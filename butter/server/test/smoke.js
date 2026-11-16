@@ -282,6 +282,8 @@ function client(port, hello) {
     await f.until(m => m.type === 'reply_end' && !/覚えた/.test(m.text || ''));
     assert.ok(/教わったこと/.test(sy) && /ピカチュウ/.test(sy), '教わったことを使う');
     assert.ok(/かたい敬語は使わない/.test(sy), 'いつも江戸っ子');
+    f.ws.send(JSON.stringify({ type: 'text', text: '英語の宿題、りんごってなんて書くの？' }));
+    await f.until(m => m.type === 'reply_end' && m.gen > 0 && /勉強を教える/.test(sy));
     f.ws.send(JSON.stringify({ type: 'text', text: 'メール来てる？' }));
     await f.until(m => m.type === 'reply_end' && /ヒロさんにしか/.test(m.text || ''));
     const h = await client(port, { type: 'hello', idToken: 'tok-b', mode: 'family' });
@@ -306,7 +308,7 @@ function client(port, hello) {
     await gx.until(m => m.type === 'ready');
     gx.ws.send(JSON.stringify({ type: 'text', text: 'この前の続きなんだけど' }));
     await gx.until(m => m.type === 'reply_end');
-    assert.ok(/役割：サポート/.test(gs) && /役割：コンサル相談/.test(gs) && /AirHost/.test(gs) && /恋の話/.test(gs), '役割と相談メモ');
+    assert.ok(!/勉強を教える/.test(gs), '窓口は勉強モードにしない'); assert.ok(/役割：サポート/.test(gs) && /役割：コンサル相談/.test(gs) && /AirHost/.test(gs) && /恋の話/.test(gs), '役割と相談メモ');
     deps.claude.messages.stream = o2; gx.ws.close();
     f.ws.send(JSON.stringify({ type: 'save_media', kind: 'photo', mime: 'image/jpeg', data: 'data:image/jpeg;base64,AAAA' }));
     await f.until(m => m.type === 'links' && /写真/.test(m.links[0].title));
@@ -329,6 +331,6 @@ function client(port, hello) {
     deps.claude.messages.stream = o;
     [f, h, t].forEach(x => x.ws.close());
   }
-  console.log('OK：覚える・メールはヒロさんだけ・議事録（文字とPDF）・窓口の役割と相談メモ・写真の保存・調べた先のリンク・質問のあとの続き・会話・気持ち・一文ずつの声・写真・記録の分け方・ご縁つなぎ・割りこみ・三人モード・呼ばれただけ・会話のつづき・ジュニア日記・やりなおし・窓口と案件メモ・紹介のつながり・窓口のお休み・いいとこ取りと検索・近くの場所');
+  console.log('OK：家族は勉強を教える・覚える・メールはヒロさんだけ・議事録（文字とPDF）・窓口の役割と相談メモ・写真の保存・調べた先のリンク・質問のあとの続き・会話・気持ち・一文ずつの声・写真・記録の分け方・ご縁つなぎ・割りこみ・三人モード・呼ばれただけ・会話のつづき・ジュニア日記・やりなおし・窓口と案件メモ・紹介のつながり・窓口のお休み・いいとこ取りと検索・近くの場所');
   process.exit(0);
 })().catch(e => { console.error('NG', e); process.exit(1); });

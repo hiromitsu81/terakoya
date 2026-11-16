@@ -223,6 +223,9 @@ function nowLine() {
 /** いいとこ取り：今の情報が要る質問（天気・ニュース・値段など）か、むずかしい相談のときだけ、賢いモデルと検索を使う */
 const NEAR_RE = /(近く|近所|この辺|このへん|最寄り|もより|周りの|まわりの|ここから)/;
 const LOOKUP_RE = /(近く|近所|この辺|このへん|最寄り|もより|天気|てんき|気温|雨|ニュース|最新|いま(の|何)|今日の|明日の|あした|今週|値段|価格|いくら|営業時間|何時まで|開いてる|やってる|場所|どこにある|行き方|調べ|検索|ランキング|おすすめの?(店|お店|場所)|試合|結果|株価|為替|地震|台風|電車|運行|遅延)/;
+/** 家族の勉強：宿題・英語・中国語・算数など。家族の画面ではしっかり教える */
+const STUDY_RE = /(宿題|しゅくだい|勉強|べんきょう|英語|えいご|英単語|中国語|ちゅうごくご|算数|さんすう|数学|すうがく|国語|こくご|理科|りか|社会|漢字|かんじ|計算|けいさん|問題|もんだい|テスト|ドリル|読み方|よみかた|書き方|意味|いみ|訳して|やくして|英訳|和訳|発音|スペル|九九|わり算|かけ算|分数|方程式|教えて|おしえて)/i;
+const STUDY_RULE = '\n\n【勉強を教える】家族の宿題や勉強（英語・中国語・算数・数学・国語・理科・社会・漢字など）は、むずかしくても断らず、しっかり教える。相手の学年に合わせてかみくだき、答えをいきなり全部言わずに、ヒントや考え方から一緒に解く（聞かれたら答えも言う）。英語や中国語は、読み方（カタカナ）と意味もそえる。説明が必要なときは4〜5文まで話してよい。話し方は江戸っ子のまま。';
 const HARD_RE = /(相談|企画|提案|見積|戦略|どうすれば|どうしたら|比べ|くらべ|メリット|デメリット|計画|アイデア|考えて|なぜ|なんで|仕組み|作り方)/;
 function needSmart(text, guest) {
   const t = String(text || '');
@@ -391,7 +394,7 @@ function session(ws) {
       S.owner = String(r.owner || ''); S.me = who; S.brainAt = Date.now();
       return;
     }
-    S.system = String(r.system || '') + SELF + (who ? '\n\n【いま開いている人】このミニアプリを開いているのは「' + who + '」。' + (ADULT_RE.test(who) ? '大人なので、宿題や報連相の声かけはしない。話し方は気さくな江戸っ子のまま（かたい敬語にしない）。' : '') : '');
+    S.system = String(r.system || '') + SELF + (who ? '\n\n【いま開いている人】このミニアプリを開いているのは「' + who + '」。' + (ADULT_RE.test(who) ? '大人なので、宿題や報連相をうながす声かけはしない（勉強や調べものを聞かれたら、しっかり教える）。話し方は気さくな江戸っ子のまま（かたい敬語にしない）。' : '') : '');
     S.owner = String(r.owner || '');
     S.me = String(r.me || '');
     S.brainAt = Date.now();
@@ -624,8 +627,10 @@ function session(ws) {
     let full = '', emotion = 'smile', head = true, seq = 0, chain = Promise.resolve();
     send({ type: 'reply_start', gen, as: jam ? 'ジャム猫' : 'ジュニア' });
     if (S.placeP) { await S.placeP.catch(() => {}); S.placeP = null; }
+    const study = !jam && !S.guest && S.mode === 'family' && STUDY_RE.test(logText || '');
     const route = jam ? { smart: false, search: false } : needSmart(logText, S.guest);
-    const maxSent = S.trio ? 2 : route.search ? 4 : 3;
+    if (study) route.smart = true;                  // 勉強は賢いモデルで、ていねいに
+    const maxSent = S.trio ? 2 : study ? 5 : route.search ? 4 : 3;
     let capped = false, spoken = '';
     const sp = splitter(sentence => {
       const s = clean(sentence).trim();
@@ -648,8 +653,8 @@ function session(ws) {
       const useSmart = route.smart && attempt < 2, useSearch = route.search && attempt < 2 && ENV.WEB_SEARCH;
       const params = {
         model: useSmart ? ENV.SMART_MODEL : ENV.MODEL,
-        max_tokens: (S.trio ? 160 : S.mode === 'business' ? 240 : 220) + (useSearch ? 200 : 0),
-        system: sysPrompt() + (jam ? JAM_RULE : '') + (route.search && !useSearch ? '\n\n【いまは調べられない】検索が使えないので、今の情報は「おいらには調べられねぇんだ」と正直に言う。' : ''),
+        max_tokens: (S.trio ? 160 : study ? 420 : S.mode === 'business' ? 240 : 220) + (useSearch ? 200 : 0),
+        system: sysPrompt() + (study ? STUDY_RULE : '') + (jam ? JAM_RULE : '') + (route.search && !useSearch ? '\n\n【いまは調べられない】検索が使えないので、今の情報は「おいらには調べられねぇんだ」と正直に言う。' : ''),
         messages: attempt === 2 || (attempt === 1 && !useSearch) ? [{ role: 'user', content }] : msgs,
       };
       if (useSearch) {
