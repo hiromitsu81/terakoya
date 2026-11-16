@@ -1977,20 +1977,23 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     const ws = new WebSocket((/^(localhost|127\.)/.test(SRV) ? 'ws://' : 'wss://') + SRV + '/talk');
     ws.binaryType = 'arraybuffer'; J.ws = ws; J.ready = false;
     const giveUp = setTimeout(() => { if (!J.ready) { try { ws.close(); } catch (e) {} } }, 20000);   // サーバーが起きて家族の記録を読むまで待つ
-    ws.onopen = () => jrSend(Object.assign({ type: 'hello', mode: BIZ() ? 'business' : 'family', greet: !J.greeted }, LIFF ? { idToken: idToken() } : { pass: cfg.pass }));
+    if (!J.greeted) hint.textContent = 'サーバーにつないでいるよ…（数びょう）';
+    const tr = store.get('jrTrio', null);
+    ws.onopen = () => jrSend(Object.assign({ type: 'hello', mode: BIZ() ? 'business' : 'family', greet: !J.greeted }, typeof tr === 'boolean' ? { trio: tr } : {}, LIFF ? { idToken: idToken() } : { pass: cfg.pass }));
     ws.onmessage = ev => { let m; try { m = JSON.parse(ev.data); } catch (e) { return; } if (m.type === 'ready') clearTimeout(giveUp); jrOn(m); };
     ws.onclose = () => {
       clearTimeout(giveUp);
       const was = J.ready; J.ready = false; jrStopAudio();
       if (J.dead) return;
       // つながらない：三人モードで使っていたら、いつもの話し方（だれにでも答える）にはせず、つなぎなおしつづける
-      if (!was && ++J.tries >= 3 && !store.get('jrTrio', false)) { jrFallback(); return; }
+      // この端末で一度でもサーバーにつながったことがあれば、前の話し方（だれにでも答える）にはもどさず、つなぎなおしつづける
+      if (!was && ++J.tries >= 3 && !store.get('jrOK', false)) { jrFallback(); return; }
       if (!was) hint.textContent = 'サーバーにつなぎなおしているよ…（' + J.tries + '回目）';
-      if (document.visibilityState === 'visible' && convOn) setTimeout(jrConnect, was ? 800 : 3000);
+      if (document.visibilityState === 'visible' && convOn) setTimeout(jrConnect, was ? 800 : Math.min(10000, 2000 * J.tries));
     };
   }
   function jrFallback() {
-    J.dead = true; $('goenBtn').hidden = true;
+    J.dead = true; $('goenBtn').hidden = true; $('trioBtn').hidden = true;
     if (diag) { diag.hidden = false; diag.textContent = '（パパへ：サーバーにつながらないので、いつもの話し方にしています。この話し方は三人モードがききません）'; }
     hint.textContent = 'いまは、いつもの話し方です（サーバーにつながっていません）。';
     if (convOn && !recBusy) setTimeout(talkOnce, 300);
@@ -2000,7 +2003,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     switch (m.type) {
       case 'ready':
         J.ready = true; J.tries = 0; J.greeted = true; J.profile = m.profile || null; $('goenBtn').hidden = false;
-        $('trioBtn').hidden = false; J.trio = !!m.trio; store.set('jrTrio', J.trio); trioShow();
+        $('trioBtn').hidden = false; J.trio = !!m.trio; store.set('jrTrio', J.trio); store.set('jrOK', true); trioShow();
         if (diag) diag.hidden = true;
         if (awake.until !== 0) keepAwake(true, 0);
         jrMicStart().catch(() => { hint.textContent = 'マイクが使えません。LINEの設定でマイクを許可してください。'; });
@@ -2056,7 +2059,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
       case 'notice': if (diag && m.detail) { diag.hidden = false; diag.textContent = '（パパへ：' + m.why + ' ' + m.detail + '）'; } break;
       case 'error':
         if (m.code === 'auth') { J.dead = true; hint.textContent = 'LINEの確認ができなかったよ。ミニアプリを開き直してね。'; }
-        else if (m.code !== 'timeout') jrFallback();
+        // それ以外のエラーでは前の話し方にしない（切れたら、つなぎなおす）
         break;
     }
   }

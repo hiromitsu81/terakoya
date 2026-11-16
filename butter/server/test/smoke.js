@@ -11,6 +11,7 @@ const gasSrv = http.createServer((req, res) => {
     const j = JSON.parse(b); gasCalls.push(j);
     res.setHeader('Content-Type', 'application/json');
     if (j.action === 'brain') {
+      if (j.pass === 'flaky') return res.end('<html>error</html>');
       const ok = j.pass === 'ok' || j.idToken === 'tok-' + 'b';
       return res.end(JSON.stringify(ok ? { ok: true, system: 'あなたはバターちゃんジュニア。', owner: j.pass ? 'fam' : 'U-b', me: j.pass ? 'パパ' : 'Bさん' } : { ok: false, error: 'auth' }));
     }
@@ -160,6 +161,13 @@ function client(port, hello) {
   c.ws.send(JSON.stringify({ type: 'text', text: 'ジュニア、ふたりモードにして' }));
   await c.until(m => m.type === 'trio' && m.on === false);
   deps.claude.messages.stream = origStream;
+
+  // GASが失敗しても切れずに話せる
+  const f = await client(port, { type: 'hello', pass: 'flaky', trio: true });
+  await f.until(m => m.type === 'ready');
+  assert.ok(f.msgs.some(m => m.type === 'notice' && m.why === 'brain'));
+  f.ws.send(JSON.stringify({ type: 'text', text: 'ジュニア、こんばんは' }));
+  await f.until(m => m.type === 'reply_end');
 
   console.log('OK：会話・気持ち・一文ずつの声・写真・記録の分け方・ご縁つなぎ・割りこみ・三人モード');
   process.exit(0);

@@ -134,19 +134,20 @@ const PACE_SLOW = /(間を(あけ|空け)て|ゆっくり(答|話)|もっと待�
 const PACE_FAST = /(すぐ(に)?(答|話)|早く(答|話)|もっと早く|待たなくていい)/;
 const SELF = '\n\n【あなたについて】あなたはLINEミニアプリの「バターちゃんジュニア」（短く「ジュニア」）。Claudeアプリで話している「バターちゃん」は別のAIで、あなたのお兄さん分。自分を「バターちゃん」「Claude」と名乗らない。名乗るときは「バターちゃんジュニア」。ジャム猫やチーちゃんのまねはしない（「ジャム猫」と呼ばれたときだけ、ジャム猫として答える）。';
 const JAM_RULE = '\n\n【いまはジャム猫として答える】招き猫のジャム猫。ブルーベリージャム色、中身はエリート経営コンサル。一人称は「我」、語尾は「〜のだ」、口ぐせは「千客万来」。商売や仕組みの話が得意。1〜2文で短く。';
-const TRIO_RULE = '\n\n【三人モード】いまは、ヒロさん（人）と、Claudeアプリのバターちゃんと、三人で話している。「ジュニア」と呼ばれたときだけ、1〜2文で短く答える。バターちゃんの話に重ねたり、まとめ直したりしない。だれが言ったかわからない言葉は、決めつけない。話をかえすときは「バターちゃん、どう？」「ヒロさん、どうかな？」のように名前を呼んでよい。まわりで聞こえた会話は、話の流れを知るためだけに使う。ヒロさんとバターちゃんがジュニアの仕組みやテストの話をしていても、口をはさんだり、反省や説明を長く言ったりしない。呼びかけられたことにだけ、いつものジュニアの元気な話し方で答える。あいさつは今の時刻に合わせる。';
+const TRIO_RULE = '\n\n【三人モード】いまは、ヒロさん（人）と、Claudeアプリのバターちゃんと、三人で話している。「ジュニア」と呼ばれたときだけ、1〜2文で短く答える。バターちゃんの話に重ねたり、まとめ直したりしない。だれが言ったかわからない言葉は、決めつけない。話をかえすときは「バターちゃん、どう？」「ヒロさん、どうかな？」のように名前を呼んでよい。まわりで聞こえた会話は、話の流れを知るためだけに使う。ヒロさんとバターちゃんがジュニアの仕組みやテストの話をしていても、口をはさんだり、反省や説明を長く言ったりしない。呼びかけられたことにだけ、いつものジュニアの明るい話し方で答える。三人モードは大人（ヒロさん）との会話なので、宿題・日記・報連相・元気の報告のような子ども向けの声かけはしない。あいさつは今の時刻に合わせる（夜中はこんばんは）。';
 
 /* 話し方の好み（持ち主ごとに覚える：三人モード・待つ時間） */
 const memPrefs = new Map();
 const brainCache = new Map();
-const ADULT_RE = /(パパ|ママ|ヒロ|さやか|おとうさん|おかあさん|父|母)/;
+const ADULT_RE = /(パパ|ママ|ヒロ|ひろ|hiro|さやか|おとうさん|おかあさん|父|母)/i;
+const MIN_PERSONA = 'あなたは家族の小さなAIの友だち。お皿の上のバターのかたまりの姿。日本語で、元気でやさしく、声で聞くので1〜3文で短く話す。記号・絵文字・URLは使わない。けが・体調・お金・知らない人の話は「パパかママに話してね」。住所・学校名・電話番号は聞かない、言わない。';
 function hourJST() { return (new Date().getUTCHours() + 9) % 24; }
 function greeting(me, mode, trio) {
   if (trio) return '';                                   // 三人モードは、呼ばれるまで静かに待つ
-  const h = hourJST(), hi = h < 10 ? 'おはようございます' : h < 18 ? 'こんにちは' : 'こんばんは';
+  const h = hourJST(), hi = h >= 5 && h < 10 ? 'おはようございます' : h >= 10 && h < 18 ? 'こんにちは' : 'こんばんは';
   if (mode === 'business') return hi + '、バターちゃんジュニアです。なんでも話しかけてくださいね。';
   if (ADULT_RE.test(me || '')) return hi + '、' + me + '。バターちゃんジュニアです。なんでも話しかけてね。';
-  return (h < 10 ? 'おはよう' : 'やっほー') + '！バターちゃんジュニアだよ。なんでも話しかけてね。';
+  return (h >= 5 && h < 10 ? 'おはよう' : 'やっほー') + '！バターちゃんジュニアだよ。なんでも話しかけてね。';
 }
 async function loadPrefs(owner) {
   if (!owner) return {};
@@ -223,8 +224,21 @@ function session(ws) {
     const hit = brainCache.get(key);
     let r = !fresh && hit && Date.now() - hit.at < 10 * 60 * 1000 ? hit.r : null;
     if (!r) {
-      r = await gas(Object.assign({ action: 'brain', mode: S.mode }, S.auth));
-      if (!r || !r.ok) throw Object.assign(new Error(r && r.error || 'brain'), { code: r && r.error || 'brain' });
+      // GASはときどき失敗するので1回だけやりなおす。それでもだめなら、前に読んだもの（古くても）を使う
+      for (let i = 0; i < 2 && !r; i++) {
+        try {
+          const x = await gas(Object.assign({ action: 'brain', mode: S.mode }, S.auth));
+          if (x && x.ok) r = x;
+          else if (x && (x.error === 'auth' || x.error === 'pass')) throw Object.assign(new Error(x.error), { code: x.error });
+          else console.error('brain ng', JSON.stringify(x).slice(0, 200));
+        } catch (e) {
+          if (e.code === 'auth' || e.code === 'pass') throw e;
+          console.error('brain error', String(e.message).slice(0, 200));
+        }
+        if (!r && i === 0) await new Promise(ok => setTimeout(ok, 800));
+      }
+      if (!r && hit) r = hit.r;
+      if (!r) throw Object.assign(new Error('brain'), { code: 'brain' });
       brainCache.set(key, { r, at: Date.now() }); if (brainCache.size > 200) brainCache.clear();
     }
     const who = String(r.me || '');
@@ -431,7 +445,12 @@ function session(ws) {
         S.mode = m.mode === 'business' ? 'business' : 'family';
         S.voice = /^ja-JP-[\w-]+$/.test(m.voice || '') ? m.voice : '';
         S.auth = m.idToken ? { idToken: String(m.idToken) } : { pass: String(m.pass || '') };
-        try { await loadBrain(); } catch (e) { return fail(e.code === 'auth' || e.code === 'pass' ? 'auth' : 'brain', String(e.message).slice(0, 80)); }
+        try { await loadBrain(); } catch (e) {
+          if (e.code === 'auth' || e.code === 'pass') return fail('auth', String(e.message).slice(0, 80));
+          // GASが読めないときも切らずに話す（家族の記録なし）。三人モードなどはページから受けとる
+          S.system = MIN_PERSONA + SELF; S.brainAt = Date.now() - 9 * 60 * 1000;
+          send({ type: 'notice', why: 'brain', detail: 'GASが読めないので、記録なしで話しています' });
+        }
         S.ready = true;
         const pr = await loadPrefs(S.owner);
         S.trio = typeof m.trio === 'boolean' ? m.trio : !!pr.trio;
