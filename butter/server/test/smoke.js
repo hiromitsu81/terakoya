@@ -35,7 +35,7 @@ let lastMessages = null;
 deps.claude = {
   messages: {
     stream: (p) => { lastMessages = p.messages; return fakeStream('[わくわく]やっほー！今日はなにして遊ぶ？クイズもできるよ。'); },
-    create: async p => /窓口AIの記録係/.test(p.system || '') ? ({ content: [{ type: 'text', text: '{"worth":true,"kind":"仕事","title":"宿のDX","need":"予約の仕組み","when":"来月","budget":"","slot":"11/20(木) 19時ごろ","next":"連絡する","memo":"宿のDXの相談"}' }] }) : /記録係/.test(p.system || '') ? ({ content: [{ type: 'text', text: '===まとめ===\n- ピョン吉のトレーナーの話をした\n===日記===\n- パパがトレーナーを買った' }] }) : ({ content: [{ type: 'text', text: '{"lines":[{"who":"チーちゃん","text":"こんにちは"},{"who":"ジャム猫","text":"千客万来なのだ"}],"match":"お祭りと宿で相性ばっちり。","next":"一度お茶してみてね。"}' }] }),
+    create: async p => /窓口AIの記録係/.test(p.system || '') ? ({ content: [{ type: 'text', text: '{"worth":true,"kind":"仕事","title":"宿のDX","need":"予約の仕組み","when":"来月","budget":"","slot":"11/20(木) 19時ごろ","next":"連絡する","memo":"宿のDXの相談"}' }] }) : /記録係/.test(p.system || '') ? ({ content: [{ type: 'text', text: '===まとめ===\n- ピョン吉のトレーナーの話をした\n===日記===\n- パパがトレーナーを買った\n===学び===\n- パパは家族の人数を聞かれたらちゃんと答えてほしい' }] }) : ({ content: [{ type: 'text', text: '{"lines":[{"who":"チーちゃん","text":"こんにちは"},{"who":"ジャム猫","text":"千客万来なのだ"}],"match":"お祭りと宿で相性ばっちり。","next":"一度お茶してみてね。"}' }] }),
   },
 };
 deps.tts = { synthesizeSpeech: async ({ input }) => [{ audioContent: Buffer.from('mp3:' + input.text) }] };
@@ -281,6 +281,7 @@ function client(port, hello) {
     f.ws.send(JSON.stringify({ type: 'text', text: 'カイトの好きなのは？' }));
     await f.until(m => m.type === 'reply_end' && !/覚えた/.test(m.text || ''));
     assert.ok(/教わったこと/.test(sy) && /ピカチュウ/.test(sy), '教わったことを使う');
+    assert.ok(/自分で気づいたこと/.test(sy) && /家族の人数/.test(sy), '自分で気づいたことを次に生かす');
     assert.ok(/かたい敬語は使わない/.test(sy), 'いつも江戸っ子');
     f.ws.send(JSON.stringify({ type: 'text', text: '英語の宿題、りんごってなんて書くの？' }));
     await f.until(m => m.type === 'reply_end' && m.gen > 0 && /勉強を教える/.test(sy));
@@ -308,7 +309,7 @@ function client(port, hello) {
     await gx.until(m => m.type === 'ready');
     gx.ws.send(JSON.stringify({ type: 'text', text: 'この前の続きなんだけど' }));
     await gx.until(m => m.type === 'reply_end');
-    assert.ok(!/勉強を教える/.test(gs), '窓口は勉強モードにしない'); assert.ok(/役割：サポート/.test(gs) && /役割：コンサル相談/.test(gs) && /AirHost/.test(gs) && /恋の話/.test(gs), '役割と相談メモ');
+    assert.ok(!/勉強を教える/.test(gs), '窓口は勉強モードにしない'); assert.ok(/便利屋/.test(gs) && /介護/.test(gs) && !/【家族の画面】/.test(gs), '窓口は事例案内'); assert.ok(/役割：サポート/.test(gs) && /役割：コンサル相談/.test(gs) && /AirHost/.test(gs) && /恋の話/.test(gs), '役割と相談メモ');
     deps.claude.messages.stream = o2; gx.ws.close();
     f.ws.send(JSON.stringify({ type: 'save_media', kind: 'photo', mime: 'image/jpeg', data: 'data:image/jpeg;base64,AAAA' }));
     await f.until(m => m.type === 'links' && /写真/.test(m.links[0].title));
@@ -329,6 +330,16 @@ function client(port, hello) {
     f.ws.send(JSON.stringify({ type: 'text', text: '近くのラーメン屋を調べて' }));
     await f.until(m => m.type === 'reply_end' && /駅のそば/.test(m.text || ''), 6000);
     assert.ok(calls === 3 && contMsgs[contMsgs.length - 1].role === 'assistant', '区切られたら続きを、空ならやり直し');
+    // 上限で切れた文は読まない・家族の画面は家族の話をしてよい・自分で気づいたことを次に生かす
+    deps.claude.messages.stream = p => { sy = p.system; return { async *[Symbol.asyncIterator]() {
+      for (const ch of ['6人家族だぜ。', 'パパとママと、子ども', 'が4人']) yield { type: 'content_block_delta', delta: { type: 'text_delta', text: ch } };
+      yield { type: 'message_delta', delta: { stop_reason: 'max_tokens' } };
+    } }; };
+    f.ws.send(JSON.stringify({ type: 'text', text: '何人家族なの？' }));
+    const cutEnd = await f.until(m => m.type === 'reply_end' && /6人家族/.test(m.text || ''));
+    assert.strictEqual(cutEnd.text, '6人家族だぜ。', '切れた文は出さない');
+    assert.ok(!f.msgs.some(m => m.type === 'audio' && /子ども/.test(m.text)), '切れた文は読まない');
+    assert.ok(/家族の画面/.test(sy) && /やったぜ/.test(sy) && !/便利屋/.test(sy), '家族の決まり・正直');
     // 三人モード：ジュニアが質問したら、つぎの1回は名前がなくても答える
     deps.claude.messages.stream = () => fakeStream('[わくわく]どれが好きなんだい？');
     const t = await client(port, { type: 'hello', pass: 'ok', mode: 'family', trio: true });
@@ -341,6 +352,6 @@ function client(port, hello) {
     deps.claude.messages.stream = o;
     [f, h, t].forEach(x => x.ws.close());
   }
-  console.log('OK：区切られた返事の続き・空の返事のやり直し・家族は勉強を教える・覚える・メールはヒロさんだけ・議事録（文字とPDF）・窓口の役割と相談メモ・写真の保存・調べた先のリンク・質問のあとの続き・会話・気持ち・一文ずつの声・写真・記録の分け方・ご縁つなぎ・割りこみ・三人モード・呼ばれただけ・会話のつづき・ジュニア日記・やりなおし・窓口と案件メモ・紹介のつながり・窓口のお休み・いいとこ取りと検索・近くの場所');
+  console.log('OK：自分で学ぶ・切れた文は読まない・家族の画面は家族の話をする・窓口の事例案内・区切られた返事の続き・空の返事のやり直し・家族は勉強を教える・覚える・メールはヒロさんだけ・議事録（文字とPDF）・窓口の役割と相談メモ・写真の保存・調べた先のリンク・質問のあとの続き・会話・気持ち・一文ずつの声・写真・記録の分け方・ご縁つなぎ・割りこみ・三人モード・呼ばれただけ・会話のつづき・ジュニア日記・やりなおし・窓口と案件メモ・紹介のつながり・窓口のお休み・いいとこ取りと検索・近くの場所');
   process.exit(0);
 })().catch(e => { console.error('NG', e); process.exit(1); });

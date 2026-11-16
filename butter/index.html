@@ -857,8 +857,8 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     <p class="hint" id="hint">「バターちゃん」と呼んでから話しかけてね。</p>
     <div class="talkrow">
       <div class="side">
-        <button class="modebtn" id="modeBtn" type="button" aria-pressed="false">ファミリー</button>
-        <button class="modebtn goenbtn" id="trioBtn" type="button" aria-pressed="false" hidden>三人</button>
+        <button class="modebtn" id="modeBtn" type="button" aria-pressed="false">いま：ファミリー</button>
+        <button class="modebtn goenbtn" id="trioBtn" type="button" aria-pressed="false" hidden>三人：オフ</button>
       </div>
       <button class="talkbtn" id="talkBtn" type="button"><i id="lvlLive"></i><b>おして話す</b></button>
       <div class="side">
@@ -2033,7 +2033,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     const r = new RegExp('^\\s*' + lead + '(?:ジュニア|じゅにあ|ジュニヤ|junior|ジャム猫|ジャムねこ|ジャムネコ|じゃむねこ|ジャムちゃん)' + not, 'i');
     return t => String(t).split(/(?<=[。！？!?\n])/).some(seg => r.test(seg.trim()));   // 文のはじめで呼ばれたときだけ
   })(), JR_TRIO = /(三人モード|3人モード|みんなで話そう|三人で話そう|3人で話そう|二人モード|ふたりモード|2人モード|ふつうのモード)/;
-  function trioShow() { const b = $('trioBtn'); b.setAttribute('aria-pressed', String(J.trio)); b.textContent = J.trio ? '三人中' : '三人'; }
+  function trioShow() { const b = $('trioBtn'); b.setAttribute('aria-pressed', String(J.trio)); b.textContent = J.trio ? '三人：オン' : '三人：オフ'; }
   const jrLive = () => !J.dead && J.ready && J.ws && J.ws.readyState === 1;
   let lipLive = false;   // 声の大きさで口を動かしている間は、ランダムの口パクを止める
   function jrSend(o) { if (J.ws && J.ws.readyState === 1) J.ws.send(typeof o === 'string' || o instanceof ArrayBuffer ? o : JSON.stringify(o)); }
@@ -2882,7 +2882,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     if (!J.dead && J.ready) { J.paused = !J.paused; if (J.paused) { J.queue = []; jrStopAudio(); jrSend({ type: 'barge' }); setState('idle'); } else setState('listening'); jrBtn(); return; }
     talkOnce();
   });
-  function showMode() { const b = BIZ(); $('modeBtn').setAttribute('aria-pressed', String(b)); $('modeBtn').textContent = b ? 'ビジネス' : 'ファミリー'; }
+  function showMode() { const b = BIZ(); $('modeBtn').setAttribute('aria-pressed', String(b)); $('modeBtn').textContent = b ? 'いま：ビジネス' : 'いま：ファミリー'; $('modeBtn').title = b ? '押すとファミリーにもどる' : '押すとビジネス（交流会）になる'; }
   $('modeBtn').addEventListener('click', () => {
     store.set('bizMode', !store.get('bizMode', false)); history = []; showMode(); jrSend({ type: 'mode', mode: BIZ() ? 'business' : 'family' });
     toast(BIZ() ? 'ビジネスモード：ていねいに、家族の話はしないよ' : 'ファミリーモード：おうちのバターちゃんだよ');

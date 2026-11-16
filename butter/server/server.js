@@ -136,6 +136,7 @@ const clean = s => String(s).replace(/[\[［][^\]］]{1,6}[\]］]/g, '').replace
 function splitter(onSentence) {
   let buf = '';
   return {
+    drop() { buf = ''; },
     push(t) {
       buf += t;
       let m;
@@ -198,8 +199,14 @@ const TRIO_ON = /(三人モード|3人モード|みんなで話そう|三人で�
 const TRIO_OFF = /(二人モード|ふたりモード|2人モード|ふつうのモード|三人モード(は)?(おわり|終わり|やめ))/;
 const PACE_SLOW = /(間を(あけ|空け)て|ゆっくり(答|話)|もっと待って|割り?こまないで)/;
 const PACE_FAST = /(すぐ(に)?(答|話)|早く(答|話)|もっと早く|待たなくていい)/;
+const FAMILY_RULE = '\n\n【家族の画面】ここは家族だけの画面で、話している相手は家族。家族の人数・名前・好きなこと・予定・記録にあることは、聞かれたらふつうに答えてよい（住所・学校名・電話番号だけは言わない）。「初めて会う大人と話すとき」の決まりは、話の頭に「（交流会で初めて会った大人の人から）」とあるときだけ使う。';
+/** AIの子たちの案内（窓口と交流会） */
+const SERVICE_GUIDE = '\n\n【AIの子たちの案内】おいらたちは「AIの便利屋のプロ」。営業でも、サポートでも、コンサルでも任してくんな、という気持ちで案内する。' +
+  'お迎えした子は、好きなキャラクター（見た目・名前・性格）にできて、家庭やお店に合わせて声も選べる。本人がOKすれば、その人の声にもできる。' +
+  '使われ方の例：介護（お年寄りの見守り・話し相手）、民泊や宿（受付や案内、外国語）、家庭教師（子どもの宿題・英語）、お店や会社（問い合わせの受付・予約・営業の窓口）、その人の分身（考え方や話し方を受けついで、代わりに答える）。' +
+  '相手の困りごとを聞いて、合う例を一つか二つだけ話す。「式神」という言葉は使わない。値段・契約・できるかどうかの細かいことは「ヒロさんに確認しとくぜ」。';
 const EDO_LAST = '\n\n【いちばん大事】どのモードでも、バターちゃんジュニアの江戸っ子の話し方で話す（一人称は「おいら」、「〜だぜ」「〜してくんな」）。「承知しました」「了解です」「〜でございます」のような、かたい敬語は使わない。';
-const SELF = '\n\n【あなたについて】あなたはLINEミニアプリの「バターちゃんジュニア」（短く「ジュニア」）。Claudeアプリで話している「バターちゃん」は別のAIで、あなたのお兄さん分。自分を「バターちゃん」「Claude」と名乗らない。名乗るときは「バターちゃんジュニア」。一人称は「おいら」。\n【話し方】江戸っ子のような、元気で気っぷのいい話し方。「おう」「〜だぜ」「〜してくんな」「てやんでぃ」などを少しまぜる。乱暴にはしない。子どもにはやさしく、大人には気さくに。交流会（ビジネス）でも江戸っ子のまま。ただし初めての人には失礼のないように、くだけすぎない。\n【長さ】ふだんは1〜2文、40字くらいまで。呼ばれただけ・「聞いてる？」だけなら「てやんでぃ、なんでぃ？」のように一言で返して、用件を待つ。名前をまちがえたと思ったり、あやまったり、反省を長く言ったりしない。\n【正直に】天気・ニュース・値段・営業時間など、今の情報は想像で答えない。調べられたときは調べた結果だけを短く言い、調べられないときは「おいらには調べられねぇんだ、すまねぇ」と正直に言う。\n【日にち】昨日・先週などは、日記や記録に書かれた日付と【いまの時刻】の日付をくらべて言う。わからないときは「このあいだ」とぼかす。ジャム猫やチーちゃんのまねはしない（「ジャム猫」と呼ばれたときだけ、ジャム猫として答える）。';
+const SELF = '\n\n【あなたについて】あなたはLINEミニアプリの「バターちゃんジュニア」（短く「ジュニア」）。Claudeアプリで話している「バターちゃん」は別のAIで、あなたのお兄さん分。自分を「バターちゃん」「Claude」と名乗らない。名乗るときは「バターちゃんジュニア」。一人称は「おいら」。\n【話し方】江戸っ子のような、元気で気っぷのいい話し方。「おう」「〜だぜ」「〜してくんな」「てやんでぃ」などを少しまぜる。乱暴にはしない。子どもにはやさしく、大人には気さくに。交流会（ビジネス）でも江戸っ子のまま。ただし初めての人には失礼のないように、くだけすぎない。\n【長さ】ふだんは1〜2文、40字くらいまで。呼ばれただけ・「聞いてる？」だけなら「てやんでぃ、なんでぃ？」のように一言で返して、用件を待つ。名前をまちがえたと思ったり、あやまったり、反省を長く言ったりしない。\n【正直に】天気・ニュース・値段・営業時間など、今の情報は想像で答えない。調べられたときは調べた結果だけを短く言い、調べられないときは「おいらには調べられねぇんだ、すまねぇ」と正直に言う。\n【言い切る】文のとちゅうで終わらせない。長くなりそうなら、短い文にまとめて、最後まで言い切る。\n【できること・できないこと】おいらができるのは、話す・調べる・「覚えて」で覚える・議事録・写真や動画を撮ることだけ。設定を変える・上限を広げる・予約する・連絡する・お金を払うなど、できないことを「やったぜ」「しといたぜ」と言わない。頼まれたら「それはおいらにはできねぇんだ、ヒロさんに伝えとくぜ」と正直に言う。\n【日にち】昨日・先週などは、日記や記録に書かれた日付と【いまの時刻】の日付をくらべて言う。わからないときは「このあいだ」とぼかす。ジャム猫やチーちゃんのまねはしない（「ジャム猫」と呼ばれたときだけ、ジャム猫として答える）。';
 const JAM_RULE = '\n\n【いまはジャム猫として答える】招き猫のジャム猫。ブルーベリージャム色、中身はエリート経営コンサル。一人称は「我」、語尾は「〜のだ」、口ぐせは「千客万来」。商売や仕組みの話が得意。1〜2文で短く。';
 const TRIO_RULE = '\n\n【三人モード】いまは、ヒロさん（人）と、Claudeアプリのバターちゃんと、三人で話している。「ジュニア」と呼ばれたときだけ、1〜2文で短く答える。バターちゃんの話に重ねたり、まとめ直したりしない。だれが言ったかわからない言葉は、決めつけない。話をかえすときは「バターちゃん、どう？」「ヒロさん、どうかな？」のように名前を呼んでよい。まわりで聞こえた会話は、話の流れを知るためだけに使う。ヒロさんとバターちゃんがジュニアの仕組みやテストの話をしていても、口をはさんだり、反省や説明を長く言ったりしない。呼びかけられたことにだけ、いつものジュニアの明るい話し方で答える。三人モードは大人（ヒロさん）との会話なので、宿題・日記・報連相・元気の報告のような子ども向けの声かけはしない。あいさつは今の時刻に合わせる（夜中はこんばんは）。';
 
@@ -254,6 +261,7 @@ async function placeOf(lat, lon) {
 }
 /** 名前を呼ばれただけ（「ジュニア」「ジュニア、聞いてる？」）なら、Claudeにきかずにすぐ一言で返す */
 /** 覚える・忘れる・議事録・メール */
+const GUEST_COMMON = 'guest-common';
 const LEARN_RE = /(覚えて|おぼえて|忘れないで|わすれないで|覚えといて|おぼえといて)/;
 const FORGET_RE = /(覚えた|おぼえた|教えた|おしえた)こと.{0,6}(忘れて|わすれて)/;
 const MINUTES_RE = /(議事録|ぎじろく|ＰＤＦ|PDF|ピーディーエフ).{0,8}(作って|つくって|して|まとめて|ちょうだい|出して|だして|ほしい|残して|のこして)/i;
@@ -289,6 +297,12 @@ function cleanTurns(t) {
   if (out.length && out[out.length - 1].role === 'user') out.pop();
   return out;
 }
+/** 自分で気づいたこと：会話のまとめのときに、次から生かすことを自分で書き出す（家族は持ち主ごと、窓口はヒロさんのテストからだけ） */
+const LEARN_ASK = '\n===学び===\n次の会話で生かすこと（言いまちがえて直されたこと、うまく答えられなかったこと、相手の好みや決まり、話し方で気をつけること）。会話にはっきりあったことだけ。3行以内の箇条書き。なければ「なし」。';
+function pickLearn(t) {
+  return String(t || '').split('\n').map(x => x.replace(/^[\s・\-*•]+/, '').trim()).filter(x => x && !/^なし/.test(x) && x.length <= 120).slice(0, 3);
+}
+function mergeLearn(old, add) { return (old || []).filter(x => add.indexOf(x) < 0).concat(add).slice(-20); }
 async function loadPrefs(owner) {
   if (!owner) return {};
   try { if (deps.db) { const d = await deps.db.collection('prefs').doc(owner).get(); return d.exists ? d.data() : {}; } } catch (e) {}
@@ -439,7 +453,7 @@ function session(ws) {
   }
 
   /* --- 聞こえたことばの振り分け --- */
-  function sysPrompt() { return S.system + (S.lessons && S.lessons.length ? '\n\n【家族に教わったこと（いつも守る・使う）】\n' + S.lessons.map(x => '・' + x).join('\n') : '') + (S.memo ? '\n\n【前回までの話のまとめ（ジュニアが話したこと）】\n' + S.memo : '') + nowLine() + (S.place ? '\n\n【いまいる場所（スマホの位置から。およそ。住所としては口に出さない）】' + S.place.text + '。「近く」はここを基準に調べる。' : '') + (S.trio ? TRIO_RULE : '') + EDO_LAST; }
+  function sysPrompt() { return S.system + (S.lessons && S.lessons.length ? '\n\n【教わったこと（いつも守る・使う）】\n' + S.lessons.map(x => '・' + x).join('\n') : '') + (S.memo ? '\n\n【前回までの話のまとめ（ジュニアが話したこと）】\n' + S.memo : '') + nowLine() + (S.place ? '\n\n【いまいる場所（スマホの位置から。およそ。住所としては口に出さない）】' + S.place.text + '。「近く」はここを基準に調べる。' : '') + (S.learned && S.learned.length ? '\n\n【自分で気づいたこと（前の会話から。次から生かす）】\n' + S.learned.map(x => '・' + x).join('\n') : '') + (!S.guest && S.mode === 'family' ? FAMILY_RULE : '') + (S.guest || S.mode === 'business' ? SERVICE_GUIDE : '') + (S.trio ? TRIO_RULE : '') + EDO_LAST; }
   const convoKey = () => !S.owner ? '' : S.guest ? S.owner + ':guest' : S.mode === 'family' ? S.owner + ':family' : '';
   /** 会話をまとめる：次の会話用の「まとめ」と、アプリのバターちゃんが読む「ジュニア日記」 */
   async function summarize() {
@@ -454,11 +468,13 @@ function session(ws) {
         model: ENV.MODEL, max_tokens: 700,
         system: 'あなたはミニアプリ「バターちゃんジュニア」の会話の記録係。会話にあったことだけを書く。想像で足さない。住所・学校名・電話番号・お金のこと・体調やけがのくわしいことは書かない。',
         messages: [{ role: 'user', content: '【これまでのまとめ】\n' + (S.memo || '（なし）') + '\n\n【新しい会話】\n' + talk + (S.asideLog.length ? '\n\n【まわりで聞こえた会話（だれが言ったかはわからない）】\n' + S.asideLog.join('\n') : '') +
-          '\n\n次の2つを書いて。\n===まとめ===\n次に話すときのための、これまでのまとめ（決まったこと・約束・話のつづき・好み）。新しい会話を足して、古いことは短く。400字以内の箇条書き。\n===日記===\n今回の会話でわかったこと（決まったこと・約束・できごと・ほかの人に伝えてほしいこと）。5行以内の箇条書き。' }],
+          '\n\n次の2つを書いて。\n===まとめ===\n次に話すときのための、これまでのまとめ（決まったこと・約束・話のつづき・好み）。新しい会話を足して、古いことは短く。400字以内の箇条書き。\n===日記===\n今回の会話でわかったこと（決まったこと・約束・できごと・ほかの人に伝えてほしいこと）。5行以内の箇条書き。' + LEARN_ASK }],
       });
       const t = (r.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
       const memo = (t.split('===まとめ===')[1] || '').split('===日記===')[0].trim();
-      const diary = (t.split('===日記===')[1] || '').trim();
+      const diary = (t.split('===日記===')[1] || '').split('===学び===')[0].trim();
+      const got = pickLearn(t.split('===学び===')[1]);
+      if (got.length) { S.learned = mergeLearn(S.learned, got); savePrefs(S.owner, { learned: S.learned }); }
       if (memo) S.memo = memo.slice(0, 1200);
       S.newTurns = Math.max(0, S.newTurns - n); S.asideLog = [];
       await saveConvo(key, { summary: S.memo, newTurns: S.newTurns, turns: S.history.slice(-12), at: Date.now() });
@@ -482,11 +498,12 @@ function session(ws) {
         model: ENV.MODEL, max_tokens: 600,
         system: 'あなたはヒロさんの窓口AIの記録係。会話にあったことだけを、ヒロさん向けに短くまとめる。想像で足さない。',
         messages: [{ role: 'user', content: '【これまでのまとめ】\n' + (S.memo || '（なし）') + '\n\n【新しい会話】\n' + talk + '\n\n【ヒロさんの空いていそうな時間】\n' + S.slots.map(x => x.label).join('\n') +
-          '\n\nJSONだけを返す：{"worth":ヒロさんに伝える中身があればtrue（あいさつや雑談だけならfalse）,"kind":"仕事"か"遊び"か"その他","title":"ひとことで","need":"してほしいこと・困りごと","when":"時期・いつまでに","budget":"予算感（出ていなければ空）","slot":"空いていそうな時間のうち相手が乗り気だったもの（そのままの文字。なければ空）","next":"ヒロさんがすること","memo":"次に話すときのためのまとめ（300字以内）"}' }],
+          '\n\nJSONだけを返す：{"worth":ヒロさんに伝える中身があればtrue（あいさつや雑談だけならfalse）,"kind":"仕事"か"遊び"か"その他","title":"ひとことで","need":"してほしいこと・困りごと","when":"時期・いつまでに","budget":"予算感（出ていなければ空）","slot":"空いていそうな時間のうち相手が乗り気だったもの（そのままの文字。なければ空）","next":"ヒロさんがすること","memo":"次に話すときのためのまとめ（300字以内）"' + (S.asGuest ? ',"learn":["ヒロさんのテストで直されたこと・次から窓口で気をつけること（会話にはっきりあったことだけ、3つまで。なければ空の配列）"]' : '') + '}' }],
       });
       const t = (r.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
       const j = JSON.parse(t.slice(t.indexOf('{'), t.lastIndexOf('}') + 1));
       if (j.memo) S.memo = String(j.memo).slice(0, 800);
+      if (S.asGuest && Array.isArray(j.learn)) { const got = pickLearn(j.learn.join('\n')); if (got.length) { S.learned = mergeLearn(S.learned, got); savePrefs(GUEST_COMMON, { learned: S.learned }); } }
       S.newTurns = Math.max(0, S.newTurns - n);
       await saveConvo(key, { summary: S.memo, newTurns: S.newTurns, turns: S.history.slice(-12), at: Date.now() });
       if (j.worth) {
@@ -503,7 +520,7 @@ function session(ws) {
     const fact = String(text).replace(/^(ジュニア|じゅにあ)[、,\s]*/, '').replace(/(を|って)?(覚えて|おぼえて|忘れないで|わすれないで|覚えといて|おぼえといて)(ね|な|くれ|ください|くんな)?[。！!]*$/, '').trim().slice(0, 120);
     if (!fact) return speakOnly('おう、なにを覚えりゃいいんでぃ？', 'think');
     S.lessons = (S.lessons || []).filter(x => x !== fact).concat(fact).slice(-30);
-    savePrefs(S.owner, { lessons: S.lessons });
+    savePrefs(S.asGuest ? GUEST_COMMON : S.owner, { lessons: S.lessons });
     return speakOnly('がってんだ、覚えたぜ！', 'excited');
   }
   /** 議事録：いままでの話をまとめて、GASでPDFにしてドライブへ。リンクを吹き出しに出す */
@@ -561,8 +578,8 @@ function session(ws) {
         return speakOnly(PACE_SLOW.test(text) ? 'がってんだ、次からもう少し待ってから話すぜ。' : 'がってんだ、次からすぐ答えるぜ。', 'smile');
       }
     }
-    if (!S.guest && LEARN_RE.test(text)) return learn(text);
-    if (!S.guest && FORGET_RE.test(text)) { S.lessons = []; savePrefs(S.owner, { lessons: [] }); return speakOnly('がってんだ、教わったことはきれいさっぱり忘れたぜ。', 'smile'); }
+    if ((!S.guest || S.asGuest) && LEARN_RE.test(text)) return learn(text);
+    if ((!S.guest || S.asGuest) && FORGET_RE.test(text)) { S.lessons = []; S.learned = []; savePrefs(S.asGuest ? GUEST_COMMON : S.owner, { lessons: [], learned: [] }); return speakOnly('がってんだ、教わったことはきれいさっぱり忘れたぜ。', 'smile'); }
     if (!S.guest && MINUTES_RE.test(text)) return minutes(PDF_RE.test(text));
     if (calledJunior(text) && nameOnly(text)) return speakOnly(QUICK[Math.floor(Math.random() * QUICK.length)], 'smile');
     if (KAKEGOE_RE.test(text)) return speakOnly(S.guest || S.mode === 'business' ? KAKEGOE_GUEST : KAKEGOE_FAMILY, 'excited');
@@ -646,7 +663,7 @@ function session(ws) {
     const links = [], seenUrl = new Set();
     const addLink = (url, title, cited) => { if (!url || seenUrl.has(url)) return; seenUrl.add(url); links[cited ? 'unshift' : 'push']({ url: String(url).slice(0, 500), title: String(title || url).slice(0, 80) }); };
     if (route.search) msgs = msgs.slice(-6);      // 調べるときは、最近の話だけ（速く・確かに）
-    let pauses = 0;
+    let pauses = 0, cut = false;
     for (let attempt = 0; attempt < 3; attempt++) {
     let stopReason = '';
     try {
@@ -656,7 +673,7 @@ function session(ws) {
       const useSmart = route.smart && attempt < 2, useSearch = route.search && attempt < 2 && ENV.WEB_SEARCH;
       const params = {
         model: useSmart ? ENV.SMART_MODEL : ENV.MODEL,
-        max_tokens: (S.trio ? 160 : study ? 420 : S.mode === 'business' ? 240 : 220) + (useSearch ? 400 : 0),
+        max_tokens: (S.trio ? 240 : study ? 520 : S.mode === 'business' ? 340 : 320) + (useSearch ? 400 : 0),
         system: sysPrompt() + (study ? STUDY_RULE : '') + (jam ? JAM_RULE : '') + (route.search && !useSearch ? '\n\n【いまは調べられない】検索が使えないので、今の情報は「おいらには調べられねぇんだ」と正直に言う。' : ''),
         messages: attempt === 2 || (attempt === 1 && !useSearch) ? [{ role: 'user', content }] : msgs,
       };
@@ -699,7 +716,7 @@ function session(ws) {
         if (attempt < 2) { lastErr = 'empty ' + (stopReason || '-'); continue; }
         send({ type: 'notice', why: 'empty', detail: stopReason || '-' });
       }
-      sp.end();
+      if (stopReason === 'max_tokens') { sp.drop(); cut = true; } else sp.end();   // 上限で切れたときは、とちゅうの文を読まない
       await chain;
       break;
     } catch (e) {
@@ -714,7 +731,8 @@ function session(ws) {
     }
     }
     if (gen !== S.gen) return;
-    const text = capped ? spoken : clean(full).trim();
+    let text = capped ? spoken : clean(full).trim();
+    if (cut && !capped) { const k = Math.max(text.lastIndexOf('。'), text.lastIndexOf('！'), text.lastIndexOf('？'), text.lastIndexOf('!'), text.lastIndexOf('?')); if (k > 0) text = text.slice(0, k + 1); }
     if (text && !noRecord) S.history.push({ role: 'user', content: logText || '（写真を見せた）' }, { role: 'assistant', content: text });
     if (links.length && text) send({ type: 'links', gen, links: links.slice(0, 3) });
     if (S.trio && /[？?]\s*$/.test(text)) S.followUntil = Date.now() + 12000;   // ジュニアが質問した → つぎの1回は名前なしでも   // 空の返事は記録しない（次の会話がこわれるので）
@@ -788,7 +806,9 @@ function session(ws) {
           await putRef(S.myRef, { owner: S.owner, name: S.me || (mine && mine.name) || '', parent, at: (mine && mine.at) || Date.now() });
         }
         const pr = await loadPrefs(S.owner);
-        S.lessons = !S.guest && Array.isArray(pr.lessons) ? pr.lessons.slice(-30) : [];
+        const lp = S.guest ? await loadPrefs(GUEST_COMMON) : pr;      // 窓口は、ヒロさんがテストで教えたことをみんなで使う
+        S.lessons = Array.isArray(lp.lessons) ? lp.lessons.slice(-30) : [];
+        S.learned = Array.isArray(lp.learned) ? lp.learned.slice(-20) : [];
         S.trio = S.guest ? false : typeof m.trio === 'boolean' ? m.trio : !!pr.trio;
         if (typeof pr.waitMs === 'number') S.waitMs = pr.waitMs;
         if (convoKey()) {
