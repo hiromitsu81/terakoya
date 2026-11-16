@@ -124,8 +124,8 @@ function client(port, hello) {
   assert.ok(/バターちゃんジュニア/.test(sys) && /三人モード/.test(sys), 'ジュニアとして三人モードで話す');
   assert.ok(/今日の天気/.test(lastMessages[lastMessages.length - 1].content[0].text), 'まわりの会話も渡す');
   c.ws.send(JSON.stringify({ type: 'text', text: 'ジュニア、もっと間をあけて' }));
-  const tr = await c.until(m => m.type === 'trio' && m.waitMs > 1000);
-  assert.strictEqual(tr.waitMs, 1600);
+  const tr = await c.until(m => m.type === 'trio' && m.waitMs > 700);
+  assert.strictEqual(tr.waitMs, 1300);
   // 三人モードは2文まで
   const g0 = (await c.until(m => m.type === 'reply_end')).gen;
   c.ws.send(JSON.stringify({ type: 'text', text: 'ジュニア、お話しして' }));
@@ -146,7 +146,18 @@ function client(port, hello) {
   assert.strictEqual(c.msgs.filter(m => m.type === 'reply_start').length, nStart + 1, '話の中の名前では答えない');
   await c.until(m => m.type === 'reply_end' && m.gen === js.gen);
   assert.ok(/ジャム猫として答える/.test(sys), 'ジャム猫として');
-  c.ws.send(JSON.stringify({ type: 'text', text: 'ふたりモードにして' }));
+  // 三人モード中に「三人モード」「ふたりモード」と話に出ても切りかわらない
+  c.ws.send(JSON.stringify({ type: 'text', text: '三人モードがオフかも。ふたりモードにする？' }));
+  await new Promise(r => setTimeout(r, 120));
+  assert.ok(!c.msgs.some(m => m.type === 'trio' && m.on === false), '名前なしでは切りかわらない');
+  // あいさつ：三人モードは言わない／大人には大人向け
+  const d = await client(port, { type: 'hello', pass: 'ok', trio: true, greet: true });
+  await d.until(m => m.type === 'ready'); await new Promise(r => setTimeout(r, 100));
+  assert.ok(!d.msgs.some(m => m.type === 'reply_start'), '三人モードはあいさつしない');
+  const e = await client(port, { type: 'hello', pass: 'ok', trio: false, greet: true });
+  const eg = await e.until(m => m.type === 'reply_end');
+  assert.ok(/パパ/.test(eg.text) && !/宿題/.test(eg.text), '大人向けのあいさつ: ' + eg.text);
+  c.ws.send(JSON.stringify({ type: 'text', text: 'ジュニア、ふたりモードにして' }));
   await c.until(m => m.type === 'trio' && m.on === false);
   deps.claude.messages.stream = origStream;
 

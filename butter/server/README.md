@@ -41,6 +41,14 @@ gcloud run deploy butter-junior --source terakoya/butter/server --region asia-no
 
 3. 最後に出る `Service URL: https://butter-junior-….run.app` のホスト名を、index.html の `JR_DEFAULT` に入れる（またはミニアプリのURLに `&s=ホスト名` を足す）。
 
+## 返事を速くする（任意）
+
+サーバーを1台起こしたままにすると、最初の返事が速くなる。そのぶん少しお金がかかる（目安で月1,000〜2,000円ほど）。やめるときは `--min-instances 0`。
+
+```
+gcloud run services update butter-junior --region asia-northeast1 --min-instances 1
+```
+
 ## 直したあと
 
 ```

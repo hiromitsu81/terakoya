@@ -138,6 +138,16 @@ const TRIO_RULE = '\n\n【三人モード】いまは、ヒロさん（人）と
 
 /* 話し方の好み（持ち主ごとに覚える：三人モード・待つ時間） */
 const memPrefs = new Map();
+const brainCache = new Map();
+const ADULT_RE = /(パパ|ママ|ヒロ|さやか|おとうさん|おかあさん|父|母)/;
+function hourJST() { return (new Date().getUTCHours() + 9) % 24; }
+function greeting(me, mode, trio) {
+  if (trio) return '';                                   // 三人モードは、呼ばれるまで静かに待つ
+  const h = hourJST(), hi = h < 10 ? 'おはようございます' : h < 18 ? 'こんにちは' : 'こんばんは';
+  if (mode === 'business') return hi + '、バターちゃんジュニアです。なんでも話しかけてくださいね。';
+  if (ADULT_RE.test(me || '')) return hi + '、' + me + '。バターちゃんジュニアです。なんでも話しかけてね。';
+  return (h < 10 ? 'おはよう' : 'やっほー') + '！バターちゃんジュニアだよ。なんでも話しかけてね。';
+}
 async function loadPrefs(owner) {
   if (!owner) return {};
   try { if (deps.db) { const d = await deps.db.collection('prefs').doc(owner).get(); return d.exists ? d.data() : {}; } } catch (e) {}
@@ -201,16 +211,24 @@ async function goenTalk(me, other) {
 function session(ws) {
   const S = {
     ready: false, auth: null, owner: '', me: '', mode: 'family', system: '', history: [], voice: '',
-    stt: null, sttBytes: 0, sttStarted: 0, gen: 0, aborter: null, speaking: false, pendingPhoto: '', quiet: false, utt: 0, trio: false, waitMs: 1000, aside: [], lastPartial: 0,
+    stt: null, sttBytes: 0, sttStarted: 0, gen: 0, aborter: null, speaking: false, pendingPhoto: '', quiet: false, utt: 0, trio: false, waitMs: 700, aside: [], lastPartial: 0,
     born: Date.now(),
   };
   const send = o => { if (ws.readyState === 1) ws.send(JSON.stringify(o)); };
   const fail = (code, why) => { send({ type: 'error', code, why }); try { ws.close(4000, code); } catch (e) {} };
 
-  async function loadBrain() {
-    const r = await gas(Object.assign({ action: 'brain', mode: S.mode }, S.auth));
-    if (!r || !r.ok) throw Object.assign(new Error(r && r.error || 'brain'), { code: r && r.error || 'brain' });
-    S.system = String(r.system || '') + SELF;
+  async function loadBrain(fresh) {
+    // GASで家族の記録を読むのは数秒かかるので、同じ人・同じモードなら10分は使いまわす（つながるのが速くなる）
+    const key = crypto.createHash('sha256').update(JSON.stringify(S.auth) + S.mode).digest('hex');
+    const hit = brainCache.get(key);
+    let r = !fresh && hit && Date.now() - hit.at < 10 * 60 * 1000 ? hit.r : null;
+    if (!r) {
+      r = await gas(Object.assign({ action: 'brain', mode: S.mode }, S.auth));
+      if (!r || !r.ok) throw Object.assign(new Error(r && r.error || 'brain'), { code: r && r.error || 'brain' });
+      brainCache.set(key, { r, at: Date.now() }); if (brainCache.size > 200) brainCache.clear();
+    }
+    const who = String(r.me || '');
+    S.system = String(r.system || '') + SELF + (who ? '\n\n【いま開いている人】このミニアプリを開いているのは「' + who + '」。' + (ADULT_RE.test(who) ? '大人なので、大人向けにていねいに話す。宿題や報連相の声かけはしない。' : '') : '');
     S.owner = String(r.owner || '');
     S.me = String(r.me || '');
     S.brainAt = Date.now();
@@ -263,8 +281,10 @@ function session(ws) {
   }
   function onHeard(text) {
     S.lastPartial = Date.now(); S.utt++;
-    if (TRIO_ON.test(text)) return setTrio(true);
-    if (TRIO_OFF.test(text)) return setTrio(false);
+    // 声での切りかえ：三人モード中は「ジュニア、ふたりモードにして」のように呼ばれたときだけ。すでに同じモードなら何もしない
+    if (TRIO_ON.test(text) && !S.trio) return setTrio(true);
+    if (TRIO_OFF.test(text) && S.trio && calledJunior(text)) return setTrio(false);
+    if (S.trio && (TRIO_ON.test(text) || TRIO_OFF.test(text)) && !calledJunior(text)) { S.aside.push(text.slice(0, 200)); if (S.aside.length > 8) S.aside.shift(); return; }
     if (S.trio) {
       if (!calledJunior(text) && !calledJam(text)) {                     // 呼ばれていない：聞いておくだけ（あとで話の流れに使う）
         S.aside.push(text.slice(0, 200)); if (S.aside.length > 8) S.aside.shift();
@@ -319,7 +339,7 @@ function session(ws) {
     const jam = as === 'jam';
     const voice = jam ? JAM_VOICE : S.voice;
     if (!quotaOk(S.owner || 'anon')) return speakOnly('きょうはたくさんお話ししたから、また明日ね。', 'shy');
-    if (Date.now() - (S.brainAt || 0) > 10 * 60 * 1000) { try { await loadBrain(); } catch (e) {} }   // 記録は10分ごとに読みなおす
+    if (Date.now() - (S.brainAt || 0) > 10 * 60 * 1000) { try { await loadBrain(true); } catch (e) {} }   // 記録は10分ごとに読みなおす
     stopReply('new');
     const gen = S.gen, utt0 = S.utt; S.speaking = true;
     const ac = new AbortController(); S.aborter = ac;
@@ -417,7 +437,8 @@ function session(ws) {
         S.trio = typeof m.trio === 'boolean' ? m.trio : !!pr.trio;
         if (typeof pr.waitMs === 'number') S.waitMs = pr.waitMs;
         send({ type: 'ready', me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs });
-        if (m.greet) speakOnly(S.mode === 'business' ? 'こんばんは、バターちゃんジュニアです。なんでも話しかけてくださいね。' : 'やっほー！バターちゃんジュニアだよ。なんでも話しかけてね。', 'excited');
+        const hi = m.greet ? greeting(S.me, S.mode, S.trio) : '';
+        if (hi) speakOnly(hi, 'excited');
         return;
       }
       if (!S.ready) return;
