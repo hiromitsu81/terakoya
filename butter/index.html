@@ -316,7 +316,7 @@ h1 { font-family: var(--display); font-weight: 800; font-size: 22px; margin: 0; 
 
 
 /* ===== ネコちゃん（招き猫・仮の名前） ===== */
-#neko { --neko: #fffaf3; --neko-line: #8a7566; --neko-orange: #f0a04b; --neko-black: #3b302a; }
+#neko { transform-origin: -65px 345px; transform-box: view-box; transition: transform .8s ease; --neko: #fffaf3; --neko-line: #8a7566; --neko-orange: #f0a04b; --neko-black: #3b302a; }
 #nekoHead { transform-origin: -65px 250px; transform-box: view-box; animation: nekotilt 6s ease-in-out infinite; }
 @keyframes nekotilt { 0%, 60%, 100% { transform: rotate(0); } 68%, 82% { transform: rotate(8deg); } }
 #nekoPaw { transform-origin: -106px 304px; transform-box: view-box; animation: beckon 2.4s ease-in-out infinite; }
@@ -330,20 +330,21 @@ h1 { font-family: var(--display); font-weight: 800; font-size: 22px; margin: 0; 
 #neko.talking .nmouthOpen { opacity: 1; }
 #neko.talking.small .nmouthOpen { transform: scaleY(.5); transform-origin: -65px 240px; transform-box: view-box; }
 #neko.talking .nmouth { opacity: 0; }
-@media (prefers-reduced-motion: reduce) { #nekoHead, #nekoPaw, #nekoTail { animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { #paw, #nekoHead, #nekoPaw, #nekoTail { animation: none !important; } }
 
 /* ===== チーちゃん（柴犬の子犬） ===== */
 #chi { transform-origin: 565px 345px; transform-box: view-box; transition: transform .8s ease; }
 #chiPose { transform-origin: 565px 300px; transform-box: view-box; transition: transform .45s ease; }
 #chiHead { transform-origin: 562px 250px; transform-box: view-box; animation: tilt 5s ease-in-out infinite; }
 @keyframes tilt { 0%, 70%, 100% { transform: rotate(0); } 78%, 90% { transform: rotate(-9deg); } }
-#tail { transform-origin: 606px 292px; transform-box: view-box; }
+#tail { transform-origin: 524px 292px; transform-box: view-box; }
 .wag #tail { animation: wag .22s ease-in-out infinite alternate; }
 @keyframes wag { from { transform: rotate(-14deg); } to { transform: rotate(16deg); } }
-#paw { transform-origin: 569px 318px; transform-box: view-box; transition: transform .35s ease; }
+#paw { transform-origin: 606px 304px; transform-box: view-box; animation: chiwave 2.8s ease-in-out infinite; }
+@keyframes chiwave { 0%, 45%, 100% { transform: rotate(0); } 60% { transform: rotate(-14deg); } 75% { transform: rotate(4deg); } 88% { transform: rotate(-10deg); } }
 .tongue { opacity: 0; transition: opacity .3s; }
 .wag .tongue { opacity: 1; }
-#chiPose.paw #paw { transform: translateY(-18px) rotate(-38deg); }
+#chiPose.paw #paw { animation: chiwave .7s ease-in-out 4; }
 #chiPose.down { transform: translateY(26px) scaleY(.82); }
 #chiPose.spin { animation: spin .9s ease-in-out; }
 #chiPose.jump { animation: jump .8s ease-out; }
@@ -538,10 +539,10 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
         <path d="M -20 290 Q -30 270 -46 280 Q -40 300 -22 304 Z" fill="var(--neko-orange)"/>
         <!-- 下の手と小判（左手） -->
         <path d="M-60 312 h18 v30 q-9 6 -18 0 Z" fill="var(--neko)" stroke="var(--neko-line)" stroke-width="3"/>
-        <g transform="rotate(10 -32 322)">
-          <ellipse cx="-32" cy="322" rx="17" ry="24" fill="#f2c94c" stroke="#c99a12" stroke-width="3"/>
-          <ellipse cx="-32" cy="322" rx="11" ry="17" fill="none" stroke="#c99a12" stroke-width="1.5"/>
-          <text x="-32" y="328" font-size="15" font-weight="800" text-anchor="middle" fill="#8a6a00">招</text>
+        <g transform="rotate(10 -30 318)">
+          <ellipse cx="-30" cy="318" rx="20" ry="32" fill="#f2c94c" stroke="#c99a12" stroke-width="3"/>
+          <ellipse cx="-30" cy="318" rx="14" ry="25" fill="none" stroke="#c99a12" stroke-width="1.5"/>
+          <text x="-30" y="302" font-size="10" font-weight="800" text-anchor="middle" fill="#8a6a00"><tspan x="-30" dy="0">千</tspan><tspan x="-30" dy="11">客</tspan><tspan x="-30" dy="11">万</tspan><tspan x="-30" dy="11">来</tspan></text>
         </g>
         <g id="nekoHead">
           <path d="M-115 200 L-109 146 L-75 180 Z" fill="var(--neko)" stroke="var(--neko-line)" stroke-width="3" stroke-linejoin="round"/>
@@ -575,23 +576,27 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
           <ellipse cx="-140" cy="214" rx="6" ry="5" fill="#f4a9b4"/>
           <circle cx="-132" cy="205" r="2.6" fill="#f4a9b4"/><circle cx="-141" cy="202" r="2.6" fill="#f4a9b4"/><circle cx="-149" cy="207" r="2.6" fill="#f4a9b4"/>
         </g>
+        <!-- あげた右手の側に「商売繁盛」の札 -->
+        <g>
+          <rect x="-92" y="288" width="20" height="56" rx="3" fill="#d9483b" stroke="#a8322a" stroke-width="2"/>
+          <text x="-82" y="299" font-size="11" font-weight="800" text-anchor="middle" fill="#fff6ea"><tspan x="-82" dy="0">商</tspan><tspan x="-82" dy="12">売</tspan><tspan x="-82" dy="12">繁</tspan><tspan x="-82" dy="12">盛</tspan></text>
+        </g>
         <text class="bark" x="-60" y="150" font-size="30">ニャー！</text>
       </g>
       <g id="chi" class="wag">
         <g id="chiPose">
-          <ellipse cx="575" cy="348" rx="70" ry="10" fill="var(--line)" opacity=".8"/>
-          <!-- くるんとしたしっぽ -->
+          <ellipse cx="565" cy="348" rx="70" ry="10" fill="var(--line)" opacity=".8"/>
+          <!-- くるんとしたしっぽ（ネコちゃんと左右対称） -->
           <g id="tail">
-            <path d="M604 296 Q650 284 650 252 Q648 226 624 230 Q606 236 614 252 Q628 252 626 262 Q620 276 598 282 Z" fill="var(--shiba)" stroke="var(--shiba-deep)" stroke-width="3"/>
-            <path d="M622 240 Q634 238 636 250" fill="none" stroke="var(--shiba-white)" stroke-width="6" stroke-linecap="round"/>
+            <path d="M 526 300 Q 480 296 478 262 Q 478 236 498 232 Q 510 232 508 246 Q 494 248 496 264 Q 500 284 532 284 Z" fill="var(--shiba)" stroke="var(--shiba-deep)" stroke-width="3"/>
+            <path d="M 482 250 Q 480 236 496 233 Q 506 234 506 242 Q 494 244 490 254 Z" fill="var(--shiba-white)"/>
           </g>
           <!-- からだ -->
-          <ellipse cx="612" cy="334" rx="24" ry="13" fill="var(--shiba)" stroke="var(--shiba-deep)" stroke-width="3"/>
-          <ellipse cx="568" cy="304" rx="54" ry="44" fill="var(--shiba)" stroke="var(--shiba-deep)" stroke-width="3"/>
-          <ellipse cx="556" cy="312" rx="28" ry="32" fill="var(--shiba-white)"/>
-          <!-- 前足 -->
-          <path d="M530 312 h18 v30 q-9 6 -18 0 Z" fill="var(--shiba-white)" stroke="var(--shiba-deep)" stroke-width="3"/>
-          <g id="paw"><path d="M560 312 h18 v30 q-9 6 -18 0 Z" fill="var(--shiba-white)" stroke="var(--shiba-deep)" stroke-width="3"/></g>
+          <ellipse cx="518" cy="334" rx="24" ry="13" fill="var(--shiba)" stroke="var(--shiba-deep)" stroke-width="3"/>
+          <ellipse cx="562" cy="304" rx="54" ry="44" fill="var(--shiba)" stroke="var(--shiba-deep)" stroke-width="3"/>
+          <ellipse cx="566" cy="314" rx="28" ry="30" fill="var(--shiba-white)"/>
+          <!-- 前足（下の手） -->
+          <path d="M542 312 h18 v30 q-9 6 -18 0 Z" fill="var(--shiba-white)" stroke="var(--shiba-deep)" stroke-width="3"/>
           <!-- あたま -->
           <g id="chiHead">
             <path d="M508 200 L514 144 L550 180 Z" fill="var(--shiba)" stroke="var(--shiba-deep)" stroke-width="3" stroke-linejoin="round"/>
@@ -613,6 +618,12 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
             <path class="collar" d="M524 262 Q562 280 600 262" fill="none" stroke="var(--collar)" stroke-width="8" stroke-linecap="round"/>
             <circle cx="562" cy="280" r="7" fill="var(--butter)" stroke="var(--butter-deep)" stroke-width="2"/>
             <path data-item="bandana" hidden d="M526 262 Q562 276 598 262 L562 302 Z" fill="#3f7fd6" stroke="#2a5ea8" stroke-width="3" stroke-linejoin="round"/>
+          </g>
+          <!-- いつも片手をあげている（ネコちゃんと左右対称） -->
+          <g id="paw">
+            <path d="M 594 306 Q 604 262 626 214 Q 634 196 648 200 Q 660 208 652 230 Q 638 270 618 308 Z" fill="var(--shiba-white)" stroke="var(--shiba-deep)" stroke-width="3" stroke-linejoin="round"/>
+            <ellipse cx="640" cy="214" rx="6" ry="5" fill="#f4a9b4"/>
+            <circle cx="632" cy="205" r="2.6" fill="#f4a9b4"/><circle cx="641" cy="202" r="2.6" fill="#f4a9b4"/><circle cx="649" cy="207" r="2.6" fill="#f4a9b4"/>
           </g>
         </g>
         <g data-item="ball" hidden><circle cx="486" cy="336" r="13" fill="#d9483b" stroke="#a8322a" stroke-width="3"/><path d="M474 332 Q486 340 498 332" fill="none" stroke="#fff" stroke-width="3"/></g>
@@ -943,6 +954,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     $('chiTricks').textContent = c.tricks.length ? 'できる芸：' + c.tricks.join('・') + '。「チーちゃん、' + c.tricks[c.tricks.length - 1] + '」って言ってみて。'
       : 'まだ芸はできないけど、家族のポイントで大きくなって芸を覚えるよ。';
     chi.style.transform = `scale(${0.82 + c.level * 0.04})`;
+    $('neko').style.transform = chi.style.transform;   // ネコちゃんもチーちゃんと同じ大きさで育つ
     if (fromServer && prevLevel !== null && c.level > prevLevel) {
       chi.classList.remove('learned'); void chi.getBBox(); chi.classList.add('learned');
       const t = CHI_LEVELS_TEXT(c);
