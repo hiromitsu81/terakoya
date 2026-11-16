@@ -1715,7 +1715,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     const out = addBubble('バターちゃん', '…', 'her');
     let answer = '', mood = 'smile';
     try {
-      const r = await callGas(LIFF ? { action: 'chat', tts: true, messages: history } : { action: 'chat', messages: history });
+      const r = await callGas(LIFF ? { action: 'chat', tts: !LIFF_BROWSER_VOICE(), messages: history } : { action: 'chat', messages: history });
       nextAudio = r.audio || null;
       if (!r.ok) { if (r.detail) hint.textContent = '（パパへ：原因 ' + r.detail + '）'; throw new Error(r.error || 'error'); }
       answer = String(r.text || '').replace(/^[\[［][^\]］]{1,6}[\]］]\s*/, '').trim();
@@ -1738,9 +1738,29 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
 
   // ===== LINEミニアプリ：声で話す（押して話す → GASで文字に → Claude → 声で返す） =====
   let nextAudio = null, recBusy = false, curSrc = null;
+  // ミニアプリでも、ステージと同じ「この端末の声」で話す（速くて、声もそろう）。日本語の声がない端末だけGoogleの声
+  function liffBrowserSay(text, mood) {
+    return new Promise(res => {
+      const parts = String(text).replace(/[*#`_>]/g, '').split(/(?<=[。！？!?\n])/).map(t => t.trim()).filter(Boolean);
+      const v = pickVoice();
+      let fin = false; const end = () => { if (fin) return; fin = true; clearTimeout(g); setState('idle'); setEmo(mood || 'smile', 5000); res(); };
+      const g = setTimeout(end, 2500 + text.length * 260);
+      speechSynthesis.cancel();
+      parts.forEach((t, i) => {
+        const u = new SpeechSynthesisUtterance(t); u.lang = 'ja-JP'; if (v) u.voice = v;
+        u.rate = Number(cfg.rate) || 1; u.pitch = Number(cfg.pitch) || 1.1;
+        if (i === 0) u.onstart = () => setState('speaking');
+        if (i === parts.length - 1) u.onend = u.onerror = end;
+        speechSynthesis.speak(u);
+      });
+      setState('speaking');
+    });
+  }
+  const LIFF_BROWSER_VOICE = () => store.get('liffVoice', 'browser') === 'browser' && jaVoices().length > 0;
   async function liffSpeak(text, mood) {
     setEmo(mood || 'smile');
     if (!text) { setState('idle'); return; }
+    if (LIFF_BROWSER_VOICE()) { nextAudio = null; await liffBrowserSay(text, mood); return; }
     let b64 = nextAudio; nextAudio = null;
     if (!b64) { try { const r = await callGas({ action: 'tts', text }); b64 = r && r.audio; } catch (e) {} }
     if (!b64) { setState('idle'); setEmo(mood || 'smile', 5000); return; }
@@ -1826,7 +1846,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     setState('thinking');
     const out = addBubble('バターちゃん', '…', 'her');
     let r = null;
-    try { r = await callGas({ action: 'voice', audio, messages: history.slice(-12) }); } catch (e) {}
+    try { r = await callGas(Object.assign({ action: 'voice', audio, messages: history.slice(-12) }, LIFF_BROWSER_VOICE() ? { tts: false } : {})); } catch (e) {}
     btn.classList.remove('wait'); btn.querySelector('b').textContent = 'おして話す';
     if (!r || !r.ok) { out.textContent = r && r.error === 'auth' ? 'LINEの確認ができなかったよ。開き直してね。' : 'うまく聞こえなかったよ。もう一回おしてね。'; setState('idle'); setEmo('sad', 4000); return; }
     if (!r.heard) { out.textContent = 'ん？もう一回言ってみて。'; setState('idle'); setEmo('think', 3000); return; }
