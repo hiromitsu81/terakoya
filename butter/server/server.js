@@ -106,7 +106,18 @@ const GUEST_PERSONA = 'あなたは「バターちゃんジュニア」。ヒロ
   '【聞くこと】仕事なら：困りごと・やりたいこと、いつまでに、予算感、決める人。遊びや会う予定なら：やりたいこと、場所、日にちの候補。一度にたくさん聞かない。\n' +
   '【予定】日にちは下の「ヒロさんの空いていそうな時間」から選び、「そこなら空いてるんじゃないかな。ヒロさんに確認しとくぜ」とやわらかく言う。言い切らない。予定を決めた・カレンダーに入れた、とは言わない（決めるのはヒロさん）。\n' +
   '【守ること】ヒロさんの予定の中身、家族のこと、住所・電話番号・メールなどは言わない（知らない）。お金や契約の約束はしない（「ヒロさんから連絡するぜ」）。ヒロさんに関係ない用事（宿題・レポート・ほかの仕事の代わりなど）には深入りせず、「それならヒロさんに直接聞くといいぜ」「ヒロさんに伝えとくぜ」とつなぐ。\n' +
+  '【恋の話】「ヒロさんが好き」「デートしたい」と言われたら、引かずに気さくに乗る（例：「おっ、ヒロさんのことが気になるのかい？相談乗るぜ」）。ただしデートや会う約束はしない。この話のときはヒロさんの空いている時間も言わない。「ヒロさんに伝えとくぜ」で返す。\n' +
   '【おわり】話がまとまったら「ヒロさんに伝えとくぜ」と言う。気が向いたら、友だちにもこのページを教えてくれるよう軽くお願いしてよい。';
+/** 紹介URLごとの役割（GASの「窓口の紹介」シートで決める。決めていないものは汎用） */
+const ROLE_RULE = {
+  '営業': '【この窓口の役割：営業】ヒロさんの得意なことを、相手の困りごとに合わせて短く紹介する。困りごと・時期・予算感・決める人を一つずつ聞いて、会う約束（候補の日にち）までつなぐ。押し売りはしない。',
+  'サポート': '【この窓口の役割：サポート】ヒロさんとの相談の続きを受ける。下の「相談メモ」を元に、細かい質問に答えたり、決まったことを確かめたりする。メモにないことや決めることは「ヒロさんに確認しとくぜ」とつなぐ。',
+  'コンサル相談': '【この窓口の役割：コンサル相談】相手の困りごとをじっくり聞いて、何が問題か・何から手をつけるかを一緒に整理する。方向の案は出してよいが、言い切らず、くわしくはヒロさんにつなぐ。下の「相談メモ」があれば、その続きから話す。',
+  '友だち': '【この窓口の役割：友だち】気さくに話す。遊びや会う約束、お祭り・フェスの話が中心。仕事の話が出たら、ふつうに聞いてヒロさんにつなぐ。',
+};
+function roleRule(role) {
+  return String(role || '').split(/[・、,／/ ]+/).map(r => ROLE_RULE[r.trim()]).filter(Boolean).join('\n');
+}
 const TELL_RE = /(伝えて|つたえて|連絡(して|ください|ほしい|欲しい)|頼みたい|お願いしたい|相談したい|会いたい|空いてる|あいてる)/;
 function guestGreeting(name) {
   return 'よう' + (name ? '、' + name + 'さん' : '') + '！ヒロさんの相棒、バターちゃんジュニアだぜ。ここで話したことはヒロさんに伝えるから、よろしくな。ヒロさんにしてほしいこと、なんでも話してくんな。';
@@ -241,7 +252,8 @@ async function placeOf(lat, lon) {
 /** 覚える・忘れる・議事録・メール */
 const LEARN_RE = /(覚えて|おぼえて|忘れないで|わすれないで|覚えといて|おぼえといて)/;
 const FORGET_RE = /(覚えた|おぼえた|教えた|おしえた)こと.{0,6}(忘れて|わすれて)/;
-const MINUTES_RE = /(議事録|ぎじろく|ＰＤＦ|PDF|ピーディーエフ).{0,8}(作って|つくって|して|まとめて|ちょうだい|出して|だして|ほしい)/i;
+const MINUTES_RE = /(議事録|ぎじろく|ＰＤＦ|PDF|ピーディーエフ).{0,8}(作って|つくって|して|まとめて|ちょうだい|出して|だして|ほしい|残して|のこして)/i;
+const PDF_RE = /(ＰＤＦ|PDF|ピーディーエフ)/i;
 const MAIL_RE = /(メール|めーる|Gmail|ジーメール).{0,8}(来て|きて|ある|見て|みて|確認|チェック|読んで|よんで|教えて|おしえて|どう)/i;
 /** 掛け声：家族は「根性があれば…」、窓口はジュニアだけの「ご縁があれば…」 */
 const KAKEGOE_RE = /(行くぞ|いくぞ|イクゾ|気合い?(を)?入れ|きあい|掛け声|かけ声|かけごえ|バターッ|いち、?に、?さん|1、?2、?3)/;
@@ -344,7 +356,7 @@ function session(ws) {
 
   async function loadBrain(fresh) {
     // GASで家族の記録を読むのは数秒かかるので、同じ人・同じモードなら10分は使いまわす（つながるのが速くなる）
-    const key = crypto.createHash('sha256').update(JSON.stringify(S.auth) + S.mode + (S.asGuest ? ':guest' : '')).digest('hex');
+    const key = crypto.createHash('sha256').update(JSON.stringify(S.auth) + S.mode + (S.asGuest ? ':guest' : '') + ':' + (S.ref || '')).digest('hex');
     const hit = brainCache.get(key);
     let r = !fresh && hit && Date.now() - hit.at < 10 * 60 * 1000 ? hit.r : null;
     if (!r) {
@@ -371,7 +383,10 @@ function session(ws) {
       if (r.closed) throw Object.assign(new Error('closed'), { code: 'closed' });
       S.guest = true; S.mode = 'guest'; S.trio = false;
       S.slots = (Array.isArray(r.slots) ? r.slots : []).slice(0, 10).map(x => ({ label: String(x.label || ''), start: String(x.start || ''), end: String(x.end || '') })).filter(x => x.label);
+      S.role = String(r.role || '汎用');
       S.system = GUEST_PERSONA + SELF + (who ? '\n\n【いま話している人】' + who + 'さん（LINEの名前）。' : '') +
+        (roleRule(S.role) ? '\n\n' + roleRule(S.role) + (r.roleNote ? '\n（ヒロさんからのメモ：' + String(r.roleNote).slice(0, 300) + '）' : '') : '') +
+        (r.consult ? '\n\n【相談メモ（この人とヒロさんの相談の記録。この人にだけ使う。ほかの人の話はしない）】\n' + String(r.consult).slice(0, 2500) : '') +
         '\n\n【ヒロさんの空いていそうな時間（予定の中身は言わない。確定ではない）】\n' + (S.slots.length ? S.slots.map(x => '・' + x.label).join('\n') : '（いまはわからない。「ヒロさんに聞いとくぜ」と言う）');
       S.owner = String(r.owner || ''); S.me = who; S.brainAt = Date.now();
       return;
@@ -488,8 +503,8 @@ function session(ws) {
     return speakOnly('がってんだ、覚えたぜ！', 'excited');
   }
   /** 議事録：いままでの話をまとめて、GASでPDFにしてドライブへ。リンクを吹き出しに出す */
-  async function minutes() {
-    speakOnly('がってん、議事録をまとめてPDFにするぜ。ちょいと待ってくんな。', 'think');
+  async function minutes(pdf) {
+    speakOnly(pdf ? 'がってん、議事録をまとめてPDFにするぜ。ちょいと待ってくんな。' : 'がってん、議事録をまとめとくぜ。ちょいと待ってくんな。', 'think');
     const talk = S.history.slice(-24).map(m => (m.role === 'user' ? (S.me || 'みんな') : 'ジュニア') + '：' + (typeof m.content === 'string' ? m.content : '（写真）')).join('\n')
       + (S.asideLog.length ? '\n（まわりで聞こえた会話）\n' + S.asideLog.join('\n') : '');
     if (!talk.trim()) return speakOnly('まだまとめる話がねぇんだ。もうちょい話してからにしようぜ。', 'shy');
@@ -502,10 +517,11 @@ function session(ws) {
       });
       const t = (r.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
       const title = (t.split('\n')[0] || '議事録').replace(/^#+\s*/, '').slice(0, 40);
-      const g = await gas(Object.assign({ action: 'minutes', mode: S.mode, title: day + ' ' + title, text: t }, S.auth));
+      const g = await gas(Object.assign({ action: 'minutes', mode: S.mode, pdf: !!pdf, title: day + ' ' + title, text: t }, S.auth));
       if (!g || !g.ok || !g.url) throw new Error((g && (g.detail || g.error)) || 'minutes');
-      send({ type: 'links', links: [{ title: '議事録（PDF）：' + title, url: g.url }] });
-      speakOnly('議事録ができたぜ！吹き出しのリンクから開いてくんな。', 'excited');
+      send({ type: 'links', links: [{ title: (pdf ? '議事録（PDF）：' : '議事録：') + title, url: g.url }] });
+      S.brainAt = 0;      // つぎの返事から、議事録も読んだ記録で話す
+      speakOnly(pdf ? '議事録のPDFができたぜ！吹き出しのリンクから開いてくんな。' : '議事録を残しといたぜ！お兄さん分のバターちゃんも読めるから、続きはどっちでも話せるぜ。', 'excited');
     } catch (e) { console.error('minutes', String(e.message).slice(0, 200)); speakOnly('すまねぇ、議事録がうまく作れなかったぜ。', 'sad'); }
   }
   /** メール：ヒロさんだけ。未読をGASから読んで、短く知らせる（記録には残さない） */
@@ -543,7 +559,7 @@ function session(ws) {
     }
     if (!S.guest && LEARN_RE.test(text)) return learn(text);
     if (!S.guest && FORGET_RE.test(text)) { S.lessons = []; savePrefs(S.owner, { lessons: [] }); return speakOnly('がってんだ、教わったことはきれいさっぱり忘れたぜ。', 'smile'); }
-    if (!S.guest && MINUTES_RE.test(text)) return minutes();
+    if (!S.guest && MINUTES_RE.test(text)) return minutes(PDF_RE.test(text));
     if (calledJunior(text) && nameOnly(text)) return speakOnly(QUICK[Math.floor(Math.random() * QUICK.length)], 'smile');
     if (KAKEGOE_RE.test(text)) return speakOnly(S.guest || S.mode === 'business' ? KAKEGOE_GUEST : KAKEGOE_FAMILY, 'excited');
     if (QUIET_RE.test(text)) { S.quiet = true; send({ type: 'quiet', on: true }); return speakOnly('おう、しずかにしてるぜ。用があったら名前を呼んでくんな。', 'smile'); }

@@ -197,6 +197,8 @@ body.wideshow .sato-banner small { font-size: 12px; }
 .liffmode .hint { font-size: 12px; }
 .liffmode .talkbtn { width: 96px; height: 96px; }
 .modebtn { display: none; }
+.guestnote { display: none; }
+.guestmode .guestnote { display: block; margin: 0; text-align: center; font-size: 11px; color: var(--soft); line-height: 1.5; }
 /* まるいボタンの左右に小さいボタン（縦に長くならないように） */
 .talkrow { display: contents; }
 .liffmode .talkrow { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; }
@@ -864,6 +866,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
         <button class="modebtn goenbtn" id="shareBtn" type="button" hidden>紹介する</button>
       </div>
     </div>
+    <p class="guestnote">このページのURLは、ほかの人に送らないでね。紹介するときは「紹介する」ボタンからどうぞ。</p>
     <form class="typed" id="typed">
       <input id="typedInput" type="text" placeholder="文字でもOK（チーちゃん、おて など）" autocomplete="off" aria-label="バターちゃんに送る文字">
       <button class="btn primary" type="submit">送る</button>
