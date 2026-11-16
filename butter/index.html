@@ -1997,18 +1997,14 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
       clearTimeout(giveUp);
       const was = J.ready; J.ready = false; jrStopAudio();
       if (J.dead) return;
-      // つながらない：三人モードで使っていたら、いつもの話し方（だれにでも答える）にはせず、つなぎなおしつづける
-      // この端末で一度でもサーバーにつながったことがあれば、前の話し方（だれにでも答える）にはもどさず、つなぎなおしつづける
-      if (!was && ++J.tries >= 3 && !store.get('jrOK', false)) { jrFallback(); return; }
-      if (!was) hint.textContent = 'サーバーにつなぎなおしているよ…（' + J.tries + '回目）';
-      if (document.visibilityState === 'visible' && convOn) setTimeout(jrConnect, was ? 800 : Math.min(10000, 2000 * J.tries));
+      // つながらないときも、前のGASの話し方にはもどさない（ミニアプリで話すのはジュニアだけ）。つなぎなおしつづける
+      if (!was) J.tries++;
+      hint.textContent = !was && J.tries >= 3
+        ? 'いまサーバーにつながっていないよ。自動でつなぎなおすね（まんなかのボタンを押すと、すぐつなぎなおすよ）。'
+        : 'サーバーにつなぎなおしているよ…';
+      if (!was && J.tries >= 3 && diag) { diag.hidden = false; diag.textContent = '（パパへ：サーバーにつながりません。Cloud Run のようすを見てください）'; }
+      if (document.visibilityState === 'visible' && convOn) setTimeout(jrConnect, was ? 800 : Math.min(15000, 2000 * J.tries));
     };
-  }
-  function jrFallback() {
-    J.dead = true; J.fallback = true; $('goenBtn').hidden = true; $('trioBtn').hidden = true;
-    if (diag) { diag.hidden = false; diag.textContent = '（パパへ：サーバーにつながらないので、いつもの話し方にしています。この話し方は三人モードがききません）'; }
-    hint.textContent = 'いまは、いつもの話し方です（サーバーにつながっていません）。';
-    if (convOn && !recBusy) setTimeout(talkOnce, 300);
   }
   const diag = $('diag');
   function jrOn(m) {
