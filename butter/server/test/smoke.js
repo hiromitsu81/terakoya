@@ -259,8 +259,14 @@ function client(port, hello) {
   w.ws.send(JSON.stringify({ type: 'text', text: 'こんばんは' }));
   await w.until(() => w.msgs.filter(m => m.type === 'reply_end').length > wn);
   assert.ok(lastParams.model === 'claude-haiku-4-5-20251001' && !lastParams.tools, 'ふだんは速いモデル');
+  // 近くを聞かれたら、スマホの位置（およそ）を基準に
+  w.ws.send(JSON.stringify({ type: 'loc', lat: 35.6, lon: 139.61 }));
+  const wn2 = w.msgs.filter(m => m.type === 'reply_end').length;
+  w.ws.send(JSON.stringify({ type: 'text', text: '近くのラーメン屋は？' }));
+  await w.until(() => w.msgs.filter(m => m.type === 'reply_end').length > wn2, 8000);
+  assert.ok(/いまいる場所/.test(lastParams.system) && lastParams.tools, '近くは位置を基準に調べる');
   deps.claude.messages.stream = os5;
 
-  console.log('OK：会話・気持ち・一文ずつの声・写真・記録の分け方・ご縁つなぎ・割りこみ・三人モード・呼ばれただけ・会話のつづき・ジュニア日記・やりなおし・窓口と案件メモ・紹介のつながり・窓口のお休み・いいとこ取りと検索');
+  console.log('OK：会話・気持ち・一文ずつの声・写真・記録の分け方・ご縁つなぎ・割りこみ・三人モード・呼ばれただけ・会話のつづき・ジュニア日記・やりなおし・窓口と案件メモ・紹介のつながり・窓口のお休み・いいとこ取りと検索・近くの場所');
   process.exit(0);
 })().catch(e => { console.error('NG', e); process.exit(1); });

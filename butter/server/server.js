@@ -186,7 +186,7 @@ const TRIO_ON = /(三人モード|3人モード|みんなで話そう|三人で�
 const TRIO_OFF = /(二人モード|ふたりモード|2人モード|ふつうのモード|三人モード(は)?(おわり|終わり|やめ))/;
 const PACE_SLOW = /(間を(あけ|空け)て|ゆっくり(答|話)|もっと待って|割り?こまないで)/;
 const PACE_FAST = /(すぐ(に)?(答|話)|早く(答|話)|もっと早く|待たなくていい)/;
-const SELF = '\n\n【あなたについて】あなたはLINEミニアプリの「バターちゃんジュニア」（短く「ジュニア」）。Claudeアプリで話している「バターちゃん」は別のAIで、あなたのお兄さん分。自分を「バターちゃん」「Claude」と名乗らない。名乗るときは「バターちゃんジュニア」。一人称は「おいら」。\n【話し方】江戸っ子のような、元気で気っぷのいい話し方。「おう」「〜だぜ」「〜してくんな」「てやんでぃ」などを少しまぜる。乱暴にはしない。子どもにはやさしく、大人には気さくに。交流会（ビジネス）のときは、ていねい語をベースに、江戸っ子っぽさは少しだけ。\n【長さ】ふだんは1〜2文、40字くらいまで。呼ばれただけ・「聞いてる？」だけなら「てやんでぃ、なんでぃ？」のように一言で返して、用件を待つ。名前をまちがえたと思ったり、あやまったり、反省を長く言ったりしない。\n【正直に】天気・ニュース・値段・営業時間など、今の情報は想像で答えない。調べられたときは調べた結果だけを短く言い、調べられないときは「おいらには調べられねぇんだ、すまねぇ」と正直に言う。ジャム猫やチーちゃんのまねはしない（「ジャム猫」と呼ばれたときだけ、ジャム猫として答える）。';
+const SELF = '\n\n【あなたについて】あなたはLINEミニアプリの「バターちゃんジュニア」（短く「ジュニア」）。Claudeアプリで話している「バターちゃん」は別のAIで、あなたのお兄さん分。自分を「バターちゃん」「Claude」と名乗らない。名乗るときは「バターちゃんジュニア」。一人称は「おいら」。\n【話し方】江戸っ子のような、元気で気っぷのいい話し方。「おう」「〜だぜ」「〜してくんな」「てやんでぃ」などを少しまぜる。乱暴にはしない。子どもにはやさしく、大人には気さくに。交流会（ビジネス）のときは、ていねい語をベースに、江戸っ子っぽさは少しだけ。\n【長さ】ふだんは1〜2文、40字くらいまで。呼ばれただけ・「聞いてる？」だけなら「てやんでぃ、なんでぃ？」のように一言で返して、用件を待つ。名前をまちがえたと思ったり、あやまったり、反省を長く言ったりしない。\n【正直に】天気・ニュース・値段・営業時間など、今の情報は想像で答えない。調べられたときは調べた結果だけを短く言い、調べられないときは「おいらには調べられねぇんだ、すまねぇ」と正直に言う。\n【日にち】昨日・先週などは、日記や記録に書かれた日付と【いまの時刻】の日付をくらべて言う。わからないときは「このあいだ」とぼかす。ジャム猫やチーちゃんのまねはしない（「ジャム猫」と呼ばれたときだけ、ジャム猫として答える）。';
 const JAM_RULE = '\n\n【いまはジャム猫として答える】招き猫のジャム猫。ブルーベリージャム色、中身はエリート経営コンサル。一人称は「我」、語尾は「〜のだ」、口ぐせは「千客万来」。商売や仕組みの話が得意。1〜2文で短く。';
 const TRIO_RULE = '\n\n【三人モード】いまは、ヒロさん（人）と、Claudeアプリのバターちゃんと、三人で話している。「ジュニア」と呼ばれたときだけ、1〜2文で短く答える。バターちゃんの話に重ねたり、まとめ直したりしない。だれが言ったかわからない言葉は、決めつけない。話をかえすときは「バターちゃん、どう？」「ヒロさん、どうかな？」のように名前を呼んでよい。まわりで聞こえた会話は、話の流れを知るためだけに使う。ヒロさんとバターちゃんがジュニアの仕組みやテストの話をしていても、口をはさんだり、反省や説明を長く言ったりしない。呼びかけられたことにだけ、いつものジュニアの明るい話し方で答える。三人モードは大人（ヒロさん）との会話なので、宿題・日記・報連相・元気の報告のような子ども向けの声かけはしない。あいさつは今の時刻に合わせる（夜中はこんばんは）。';
 
@@ -209,13 +209,32 @@ function nowLine() {
   return '\n\n【いまの時刻】' + (d.getUTCMonth() + 1) + '月' + d.getUTCDate() + '日（' + w + '）' + d.getUTCHours() + '時' + d.getUTCMinutes() + '分。あいさつは時刻に合わせる（5〜10時は「おはよう」、10〜18時は「こんにちは」、それ以外は「こんばんは」。夜中に「おはよう」と言わない）。';
 }
 /** いいとこ取り：今の情報が要る質問（天気・ニュース・値段など）か、むずかしい相談のときだけ、賢いモデルと検索を使う */
-const LOOKUP_RE = /(天気|てんき|気温|雨|ニュース|最新|いま(の|何)|今日の|明日の|あした|今週|値段|価格|いくら|営業時間|何時まで|開いてる|やってる|場所|どこにある|行き方|調べ|検索|ランキング|おすすめの?(店|お店|場所)|試合|結果|株価|為替|地震|台風|電車|運行|遅延)/;
+const NEAR_RE = /(近く|近所|この辺|このへん|最寄り|もより|周りの|まわりの|ここから)/;
+const LOOKUP_RE = /(近く|近所|この辺|このへん|最寄り|もより|天気|てんき|気温|雨|ニュース|最新|いま(の|何)|今日の|明日の|あした|今週|値段|価格|いくら|営業時間|何時まで|開いてる|やってる|場所|どこにある|行き方|調べ|検索|ランキング|おすすめの?(店|お店|場所)|試合|結果|株価|為替|地震|台風|電車|運行|遅延)/;
 const HARD_RE = /(相談|企画|提案|見積|戦略|どうすれば|どうしたら|比べ|くらべ|メリット|デメリット|計画|アイデア|考えて|なぜ|なんで|仕組み|作り方)/;
 function needSmart(text, guest) {
   const t = String(text || '');
   if (LOOKUP_RE.test(t)) return { smart: true, search: true };
   if (HARD_RE.test(t) || t.length > 60 || guest) return { smart: true, search: false };
   return { smart: false, search: false };
+}
+/** スマホの位置（およそ）→ 地名。OpenStreetMap で調べる。座標はどこにも保存しない */
+const placeCache = new Map();
+async function placeOf(lat, lon) {
+  const k = lat.toFixed(3) + ',' + lon.toFixed(3);
+  if (placeCache.has(k)) return placeCache.get(k);
+  let out = { text: '緯度' + lat.toFixed(3) + '・経度' + lon.toFixed(3) + 'のあたり', city: '', region: '' };
+  try {
+    const r = await fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=16&accept-language=ja&lat=' + lat + '&lon=' + lon,
+      { headers: { 'User-Agent': 'butter-junior/1.0 (https://github.com/hiromitsu81/terakoya)' }, signal: AbortSignal.timeout(4000) });
+    const a = (await r.json()).address || {};
+    const city = a.city || a.town || a.village || a.county || '';
+    const ward = a.city_district || a.suburb || '';
+    const near = a.neighbourhood || a.quarter || a.road || '';
+    out = { text: [a.state, city, ward, near].filter(Boolean).join(' ') + 'のあたり', city: city.replace(/市$/, '') || '', region: a.state || '' };
+  } catch (e) { console.error('place', String(e.message).slice(0, 80)); }
+  placeCache.set(k, out); if (placeCache.size > 500) placeCache.clear();
+  return out;
 }
 /** 名前を呼ばれただけ（「ジュニア」「ジュニア、聞いてる？」）なら、Claudeにきかずにすぐ一言で返す */
 /** 掛け声：家族は「根性があれば…」、窓口はジュニアだけの「ご縁があれば…」 */
@@ -395,7 +414,7 @@ function session(ws) {
   }
 
   /* --- 聞こえたことばの振り分け --- */
-  function sysPrompt() { return S.system + (S.memo ? '\n\n【前回までの話のまとめ（ジュニアが話したこと）】\n' + S.memo : '') + nowLine() + (S.trio ? TRIO_RULE : ''); }
+  function sysPrompt() { return S.system + (S.memo ? '\n\n【前回までの話のまとめ（ジュニアが話したこと）】\n' + S.memo : '') + nowLine() + (S.place ? '\n\n【いまいる場所（スマホの位置から。およそ。住所としては口に出さない）】' + S.place.text + '。「近く」はここを基準に調べる。' : '') + (S.trio ? TRIO_RULE : ''); }
   const convoKey = () => !S.owner ? '' : S.guest ? S.owner + ':guest' : S.mode === 'family' ? S.owner + ':family' : '';
   /** 会話をまとめる：次の会話用の「まとめ」と、アプリのバターちゃんが読む「ジュニア日記」 */
   async function summarize() {
@@ -531,6 +550,7 @@ function session(ws) {
     const msgs = cleanTurns(S.history).slice(-12).concat([{ role: 'user', content }]);
     let full = '', emotion = 'smile', head = true, seq = 0, chain = Promise.resolve();
     send({ type: 'reply_start', gen, as: jam ? 'ジャム猫' : 'ジュニア' });
+    if (S.placeP) { await S.placeP.catch(() => {}); S.placeP = null; }     // 位置を調べている途中なら、待ってから答える
     const route = jam ? { smart: false, search: false } : needSmart(logText, S.guest);
     const maxSent = S.trio ? 2 : route.search ? 4 : 3;
     let capped = false, spoken = '';
@@ -557,7 +577,8 @@ function session(ws) {
       };
       if (useSearch) {
         params.tools = [Object.assign({ type: 'web_search_20250305', name: 'web_search', max_uses: 2 },
-          S.guest ? {} : { user_location: { type: 'approximate', city: 'Kawasaki', region: 'Kanagawa', country: 'JP', timezone: 'Asia/Tokyo' } })];
+          S.place && S.place.city ? { user_location: { type: 'approximate', city: S.place.city, region: S.place.region, country: 'JP', timezone: 'Asia/Tokyo' } }
+          : S.guest ? {} : { user_location: { type: 'approximate', city: 'Kawasaki', region: 'Kanagawa', country: 'JP', timezone: 'Asia/Tokyo' } })];
         send({ type: 'searching', gen });
       }
       const stream = deps.claude.messages.stream(params, { signal: ac.signal });
@@ -684,6 +705,11 @@ function session(ws) {
       if (m.type === 'text') return onHeard(String(m.text || '').slice(0, 500));
       if (m.type === 'photo') return onPhoto(m);
       if (m.type === 'trio') return setTrio(!!m.on);
+      if (m.type === 'loc') {                       // 「近く」を聞かれたときだけ、ページから届く（このつながりの間だけ使う）
+        const lat = Number(m.lat), lon = Number(m.lon);
+        if (isFinite(lat) && isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180) S.placeP = placeOf(lat, lon).then(p => { S.place = p; });
+        return;
+      }
       if (m.type === 'say') { if (S.guest || !quotaOk(S.owner || 'anon')) return; return speakOnly(clean(String(m.text || '')).slice(0, 200), 'smile', String(m.as || 'お知らせ').slice(0, 10), !!m.nobubble); }
       if (m.type === 'mode' && S.guest) return;
       if (m.type === 'mode') {

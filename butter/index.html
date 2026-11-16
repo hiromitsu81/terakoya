@@ -1688,6 +1688,14 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     return p;
   }
 
+  // 吹き出しは、いつもいちばん新しいところを見せる（文字がふえても、写真が読みこまれても）。
+  // 自分で上にもどして読んでいるときは、4びょうはそのまま
+  let chatTouched = 0;
+  bubbles.addEventListener('scroll', () => { if (bubbles.scrollHeight - bubbles.scrollTop - bubbles.clientHeight > 60) chatTouched = Date.now(); }, { passive: true });
+  const chatToEnd = () => { if (Date.now() - chatTouched > 4000) bubbles.scrollTop = bubbles.scrollHeight; };
+  new MutationObserver(() => requestAnimationFrame(chatToEnd)).observe(bubbles, { childList: true, subtree: true, characterData: true });
+  bubbles.addEventListener('load', () => requestAnimationFrame(chatToEnd), true);
+
   // ===== 聞く =====
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   let rec = null, recOn = false;
@@ -2085,7 +2093,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
         hint.textContent = J.trio ? '三人モード：「ジュニア」と呼んだときだけ答えるよ。' + (m.waitMs != null ? '（待つ時間 ' + (m.waitMs / 1000).toFixed(1) + 'びょう）' : '') : 'そのまま話しかけてね。';
         break;
       case 'camera': jrCamera(m.kind, m.prompt); break;
-      case 'volume': J.vol = Math.max(0.3, Math.min(2, J.vol + m.delta)); store.set('jrVol', J.vol); if (J.gain) J.gain.gain.value = J.vol; break;
+      case 'volume': J.vol = Math.max(0.3, Math.min(2, J.vol + m.delta)); store.set('jrVol', J.vol); if (J.gain) J.gain.gain.value = J.vol * autoVol(); break;
       case 'quiet': hint.textContent = m.on ? 'しずかにしてるよ。「バターちゃん」と呼んだらお話しするね。' : 'そのまま話しかけてね。'; break;
       case 'profile': J.profile = m.profile; goenShow(); toast('ご縁コードは ' + m.profile.code + ' だよ'); break;
       case 'goen_wait': $('gLines').textContent = '相棒どうしでお話し中…'; break;
@@ -2123,6 +2131,15 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     history.push({ role: 'user', content: text });
     if (history.length > 12) history = history.slice(-12);
     convoUntil = Date.now() + 25000;
+    // 「近くの〜」を聞かれたときだけ、スマホの位置（およそ）をそえる。初めてのときはスマホが許可をたずねる。どこにも保存しない
+    if (/(近く|近所|この辺|このへん|最寄り|もより|周りの|まわりの|ここから)/.test(text) && navigator.geolocation) {
+      let done = false;
+      const go = () => { if (done) return; done = true; jrSend({ type: 'text', text }); };
+      navigator.geolocation.getCurrentPosition(p => { jrSend({ type: 'loc', lat: +p.coords.latitude.toFixed(4), lon: +p.coords.longitude.toFixed(4) }); go(); },
+        () => go(), { enableHighAccuracy: false, timeout: 6000, maximumAge: 10 * 60000 });
+      setTimeout(go, 7000);
+      return;
+    }
     jrSend({ type: 'text', text });
   }
   // 一文ずつ届いた声を、順番に鳴らす。口は声の大きさで動かす
@@ -2135,7 +2152,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     try { const bin = atob(m.mp3), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); buf = await a.decodeAudioData(u8.buffer); } catch (e) {}
     if (!buf || m.gen !== J.gen) { J.playing = false; jrPump(); jrDrain(); return; }
     if (!J.gain) { J.gain = a.createGain(); J.an = a.createAnalyser(); J.an.fftSize = 512; J.gain.connect(J.an); J.an.connect(a.destination); }
-    J.gain.gain.value = J.vol;
+    J.gain.gain.value = J.vol * autoVol();
     const src = a.createBufferSource(); src.buffer = buf; src.connect(J.gain); J.src = src;
     setState('speaking'); lipLive = true;
     src.onended = () => { if (J.src === src) J.src = null; J.playing = false; J.lastPlayEnd = Date.now(); jrPump(); jrDrain(); };
@@ -2150,11 +2167,18 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     if (J.src) { try { J.src.onended = null; J.src.stop(); } catch (e) {} J.src = null; }
     J.playing = false; lipLive = false; butter.classList.remove('talking', 'mouth-small');
   }
+  // 声の大きさを自動で：まわりがうるさいときは大きく、静かなとき・夜（22〜6時）は小さく。「声大きくして」の設定にかける
+  function autoVol() {
+    const f = J.floor || 0.01, h = new Date().getHours();
+    let k = f > 0.04 ? 1.5 : f > 0.02 ? 1.2 : f < 0.006 ? 0.85 : 1;
+    if (h >= 22 || h < 6) k *= 0.8;
+    return Math.max(0.5, Math.min(1.6, k));
+  }
   setInterval(() => {
     if (!lipLive || !J.an || !J.playing) return;
     const d = new Float32Array(J.an.fftSize); J.an.getFloatTimeDomainData(d);
     let s2 = 0; for (let i = 0; i < d.length; i++) s2 += d[i] * d[i];
-    const r = Math.sqrt(s2 / d.length) / Math.max(0.3, J.vol);
+    const r = Math.sqrt(s2 / d.length) / Math.max(0.3, J.vol * autoVol());
     butter.classList.toggle('talking', r > 0.02); butter.classList.toggle('mouth-small', r < 0.08);
   }, 40);
   // マイク：16kHzの声にして流しっぱなしで送る。話している途中で大きな声がしたら、すぐ止める
