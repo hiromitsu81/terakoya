@@ -185,8 +185,9 @@ function client(port, hello) {
   const kg = await q.until(m => m.type === 'reply_end' && /バターッ/.test(m.text));
   assert.ok(/根性があれば/.test(kg.text), '家族の掛け声');
   // 話したことは、切っても次につづく（まとめ・ジュニア日記）
+  const qn = q.msgs.filter(m => m.type === 'reply_end').length;
   q.ws.send(JSON.stringify({ type: 'text', text: 'ピョン吉のトレーナー買ったよ' }));
-  await q.until(m => m.type === 'reply_end' && m !== qe);
+  await q.until(() => q.msgs.filter(m => m.type === 'reply_end').length > qn);
   assert.ok(/いまの時刻/.test(sys) && /一人称は「おいら」/.test(sys), '時刻と話し方');
   q.ws.send(JSON.stringify({ type: 'text', text: 'こんどスマホを入れるんだ' }));
   await new Promise(r => setTimeout(r, 900));
