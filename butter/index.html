@@ -832,6 +832,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     <p class="hint" id="hint">「バターちゃん」と呼んでから話しかけてね。</p>
     <button class="talkbtn" id="talkBtn" type="button"><i id="lvlLive"></i><b>おして話す</b></button>
     <button class="modebtn" id="modeBtn" type="button" aria-pressed="false">ファミリーモード</button>
+    <button class="modebtn goenbtn" id="trioBtn" type="button" aria-pressed="false" hidden>三人モード</button>
     <button class="modebtn goenbtn" id="goenBtn" type="button" hidden>ご縁つなぎ</button>
     <form class="typed" id="typed">
       <input id="typedInput" type="text" placeholder="文字でもOK（チーちゃん、おて など）" autocomplete="off" aria-label="バターちゃんに送る文字">
@@ -1960,7 +1961,9 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   if (Q.get('s')) store.set('srv', SRV);
   const J = { ws: null, ready: false, dead: !SRV || !LIFF, tries: 0, gen: -1, queue: [], playing: false, src: null, endEmo: null,
     out: null, outText: '', mic: null, ctx: null, gain: null, an: null, paused: false, floor: 0.01, loud: 0, vol: Number(store.get('jrVol', 1)) || 1,
-    greeted: false, profile: null, facing: 'environment' };
+    greeted: false, profile: null, facing: 'environment', trio: false };
+  const JR_NAME = /(ジュニア|じゅにあ|ジュニヤ|junior)/i, JR_TRIO = /(三人モード|3人モード|みんなで話そう|三人で話そう|3人で話そう|二人モード|ふたりモード|2人モード|ふつうのモード)/;
+  function trioShow() { const b = $('trioBtn'); b.setAttribute('aria-pressed', String(J.trio)); b.textContent = J.trio ? '三人モード（「ジュニア」で話す）' : '三人モード'; }
   const jrLive = () => !J.dead && J.ready && J.ws && J.ws.readyState === 1;
   let lipLive = false;   // 声の大きさで口を動かしている間は、ランダムの口パクを止める
   function jrSend(o) { if (J.ws && J.ws.readyState === 1) J.ws.send(typeof o === 'string' || o instanceof ArrayBuffer ? o : JSON.stringify(o)); }
@@ -1989,9 +1992,10 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     switch (m.type) {
       case 'ready':
         J.ready = true; J.tries = 0; J.greeted = true; J.profile = m.profile || null; $('goenBtn').hidden = false;
+        $('trioBtn').hidden = false; J.trio = !!m.trio; trioShow();
         jrMicStart().catch(() => { hint.textContent = 'マイクが使えません。LINEの設定でマイクを許可してください。'; });
         jrBtn(); if (!J.playing) setState('listening');
-        hint.textContent = 'そのまま話しかけてね。話している途中でも、声をかけたら止まって聞くよ。';
+        hint.textContent = J.trio ? '三人モード：「ジュニア」と呼んだときだけ答えるよ。' : 'そのまま話しかけてね。話している途中でも、声をかけたら止まって聞くよ。';
         break;
       case 'partial':
         if (pickRes && nameIn(m.text)) break;
@@ -2002,7 +2006,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
       case 'heard': clearPartial(); jrHeard(m.text); break;
       case 'reply_start':
         J.gen = m.gen; J.queue = []; J.endEmo = null; jrStopAudio();
-        J.out = addBubble('バターちゃん', '…', 'her'); J.outText = '';
+        J.out = addBubble('ジュニア', '…', 'her'); J.outText = '';
         if (m.emotion) setEmo(m.emotion);
         setState('thinking');
         break;
@@ -2020,6 +2024,10 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
         J.queue = []; jrStopAudio();
         if (J.out && J.outText) J.out.textContent = J.outText + '…';
         setState('listening');
+        break;
+      case 'trio':
+        J.trio = !!m.on; trioShow();
+        hint.textContent = J.trio ? '三人モード：「ジュニア」と呼んだときだけ答えるよ。' + (m.waitMs != null ? '（待つ時間 ' + (m.waitMs / 1000).toFixed(1) + 'びょう）' : '') : 'そのまま話しかけてね。';
         break;
       case 'camera': jrCamera(m.kind, m.prompt); break;
       case 'volume': J.vol = Math.max(0.3, Math.min(2, J.vol + m.delta)); store.set('jrVol', J.vol); if (J.gain) J.gain.gain.value = J.vol; break;
@@ -2039,6 +2047,8 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   }
   // 聞こえた言葉：ページでできること（ガチャ・UFO・チーちゃんの芸・ご縁）を先に。ほかはサーバーへ
   function jrHeard(text) {
+    // 三人モード：呼ばれていない声は「聞こえた」として出すだけ（サーバーが話の流れとして覚える）
+    if (J.trio && !JR_NAME.test(text) && !JR_TRIO.test(text) && !(U.on || pickRes)) { addBubble('聞こえた', text, 'me partial'); jrSend({ type: 'text', text }); return; }
     if (pickRes && pickHear(text)) return;
     if (U.on && ufoHear(text, true)) return;
     if (playCmd(text, /(ガチャ|がちゃ|ガシャ)/)) { doGacha(text); return; }
@@ -2102,7 +2112,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
       const rms = Math.sqrt(s2 / d.length), ms = d.length / a.sampleRate * 1000;
       $('lvlLive').style.transform = 'scale(' + (1 + Math.min(rms * 8, 0.5)) + ')';
       if (!J.playing) J.floor = rms < J.floor ? J.floor * 0.9 + rms * 0.1 : J.floor * 0.998 + rms * 0.002;
-      else if (rms > Math.max(0.05, J.floor * 4)) { J.loud += ms; if (J.loud > 220) { J.loud = 0; J.queue = []; jrStopAudio(); jrSend({ type: 'barge' }); setState('listening'); } }
+      else if (!J.trio && rms > Math.max(0.05, J.floor * 4)) { J.loud += ms; if (J.loud > 220) { J.loud = 0; J.queue = []; jrStopAudio(); jrSend({ type: 'barge' }); setState('listening'); } }
       else J.loud = Math.max(0, J.loud - ms / 2);
       const ratio = a.sampleRate / 16000, n = Math.floor(d.length / ratio), pcm = new Int16Array(n);
       for (let i = 0; i < n; i++) {
@@ -2204,6 +2214,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     [m.match, m.next].filter(Boolean).forEach(t => { const p = document.createElement('p'); p.textContent = t; p.style.fontWeight = '700'; box.append(p); });
   }
   $('goenBtn').addEventListener('click', goenOpen);
+  $('trioBtn').addEventListener('click', () => jrSend({ type: 'trio', on: !J.trio }));
   $('gClose').addEventListener('click', () => { $('goenBox').hidden = true; });
   $('gSave').addEventListener('click', () => jrSend({ type: 'profile', profile: { character: $('gChar').value, name: $('gName').value.trim(), skills: $('gSkills').value.trim(), seeking: $('gSeek').value.trim(), shareable: $('gShare').value.trim() } }));
   $('gGo').addEventListener('click', () => { const c = $('gOther').value.trim(); if (c) jrSend({ type: 'goen', code: c }); });

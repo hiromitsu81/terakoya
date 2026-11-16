@@ -114,6 +114,28 @@ const PHOTO_RE = /((写真|しゃしん|シャシン|ピクチャー).{0,6}(撮|
 const VIDEO_RE = /(動画|どうが|ビデオ).{0,6}(撮|と)って/;
 const VOLUME_UP = /(声|こえ|音).{0,4}(大きく|おおきく)/, VOLUME_DOWN = /(声|こえ|音).{0,4}(小さく|ちいさく)/;
 const QUIET_RE = /(静かにして|しずかにして|だまって|黙って|おすわりモード)/;
+/* 三人モード：ヒロさん（人）・Claudeアプリのバターちゃん・ジュニアで話す。ジュニアは名前を呼ばれたときだけ話す */
+const NAME_RE = /(ジュニア|じゅにあ|ジュニヤ|junior)/i;
+const STOP_RE = /(ストップ|待って|まって|止まって|とまって)/;
+const TRIO_ON = /(三人モード|3人モード|みんなで話そう|三人で話そう|3人で話そう)/;
+const TRIO_OFF = /(二人モード|ふたりモード|2人モード|ふつうのモード|三人モード(は)?(おわり|終わり|やめ))/;
+const PACE_SLOW = /(間を(あけ|空け)て|ゆっくり(答|話)|もっと待って|割り?こまないで)/;
+const PACE_FAST = /(すぐ(に)?(答|話)|早く(答|話)|もっと早く|待たなくていい)/;
+const SELF = '\n\n【あなたについて】あなたはLINEミニアプリの「バターちゃんジュニア」（短く「ジュニア」）。Claudeアプリで話している「バターちゃん」は別のAIで、あなたのお兄さん分。自分を「バターちゃん」「Claude」と名乗らない。名乗るときは「バターちゃんジュニア」。';
+const TRIO_RULE = '\n\n【三人モード】いまは、ヒロさん（人）と、Claudeアプリのバターちゃんと、三人で話している。「ジュニア」と呼ばれたときだけ、1〜2文で短く答える。バターちゃんの話に重ねたり、まとめ直したりしない。だれが言ったかわからない言葉は、決めつけない。話をかえすときは「バターちゃん、どう？」「ヒロさん、どうかな？」のように名前を呼んでよい。';
+
+/* 話し方の好み（持ち主ごとに覚える：三人モード・待つ時間） */
+const memPrefs = new Map();
+async function loadPrefs(owner) {
+  if (!owner) return {};
+  try { if (deps.db) { const d = await deps.db.collection('prefs').doc(owner).get(); return d.exists ? d.data() : {}; } } catch (e) {}
+  return memPrefs.get(owner) || {};
+}
+async function savePrefs(owner, p) {
+  if (!owner) return;
+  try { if (deps.db) return void await deps.db.collection('prefs').doc(owner).set(p, { merge: true }); } catch (e) {}
+  memPrefs.set(owner, Object.assign(memPrefs.get(owner) || {}, p));
+}
 
 /* ===== ご縁つなぎ（プロフィールはFirestore。なければこのサーバーの中だけ） ===== */
 const memProfiles = new Map();
@@ -167,7 +189,7 @@ async function goenTalk(me, other) {
 function session(ws) {
   const S = {
     ready: false, auth: null, owner: '', me: '', mode: 'family', system: '', history: [], voice: '',
-    stt: null, sttBytes: 0, sttStarted: 0, gen: 0, aborter: null, speaking: false, pendingPhoto: '', quiet: false,
+    stt: null, sttBytes: 0, sttStarted: 0, gen: 0, aborter: null, speaking: false, pendingPhoto: '', quiet: false, trio: false, waitMs: 1000, aside: [], lastPartial: 0,
     born: Date.now(),
   };
   const send = o => { if (ws.readyState === 1) ws.send(JSON.stringify(o)); };
@@ -176,7 +198,7 @@ function session(ws) {
   async function loadBrain() {
     const r = await gas(Object.assign({ action: 'brain', mode: S.mode }, S.auth));
     if (!r || !r.ok) throw Object.assign(new Error(r && r.error || 'brain'), { code: r && r.error || 'brain' });
-    S.system = String(r.system || '');
+    S.system = String(r.system || '') + SELF;
     S.owner = String(r.owner || '');
     S.me = String(r.me || '');
     S.brainAt = Date.now();
@@ -188,7 +210,7 @@ function session(ws) {
     const st = deps.stt.streamingRecognize({
       config: {
         encoding: 'LINEAR16', sampleRateHertz: 16000, languageCode: 'ja-JP', enableAutomaticPunctuation: true,
-        speechContexts: [{ phrases: ['バターちゃん', 'チーちゃん', 'ジャム猫', '福まねき', '千客万来', 'ガチャ', '写真撮って', '動画撮って', 'ご縁'] }],
+        speechContexts: [{ phrases: ['バターちゃん', 'チーちゃん', 'ジャム猫', '福まねき', '千客万来', 'ガチャ', '写真撮って', '動画撮って', 'ご縁', 'ジュニア', '三人モード'] }],
       },
       interimResults: true, singleUtterance: true,
     });
@@ -199,7 +221,13 @@ function session(ws) {
       if (!r || !r.alternatives || !r.alternatives[0]) return;
       const t = r.alternatives[0].transcript || '';
       if (r.isFinal) finalText += t;
-      else { send({ type: 'partial', text: finalText + t }); if (S.speaking && (finalText + t).length >= 2) stopReply('barge'); }
+      else {
+        const all = finalText + t;
+        S.lastPartial = Date.now();
+        send({ type: 'partial', text: all });
+        // 三人モードでは、名前か「待って」のときだけ止まる（バターちゃんの声で止まらない）
+        if (S.speaking && all.length >= 2 && (!S.trio || NAME_RE.test(all) || STOP_RE.test(all))) stopReply('barge');
+      }
     });
     st.on('error', e => { if (S.stt === st) S.stt = null; if (!/Audio Timeout|DEADLINE|exceeded maximum/i.test(String(e.message))) send({ type: 'notice', why: 'stt', detail: String(e.message).slice(0, 80) }); });
     // 聞こえた文はページへ。ページがガチャ・UFO・チーちゃんの芸などを先に見て、話す分だけ {type:'text'} で返してくる
@@ -214,14 +242,46 @@ function session(ws) {
   }
 
   /* --- 聞こえたことばの振り分け --- */
+  function sysPrompt() { return S.system + (S.trio ? TRIO_RULE : ''); }
+  async function setTrio(on) {
+    S.trio = on; S.aside = [];
+    send({ type: 'trio', on, waitMs: S.waitMs });
+    savePrefs(S.owner, { trio: on });
+    return speakOnly(on ? '三人モードにするね。ぼくに話すときは「ジュニア」って呼んでね。' : 'ふつうのモードにもどすね。', 'excited');
+  }
   function onHeard(text) {
+    S.lastPartial = Date.now();
+    if (TRIO_ON.test(text)) return setTrio(true);
+    if (TRIO_OFF.test(text)) return setTrio(false);
+    if (S.trio) {
+      if (!NAME_RE.test(text)) {                     // 呼ばれていない：聞いておくだけ（あとで話の流れに使う）
+        S.aside.push(text.slice(0, 200)); if (S.aside.length > 8) S.aside.shift();
+        return;
+      }
+      if (PACE_SLOW.test(text) || PACE_FAST.test(text)) {
+        S.waitMs = Math.max(0, Math.min(3000, S.waitMs + (PACE_SLOW.test(text) ? 600 : -600)));
+        savePrefs(S.owner, { waitMs: S.waitMs }); send({ type: 'trio', on: true, waitMs: S.waitMs });
+        return speakOnly(PACE_SLOW.test(text) ? 'わかった、次からもう少し待ってから話すね。' : 'わかった、次からすぐ答えるね。', 'smile');
+      }
+    }
     if (QUIET_RE.test(text)) { S.quiet = true; send({ type: 'quiet', on: true }); return speakOnly('うん、しずかにしてるね。用があったら名前を呼んでね。', 'smile'); }
-    if (S.quiet) { if (!/(バター|ばたー|ジュニア)/.test(text)) return; S.quiet = false; send({ type: 'quiet', on: false }); }
+    if (S.quiet) { if (!(S.trio ? NAME_RE : /(バター|ばたー|ジュニア)/).test(text)) return; S.quiet = false; send({ type: 'quiet', on: false }); }
     if (VOLUME_UP.test(text)) { send({ type: 'volume', delta: +0.25 }); return speakOnly('このくらいでどうかな？', 'smile'); }
     if (VOLUME_DOWN.test(text)) { send({ type: 'volume', delta: -0.25 }); return speakOnly('このくらいでどうかな？', 'smile'); }
     if (VIDEO_RE.test(text)) { send({ type: 'camera', kind: 'video', prompt: text }); return speakOnly('動画を撮るね。10びょうだよ、よーい、スタート！', 'excited'); }
     if (PHOTO_RE.test(text)) { S.pendingPhoto = text; send({ type: 'camera', kind: 'photo', prompt: text }); return; }
-    reply([{ type: 'text', text }], text);
+    let said = text;
+    if (S.trio && S.aside.length) {
+      said = '【まわりで聞こえた会話（だれが言ったかはわからない）】\n' + S.aside.join('\n') + '\n\n【ジュニアへの呼びかけ】\n' + text;
+      S.aside = [];
+    }
+    reply([{ type: 'text', text: said }], text);
+  }
+  /** 三人モード：まわりが静かになるまで少し待ってから話しはじめる */
+  async function waitQuiet(gen) {
+    if (!S.trio) return;
+    const t0 = Date.now();
+    while (gen === S.gen && Date.now() - S.lastPartial < S.waitMs && Date.now() - t0 < 6000) await new Promise(r => setTimeout(r, 120));
   }
 
   /* --- 返事：Claudeを流しながら、一文ずつ読み上げて送る --- */
@@ -252,11 +312,11 @@ function session(ws) {
       if (!s) return;
       const n = seq++;
       const p = synth(s, S.voice).catch(e => { send({ type: 'notice', why: 'tts', detail: String(e.message).slice(0, 80) }); return ''; });
-      chain = chain.then(async () => { const mp3 = await p; if (gen === S.gen && mp3) send({ type: 'audio', gen, seq: n, text: s, mp3 }); });
+      chain = chain.then(async () => { const mp3 = await p; if (n === 0) await waitQuiet(gen); if (gen === S.gen && mp3) send({ type: 'audio', gen, seq: n, text: s, mp3 }); });
     });
     try {
       const stream = deps.claude.messages.stream({
-        model: ENV.MODEL, max_tokens: S.mode === 'business' ? 260 : 360, system: S.system, messages: msgs,
+        model: ENV.MODEL, max_tokens: S.mode === 'business' ? 260 : 360, system: sysPrompt(), messages: msgs,
       }, { signal: ac.signal });
       for await (const ev of stream) {
         if (gen !== S.gen) break;
@@ -329,7 +389,10 @@ function session(ws) {
         S.auth = m.idToken ? { idToken: String(m.idToken) } : { pass: String(m.pass || '') };
         try { await loadBrain(); } catch (e) { return fail(e.code === 'auth' || e.code === 'pass' ? 'auth' : 'brain', String(e.message).slice(0, 80)); }
         S.ready = true;
-        send({ type: 'ready', me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null });
+        const pr = await loadPrefs(S.owner);
+        S.trio = typeof m.trio === 'boolean' ? m.trio : !!pr.trio;
+        if (typeof pr.waitMs === 'number') S.waitMs = pr.waitMs;
+        send({ type: 'ready', me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs });
         if (m.greet) speakOnly(S.mode === 'business' ? 'こんばんは、バターちゃんジュニアです。なんでも話しかけてくださいね。' : 'やっほー！バターちゃんジュニアだよ。なんでも話しかけてね。', 'excited');
         return;
       }
@@ -337,6 +400,7 @@ function session(ws) {
       if (m.type === 'barge') return stopReply('barge');
       if (m.type === 'text') return onHeard(String(m.text || '').slice(0, 500));
       if (m.type === 'photo') return onPhoto(m);
+      if (m.type === 'trio') return setTrio(!!m.on);
       if (m.type === 'mode') { S.mode = m.mode === 'business' ? 'business' : 'family'; S.history = []; await loadBrain(); return send({ type: 'mode', mode: S.mode }); }
       if (m.type === 'profile') return onProfile(m);
       if (m.type === 'goen') return onGoen(m);

@@ -109,6 +109,27 @@ function client(port, hello) {
   a.ws.send(JSON.stringify({ type: 'barge' }));
   await a.until(m => m.type === 'stopped');
 
-  console.log('OK：会話・気持ち・一文ずつの声・写真・記録の分け方・ご縁つなぎ・割りこみ');
+  // 三人モード：呼ばれないと答えない。呼ばれたら、まわりの会話もいっしょに渡す。自分はジュニア
+  await new Promise(r => setTimeout(r, 100));
+  const c = await client(port, { type: 'hello', pass: 'ok', mode: 'family', trio: true });
+  const rd = await c.until(m => m.type === 'ready'); assert.strictEqual(rd.trio, true);
+  c.ws.send(JSON.stringify({ type: 'text', text: 'バターちゃん、今日の天気は？' }));
+  await new Promise(r => setTimeout(r, 150));
+  assert.ok(!c.msgs.some(m => m.type === 'reply_start'), '呼ばれていないので答えない');
+  let sys = '';
+  const origStream = deps.claude.messages.stream;
+  deps.claude.messages.stream = p => { sys = p.system; lastMessages = p.messages; return origStream(p); };
+  c.ws.send(JSON.stringify({ type: 'text', text: 'ジュニア、どう思う？' }));
+  await c.until(m => m.type === 'reply_end');
+  assert.ok(/バターちゃんジュニア/.test(sys) && /三人モード/.test(sys), 'ジュニアとして三人モードで話す');
+  assert.ok(/今日の天気/.test(lastMessages[lastMessages.length - 1].content[0].text), 'まわりの会話も渡す');
+  c.ws.send(JSON.stringify({ type: 'text', text: 'ジュニア、もっと間をあけて' }));
+  const tr = await c.until(m => m.type === 'trio' && m.waitMs > 1000);
+  assert.strictEqual(tr.waitMs, 1600);
+  c.ws.send(JSON.stringify({ type: 'text', text: 'ふたりモードにして' }));
+  await c.until(m => m.type === 'trio' && m.on === false);
+  deps.claude.messages.stream = origStream;
+
+  console.log('OK：会話・気持ち・一文ずつの声・写真・記録の分け方・ご縁つなぎ・割りこみ・三人モード');
   process.exit(0);
 })().catch(e => { console.error('NG', e); process.exit(1); });
