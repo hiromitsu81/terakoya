@@ -196,6 +196,9 @@ body.wideshow .sato-banner small { font-size: 12px; }
 .liffmode .meter .top span:last-child { font-size: 11px; }
 .liffmode .hint { font-size: 12px; }
 .liffmode .talkbtn { width: 96px; height: 96px; }
+.modebtn { display: none; }
+.liffmode .modebtn { display: block; justify-self: center; font-family: var(--display); font-weight: 800; font-size: 14px; padding: 8px 18px; border-radius: 999px; border: 2px solid var(--butter-deep); background: var(--card); color: var(--ink); cursor: pointer; }
+.liffmode .modebtn[aria-pressed="true"] { background: linear-gradient(100deg, #e2506b, #f0794a); border-color: #fff; color: #fff; }
 .mini { font-family: var(--display); font-weight: 700; font-size: 12px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--butter-deep); background: var(--butter); color: #2b2310; cursor: pointer; margin-left: 6px; }
 .lvlbox { position: relative; height: 12px; border-radius: 6px; background: var(--tile); overflow: hidden; }
 .lvlbox i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: #4caf50; }
@@ -821,6 +824,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     <p class="hint" id="diag" hidden></p>
     <p class="hint" id="hint">「バターちゃん」と呼んでから話しかけてね。</p>
     <button class="talkbtn" id="talkBtn" type="button"><i id="lvlLive"></i><b>おして話す</b></button>
+    <button class="modebtn" id="modeBtn" type="button" aria-pressed="false">ファミリーモード</button>
     <form class="typed" id="typed">
       <input id="typedInput" type="text" placeholder="文字でもOK（チーちゃん、おて など）" autocomplete="off" aria-label="バターちゃんに送る文字">
       <button class="btn primary" type="submit">送る</button>
@@ -1175,7 +1179,9 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
 
   // ===== おためし（合言葉なし・ステージ）：ガチャとUFOをこの端末だけで動かす。ポイントは使わない =====
   let forceDemo = false;   // 名前を選ばなかったときの、ポイントを使わないおためし
-  const DEMO = () => STAGE || !canCall() || forceDemo;
+  // ビジネスモード（ミニアプリ・ステージ）：家族の記録を使わず、大人とていねいに話す。ガチャとUFOはおためし
+  const BIZ = () => STAGE || (LIFF && store.get('bizMode', false));
+  const DEMO = () => STAGE || !canCall() || forceDemo || BIZ();
   let demoEquip = {};
   function demoState() {
     const p = JSON.parse(JSON.stringify(pet || { melt: 0, meltName: 'ひんやり' }));
@@ -1718,7 +1724,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     if (!canCall()) throw new Error('setup');
     const res = await fetch(cfg.url, {
       method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(Object.assign({ app: 'butter' }, LIFF ? { idToken: idToken() } : { pass: cfg.pass }, cfg.test && !LIFF ? { test: true } : {}, payload)),
+      body: JSON.stringify(Object.assign({ app: 'butter', mode: BIZ() ? 'business' : 'family' }, LIFF ? { idToken: idToken() } : { pass: cfg.pass }, cfg.test && !LIFF ? { test: true } : {}, payload)),
     });
     return res.json();
   }
@@ -2376,6 +2382,12 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   }
   setHint();
   $('talkBtn').addEventListener('click', talkOnce);
+  function showMode() { const b = BIZ(); $('modeBtn').setAttribute('aria-pressed', String(b)); $('modeBtn').textContent = b ? 'ビジネスモード（家族の話はしない）' : 'ファミリーモード'; }
+  $('modeBtn').addEventListener('click', () => {
+    store.set('bizMode', !store.get('bizMode', false)); history = []; showMode();
+    toast(BIZ() ? 'ビジネスモード：ていねいに、家族の話はしないよ' : 'ファミリーモード：おうちのバターちゃんだよ');
+  });
+  showMode();
   liffBoot();
   addBubble('バターちゃん', 'こんにちは！バターちゃんだよ。となりは柴犬のチーちゃん！', 'her');
   setState('idle');
