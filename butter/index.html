@@ -1962,7 +1962,12 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   const J = { ws: null, ready: false, dead: !SRV || !LIFF, tries: 0, gen: -1, queue: [], playing: false, src: null, endEmo: null,
     out: null, outText: '', mic: null, ctx: null, gain: null, an: null, paused: false, floor: 0.01, loud: 0, vol: Number(store.get('jrVol', 1)) || 1,
     greeted: false, profile: null, facing: 'environment', trio: false };
-  const JR_NAME = /(ジュニア|じゅにあ|ジュニヤ|junior)/i, JR_TRIO = /(三人モード|3人モード|みんなで話そう|三人で話そう|3人で話そう|二人モード|ふたりモード|2人モード|ふつうのモード)/;
+  const JR_CALL = (() => {
+    const lead = '(?:(?:ねえ|ねぇ|ね|おーい|おい|あの|あのさ|えっと|えーと|じゃあ|では|よし|ほら|はい|それじゃ)[、,。\\s]*)*';
+    const not = '(?!(?:って|っていう|と(?:言|い|呼|よ)|は|が|の|を|に|も|で|や|みたい|モード|くんは|ちゃんは))';
+    const r = new RegExp('^\\s*' + lead + '(?:ジュニア|じゅにあ|ジュニヤ|junior|ジャム猫|ジャムねこ|ジャムネコ|じゃむねこ|ジャムちゃん)' + not, 'i');
+    return t => String(t).split(/(?<=[。！？!?\n])/).some(seg => r.test(seg.trim()));   // 文のはじめで呼ばれたときだけ
+  })(), JR_TRIO = /(三人モード|3人モード|みんなで話そう|三人で話そう|3人で話そう|二人モード|ふたりモード|2人モード|ふつうのモード)/;
   function trioShow() { const b = $('trioBtn'); b.setAttribute('aria-pressed', String(J.trio)); b.textContent = J.trio ? '三人モード（「ジュニア」で話す）' : '三人モード'; }
   const jrLive = () => !J.dead && J.ready && J.ws && J.ws.readyState === 1;
   let lipLive = false;   // 声の大きさで口を動かしている間は、ランダムの口パクを止める
@@ -2006,7 +2011,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
       case 'heard': clearPartial(); jrHeard(m.text); break;
       case 'reply_start':
         J.gen = m.gen; J.queue = []; J.endEmo = null; jrStopAudio();
-        J.out = addBubble('ジュニア', '…', 'her'); J.outText = '';
+        J.out = addBubble(m.as || 'ジュニア', '…', 'her'); J.outText = '';
         if (m.emotion) setEmo(m.emotion);
         setState('thinking');
         break;
@@ -2048,7 +2053,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   // 聞こえた言葉：ページでできること（ガチャ・UFO・チーちゃんの芸・ご縁）を先に。ほかはサーバーへ
   function jrHeard(text) {
     // 三人モード：呼ばれていない声は「聞こえた」として出すだけ（サーバーが話の流れとして覚える）
-    if (J.trio && !JR_NAME.test(text) && !JR_TRIO.test(text) && !(U.on || pickRes)) { addBubble('聞こえた', text, 'me partial'); jrSend({ type: 'text', text }); return; }
+    if (J.trio && !JR_CALL(text) && !JR_TRIO.test(text) && !(U.on || pickRes)) { addBubble('聞こえた', text, 'me partial'); jrSend({ type: 'text', text }); return; }
     if (pickRes && pickHear(text)) return;
     if (U.on && ufoHear(text, true)) return;
     if (playCmd(text, /(ガチャ|がちゃ|ガシャ)/)) { doGacha(text); return; }

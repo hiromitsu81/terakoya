@@ -126,6 +126,14 @@ function client(port, hello) {
   c.ws.send(JSON.stringify({ type: 'text', text: 'ジュニア、もっと間をあけて' }));
   const tr = await c.until(m => m.type === 'trio' && m.waitMs > 1000);
   assert.strictEqual(tr.waitMs, 1600);
+  c.ws.send(JSON.stringify({ type: 'text', text: 'ジュニアって呼んだときだけ答えるんだね' }));
+  await new Promise(r => setTimeout(r, 150));
+  const nStart = c.msgs.filter(m => m.type === 'reply_start').length;
+  c.ws.send(JSON.stringify({ type: 'text', text: 'ジャム猫、商売のコツは？' }));
+  const js = await c.until(m => m.type === 'reply_start' && m.as === 'ジャム猫');
+  assert.strictEqual(c.msgs.filter(m => m.type === 'reply_start').length, nStart + 1, '話の中の名前では答えない');
+  await c.until(m => m.type === 'reply_end' && m.gen === js.gen);
+  assert.ok(/ジャム猫として答える/.test(sys), 'ジャム猫として');
   c.ws.send(JSON.stringify({ type: 'text', text: 'ふたりモードにして' }));
   await c.until(m => m.type === 'trio' && m.on === false);
   deps.claude.messages.stream = origStream;

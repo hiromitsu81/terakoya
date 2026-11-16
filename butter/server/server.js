@@ -116,12 +116,24 @@ const VOLUME_UP = /(声|こえ|音).{0,4}(大きく|おおきく)/, VOLUME_DOWN 
 const QUIET_RE = /(静かにして|しずかにして|だまって|黙って|おすわりモード)/;
 /* 三人モード：ヒロさん（人）・Claudeアプリのバターちゃん・ジュニアで話す。ジュニアは名前を呼ばれたときだけ話す */
 const NAME_RE = /(ジュニア|じゅにあ|ジュニヤ|junior)/i;
+const JAM_RE = /(ジャム猫|ジャムねこ|ジャムネコ|じゃむねこ|ジャムちゃん)/;
+const JAM_VOICE = process.env.JAM_VOICE || 'ja-JP-Chirp3-HD-Charon';
+/** 文のはじめで名前を呼ばれたか（「ジュニア、…」「ねえジュニア…」）。「ジュニアって」「ジュニアは」のような話の中の名前は数えない */
+function calledBy(text, re) {
+  const lead = '(?:(?:ねえ|ねぇ|ね|おーい|おい|あの|あのさ|えっと|えーと|じゃあ|では|よし|ほら|はい|それじゃ)[、,。\\s]*)*';
+  const not = '(?!(?:って|っていう|と(?:言|い|呼|よ)|は|が|の|を|に|も|で|や|みたい|モード|くんは|ちゃんは))';
+  const r = new RegExp('^\\s*' + lead + '(?:' + re.source + ')' + not, re.flags.replace('g', ''));
+  return String(text).split(/(?<=[。！？!?\n])/).some(seg => r.test(seg.trim()));
+}
+const calledJunior = t => calledBy(t, NAME_RE);
+const calledJam = t => calledBy(t, JAM_RE);
 const STOP_RE = /(ストップ|待って|まって|止まって|とまって)/;
 const TRIO_ON = /(三人モード|3人モード|みんなで話そう|三人で話そう|3人で話そう)/;
 const TRIO_OFF = /(二人モード|ふたりモード|2人モード|ふつうのモード|三人モード(は)?(おわり|終わり|やめ))/;
 const PACE_SLOW = /(間を(あけ|空け)て|ゆっくり(答|話)|もっと待って|割り?こまないで)/;
 const PACE_FAST = /(すぐ(に)?(答|話)|早く(答|話)|もっと早く|待たなくていい)/;
-const SELF = '\n\n【あなたについて】あなたはLINEミニアプリの「バターちゃんジュニア」（短く「ジュニア」）。Claudeアプリで話している「バターちゃん」は別のAIで、あなたのお兄さん分。自分を「バターちゃん」「Claude」と名乗らない。名乗るときは「バターちゃんジュニア」。';
+const SELF = '\n\n【あなたについて】あなたはLINEミニアプリの「バターちゃんジュニア」（短く「ジュニア」）。Claudeアプリで話している「バターちゃん」は別のAIで、あなたのお兄さん分。自分を「バターちゃん」「Claude」と名乗らない。名乗るときは「バターちゃんジュニア」。ジャム猫やチーちゃんのまねはしない（「ジャム猫」と呼ばれたときだけ、ジャム猫として答える）。';
+const JAM_RULE = '\n\n【いまはジャム猫として答える】招き猫のジャム猫。ブルーベリージャム色、中身はエリート経営コンサル。一人称は「我」、語尾は「〜のだ」、口ぐせは「千客万来」。商売や仕組みの話が得意。1〜2文で短く。';
 const TRIO_RULE = '\n\n【三人モード】いまは、ヒロさん（人）と、Claudeアプリのバターちゃんと、三人で話している。「ジュニア」と呼ばれたときだけ、1〜2文で短く答える。バターちゃんの話に重ねたり、まとめ直したりしない。だれが言ったかわからない言葉は、決めつけない。話をかえすときは「バターちゃん、どう？」「ヒロさん、どうかな？」のように名前を呼んでよい。';
 
 /* 話し方の好み（持ち主ごとに覚える：三人モード・待つ時間） */
@@ -226,7 +238,7 @@ function session(ws) {
         S.lastPartial = Date.now();
         send({ type: 'partial', text: all });
         // 三人モードでは、名前か「待って」のときだけ止まる（バターちゃんの声で止まらない）
-        if (S.speaking && all.length >= 2 && (!S.trio || NAME_RE.test(all) || STOP_RE.test(all))) stopReply('barge');
+        if (S.speaking && all.length >= 2 && (!S.trio || calledJunior(all) || calledJam(all) || STOP_RE.test(all))) stopReply('barge');
       }
     });
     st.on('error', e => { if (S.stt === st) S.stt = null; if (!/Audio Timeout|DEADLINE|exceeded maximum/i.test(String(e.message))) send({ type: 'notice', why: 'stt', detail: String(e.message).slice(0, 80) }); });
@@ -254,7 +266,7 @@ function session(ws) {
     if (TRIO_ON.test(text)) return setTrio(true);
     if (TRIO_OFF.test(text)) return setTrio(false);
     if (S.trio) {
-      if (!NAME_RE.test(text)) {                     // 呼ばれていない：聞いておくだけ（あとで話の流れに使う）
+      if (!calledJunior(text) && !calledJam(text)) {                     // 呼ばれていない：聞いておくだけ（あとで話の流れに使う）
         S.aside.push(text.slice(0, 200)); if (S.aside.length > 8) S.aside.shift();
         return;
       }
@@ -265,7 +277,7 @@ function session(ws) {
       }
     }
     if (QUIET_RE.test(text)) { S.quiet = true; send({ type: 'quiet', on: true }); return speakOnly('うん、しずかにしてるね。用があったら名前を呼んでね。', 'smile'); }
-    if (S.quiet) { if (!(S.trio ? NAME_RE : /(バター|ばたー|ジュニア)/).test(text)) return; S.quiet = false; send({ type: 'quiet', on: false }); }
+    if (S.quiet) { if (!(S.trio ? (calledJunior(text) || calledJam(text)) : /(バター|ばたー|ジュニア|ジャム)/.test(text))) return; S.quiet = false; send({ type: 'quiet', on: false }); }
     if (VOLUME_UP.test(text)) { send({ type: 'volume', delta: +0.25 }); return speakOnly('このくらいでどうかな？', 'smile'); }
     if (VOLUME_DOWN.test(text)) { send({ type: 'volume', delta: -0.25 }); return speakOnly('このくらいでどうかな？', 'smile'); }
     if (VIDEO_RE.test(text)) { send({ type: 'camera', kind: 'video', prompt: text }); return speakOnly('動画を撮るね。10びょうだよ、よーい、スタート！', 'excited'); }
@@ -275,7 +287,7 @@ function session(ws) {
       said = '【まわりで聞こえた会話（だれが言ったかはわからない）】\n' + S.aside.join('\n') + '\n\n【ジュニアへの呼びかけ】\n' + text;
       S.aside = [];
     }
-    reply([{ type: 'text', text: said }], text);
+    reply([{ type: 'text', text: said }], text, calledJam(text) && !calledJunior(text) ? 'jam' : '');
   }
   /** 三人モード：まわりが静かになるまで少し待ってから話しはじめる */
   async function waitQuiet(gen) {
@@ -298,7 +310,9 @@ function session(ws) {
     try { send({ type: 'audio', gen, seq: 0, text, mp3: await synth(text, S.voice) }); } catch (e) { send({ type: 'notice', why: 'tts', detail: String(e.message).slice(0, 80) }); }
     if (gen === S.gen) { send({ type: 'reply_end', gen, emotion, text }); S.speaking = false; }
   }
-  async function reply(content, logText) {
+  async function reply(content, logText, as) {
+    const jam = as === 'jam';
+    const voice = jam ? JAM_VOICE : S.voice;
     if (!quotaOk(S.owner || 'anon')) return speakOnly('きょうはたくさんお話ししたから、また明日ね。', 'shy');
     if (Date.now() - (S.brainAt || 0) > 10 * 60 * 1000) { try { await loadBrain(); } catch (e) {} }   // 記録は10分ごとに読みなおす
     stopReply('new');
@@ -306,17 +320,17 @@ function session(ws) {
     const ac = new AbortController(); S.aborter = ac;
     const msgs = S.history.slice(-12).concat([{ role: 'user', content }]);
     let full = '', emotion = 'smile', head = true, seq = 0, chain = Promise.resolve();
-    send({ type: 'reply_start', gen });
+    send({ type: 'reply_start', gen, as: jam ? 'ジャム猫' : 'ジュニア' });
     const sp = splitter(sentence => {
       const s = clean(sentence).trim();
       if (!s) return;
       const n = seq++;
-      const p = synth(s, S.voice).catch(e => { send({ type: 'notice', why: 'tts', detail: String(e.message).slice(0, 80) }); return ''; });
+      const p = synth(s, voice).catch(() => jam ? synth(s, S.voice) : Promise.reject(new Error('tts'))).catch(e => { send({ type: 'notice', why: 'tts', detail: String(e.message).slice(0, 80) }); return ''; });
       chain = chain.then(async () => { const mp3 = await p; if (n === 0) await waitQuiet(gen); if (gen === S.gen && mp3) send({ type: 'audio', gen, seq: n, text: s, mp3 }); });
     });
     try {
       const stream = deps.claude.messages.stream({
-        model: ENV.MODEL, max_tokens: S.mode === 'business' ? 260 : 360, system: sysPrompt(), messages: msgs,
+        model: ENV.MODEL, max_tokens: S.mode === 'business' ? 260 : 360, system: sysPrompt() + (jam ? JAM_RULE : ''), messages: msgs,
       }, { signal: ac.signal });
       for await (const ev of stream) {
         if (gen !== S.gen) break;
@@ -430,4 +444,4 @@ if (require.main === module) {
   deps.init();
   createServer().listen(ENV.PORT, () => console.log('butter-junior on :' + ENV.PORT));
 }
-module.exports = { createServer, deps, ENV, splitter, takeEmotion, clean, PHOTO_RE, VIDEO_RE, session };
+module.exports = { createServer, deps, ENV, splitter, takeEmotion, clean, PHOTO_RE, VIDEO_RE, session, calledJunior, calledJam };
