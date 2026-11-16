@@ -11,7 +11,7 @@
 <style>
 /* 台所のタイル壁の前に、バターちゃんと柴犬の子犬チーちゃん。話しかけないとバターちゃんは溶けていく */
 :root {
-  --bg: #e9f2f4; --tile: #dbe8ec; --ink: #23303b; --soft: #5b6b78; --card: #ffffff; --line: #c9d8de;
+  --bg: #fff3e6; --tile: #dbe8ec; --ink: #23303b; --soft: #5b6b78; --card: #ffffff; --line: #c9d8de;
   --butter: #f7d46a; --butter-deep: #e7b73e; --mic: #2f6fd0; --mic-live: #d9483b; --think: #8a63d2;
   --shiba: #d9823b; --shiba-deep: #b5652a; --shiba-white: #fff6ea; --collar: #d9483b; --cold: #3f8fd6;
   --display: "M PLUS Rounded 1c", "Hiragino Maru Gothic ProN", "Yu Gothic", sans-serif;
@@ -28,11 +28,32 @@
 }
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
+/* 背景：夕暮れの祭りのようなグラデーションに、きらきらの点と、やわらかい光 */
 body {
-  background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px;
-  background-image: linear-gradient(var(--tile) 2px, transparent 2px), linear-gradient(90deg, var(--tile) 2px, transparent 2px);
-  background-size: 48px 48px;
+  background-color: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px;
+  background-image:
+    radial-gradient(rgba(255,255,255,.75) 1.2px, transparent 1.8px),
+    radial-gradient(circle at 10% 12%, rgba(255,196,102,.50) 0, transparent 32%),
+    radial-gradient(circle at 92% 18%, rgba(170,140,255,.40) 0, transparent 34%),
+    radial-gradient(circle at 85% 92%, rgba(255,140,186,.32) 0, transparent 38%),
+    radial-gradient(circle at 8% 88%, rgba(120,200,255,.28) 0, transparent 34%),
+    linear-gradient(165deg, #fff5e0 0%, #ffe6dc 48%, #ebe3ff 100%);
+  background-size: 26px 26px, auto, auto, auto, auto, auto;
+  background-attachment: fixed;
 }
+@media (prefers-color-scheme: dark) {
+  body { background-image:
+    radial-gradient(rgba(255,236,170,.35) 1.2px, transparent 1.8px),
+    radial-gradient(circle at 12% 14%, rgba(255,186,80,.28) 0, transparent 32%),
+    radial-gradient(circle at 90% 20%, rgba(150,110,255,.30) 0, transparent 34%),
+    radial-gradient(circle at 85% 92%, rgba(255,110,170,.22) 0, transparent 38%),
+    linear-gradient(165deg, #1b1830 0%, #241a36 50%, #10202e 100%); }
+}
+/* キャラクターのうしろのスポットライト */
+.stage::before { content: ""; position: absolute; left: 2%; right: 2%; top: 6%; bottom: 0; pointer-events: none;
+  background: radial-gradient(ellipse 60% 55% at 50% 62%, rgba(255,255,255,.85), rgba(255,250,235,.35) 45%, rgba(255,255,255,0) 72%); }
+@media (prefers-color-scheme: dark) { .stage::before { background: radial-gradient(ellipse 60% 55% at 50% 62%, rgba(255,226,150,.22), rgba(255,226,150,0) 70%); } }
+.stage > svg { position: relative; }
 .app {
   height: 100%; display: grid; grid-template-rows: auto 1fr auto auto; gap: 10px; max-width: 980px; margin: 0 auto;
   padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
@@ -316,9 +337,11 @@ h1 { font-family: var(--display); font-weight: 800; font-size: 22px; margin: 0; 
 
 
 /* ===== ネコちゃん（招き猫・仮の名前） ===== */
-/* 陰陽：ネコちゃん＝陰（黒い招き猫、白い模様が陰の中の陽）／チーちゃん＝陽（白い柴、黒い眉としっぽの先が陽の中の陰） */
-#neko { transform-origin: -65px 345px; transform-box: view-box; transition: transform .8s ease; --neko: #34302f; --neko-line: #171313; --neko-orange: #fffaf3; --neko-black: #171313; --neko-ink: #fff3d6; --neko-whisker: #d9d2c8; }
-#chi { --shiba: #f7f1e6; --shiba-deep: #9b8672; --shiba-white: #ffffff; --chi-yin: #34302f; }
+/* 陰陽：ジャム猫＝陰・甘い（ブルーベリージャムの紫、ミルクの模様が陰の中の陽）／チーちゃん＝陽・しょっぱい（チーズの黄色、黒い眉としっぽの先が陽の中の陰） */
+#neko { transform-origin: -65px 345px; transform-box: view-box; transition: transform .8s ease; --neko: #4b3463; --neko-line: #221630; --neko-orange: #fff1f6; --neko-black: #221630; --neko-ink: #fff3d6; --neko-whisker: #d9cce6; }
+#chi { --shiba: #ffd65c; --shiba-deep: #c08a1e; --shiba-white: #fff8e2; --chi-yin: #3a2e22; --cheese-hole: #f0b93a; }
+#chi.calling #paw { animation: chiwave .5s ease-in-out 6; }
+#neko.calling #nekoPaw { animation: beckon .5s ease-in-out 6; }
 #nekoHead { transform-origin: -65px 250px; transform-box: view-box; animation: nekotilt 6s ease-in-out infinite; }
 @keyframes nekotilt { 0%, 60%, 100% { transform: rotate(0); } 68%, 82% { transform: rotate(8deg); } }
 #nekoPaw { transform-origin: -106px 304px; transform-box: view-box; animation: beckon 2.4s ease-in-out infinite; }
@@ -450,7 +473,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   </header>
 
   <div class="stage">
-    <svg id="scene" viewBox="-160 0 880 420" role="img" aria-label="まんなかにバターちゃん、左に招き猫のネコちゃん、右に柴犬のチーちゃん">
+    <svg id="scene" viewBox="-160 0 880 420" role="img" aria-label="まんなかにバターちゃん、左に招き猫のジャム猫、右にチーズ色の柴犬チーちゃん">
       <defs>
         <linearGradient id="goldGrad" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" stop-color="#fff0a0"/><stop offset=".5" stop-color="#f7c843"/><stop offset="1" stop-color="#e0a412"/>
@@ -560,6 +583,8 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
             <ellipse cx="-22" cy="176" rx="28" ry="24" fill="var(--neko-black)"/>
           </g>
           <ellipse cx="-65" cy="216" rx="62" ry="52" fill="none" stroke="var(--neko-line)" stroke-width="3"/>
+          <path d="M-112 196 Q-104 172 -80 168" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" opacity=".35"/>
+          <circle cx="-74" cy="167" r="3" fill="#fff" opacity=".45"/>
           <ellipse cx="-65" cy="240" rx="30" ry="20" fill="var(--neko-orange)" opacity=".18"/>
           <path d="M-98 212 Q-87 200 -76 212" fill="none" stroke="var(--neko-ink)" stroke-width="5" stroke-linecap="round"/>
           <path d="M-54 212 Q-43 200 -32 212" fill="none" stroke="var(--neko-ink)" stroke-width="5" stroke-linecap="round"/>
@@ -603,6 +628,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
           <ellipse cx="518" cy="334" rx="24" ry="13" fill="var(--shiba)" stroke="var(--shiba-deep)" stroke-width="3"/>
           <ellipse cx="562" cy="304" rx="54" ry="44" fill="var(--shiba)" stroke="var(--shiba-deep)" stroke-width="3"/>
           <ellipse cx="566" cy="314" rx="28" ry="30" fill="var(--shiba-white)"/>
+          <g fill="var(--cheese-hole)"><ellipse cx="526" cy="296" rx="8" ry="7"/><ellipse cx="520" cy="320" rx="4.5" ry="4"/><ellipse cx="602" cy="282" rx="5" ry="4.5"/></g>
           <!-- 前足（下の手） -->
           <path d="M542 312 h18 v30 q-9 6 -18 0 Z" fill="var(--shiba-white)" stroke="var(--shiba-deep)" stroke-width="3"/>
           <!-- あたま -->
@@ -613,6 +639,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
             <path d="M606 186 L604 160 L586 180 Z" fill="#f1b68a"/>
             <ellipse cx="562" cy="216" rx="62" ry="52" fill="var(--shiba)" stroke="var(--shiba-deep)" stroke-width="3"/>
             <path d="M516 236 Q522 204 548 214 Q562 222 576 214 Q602 204 608 236 Q604 268 562 270 Q520 268 516 236 Z" fill="var(--shiba-white)"/>
+            <g fill="var(--cheese-hole)"><ellipse cx="520" cy="200" rx="7" ry="6"/><ellipse cx="606" cy="206" rx="4.5" ry="4"/><ellipse cx="590" cy="176" rx="4" ry="3.5"/></g>
             <ellipse cx="540" cy="190" rx="8" ry="5" fill="var(--chi-yin)"/>
             <ellipse cx="584" cy="190" rx="8" ry="5" fill="var(--chi-yin)"/>
             <g class="eye"><circle cx="540" cy="208" r="8" fill="#2b2310"/><circle cx="543" cy="205" r="2.6" fill="#fff"/></g>
@@ -626,6 +653,14 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
             <path class="collar" d="M524 262 Q562 280 600 262" fill="none" stroke="var(--collar)" stroke-width="8" stroke-linecap="round"/>
             <circle cx="562" cy="280" r="7" fill="var(--butter)" stroke="var(--butter-deep)" stroke-width="2"/>
             <path data-item="bandana" hidden d="M526 262 Q562 276 598 262 L562 302 Z" fill="#3f7fd6" stroke="#2a5ea8" stroke-width="3" stroke-linejoin="round"/>
+          </g>
+          <!-- 内側の下の手に「ご縁」の五円玉（ジャム猫の小判と左右対称） -->
+          <g transform="rotate(-10 530 318)">
+            <circle cx="530" cy="318" r="21" fill="#e6b93f" stroke="#a87d12" stroke-width="3"/>
+            <circle cx="530" cy="318" r="16" fill="none" stroke="#a87d12" stroke-width="1.2"/>
+            <circle cx="530" cy="318" r="5" fill="var(--bg)" stroke="#a87d12" stroke-width="2"/>
+            <text x="530" y="309" font-size="9" font-weight="800" text-anchor="middle" fill="#6b4e00">ご</text>
+            <text x="530" y="335" font-size="9" font-weight="800" text-anchor="middle" fill="#6b4e00">縁</text>
           </g>
           <!-- あげた左手の側に「千客万来」の札（人を招く） -->
           <g>
@@ -736,7 +771,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
 
   <section class="meters" aria-label="育ちぐあい">
     <div class="meter">
-      <div class="top"><span>バターちゃん：<b id="meltName">ひんやり</b></span><span><span id="careNote"></span> <button class="mini" id="gachaBtn" type="button">ガチャ</button><button class="mini" id="ufoBtn" type="button">UFO</button><button class="mini" id="invBtn" type="button">もちもの</button></span></div>
+      <div class="top"><span>バターちゃん：<b id="meltName">ひんやり</b></span><span><span id="careNote"></span> <button class="mini" id="gachaBtn" type="button">ガチャ</button><button class="mini" id="ufoBtn" type="button">UFO</button><button class="mini" id="invBtn" type="button">もちもの</button><button class="mini" id="fukuBtn" type="button">千客万来</button></span></div>
       <div class="bar" id="coldBar"><i style="width:100%"></i></div>
       <small id="evoNote">話しかけたり、LINEで宿題や日記を報告するとひんやりするよ。ほうっておくと溶けちゃう。</small>
     </div>
@@ -764,7 +799,8 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     <button class="next" id="stageNext" type="button">▶ スタート</button>
     <div class="row">
       <button class="btn" id="stageReset" type="button">最初から</button>
-      <button class="btn" id="stageNeko" type="button">ネコちゃんの一言</button>
+      <button class="btn" id="stageNeko" type="button">ジャム猫の一言</button>
+      <button class="btn" id="stageFuku" type="button">千客万来</button>
       <button class="btn" id="stageGacha" type="button">ガチャ</button>
       <button class="btn" id="stageUfo" type="button">UFO</button>
       <button class="btn" id="stageEdit" type="button">台本をなおす</button>
@@ -787,7 +823,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
 <div class="overlay" id="scriptBox" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="scriptTitle">
     <h2 id="scriptTitle">台本</h2>
-    <p class="note">1行に1つのセリフ。ふつうの行はバターちゃんが話します。「ヒロ：」ではじまる行は話さずに、画面に「ヒロさんの番」として出ます。「ネコ：」ではじまる行は、招き猫のネコちゃんが低い声で話します。行のはじめに【わくわく】【わらう】【てれる】【びっくり】【えがお】【かんがえ】【しょんぼり】をつけると表情が変わります。</p>
+    <p class="note">1行に1つのセリフ。ふつうの行はバターちゃんが話します。「ヒロ：」ではじまる行は話さずに、画面に「ヒロさんの番」として出ます。「ジャム猫：」ではじまる行は、招き猫のジャム猫が低い声で話します。行のはじめに【わくわく】【わらう】【てれる】【びっくり】【えがお】【かんがえ】【しょんぼり】をつけると表情が変わります。</p>
     <textarea id="scriptText" aria-label="台本"></textarea>
     <div class="row">
       <button class="btn" id="scriptDefault" type="button">はじめの台本にもどす</button>
@@ -1994,7 +2030,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     neko.classList.remove('calling', 'barking'); void neko.getBBox(); neko.classList.add('calling', 'barking');
     setTimeout(() => neko.classList.remove('calling'), 3000);
   }
-  const NEKO_LINE = '我は招き猫。本職は経営コンサルなのだ。お店の困りごとも、交流会で相談に来るのだ。千客万来！';
+  const NEKO_LINE = '我はジャム猫。本職は経営コンサルなのだ。お店の困りごとも、交流会で相談に来るのだ。商売繁盛！';
   let nekoTalkTimer = null;
   function nekoTalk(on) {
     clearInterval(nekoTalkTimer);
@@ -2019,9 +2055,40 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     return end;
   }
   neko.addEventListener('click', () => {
-    if (STAGE || !SHOW()) { if (!stageBusy) { addBubble('ネコちゃん', NEKO_LINE, 'dog'); nekoSay(NEKO_LINE); } return; }
+    if (STAGE || !SHOW()) { if (!stageBusy) { addBubble('ジャム猫', NEKO_LINE, 'dog'); nekoSay(NEKO_LINE); } return; }
     nekoCall();
   });
+
+
+  // ===== 千客万来のあいさつ：ジャム猫→チーちゃん→みんな =====
+  let fukuBusy = false;
+  function sayAs(text, who) {
+    return new Promise(res => {
+      const u = who === 'neko' ? nekoUtter(text) : new SpeechSynthesisUtterance(text);
+      if (who !== 'neko') { const v = pickVoice(); u.lang = 'ja-JP'; if (v) u.voice = v; u.rate = Number(cfg.rate) || 1; u.pitch = who === 'chi' ? Math.min(2, (Number(cfg.pitch) || 1.1) + 0.45) : (Number(cfg.pitch) || 1.1); }
+      let fin = false; const end = () => { if (fin) return; fin = true; clearTimeout(g); res(); };
+      const g = setTimeout(end, 1500 + text.length * 260);
+      u.onend = u.onerror = end;
+      speechSynthesis.speak(u);
+    });
+  }
+  async function fukuCall() {
+    if (fukuBusy || (typeof stageBusy !== 'undefined' && stageBusy)) return;
+    fukuBusy = true; speechSynthesis.cancel();
+    const line = t => { if (STAGE) { $('stageLine').textContent = t; $('stageCue').textContent = ''; } else addBubble('みんな', t, 'her'); };
+    line('ジャム猫：商売繁盛、招くのだ！');
+    nekoTalk(true); await sayAs('商売繁盛、招くのだ！', 'neko'); nekoTalk(false);
+    line('チーちゃん：千客万来、ご縁だワン！');
+    chi.classList.remove('barking'); void chi.getBBox(); chi.classList.add('calling', 'barking'); await sayAs('千客万来、ご縁だワン！', 'chi'); chi.classList.remove('calling');
+    line('みんな：みんなで福を招くのだ！');
+    nekoTalk(true); chi.classList.add('calling'); setEmo('excited', 5000); setState('speaking');
+    await sayAs('みんなで、福を招くのだ！', 'butter');
+    nekoTalk(false); chi.classList.remove('calling'); setState('idle'); chiDo('jump'); nekoCall();
+    try { confettiIn(document.querySelector('.stage'), 90); } catch (e) {}
+    fukuBusy = false;
+  }
+  $('stageFuku').addEventListener('click', fukuCall);
+  $('fukuBtn').addEventListener('click', fukuCall);
 
   // ===== 台本モード =====
   const DEFAULT_SCRIPT = [
@@ -2035,7 +2102,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   function parseScript(txt) {
     const steps = [];
     String(txt || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean).forEach(l => {
-      const nk = l.match(/^(ネコ|ねこ|猫)(ちゃん)?\s*[:：]\s*(.*)$/);
+      const nk = l.match(/^(ジャム猫|ジャムねこ|ジャム|ネコ|ねこ|猫)(ちゃん)?\s*[:：]\s*(.*)$/);
       if (nk) { steps.push({ text: nk[3], mood: 'smile', cue: '', who: 'neko' }); return; }
       const cue = l.match(/^(ヒロ|パパ|ひろ)\s*[:：]\s*(.*)$/);
       if (cue) { if (steps.length) steps[steps.length - 1].cue = cue[2]; else steps.push({ text: '', cue: cue[2], mood: 'smile' }); return; }
@@ -2070,7 +2137,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     if (!step.text) { stageBusy = true; stageDone(step); return; }
     stageBusy = true; stageShow();
     if (step.who === 'neko') {
-      $('stageLine').textContent = 'ネコちゃん：' + step.text;
+      $('stageLine').textContent = 'ジャム猫：' + step.text;
       setEmo('smile', 60000);
       nekoSay(step.text, () => stageDone(step));
       return;
@@ -2095,7 +2162,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     $('stageReset').addEventListener('click', () => { speechSynthesis.cancel(); stageBusy = false; stageI = 0; $('stageLine').textContent = 'ボタンをおすと、バターちゃんが話しはじめるよ。'; $('stageCue').textContent = ''; setState('idle'); setEmo('smile'); stageShow(); });
     $('stageGacha').addEventListener('click', () => { if (!stageBusy) doGacha('ガチャ回して'); });
     $('stageUfo').addEventListener('click', () => { if (!stageBusy) doUfo('UFOキャッチャー'); });
-    $('stageNeko').addEventListener('click', () => { if (stageBusy) return; $('stageLine').textContent = 'ネコちゃん：' + NEKO_LINE; $('stageCue').textContent = ''; nekoSay(NEKO_LINE); });
+    $('stageNeko').addEventListener('click', () => { if (stageBusy) return; $('stageLine').textContent = 'ジャム猫：' + NEKO_LINE; $('stageCue').textContent = ''; nekoSay(NEKO_LINE); });
     $('stageEdit').addEventListener('click', () => { $('scriptText').value = store.get('script', DEFAULT_SCRIPT); $('scriptBox').hidden = false; });
     $('stageExit').addEventListener('click', () => { location.href = location.pathname; });
     $('scriptDefault').addEventListener('click', () => { $('scriptText').value = DEFAULT_SCRIPT; });
