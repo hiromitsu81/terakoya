@@ -62,6 +62,16 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 h1 { font-family: var(--display); font-weight: 800; font-size: 22px; margin: 0; letter-spacing: .02em; }
 h1 .badge { display: inline-block; vertical-align: middle; margin-left: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 800; color: #fff; background: linear-gradient(90deg, #e2506b, #f39c32); box-shadow: 0 2px 8px rgba(226,80,107,.35); animation: badgepop 2.6s ease-in-out infinite; }
 @keyframes badgepop { 0%, 80%, 100% { transform: scale(1); } 88% { transform: scale(1.1) rotate(-3deg); } }
+.sato-banner { position: absolute; z-index: 2; top: 2%; left: 50%; transform: translateX(-50%) rotate(-2deg); display: grid; gap: 2px; justify-items: center;
+  padding: 10px 26px 9px; border: 3px solid #fff; border-radius: 18px; cursor: pointer; color: #fff; white-space: nowrap;
+  background: linear-gradient(100deg, #e2506b 0%, #f0794a 55%, #f6b23c 100%); box-shadow: 0 8px 24px rgba(226,80,107,.38), inset 0 -3px 0 rgba(0,0,0,.08);
+  animation: satopulse 3s ease-in-out infinite; font-family: var(--display); }
+.sato-banner b { font-size: clamp(22px, 5.4vw, 40px); font-weight: 800; letter-spacing: .08em; text-shadow: 0 2px 0 rgba(0,0,0,.15); line-height: 1.1; }
+.sato-banner small { font-size: clamp(11px, 2.3vw, 16px); font-weight: 700; opacity: .95; }
+@keyframes satopulse { 0%, 78%, 100% { transform: translateX(-50%) rotate(-2deg) scale(1); } 86% { transform: translateX(-50%) rotate(1deg) scale(1.06); } 93% { transform: translateX(-50%) rotate(-3deg) scale(1.02); } }
+body.wideshow .sato-banner { top: 1%; padding: 6px 22px 5px; }
+body.wideshow .sato-banner b { font-size: 26px; }
+body.wideshow .sato-banner small { font-size: 12px; }
 .nametag text { font-family: var(--display); font-weight: 800; font-size: 17px; fill: #3a2a1a; }
 .nametag rect { fill: rgba(255,255,255,.88); stroke: var(--butter-deep); stroke-width: 2; }
 @media (prefers-color-scheme: dark) { .nametag rect { fill: rgba(29,39,50,.9); } .nametag text { fill: #f6ecdf; } }
@@ -447,7 +457,10 @@ body.big form.typed { display: none; }
 body.stagemode .meters, body.stagemode .talk, body.stagemode #bigBtn { display: none; }
 body.stagemode .app { height: 100dvh; grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden; }
 body.stagemode .stage { min-height: 0; overflow: hidden; }
-body.tall .stage svg { aspect-ratio: 580 / 520; max-width: 100%; }
+body.tall .stage svg { aspect-ratio: 580 / 560; max-width: 100%; }
+body.tall .stage { padding-top: 84px; }
+body.tall.stagemode .stage svg { width: auto; height: 100%; max-width: 100%; max-height: 100%; }
+body.wideshow .stage { padding-top: 58px; }
 body.tall #floor { display: none; }
 /* スマホ横向き：ボタンを全部しまって、3匹を画面いっぱいに（タップでつぎのセリフ） */
 body.wideshow header, body.wideshow .meters, body.wideshow .talk, body.wideshow .stagebar { display: none !important; }
@@ -460,6 +473,11 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
 .stagebar .cue { min-height: 1.6em; text-align: center; font-family: var(--display); font-weight: 800; font-size: 17px; color: var(--mic-live); }
 .stagebar .next { font-family: var(--display); font-weight: 800; font-size: 22px; padding: 18px; border-radius: 20px; border: 2px solid var(--butter-deep); background: var(--butter); color: #2b2310; cursor: pointer; touch-action: manipulation; }
 .stagebar .next.speaking { background: var(--card); }
+.stagebar .bigrow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.stagebar .next.speakbtn { background: linear-gradient(120deg, #7b5cd6, #b257c9); color: #fff; border-color: #6a48c4; }
+.stagebar .next.speakbtn.rec { background: #d9483b; border-color: #a8322a; animation: recpulse 1s ease-in-out infinite; }
+.stagebar .next.speakbtn.wait { background: var(--card); color: var(--ink); }
+@keyframes recpulse { 50% { transform: scale(1.04); } }
 .stagebar .row { justify-content: center; flex-wrap: wrap; gap: 6px; }
 .stagebar .row .btn { padding: 8px 12px; font-size: 13px; }
 #scriptText { font: inherit; font-size: 14px; line-height: 1.6; width: 100%; min-height: 220px; padding: 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
@@ -474,7 +492,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
 <body>
 <div class="app">
   <header>
-    <h1>福まねき特戦隊 <span class="badge">里親募集中</span></h1>
+    <h1>福まねき特戦隊</h1>
     <div class="row">
       <span class="chip" id="chip" data-s="idle" role="status" aria-live="polite">まってるよ</span>
       <button class="icon-btn" id="bigBtn" aria-label="プロジェクター表示" title="プロジェクター表示">⛶</button>
@@ -483,6 +501,9 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   </header>
 
   <div class="stage">
+    <button class="sato-banner" id="satoBanner" type="button" aria-label="里親募集中（おすと、ジャム猫とチーちゃんが話します）">
+      <b>里親募集中！</b><small>ジャム猫とチーちゃんの仲間を、あなたの相棒に</small>
+    </button>
     <svg id="scene" viewBox="-160 0 880 420" role="img" aria-label="まんなかにバターちゃん、左に招き猫のジャム猫、右にチーズ色の柴犬チーちゃん">
       <defs>
         <linearGradient id="goldGrad" x1="0" y1="0" x2="1" y2="1">
@@ -809,7 +830,10 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   <section class="stagebar" aria-label="台本">
     <div class="line" id="stageLine" aria-live="polite">ボタンをおすと、バターちゃんが話しはじめるよ。</div>
     <div class="cue" id="stageCue"></div>
-    <button class="next" id="stageNext" type="button">▶ スタート</button>
+    <div class="bigrow">
+      <button class="next" id="stageNext" type="button">▶ スタート</button>
+      <button class="next speakbtn" id="stageTalk" type="button">おして話しかける</button>
+    </div>
     <div class="row">
       <button class="btn" id="stageReset" type="button">最初から</button>
       <button class="btn" id="stageNeko" type="button">ジャム猫の一言</button>
@@ -1707,6 +1731,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
       history.pop();
     }
     out.textContent = answer;
+    if (STAGE) stageSay('バターちゃん：' + answer);
     if (answer && history.length && history[history.length - 1].role === 'user') history.push({ role: 'assistant', content: answer });
     speak(answer, mood);
   }
@@ -1973,7 +1998,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   $('uDrop').addEventListener('click', () => uDrop());
   $('uClose').addEventListener('click', () => { if (U.phase === 'move') ufoClose(); });
   $('scene').addEventListener('click', ev => {
-    if (WIDE() && STAGE) { stagePlay(); return; }
+    if (WIDE() && STAGE) { if (stageBusy || stageI < stageSteps.length) stagePlay(); else stageListen(); return; }
     if (chi.contains(ev.target)) { if (STAGE || !SHOW()) { if (!stageBusy) chiSay(SATO_CHI); } else { chiDo('sit'); bark(); } }
   });
 
@@ -2033,7 +2058,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     const on = tallMQ.matches, wide = wideMQ.matches;
     document.body.classList.toggle('tall', on);
     document.body.classList.toggle('wideshow', wide);
-    scene.setAttribute('viewBox', on ? '-40 110 580 520' : wide ? '-175 112 900 300' : '-160 0 880 420');
+    scene.setAttribute('viewBox', on ? '-40 110 580 560' : wide ? '-175 112 900 300' : '-160 0 880 420');
     // 下の段は少し大きく（1.2倍）。足もとを (95,600) と (405,600) に
     $('nekoWrap').setAttribute('transform', on ? 'translate(95 600) scale(1.2) translate(65 -345)' : '');
     $('chiWrap').setAttribute('transform', on ? 'translate(405 600) scale(1.2) translate(-565 -345)' : '');
@@ -2134,6 +2159,34 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   $('stageFuku').addEventListener('click', fukuCall);
   $('fukuBtn').addEventListener('click', fukuCall);
   $('stageSato').addEventListener('click', satoCall);
+  $('satoBanner').addEventListener('click', ev => { ev.stopPropagation(); satoCall(); });
+
+
+  // ===== 1台で会話（ステージ）：おして話す → 聞き取り → GASのClaude → この端末の声で答えて口が動く =====
+  let pttBusy = false;
+  const stageSay = t => { if (STAGE) { $('stageLine').textContent = t; $('stageCue').textContent = ''; } };
+  function stageListen() {
+    if (pttBusy || stageBusy || fukuBusy || state === 'thinking') return;
+    if (!canCall()) { stageSay('お話しするには、⚙の設定でGASのURLと合言葉を入れてね。'); openSettings(); return; }
+    if (!SR) { stageSay('このブラウザでは声が聞き取れないよ。iPhoneはSafariで開いてね。'); return; }
+    speechSynthesis.cancel();
+    pttBusy = true;
+    const btn = $('stageTalk'); btn.classList.add('rec'); btn.textContent = 'きいてるよ…';
+    const r = new SR(); r.lang = 'ja-JP'; r.interimResults = true; r.continuous = false;
+    let heard = '';
+    setState('listening'); convoUntil = Date.now() + 10000; stageSay('きいてるよ…');
+    r.onresult = ev => { heard = ''; for (let i = 0; i < ev.results.length; i++) heard += ev.results[i][0].transcript; stageSay('「' + heard + '」'); };
+    r.onerror = e => { if (e.error === 'not-allowed' || e.error === 'service-not-allowed') stageSay('マイクが使えないよ。設定でSafariのマイクを許可してね。'); };
+    r.onend = () => {
+      clearTimeout(stopT); btn.classList.remove('rec'); btn.textContent = 'おして話しかける'; pttBusy = false;
+      const t = heard.trim();
+      if (!t) { setState('idle'); stageSay('聞こえなかったよ。もう一回おしてね。'); return; }
+      btn.classList.add('wait'); btn.textContent = 'かんがえ中…';
+      ask('（交流会で初めて会った大人の人から）' + t).finally(() => { btn.classList.remove('wait'); btn.textContent = 'おして話しかける'; });
+    };
+    const stopT = setTimeout(() => { try { r.stop(); } catch (e) {} }, 9000);
+    try { r.start(); } catch (e) { pttBusy = false; btn.classList.remove('rec'); btn.textContent = 'おして話しかける'; }
+  }
 
   // ===== 台本モード =====
   const DEFAULT_SCRIPT = [
@@ -2204,6 +2257,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   }
   if (STAGE) {
     $('stageNext').addEventListener('click', stagePlay);
+    $('stageTalk').addEventListener('click', stageListen);
     $('stageReset').addEventListener('click', () => { speechSynthesis.cancel(); stageBusy = false; stageI = 0; $('stageLine').textContent = 'ボタンをおすと、バターちゃんが話しはじめるよ。'; $('stageCue').textContent = ''; setState('idle'); setEmo('smile'); stageShow(); });
     $('stageGacha').addEventListener('click', () => { if (!stageBusy) doGacha('ガチャ回して'); });
     $('stageUfo').addEventListener('click', () => { if (!stageBusy) doUfo('UFOキャッチャー'); });
