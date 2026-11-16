@@ -326,6 +326,10 @@ h1 { font-family: var(--display); font-weight: 800; font-size: 22px; margin: 0; 
 @keyframes nekotail { from { transform: rotate(6deg); } to { transform: rotate(-8deg); } }
 #neko .bark { fill: var(--neko-line); }
 #neko { cursor: pointer; }
+#neko .nmouthOpen { opacity: 0; }
+#neko.talking .nmouthOpen { opacity: 1; }
+#neko.talking.small .nmouthOpen { transform: scaleY(.5); transform-origin: -65px 240px; transform-box: view-box; }
+#neko.talking .nmouth { opacity: 0; }
 @media (prefers-reduced-motion: reduce) { #nekoHead, #nekoPaw, #nekoTail { animation: none !important; } }
 
 /* ===== チーちゃん（柴犬の子犬） ===== */
@@ -418,7 +422,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
 .stagebar .cue { min-height: 1.6em; text-align: center; font-family: var(--display); font-weight: 800; font-size: 17px; color: var(--mic-live); }
 .stagebar .next { font-family: var(--display); font-weight: 800; font-size: 22px; padding: 18px; border-radius: 20px; border: 2px solid var(--butter-deep); background: var(--butter); color: #2b2310; cursor: pointer; touch-action: manipulation; }
 .stagebar .next.speaking { background: var(--card); }
-.stagebar .row { justify-content: center; }
+.stagebar .row { justify-content: center; flex-wrap: wrap; gap: 6px; }
 .stagebar .row .btn { padding: 8px 12px; font-size: 13px; }
 #scriptText { font: inherit; font-size: 14px; line-height: 1.6; width: 100%; min-height: 220px; padding: 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
 @media (orientation: landscape) and (max-height: 500px) {
@@ -553,7 +557,8 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
           <path d="M-98 212 Q-87 200 -76 212" fill="none" stroke="#2b2310" stroke-width="5" stroke-linecap="round"/>
           <path d="M-54 212 Q-43 200 -32 212" fill="none" stroke="#2b2310" stroke-width="5" stroke-linecap="round"/>
           <path d="M-71 228 h12 l-6 7 Z" fill="#ee7f8a"/>
-          <path d="M-75 240 Q-70 246 -65 240 Q-60 246 -55 240" fill="none" stroke="#2b2310" stroke-width="3" stroke-linecap="round"/>
+          <path class="nmouth" d="M-75 240 Q-70 246 -65 240 Q-60 246 -55 240" fill="none" stroke="#2b2310" stroke-width="3" stroke-linecap="round"/>
+          <ellipse class="nmouthOpen" cx="-65" cy="246" rx="8" ry="9" fill="#7a2e22" stroke="#2b2310" stroke-width="3"/>
           <ellipse cx="-102" cy="234" rx="10" ry="6" fill="#f39a8c" opacity=".6"/>
           <ellipse cx="-28" cy="234" rx="10" ry="6" fill="#f39a8c" opacity=".6"/>
           <g stroke="var(--neko-line)" stroke-width="2" stroke-linecap="round">
@@ -734,6 +739,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     <button class="next" id="stageNext" type="button">▶ スタート</button>
     <div class="row">
       <button class="btn" id="stageReset" type="button">最初から</button>
+      <button class="btn" id="stageNeko" type="button">ネコちゃんの一言</button>
       <button class="btn" id="stageEdit" type="button">台本をなおす</button>
       <button class="btn" id="stageExit" type="button">ふつうの画面へ</button>
     </div>
@@ -754,7 +760,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
 <div class="overlay" id="scriptBox" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="scriptTitle">
     <h2 id="scriptTitle">台本</h2>
-    <p class="note">1行に1つのセリフ。ふつうの行はバターちゃんが話します。「ヒロ：」ではじまる行は話さずに、画面に「ヒロさんの番」として出ます。行のはじめに【わくわく】【わらう】【てれる】【びっくり】【えがお】【かんがえ】【しょんぼり】をつけると表情が変わります。</p>
+    <p class="note">1行に1つのセリフ。ふつうの行はバターちゃんが話します。「ヒロ：」ではじまる行は話さずに、画面に「ヒロさんの番」として出ます。「ネコ：」ではじまる行は、招き猫のネコちゃんが低い声で話します。行のはじめに【わくわく】【わらう】【てれる】【びっくり】【えがお】【かんがえ】【しょんぼり】をつけると表情が変わります。</p>
     <textarea id="scriptText" aria-label="台本"></textarea>
     <div class="row">
       <button class="btn" id="scriptDefault" type="button">はじめの台本にもどす</button>
@@ -1927,7 +1933,34 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     neko.classList.remove('calling', 'barking'); void neko.getBBox(); neko.classList.add('calling', 'barking');
     setTimeout(() => neko.classList.remove('calling'), 3000);
   }
-  neko.addEventListener('click', nekoCall);
+  const NEKO_LINE = '我は招き猫。本職は経営コンサルなのだ。お店の困りごとも、交流会で相談に来るのだ。千客万来！';
+  let nekoTalkTimer = null;
+  function nekoTalk(on) {
+    clearInterval(nekoTalkTimer);
+    neko.classList.toggle('calling', on);
+    if (!on) { neko.classList.remove('talking', 'small'); return; }
+    nekoTalkTimer = setInterval(() => { const r = Math.random(); neko.classList.toggle('talking', r > 0.18); neko.classList.toggle('small', r < 0.5); }, 110);
+  }
+  // ネコちゃんの声：バターちゃんより低く、ゆっくり
+  function nekoUtter(t) {
+    const u = new SpeechSynthesisUtterance(t), v = pickVoice();
+    u.lang = 'ja-JP'; if (v) u.voice = v;
+    u.rate = Math.max(0.7, (Number(cfg.rate) || 1) * 0.92); u.pitch = Math.max(0.5, (Number(cfg.pitch) || 1.1) - 0.45);
+    return u;
+  }
+  function nekoSay(text, done) {
+    speechSynthesis.cancel();
+    const parts = String(text).split(/(?<=[。！？!?])/).map(t => t.trim()).filter(Boolean);
+    let fin = false; const end = () => { if (fin) return; fin = true; clearTimeout(g); nekoTalk(false); done && done(); };
+    const g = setTimeout(end, 2500 + text.length * 250);
+    nekoTalk(true);
+    parts.forEach((t, i) => { const u = nekoUtter(t); if (i === parts.length - 1) u.onend = u.onerror = end; speechSynthesis.speak(u); });
+    return end;
+  }
+  neko.addEventListener('click', () => {
+    if (STAGE || !SHOW()) { if (!stageBusy) { addBubble('ネコちゃん', NEKO_LINE, 'dog'); nekoSay(NEKO_LINE); } return; }
+    nekoCall();
+  });
 
   // ===== 台本モード =====
   const DEFAULT_SCRIPT = [
@@ -1941,6 +1974,8 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   function parseScript(txt) {
     const steps = [];
     String(txt || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean).forEach(l => {
+      const nk = l.match(/^(ネコ|ねこ|猫)(ちゃん)?\s*[:：]\s*(.*)$/);
+      if (nk) { steps.push({ text: nk[3], mood: 'smile', cue: '', who: 'neko' }); return; }
       const cue = l.match(/^(ヒロ|パパ|ひろ)\s*[:：]\s*(.*)$/);
       if (cue) { if (steps.length) steps[steps.length - 1].cue = cue[2]; else steps.push({ text: '', cue: cue[2], mood: 'smile' }); return; }
       const m = l.match(/^[【\[]([^】\]]+)[】\]]\s*(.*)$/);
@@ -1965,7 +2000,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     stageShow();
   }
   function stagePlay() {
-    if (stageBusy) { speechSynthesis.cancel(); stageDone(stageSteps[stageI - 1] || { mood: 'smile', cue: '' }); return; }
+    if (stageBusy) { speechSynthesis.cancel(); nekoTalk(false); stageDone(stageSteps[stageI - 1] || { mood: 'smile', cue: '' }); return; }
     if (stageI >= stageSteps.length) { stageI = 0; $('stageCue').textContent = ''; }
     const step = stageSteps[stageI++];
     if (!step) return;
@@ -1973,6 +2008,12 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     $('stageCue').textContent = '';
     if (!step.text) { stageBusy = true; stageDone(step); return; }
     stageBusy = true; stageShow();
+    if (step.who === 'neko') {
+      $('stageLine').textContent = 'ネコちゃん：' + step.text;
+      setEmo('smile', 60000);
+      nekoSay(step.text, () => stageDone(step));
+      return;
+    }
     speechSynthesis.cancel();
     setEmo(step.mood, 60000); setState('speaking');
     chiDo(step.mood === 'laugh' || step.mood === 'excited' ? 'spin' : 'sit');
@@ -1991,6 +2032,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   if (STAGE) {
     $('stageNext').addEventListener('click', stagePlay);
     $('stageReset').addEventListener('click', () => { speechSynthesis.cancel(); stageBusy = false; stageI = 0; $('stageLine').textContent = 'ボタンをおすと、バターちゃんが話しはじめるよ。'; $('stageCue').textContent = ''; setState('idle'); setEmo('smile'); stageShow(); });
+    $('stageNeko').addEventListener('click', () => { if (stageBusy) return; $('stageLine').textContent = 'ネコちゃん：' + NEKO_LINE; $('stageCue').textContent = ''; nekoSay(NEKO_LINE); });
     $('stageEdit').addEventListener('click', () => { $('scriptText').value = store.get('script', DEFAULT_SCRIPT); $('scriptBox').hidden = false; });
     $('stageExit').addEventListener('click', () => { location.href = location.pathname; });
     $('scriptDefault').addEventListener('click', () => { $('scriptText').value = DEFAULT_SCRIPT; });
