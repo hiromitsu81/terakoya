@@ -316,7 +316,9 @@ h1 { font-family: var(--display); font-weight: 800; font-size: 22px; margin: 0; 
 
 
 /* ===== ネコちゃん（招き猫・仮の名前） ===== */
-#neko { transform-origin: -65px 345px; transform-box: view-box; transition: transform .8s ease; --neko: #fffaf3; --neko-line: #8a7566; --neko-orange: #f0a04b; --neko-black: #3b302a; }
+/* 陰陽：ネコちゃん＝陰（黒い招き猫、白い模様が陰の中の陽）／チーちゃん＝陽（白い柴、黒い眉としっぽの先が陽の中の陰） */
+#neko { transform-origin: -65px 345px; transform-box: view-box; transition: transform .8s ease; --neko: #34302f; --neko-line: #171313; --neko-orange: #fffaf3; --neko-black: #171313; --neko-ink: #fff3d6; --neko-whisker: #d9d2c8; }
+#chi { --shiba: #f7f1e6; --shiba-deep: #9b8672; --shiba-white: #ffffff; --chi-yin: #34302f; }
 #nekoHead { transform-origin: -65px 250px; transform-box: view-box; animation: nekotilt 6s ease-in-out infinite; }
 @keyframes nekotilt { 0%, 60%, 100% { transform: rotate(0); } 68%, 82% { transform: rotate(8deg); } }
 #nekoPaw { transform-origin: -106px 304px; transform-box: view-box; animation: beckon 2.4s ease-in-out infinite; }
@@ -381,7 +383,7 @@ h1 { font-family: var(--display); font-weight: 800; font-size: 22px; margin: 0; 
 .bubble.partial { color: var(--soft); font-style: italic; }
 .hint { color: var(--soft); font-size: 14px; text-align: center; margin: 0; }
 form.typed { display: flex; gap: 8px; }
-form.typed input { flex: 1; min-width: 0; font: inherit; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
+form.typed input { flex: 1; min-width: 0; font: inherit; font-size: 16px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
 .btn { font-family: var(--display); font-weight: 700; padding: 12px 16px; border-radius: 14px; cursor: pointer; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
 .btn.primary { background: var(--butter); border-color: var(--butter-deep); color: #2b2310; }
 button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid var(--butter-deep); outline-offset: 2px; }
@@ -391,7 +393,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .sheet h2 { font-family: var(--display); margin: 0; font-size: 20px; }
 .field { display: grid; gap: 6px; }
 .field label { font-weight: 700; font-size: 13px; }
-.field input[type="text"], .field input[type="password"], .field input[type="url"], .field select { font: inherit; padding: 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); width: 100%; }
+.field input[type="text"], .field input[type="password"], .field input[type="url"], .field select { font: inherit; font-size: 16px; padding: 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); width: 100%; }
 .row { display: flex; gap: 8px; align-items: center; }
 .note { font-size: 12px; color: var(--soft); line-height: 1.6; margin: 0; }
 .err { color: var(--mic-live); font-size: 13px; margin: 0; }
@@ -417,6 +419,8 @@ body.big form.typed { display: none; }
 body.stagemode .meters, body.stagemode .talk, body.stagemode #bigBtn { display: none; }
 body.stagemode .app { height: 100dvh; grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden; }
 body.stagemode .stage { min-height: 0; overflow: hidden; }
+body.tall .stage svg { aspect-ratio: 580 / 520; max-width: 100%; }
+body.tall #floor { display: none; }
 body.stagemode .stage svg { width: auto; height: 100%; max-width: 100%; max-height: 100%; }
 body.stagemode .stagebar { display: grid; gap: 8px; }
 .stagebar .line { min-height: 3.2em; padding: 10px 14px; border-radius: 16px; background: var(--card); border: 1px solid var(--butter-deep); line-height: 1.6; font-size: 16px; }
@@ -453,7 +457,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
         </linearGradient>
       </defs>
       <!-- 床 -->
-      <ellipse cx="360" cy="372" rx="340" ry="26" fill="var(--line)" opacity=".5"/>
+      <ellipse id="floor" cx="250" cy="372" rx="410" ry="26" fill="var(--line)" opacity=".5"/>
 
       <!-- ===== バターちゃん ===== -->
       <g id="butter" class="butter" data-melt="0" data-emo="smile">
@@ -526,6 +530,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
       <g id="decor" transform="translate(454 366)"></g>
 
       <!-- ===== チーちゃん（オリジナルの柴犬の子犬） ===== -->
+      <g id="nekoWrap">
       <!-- ネコちゃん（招き猫・仮の名前）：バターちゃんの左。テーマ曲どおり右手をあげる -->
       <g id="neko">
         <defs><clipPath id="nekoHeadClip"><ellipse cx="-65" cy="216" rx="62" ry="52"/></clipPath></defs>
@@ -542,7 +547,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
         <g transform="rotate(10 -30 318)">
           <ellipse cx="-30" cy="318" rx="20" ry="32" fill="#f2c94c" stroke="#c99a12" stroke-width="3"/>
           <ellipse cx="-30" cy="318" rx="14" ry="25" fill="none" stroke="#c99a12" stroke-width="1.5"/>
-          <text x="-30" y="302" font-size="10" font-weight="800" text-anchor="middle" fill="#8a6a00"><tspan x="-30" dy="0">千</tspan><tspan x="-30" dy="11">客</tspan><tspan x="-30" dy="11">万</tspan><tspan x="-30" dy="11">来</tspan></text>
+          <text x="-30" y="307" font-size="11" font-weight="800" text-anchor="middle" fill="#8a6a00"><tspan x="-30" dy="0">千</tspan><tspan x="-30" dy="12">万</tspan><tspan x="-30" dy="12">両</tspan></text>
         </g>
         <g id="nekoHead">
           <path d="M-115 200 L-109 146 L-75 180 Z" fill="var(--neko)" stroke="var(--neko-line)" stroke-width="3" stroke-linejoin="round"/>
@@ -555,14 +560,15 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
             <ellipse cx="-22" cy="176" rx="28" ry="24" fill="var(--neko-black)"/>
           </g>
           <ellipse cx="-65" cy="216" rx="62" ry="52" fill="none" stroke="var(--neko-line)" stroke-width="3"/>
-          <path d="M-98 212 Q-87 200 -76 212" fill="none" stroke="#2b2310" stroke-width="5" stroke-linecap="round"/>
-          <path d="M-54 212 Q-43 200 -32 212" fill="none" stroke="#2b2310" stroke-width="5" stroke-linecap="round"/>
+          <ellipse cx="-65" cy="240" rx="30" ry="20" fill="var(--neko-orange)" opacity=".18"/>
+          <path d="M-98 212 Q-87 200 -76 212" fill="none" stroke="var(--neko-ink)" stroke-width="5" stroke-linecap="round"/>
+          <path d="M-54 212 Q-43 200 -32 212" fill="none" stroke="var(--neko-ink)" stroke-width="5" stroke-linecap="round"/>
           <path d="M-71 228 h12 l-6 7 Z" fill="#ee7f8a"/>
-          <path class="nmouth" d="M-75 240 Q-70 246 -65 240 Q-60 246 -55 240" fill="none" stroke="#2b2310" stroke-width="3" stroke-linecap="round"/>
-          <ellipse class="nmouthOpen" cx="-65" cy="246" rx="8" ry="9" fill="#7a2e22" stroke="#2b2310" stroke-width="3"/>
+          <path class="nmouth" d="M-75 240 Q-70 246 -65 240 Q-60 246 -55 240" fill="none" stroke="var(--neko-ink)" stroke-width="3" stroke-linecap="round"/>
+          <ellipse class="nmouthOpen" cx="-65" cy="246" rx="8" ry="9" fill="#7a2e22" stroke="var(--neko-ink)" stroke-width="3"/>
           <ellipse cx="-102" cy="234" rx="10" ry="6" fill="#f39a8c" opacity=".6"/>
           <ellipse cx="-28" cy="234" rx="10" ry="6" fill="#f39a8c" opacity=".6"/>
-          <g stroke="var(--neko-line)" stroke-width="2" stroke-linecap="round">
+          <g stroke="var(--neko-whisker)" stroke-width="2" stroke-linecap="round">
             <path d="M-112 226 L-136 220"/><path d="M-112 232 L-136 236"/>
             <path d="M-18 226 L6 220"/><path d="M-18 232 L6 236"/>
           </g>
@@ -583,13 +589,15 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
         </g>
         <text class="bark" x="-60" y="150" font-size="30">ニャー！</text>
       </g>
+      </g>
+      <g id="chiWrap">
       <g id="chi" class="wag">
         <g id="chiPose">
           <ellipse cx="565" cy="348" rx="70" ry="10" fill="var(--line)" opacity=".8"/>
           <!-- くるんとしたしっぽ（ネコちゃんと左右対称） -->
           <g id="tail">
             <path d="M 526 300 Q 480 296 478 262 Q 478 236 498 232 Q 510 232 508 246 Q 494 248 496 264 Q 500 284 532 284 Z" fill="var(--shiba)" stroke="var(--shiba-deep)" stroke-width="3"/>
-            <path d="M 482 250 Q 480 236 496 233 Q 506 234 506 242 Q 494 244 490 254 Z" fill="var(--shiba-white)"/>
+            <path d="M 482 250 Q 480 236 496 233 Q 506 234 506 242 Q 494 244 490 254 Z" fill="var(--chi-yin)"/>
           </g>
           <!-- からだ -->
           <ellipse cx="518" cy="334" rx="24" ry="13" fill="var(--shiba)" stroke="var(--shiba-deep)" stroke-width="3"/>
@@ -605,8 +613,8 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
             <path d="M606 186 L604 160 L586 180 Z" fill="#f1b68a"/>
             <ellipse cx="562" cy="216" rx="62" ry="52" fill="var(--shiba)" stroke="var(--shiba-deep)" stroke-width="3"/>
             <path d="M516 236 Q522 204 548 214 Q562 222 576 214 Q602 204 608 236 Q604 268 562 270 Q520 268 516 236 Z" fill="var(--shiba-white)"/>
-            <ellipse cx="540" cy="190" rx="8" ry="5" fill="var(--shiba-white)"/>
-            <ellipse cx="584" cy="190" rx="8" ry="5" fill="var(--shiba-white)"/>
+            <ellipse cx="540" cy="190" rx="8" ry="5" fill="var(--chi-yin)"/>
+            <ellipse cx="584" cy="190" rx="8" ry="5" fill="var(--chi-yin)"/>
             <g class="eye"><circle cx="540" cy="208" r="8" fill="#2b2310"/><circle cx="543" cy="205" r="2.6" fill="#fff"/></g>
             <g class="eye"><circle cx="584" cy="208" r="8" fill="#2b2310"/><circle cx="587" cy="205" r="2.6" fill="#fff"/></g>
             <ellipse cx="562" cy="231" rx="9" ry="6" fill="#2b2310"/>
@@ -618,6 +626,11 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
             <path class="collar" d="M524 262 Q562 280 600 262" fill="none" stroke="var(--collar)" stroke-width="8" stroke-linecap="round"/>
             <circle cx="562" cy="280" r="7" fill="var(--butter)" stroke="var(--butter-deep)" stroke-width="2"/>
             <path data-item="bandana" hidden d="M526 262 Q562 276 598 262 L562 302 Z" fill="#3f7fd6" stroke="#2a5ea8" stroke-width="3" stroke-linejoin="round"/>
+          </g>
+          <!-- あげた左手の側に「千客万来」の札（人を招く） -->
+          <g>
+            <rect x="572" y="288" width="20" height="56" rx="3" fill="#d9483b" stroke="#a8322a" stroke-width="2"/>
+            <text x="582" y="299" font-size="11" font-weight="800" text-anchor="middle" fill="#fff6ea"><tspan x="582" dy="0">千</tspan><tspan x="582" dy="12">客</tspan><tspan x="582" dy="12">万</tspan><tspan x="582" dy="12">来</tspan></text>
           </g>
           <!-- いつも片手をあげている（ネコちゃんと左右対称） -->
           <g id="paw">
@@ -631,6 +644,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
         <ellipse data-item="frisbee" hidden cx="484" cy="344" rx="24" ry="8" fill="#f39c32" stroke="#c4741a" stroke-width="3"/>
         <text class="bark" x="628" y="170" font-size="30">ワン！</text>
         <path class="heart" d="M600 160 c-10 -14 -30 -4 -20 12 l20 18 l20 -18 c10 -16 -10 -26 -20 -12Z" fill="#ee6b7c"/>
+      </g>
       </g>
     </svg>
     <div class="gacha-pop" id="gachaPop" hidden>
@@ -751,6 +765,8 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     <div class="row">
       <button class="btn" id="stageReset" type="button">最初から</button>
       <button class="btn" id="stageNeko" type="button">ネコちゃんの一言</button>
+      <button class="btn" id="stageGacha" type="button">ガチャ</button>
+      <button class="btn" id="stageUfo" type="button">UFO</button>
       <button class="btn" id="stageEdit" type="button">台本をなおす</button>
       <button class="btn" id="stageExit" type="button">ふつうの画面へ</button>
     </div>
@@ -789,7 +805,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     </div>
     <div class="field">
       <label for="pass">家族の合言葉</label>
-      <input id="pass" type="password" autocomplete="off">
+      <input id="pass" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text">
       <p class="note">GASの BUTTER_PASS と同じことば。この端末にだけ保存されます。</p>
     </div>
     <div class="field">
@@ -998,8 +1014,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     const who = whoIn || nameIn(said) || await choosePlayer('ガチャ');
     gachaBusy = false;
     if (!who && playerNames().length) return;
-    $('gachaPop').querySelector('.gtitle').textContent = (cfg.test ? '【テスト】' : '') + (who ? who + 'のガチャ' : 'GACHA ガチャ');
-    if (!canCall()) { speak('設定でGASのURLと合言葉を入れてね。', 'sad'); return; }
+    $('gachaPop').querySelector('.gtitle').textContent = (DEMO() ? '【おためし】' : cfg.test ? '【テスト】' : '') + (who ? who + 'のガチャ' : 'GACHA ガチャ');
     gachaBusy = true;
     stopRec(); setState('thinking');
     const pop = $('gachaPop');
@@ -1010,7 +1025,8 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     const gWait = sleep(1100);
     let r;
     let why = '';
-    try { r = await callGas({ action: 'gacha', who: who }); } catch (e) { r = null; why = String(e.message || e); }
+    if (DEMO()) r = demoGacha();
+    else try { r = await callGas({ action: 'gacha', who: who }); } catch (e) { r = null; why = String(e.message || e); }
     gachaBusy = false;
     if (!r || !r.ok) {
       why = why || (r && (r.detail || r.error)) || 'unknown';
@@ -1075,11 +1091,28 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     sfx.fanfare(rare);
     if (rare !== 'N') confetti(rare === 'SR' ? 180 : 80);
     applyPet(r.state, true);
+    if (r.demo) applyLook(demoState());
     butter.classList.remove('cooled'); void butter.getBBox(); butter.classList.add('cooled');
     const t = (who ? who + 'の' : '') + (g.dup ? it.name + 'がまた出たよ！' : it.name + 'が出たよ！' + (rare === 'SR' ? 'スーパーレアだよ！' : '')) + 'さっそくバターちゃんに貸してくれたね。';
     addBubble('バターちゃん', t, 'her');
     speak(t, rare === 'SR' ? 'surprise' : 'excited');
     setTimeout(() => { pop.hidden = true; cap.classList.remove('glow'); }, rare === 'SR' ? 7000 : 5500);
+  }
+
+  // ===== おためし（合言葉なし・ステージ）：ガチャとUFOをこの端末だけで動かす。ポイントは使わない =====
+  const DEMO = () => STAGE || !canCall();
+  let demoEquip = {};
+  function demoState() {
+    const p = JSON.parse(JSON.stringify(pet || { melt: 0, meltName: 'ひんやり' }));
+    p.gacha = Object.assign({ tickets: 9, toNextTicket: 10, owned: 0, total: ITEMS.length }, p.gacha || {});
+    p.gacha.equip = Object.assign({}, p.gacha.equip || {}, demoEquip);
+    return p;
+  }
+  function demoGacha() {
+    const r = Math.random(), rare = r < 0.05 ? 'SR' : r < 0.30 ? 'R' : 'N';
+    const pool = ITEMS.filter(x => x.rare === rare), it = pool[Math.floor(Math.random() * pool.length)];
+    demoEquip[it.slot] = it.id;
+    return { ok: true, demo: true, gacha: { item: it, dup: false }, state: null };
   }
   let tapOpen = null;
   const sleep = ms => new Promise(res => setTimeout(res, ms));
@@ -1302,11 +1335,11 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     ufoBusy = false;
     if (!who && playerNames().length) return;
     U.who = who;
-    toast((who ? who + 'の' : '') + 'UFOキャッチャーをじゅんびちゅう…');
-    if (!canCall()) { speak('設定でGASのURLと合言葉を入れてね。', 'sad'); return; }
+    if (!DEMO()) toast((who ? who + 'の' : '') + 'UFOキャッチャーをじゅんびちゅう…');
     ufoBusy = true;
     let r = null, why = '';
-    try { r = await callGas({ action: 'ufo', who: who }); } catch (e) { why = String(e.message || e); }
+    if (DEMO()) r = { ok: true, demo: true, ufo: { prizes: PRIZES, free: true, test: true } };
+    else try { r = await callGas({ action: 'ufo', who: who }); } catch (e) { why = String(e.message || e); }
     ufoBusy = false;
     if (!r || !r.ok) {
       const w = why || (r && (r.detail || r.error)) || 'unknown';
@@ -1321,7 +1354,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     U.prizes = list.map((p, i) => ({ id: p.id, name: p.name, x: xs[i] }));
     Object.assign(U, { on: true, x: 200, y: UTOP, dir: 1, phase: 'move', held: null });
     $('ufoPop').hidden = false;
-    $('uInfo').textContent = (r.ufo.test ? '【テスト】' : '') + (who ? who + '　' : '') + (r.ufo.free ? '今日のおためし（無料）！ ' : '5ptつかったよ。 ') + '「ストップ」でおろす・「みぎ」「ひだり」';
+    $('uInfo').textContent = (r.demo ? '【おためし】' : r.ufo.test ? '【テスト】' : '') + (who ? who + '　' : '') + (r.ufo.free ? '今日のおためし（無料）！ ' : '5ptつかったよ。 ') + '「ストップ」でおろす・「みぎ」「ひだり」';
     stopRec(); startRec();
     sfx.notes([523, 659, 784, 659, 784, 1047], 0.08, 'square', 0.06);
     setEmo('excited');
@@ -1374,7 +1407,9 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
       await sleep(250); U.held = null; uDraw();
       uFlash(); uShake(); sfx.pop(); sfx.fanfare('SR'); confettiIn($('ufoPop'), 160); uMsg('GET!');
       setEmo('excited', 5000);
-      let rr = null; try { rr = await callGas({ action: 'ufo_win', prize: got.id, who: U.who }); } catch (e) {}
+      let rr = null;
+      if (DEMO()) { demoEquip.decor = got.id; applyLook(demoState()); }
+      else { try { rr = await callGas({ action: 'ufo_win', prize: got.id, who: U.who }); } catch (e) {} }
       if (rr && rr.state) applyPet(rr.state, true);
       // ホロのカードで見せる
       await sleep(900);
@@ -1939,6 +1974,20 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
 
 
 
+
+  // ===== スマホ縦：バターちゃんを上に大きく、ネコちゃんとチーちゃんを下に並べる =====
+  const tallMQ = window.matchMedia('(orientation: portrait) and (max-width: 700px)');
+  function layoutTall() {
+    const on = tallMQ.matches;
+    document.body.classList.toggle('tall', on);
+    scene.setAttribute('viewBox', on ? '-40 110 580 520' : '-160 0 880 420');
+    // 下の段は少し大きく（1.2倍）。足もとを (95,600) と (405,600) に
+    $('nekoWrap').setAttribute('transform', on ? 'translate(95 600) scale(1.2) translate(65 -345)' : '');
+    $('chiWrap').setAttribute('transform', on ? 'translate(405 600) scale(1.2) translate(-565 -345)' : '');
+  }
+  try { tallMQ.addEventListener('change', layoutTall); } catch (e) { tallMQ.addListener && tallMQ.addListener(layoutTall); }
+  layoutTall();
+
   // ===== ネコちゃん（招き猫） =====
   const neko = $('neko');
   function nekoCall() {
@@ -2044,6 +2093,8 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   if (STAGE) {
     $('stageNext').addEventListener('click', stagePlay);
     $('stageReset').addEventListener('click', () => { speechSynthesis.cancel(); stageBusy = false; stageI = 0; $('stageLine').textContent = 'ボタンをおすと、バターちゃんが話しはじめるよ。'; $('stageCue').textContent = ''; setState('idle'); setEmo('smile'); stageShow(); });
+    $('stageGacha').addEventListener('click', () => { if (!stageBusy) doGacha('ガチャ回して'); });
+    $('stageUfo').addEventListener('click', () => { if (!stageBusy) doUfo('UFOキャッチャー'); });
     $('stageNeko').addEventListener('click', () => { if (stageBusy) return; $('stageLine').textContent = 'ネコちゃん：' + NEKO_LINE; $('stageCue').textContent = ''; nekoSay(NEKO_LINE); });
     $('stageEdit').addEventListener('click', () => { $('scriptText').value = store.get('script', DEFAULT_SCRIPT); $('scriptBox').hidden = false; });
     $('stageExit').addEventListener('click', () => { location.href = location.pathname; });
