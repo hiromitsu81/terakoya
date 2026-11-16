@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
-<title>バターちゃん</title>
+<title>福まねき特戦隊｜バターちゃん</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
@@ -59,7 +59,12 @@ body {
   padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
 }
 header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-h1 { font-family: var(--display); font-weight: 800; font-size: 22px; margin: 0; }
+h1 { font-family: var(--display); font-weight: 800; font-size: 22px; margin: 0; letter-spacing: .02em; }
+h1 .badge { display: inline-block; vertical-align: middle; margin-left: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 800; color: #fff; background: linear-gradient(90deg, #e2506b, #f39c32); box-shadow: 0 2px 8px rgba(226,80,107,.35); animation: badgepop 2.6s ease-in-out infinite; }
+@keyframes badgepop { 0%, 80%, 100% { transform: scale(1); } 88% { transform: scale(1.1) rotate(-3deg); } }
+.nametag text { font-family: var(--display); font-weight: 800; font-size: 17px; fill: #3a2a1a; }
+.nametag rect { fill: rgba(255,255,255,.88); stroke: var(--butter-deep); stroke-width: 2; }
+@media (prefers-color-scheme: dark) { .nametag rect { fill: rgba(29,39,50,.9); } .nametag text { fill: #f6ecdf; } }
 .chip {
   font-family: var(--display); font-weight: 700; font-size: 13px; padding: 6px 12px; border-radius: 999px;
   background: var(--card); border: 1px solid var(--line); color: var(--soft); white-space: nowrap;
@@ -444,6 +449,11 @@ body.stagemode .app { height: 100dvh; grid-template-rows: auto minmax(0, 1fr) au
 body.stagemode .stage { min-height: 0; overflow: hidden; }
 body.tall .stage svg { aspect-ratio: 580 / 520; max-width: 100%; }
 body.tall #floor { display: none; }
+/* スマホ横向き：ボタンを全部しまって、3匹を画面いっぱいに（タップでつぎのセリフ） */
+body.wideshow header, body.wideshow .meters, body.wideshow .talk, body.wideshow .stagebar { display: none !important; }
+body.wideshow .app { height: 100dvh; max-width: none; grid-template-rows: minmax(0, 1fr); padding: 4px env(safe-area-inset-right) 4px env(safe-area-inset-left); overflow: hidden; }
+body.wideshow .stage { min-height: 0; overflow: hidden; }
+body.wideshow .stage svg { width: auto; height: 100%; max-width: 100%; max-height: 100%; aspect-ratio: 900 / 300; }
 body.stagemode .stage svg { width: auto; height: 100%; max-width: 100%; max-height: 100%; }
 body.stagemode .stagebar { display: grid; gap: 8px; }
 .stagebar .line { min-height: 3.2em; padding: 10px 14px; border-radius: 16px; background: var(--card); border: 1px solid var(--butter-deep); line-height: 1.6; font-size: 16px; }
@@ -464,7 +474,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
 <body>
 <div class="app">
   <header>
-    <h1>バターちゃんとチーちゃん</h1>
+    <h1>福まねき特戦隊 <span class="badge">里親募集中</span></h1>
     <div class="row">
       <span class="chip" id="chip" data-s="idle" role="status" aria-live="polite">まってるよ</span>
       <button class="icon-btn" id="bigBtn" aria-label="プロジェクター表示" title="プロジェクター表示">⛶</button>
@@ -614,6 +624,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
         </g>
         <text class="bark" x="-60" y="150" font-size="30">ニャー！</text>
       </g>
+      <g class="nametag" pointer-events="none"><rect x="-113" y="361" width="96" height="26" rx="13"/><text x="-65" y="380" text-anchor="middle">ジャム猫</text></g>
       </g>
       <g id="chiWrap">
       <g id="chi" class="wag">
@@ -680,7 +691,9 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
         <text class="bark" x="628" y="170" font-size="30">ワン！</text>
         <path class="heart" d="M600 160 c-10 -14 -30 -4 -20 12 l20 18 l20 -18 c10 -16 -10 -26 -20 -12Z" fill="#ee6b7c"/>
       </g>
+      <g class="nametag" pointer-events="none"><rect x="509" y="361" width="112" height="26" rx="13"/><text x="565" y="380" text-anchor="middle">チーちゃん</text></g>
       </g>
+      <g id="butterTag"><g class="nametag" pointer-events="none"><rect x="186" y="379" width="128" height="26" rx="13"/><text x="250" y="398" text-anchor="middle">バターちゃん</text></g></g>
     </svg>
     <div class="gacha-pop" id="gachaPop" hidden>
       <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
@@ -801,6 +814,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
       <button class="btn" id="stageReset" type="button">最初から</button>
       <button class="btn" id="stageNeko" type="button">ジャム猫の一言</button>
       <button class="btn" id="stageFuku" type="button">千客万来</button>
+      <button class="btn" id="stageSato" type="button">里親募集</button>
       <button class="btn" id="stageGacha" type="button">ガチャ</button>
       <button class="btn" id="stageUfo" type="button">UFO</button>
       <button class="btn" id="stageEdit" type="button">台本をなおす</button>
@@ -1959,7 +1973,8 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   $('uDrop').addEventListener('click', () => uDrop());
   $('uClose').addEventListener('click', () => { if (U.phase === 'move') ufoClose(); });
   $('scene').addEventListener('click', ev => {
-    if (chi.contains(ev.target)) { chiDo('sit'); bark(); }
+    if (WIDE() && STAGE) { stagePlay(); return; }
+    if (chi.contains(ev.target)) { if (STAGE || !SHOW()) { if (!stageBusy) chiSay(SATO_CHI); } else { chiDo('sit'); bark(); } }
   });
 
   // ===== 設定・はじめる・全画面 =====
@@ -2013,15 +2028,18 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
 
   // ===== スマホ縦：バターちゃんを上に大きく、ネコちゃんとチーちゃんを下に並べる =====
   const tallMQ = window.matchMedia('(orientation: portrait) and (max-width: 700px)');
+  const wideMQ = window.matchMedia('(orientation: landscape) and (max-height: 520px)');
   function layoutTall() {
-    const on = tallMQ.matches;
+    const on = tallMQ.matches, wide = wideMQ.matches;
     document.body.classList.toggle('tall', on);
-    scene.setAttribute('viewBox', on ? '-40 110 580 520' : '-160 0 880 420');
+    document.body.classList.toggle('wideshow', wide);
+    scene.setAttribute('viewBox', on ? '-40 110 580 520' : wide ? '-175 112 900 300' : '-160 0 880 420');
     // 下の段は少し大きく（1.2倍）。足もとを (95,600) と (405,600) に
     $('nekoWrap').setAttribute('transform', on ? 'translate(95 600) scale(1.2) translate(65 -345)' : '');
     $('chiWrap').setAttribute('transform', on ? 'translate(405 600) scale(1.2) translate(-565 -345)' : '');
   }
-  try { tallMQ.addEventListener('change', layoutTall); } catch (e) { tallMQ.addListener && tallMQ.addListener(layoutTall); }
+  try { tallMQ.addEventListener('change', layoutTall); wideMQ.addEventListener('change', layoutTall); } catch (e) { tallMQ.addListener && tallMQ.addListener(layoutTall); wideMQ.addListener && wideMQ.addListener(layoutTall); }
+  const WIDE = () => document.body.classList.contains('wideshow');
   layoutTall();
 
   // ===== ネコちゃん（招き猫） =====
@@ -2054,11 +2072,37 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     parts.forEach((t, i) => { const u = nekoUtter(t); if (i === parts.length - 1) u.onend = u.onerror = end; speechSynthesis.speak(u); });
     return end;
   }
+  let nekoTap = 0;
   neko.addEventListener('click', () => {
-    if (STAGE || !SHOW()) { if (!stageBusy) { addBubble('ジャム猫', NEKO_LINE, 'dog'); nekoSay(NEKO_LINE); } return; }
+    if (WIDE() && STAGE) return;
+    if (STAGE || !SHOW()) {
+      if (stageBusy || fukuBusy) return;
+      const t = (nekoTap++ % 2) ? SATO_NEKO : NEKO_LINE;
+      addBubble('ジャム猫', t, 'dog'); if (STAGE) $('stageLine').textContent = 'ジャム猫：' + t; nekoSay(t); return;
+    }
     nekoCall();
   });
 
+
+  // ===== 里親さがし：ジャム猫とチーちゃんの仲間を、相棒としてお迎え =====
+  const SATO_NEKO = '我はジャム猫。里親をさがしているのだ。我の仲間を、お店の相棒にどうなのだ？';
+  const SATO_CHI = 'ぼくはチーちゃん。ぼくの仲間を、おうちに迎えてほしいワン！';
+  async function satoCall() {
+    if (fukuBusy || (typeof stageBusy !== 'undefined' && stageBusy)) return;
+    fukuBusy = true; speechSynthesis.cancel();
+    const line = t => { if (STAGE) { $('stageLine').textContent = t; $('stageCue').textContent = ''; } else addBubble('里親募集中', t, 'her'); };
+    line('ジャム猫：' + SATO_NEKO); nekoTalk(true); await sayAs(SATO_NEKO, 'neko'); nekoTalk(false);
+    line('チーちゃん：' + SATO_CHI); chi.classList.add('calling', 'barking'); await sayAs(SATO_CHI, 'chi'); chi.classList.remove('calling', 'barking');
+    line('バターちゃん：犬派？猫派？ぼくたちに話しかけてね！'); setState('speaking'); setEmo('excited', 4000);
+    await sayAs('犬派？猫派？ぼくたちに話しかけてね！', 'butter'); setState('idle');
+    fukuBusy = false;
+  }
+  async function chiSay(t) {
+    if (fukuBusy) return; fukuBusy = true; speechSynthesis.cancel();
+    if (STAGE) $('stageLine').textContent = 'チーちゃん：' + t; else addBubble('チーちゃん', t, 'dog');
+    chi.classList.remove('barking'); void chi.getBBox(); chi.classList.add('calling', 'barking');
+    await sayAs(t, 'chi'); chi.classList.remove('calling', 'barking'); fukuBusy = false;
+  }
 
   // ===== 千客万来のあいさつ：ジャム猫→チーちゃん→みんな =====
   let fukuBusy = false;
@@ -2089,6 +2133,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   }
   $('stageFuku').addEventListener('click', fukuCall);
   $('fukuBtn').addEventListener('click', fukuCall);
+  $('stageSato').addEventListener('click', satoCall);
 
   // ===== 台本モード =====
   const DEFAULT_SCRIPT = [
