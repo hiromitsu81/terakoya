@@ -1,0 +1,16 @@
+{
+  "name": "butter-junior-server",
+  "version": "1.0.0",
+  "description": "バターちゃんジュニア（福まねき特戦隊）のなめらか会話サーバー：声を流しっぱなし→聞き取り→Claude→一文ずつ読み上げ。写真・ご縁つなぎつき",
+  "main": "server.js",
+  "type": "commonjs",
+  "engines": { "node": ">=20" },
+  "scripts": { "start": "node server.js", "test": "node test/smoke.js" },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@google-cloud/firestore": "^7.11.0",
+    "@google-cloud/speech": "^6.7.0",
+    "@google-cloud/text-to-speech": "^5.8.0",
+    "ws": "^8.18.0"
+  }
+}

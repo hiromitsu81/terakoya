@@ -197,6 +197,13 @@ body.wideshow .sato-banner small { font-size: 12px; }
 .liffmode .hint { font-size: 12px; }
 .liffmode .talkbtn { width: 96px; height: 96px; }
 .modebtn { display: none; }
+.liffmode .goenbtn:not([hidden]) { display: block; }
+.cam video { width: 100%; border-radius: 14px; background: #000; max-height: 56vh; object-fit: cover; }
+.cam .count { font-family: var(--display); font-size: 40px; font-weight: 900; text-align: center; margin: 0; min-height: 1.2em; }
+.bubble img.snap, .bubble video.snap { display: block; width: 100%; max-width: 240px; border-radius: 10px; margin-top: 6px; }
+.goen textarea { font: inherit; font-size: 15px; padding: 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); width: 100%; min-height: 60px; }
+.goen .code { font-family: var(--display); font-size: 20px; font-weight: 900; letter-spacing: .15em; text-align: center; margin: 0; }
+.goen .lines p { margin: 4px 0; }
 .liffmode .modebtn { display: block; justify-self: center; font-family: var(--display); font-weight: 800; font-size: 14px; padding: 8px 18px; border-radius: 999px; border: 2px solid var(--butter-deep); background: var(--card); color: var(--ink); cursor: pointer; }
 .liffmode .modebtn[aria-pressed="true"] { background: linear-gradient(100deg, #e2506b, #f0794a); border-color: #fff; color: #fff; }
 .mini { font-family: var(--display); font-weight: 700; font-size: 12px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--butter-deep); background: var(--butter); color: #2b2310; cursor: pointer; margin-left: 6px; }
@@ -825,6 +832,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     <p class="hint" id="hint">「バターちゃん」と呼んでから話しかけてね。</p>
     <button class="talkbtn" id="talkBtn" type="button"><i id="lvlLive"></i><b>おして話す</b></button>
     <button class="modebtn" id="modeBtn" type="button" aria-pressed="false">ファミリーモード</button>
+    <button class="modebtn goenbtn" id="goenBtn" type="button" hidden>ご縁つなぎ</button>
     <form class="typed" id="typed">
       <input id="typedInput" type="text" placeholder="文字でもOK（チーちゃん、おて など）" autocomplete="off" aria-label="バターちゃんに送る文字">
       <button class="btn primary" type="submit">送る</button>
@@ -871,6 +879,38 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
       <button class="btn" id="scriptDefault" type="button">はじめの台本にもどす</button>
       <button class="btn primary" id="scriptSave" type="button">保存してとじる</button>
     </div>
+  </div>
+</div>
+
+<div class="overlay" id="camBox" hidden>
+  <div class="sheet cam" role="dialog" aria-modal="true" aria-labelledby="camTitle">
+    <h2 id="camTitle">カメラ</h2>
+    <video id="camVid" playsinline muted autoplay></video>
+    <p class="count" id="camCount" aria-live="assertive"></p>
+    <p class="note">撮った写真はバターちゃんが見てお話しするだけで、どこにも保存しません。</p>
+    <div class="row">
+      <button class="btn" id="camFlip" type="button">カメラを切りかえ</button>
+      <button class="btn" id="camCancel" type="button">やめる</button>
+      <button class="btn primary" id="camShot" type="button">いま撮る</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="goenBox" hidden>
+  <div class="sheet goen" role="dialog" aria-modal="true" aria-labelledby="goenTitle">
+    <h2 id="goenTitle">ご縁つなぎ</h2>
+    <p class="note">相棒どうしがお話しして、持ち主どうしの相性をさがします。相手に伝わるのは「紹介してよいこと」に書いたことだけです。</p>
+    <div class="field"><label for="gChar">わたしの相棒</label><select id="gChar"><option>ジャム猫</option><option>チーちゃん</option><option>バターちゃん</option></select></div>
+    <div class="field"><label for="gName">呼び名</label><input id="gName" type="text" maxlength="40" placeholder="例：ヒロ"></div>
+    <div class="field"><label for="gSkills">得意なこと</label><textarea id="gSkills" maxlength="400"></textarea></div>
+    <div class="field"><label for="gSeek">さがしていること</label><textarea id="gSeek" maxlength="400"></textarea></div>
+    <div class="field"><label for="gShare">紹介してよいこと</label><textarea id="gShare" maxlength="400" placeholder="ここに書いたことだけ相手に伝わります"></textarea></div>
+    <button class="btn primary" id="gSave" type="button">保存して、ご縁コードをもらう</button>
+    <p class="code" id="gCode"></p>
+    <div class="field"><label for="gOther">相手のご縁コード</label><input id="gOther" type="text" maxlength="8" autocomplete="off" placeholder="6文字"></div>
+    <button class="btn primary" id="gGo" type="button">相棒どうしで話してもらう</button>
+    <div class="lines" id="gLines" aria-live="polite"></div>
+    <button class="btn" id="gClose" type="button">とじる</button>
   </div>
 </div>
 
@@ -1613,7 +1653,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     if (s === 'sleeping' || s === 'thinking' || prev === 'sleeping' || (prev === 'thinking' && s !== 'speaking')) setEmo(baseEmo());
   }
   setInterval(() => {
-    if (state !== 'speaking' || SHOW()) return;
+    if (state !== 'speaking' || SHOW() || lipLive) return;
     const r = Math.random();
     butter.classList.toggle('talking', r > 0.18);
     butter.classList.toggle('mouth-small', r < 0.5);
@@ -1729,6 +1769,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     return res.json();
   }
   async function ask(text) {
+    if (jrLive()) { jrAsk(text); return; }
     addBubble('あなた', text, 'me');
     history.push({ role: 'user', content: text });
     if (history.length > 12) history = history.slice(-12);
@@ -1802,7 +1843,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
       an.fftSize = 512; src.buffer = buf; src.connect(an); an.connect(a.destination);
       curSrc = src;
       const data = new Float32Array(an.fftSize);
-      setState('speaking');
+      setState('speaking'); lipLive = true;
       const iv = setInterval(() => {              // 自分で鳴らした声に合わせて口を動かす（ずれない）
         an.getFloatTimeDomainData(data);
         let sum = 0; for (let i = 0; i < data.length; i++) sum += data[i] * data[i];
@@ -1810,7 +1851,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
         butter.classList.toggle('talking', rms > 0.02);
         butter.classList.toggle('mouth-small', rms < 0.08);
       }, 40);
-      src.onended = () => { clearInterval(iv); butter.classList.remove('talking', 'mouth-small'); setState('idle'); curSrc = null; res(); };
+      src.onended = () => { clearInterval(iv); lipLive = false; butter.classList.remove('talking', 'mouth-small'); setState('idle'); curSrc = null; res(); };
       src.start();
     });
   }
@@ -1910,6 +1951,262 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
       hint.textContent = 'ミニアプリの準備ができませんでした（' + (e.message || e) + '）';
     }
   }
+
+  // ===== なめらか会話（バターちゃんジュニアのサーバー／Google Cloud Run） =====
+  // ミニアプリで、サーバーにつながればこちらで話す。声は流しっぱなしで聞き、返事は一文ずつ届いてすぐ話す。
+  // 話している途中に声をかけると、止まって聞く。つながらなければ、これまでのGASの話し方にもどる。
+  const JR_DEFAULT = '';   // デプロイしたら Cloud Run のホスト名（…run.app）を入れる
+  const SRV = String(Q.get('s') || store.get('srv', '') || JR_DEFAULT).replace(/^(wss?|https?):\/\//, '').replace(/\/.*$/, '');
+  if (Q.get('s')) store.set('srv', SRV);
+  const J = { ws: null, ready: false, dead: !SRV || !LIFF, tries: 0, gen: -1, queue: [], playing: false, src: null, endEmo: null,
+    out: null, outText: '', mic: null, ctx: null, gain: null, an: null, paused: false, floor: 0.01, loud: 0, vol: Number(store.get('jrVol', 1)) || 1,
+    greeted: false, profile: null, facing: 'environment' };
+  const jrLive = () => !J.dead && J.ready && J.ws && J.ws.readyState === 1;
+  let lipLive = false;   // 声の大きさで口を動かしている間は、ランダムの口パクを止める
+  function jrSend(o) { if (J.ws && J.ws.readyState === 1) J.ws.send(typeof o === 'string' || o instanceof ArrayBuffer ? o : JSON.stringify(o)); }
+  function jrConnect() {
+    if (J.dead || (J.ws && J.ws.readyState <= 1)) return;
+    const ws = new WebSocket((/^(localhost|127\.)/.test(SRV) ? 'ws://' : 'wss://') + SRV + '/talk');
+    ws.binaryType = 'arraybuffer'; J.ws = ws; J.ready = false;
+    const giveUp = setTimeout(() => { if (!J.ready) { try { ws.close(); } catch (e) {} } }, 8000);
+    ws.onopen = () => jrSend(Object.assign({ type: 'hello', mode: BIZ() ? 'business' : 'family', greet: !J.greeted }, LIFF ? { idToken: idToken() } : { pass: cfg.pass }));
+    ws.onmessage = ev => { let m; try { m = JSON.parse(ev.data); } catch (e) { return; } if (m.type === 'ready') clearTimeout(giveUp); jrOn(m); };
+    ws.onclose = () => {
+      clearTimeout(giveUp);
+      const was = J.ready; J.ready = false; jrStopAudio();
+      if (J.dead) return;
+      if (!was && ++J.tries >= 2) { jrFallback(); return; }              // つながらない → これまでの話し方へ
+      if (document.visibilityState === 'visible' && convOn) setTimeout(jrConnect, was ? 800 : 2500);
+    };
+  }
+  function jrFallback() {
+    J.dead = true; $('goenBtn').hidden = true;
+    if (diag) { diag.hidden = false; diag.textContent = '（パパへ：サーバーにつながらないので、いつもの話し方にしています）'; }
+    if (convOn && !recBusy) setTimeout(talkOnce, 300);
+  }
+  const diag = $('diag');
+  function jrOn(m) {
+    switch (m.type) {
+      case 'ready':
+        J.ready = true; J.tries = 0; J.greeted = true; J.profile = m.profile || null; $('goenBtn').hidden = false;
+        jrMicStart().catch(() => { hint.textContent = 'マイクが使えません。LINEの設定でマイクを許可してください。'; });
+        jrBtn(); if (!J.playing) setState('listening');
+        hint.textContent = 'そのまま話しかけてね。話している途中でも、声をかけたら止まって聞くよ。';
+        break;
+      case 'partial':
+        if (pickRes && nameIn(m.text)) break;
+        if (U.on && ufoHear(m.text, false)) break;
+        if (!partialEl) partialEl = addBubble('聞き取り中', '', 'me partial');
+        partialEl.textContent = m.text;
+        break;
+      case 'heard': clearPartial(); jrHeard(m.text); break;
+      case 'reply_start':
+        J.gen = m.gen; J.queue = []; J.endEmo = null; jrStopAudio();
+        J.out = addBubble('バターちゃん', '…', 'her'); J.outText = '';
+        if (m.emotion) setEmo(m.emotion);
+        setState('thinking');
+        break;
+      case 'emotion': if (m.gen === J.gen) setEmo(m.emotion); break;
+      case 'reply_text': if (m.gen === J.gen && J.out) { J.outText += m.text; J.out.textContent = J.outText; } break;
+      case 'audio': if (m.gen === J.gen) { J.queue.push(m); jrPump(); } break;
+      case 'reply_end':
+        if (m.gen !== J.gen) break;
+        if (J.out) J.out.textContent = m.text || J.outText || '…';
+        if (m.text && history.length && history[history.length - 1].role === 'user') { history.push({ role: 'assistant', content: m.text }); if (history.length > 12) history = history.slice(-12); }
+        J.endEmo = m.emotion || 'smile';
+        jrDrain();
+        break;
+      case 'stopped':
+        J.queue = []; jrStopAudio();
+        if (J.out && J.outText) J.out.textContent = J.outText + '…';
+        setState('listening');
+        break;
+      case 'camera': jrCamera(m.kind, m.prompt); break;
+      case 'volume': J.vol = Math.max(0.3, Math.min(2, J.vol + m.delta)); store.set('jrVol', J.vol); if (J.gain) J.gain.gain.value = J.vol; break;
+      case 'quiet': hint.textContent = m.on ? 'しずかにしてるよ。「バターちゃん」と呼んだらお話しするね。' : 'そのまま話しかけてね。'; break;
+      case 'profile': J.profile = m.profile; goenShow(); toast('ご縁コードは ' + m.profile.code + ' だよ'); break;
+      case 'goen_wait': $('gLines').textContent = '相棒どうしでお話し中…'; break;
+      case 'goen_result': goenResult(m); break;
+      case 'goen_error':
+        $('gLines').textContent = { no_profile: '先に、自分のことを保存してね。', no_code: 'そのコードの相棒が見つからなかったよ。', self: '自分のコードだよ。相手のコードを入れてね。', owner: 'ミニアプリから開いてね。' }[m.why] || 'うまくつなげなかったよ。もう一回やってみてね。';
+        break;
+      case 'notice': if (diag && m.detail) { diag.hidden = false; diag.textContent = '（パパへ：' + m.why + ' ' + m.detail + '）'; } break;
+      case 'error':
+        if (m.code === 'auth') { J.dead = true; hint.textContent = 'LINEの確認ができなかったよ。ミニアプリを開き直してね。'; }
+        else if (m.code !== 'timeout') jrFallback();
+        break;
+    }
+  }
+  // 聞こえた言葉：ページでできること（ガチャ・UFO・チーちゃんの芸・ご縁）を先に。ほかはサーバーへ
+  function jrHeard(text) {
+    if (pickRes && pickHear(text)) return;
+    if (U.on && ufoHear(text, true)) return;
+    if (playCmd(text, /(ガチャ|がちゃ|ガシャ)/)) { doGacha(text); return; }
+    if (playCmd(text, UFO_RE)) { doUfo(text); return; }
+    if (/ご縁(つなぎ|コード)/.test(text)) { addBubble('あなた', text, 'me'); goenOpen(); return; }
+    if (CHI.test(text) && !WAKE.test(text) && TRICKS.some(t => t.re.test(text))) {
+      const t = TRICKS.find(x => x.re.test(text));
+      if ((pet && pet.chi && pet.chi.tricks || []).indexOf(t.name) >= 0) { chiDo(t.pose); bark(); }
+    }
+    ask(text);
+  }
+  function jrAsk(text) {
+    addBubble('あなた', text, 'me');
+    history.push({ role: 'user', content: text });
+    if (history.length > 12) history = history.slice(-12);
+    convoUntil = Date.now() + 25000;
+    jrSend({ type: 'text', text });
+  }
+  // 一文ずつ届いた声を、順番に鳴らす。口は声の大きさで動かす
+  async function jrPump() {
+    if (J.playing || !J.queue.length) return;
+    const m = J.queue.shift();
+    J.playing = true;
+    const a = AC();
+    let buf = null;
+    try { const bin = atob(m.mp3), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); buf = await a.decodeAudioData(u8.buffer); } catch (e) {}
+    if (!buf || m.gen !== J.gen) { J.playing = false; jrPump(); jrDrain(); return; }
+    if (!J.gain) { J.gain = a.createGain(); J.an = a.createAnalyser(); J.an.fftSize = 512; J.gain.connect(J.an); J.an.connect(a.destination); }
+    J.gain.gain.value = J.vol;
+    const src = a.createBufferSource(); src.buffer = buf; src.connect(J.gain); J.src = src;
+    setState('speaking'); lipLive = true;
+    src.onended = () => { if (J.src === src) J.src = null; J.playing = false; jrPump(); jrDrain(); };
+    src.start();
+  }
+  function jrDrain() {
+    if (J.playing || J.queue.length || !J.endEmo) return;
+    lipLive = false; butter.classList.remove('talking', 'mouth-small');
+    setState('listening'); setEmo(J.endEmo, 5000); J.endEmo = null;
+  }
+  function jrStopAudio() {
+    if (J.src) { try { J.src.onended = null; J.src.stop(); } catch (e) {} J.src = null; }
+    J.playing = false; lipLive = false; butter.classList.remove('talking', 'mouth-small');
+  }
+  setInterval(() => {
+    if (!lipLive || !J.an || !J.playing) return;
+    const d = new Float32Array(J.an.fftSize); J.an.getFloatTimeDomainData(d);
+    let s2 = 0; for (let i = 0; i < d.length; i++) s2 += d[i] * d[i];
+    const r = Math.sqrt(s2 / d.length) / Math.max(0.3, J.vol);
+    butter.classList.toggle('talking', r > 0.02); butter.classList.toggle('mouth-small', r < 0.08);
+  }, 40);
+  // マイク：16kHzの声にして流しっぱなしで送る。話している途中で大きな声がしたら、すぐ止める
+  async function jrMicStart() {
+    if (J.ctx) return;
+    const a = AC();
+    J.mic = J.mic || liffStream || await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    liffStream = J.mic;
+    const src = a.createMediaStreamSource(J.mic);
+    const onChunk = d => {
+      if (J.paused || !jrLive()) return;
+      let s2 = 0; for (let i = 0; i < d.length; i++) s2 += d[i] * d[i];
+      const rms = Math.sqrt(s2 / d.length), ms = d.length / a.sampleRate * 1000;
+      $('lvlLive').style.transform = 'scale(' + (1 + Math.min(rms * 8, 0.5)) + ')';
+      if (!J.playing) J.floor = rms < J.floor ? J.floor * 0.9 + rms * 0.1 : J.floor * 0.998 + rms * 0.002;
+      else if (rms > Math.max(0.05, J.floor * 4)) { J.loud += ms; if (J.loud > 220) { J.loud = 0; J.queue = []; jrStopAudio(); jrSend({ type: 'barge' }); setState('listening'); } }
+      else J.loud = Math.max(0, J.loud - ms / 2);
+      const ratio = a.sampleRate / 16000, n = Math.floor(d.length / ratio), pcm = new Int16Array(n);
+      for (let i = 0; i < n; i++) {
+        const s0 = Math.floor(i * ratio), s1 = Math.min(d.length, Math.floor((i + 1) * ratio));
+        let v = 0; for (let j = s0; j < s1; j++) v += d[j]; v /= Math.max(1, s1 - s0);
+        pcm[i] = Math.max(-1, Math.min(1, v)) * 0x7fff;
+      }
+      jrSend(pcm.buffer);
+    };
+    try {
+      const code = "class P extends AudioWorkletProcessor{constructor(){super();this.b=new Float32Array(2048);this.n=0}process(i){const d=i[0]&&i[0][0];if(d){for(let k=0;k<d.length;k++){this.b[this.n++]=d[k];if(this.n===2048){this.port.postMessage(this.b.slice(0));this.n=0}}}return true}}registerProcessor('jr-pcm',P)";
+      await a.audioWorklet.addModule(URL.createObjectURL(new Blob([code], { type: 'application/javascript' })));
+      const node = new AudioWorkletNode(a, 'jr-pcm');
+      node.port.onmessage = e => onChunk(e.data);
+      const mute = a.createGain(); mute.gain.value = 0;
+      src.connect(node); node.connect(mute); mute.connect(a.destination);
+      J.ctx = { node, src };
+    } catch (e) {
+      const proc = a.createScriptProcessor(4096, 1, 1);
+      proc.onaudioprocess = ev => onChunk(new Float32Array(ev.inputBuffer.getChannelData(0)));
+      const mute = a.createGain(); mute.gain.value = 0;
+      src.connect(proc); proc.connect(mute); mute.connect(a.destination);
+      J.ctx = { node: proc, src };
+    }
+  }
+  function jrBtn() {
+    const btn = $('talkBtn');
+    btn.classList.toggle('rec', !J.paused); btn.querySelector('b').textContent = J.paused ? 'おして話す' : 'きいてるよ';
+  }
+  // カメラ：「写真撮って」「動画撮って」と言われたときだけ。お知らせを出して、3びょう数えて撮る
+  let camStream = null, camCancel = null;
+  async function camOpen() {
+    if (camStream) camStream.getTracks().forEach(t => t.stop());
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: J.facing, width: { ideal: 1280 } }, audio: false });
+    $('camVid').srcObject = camStream; await $('camVid').play().catch(() => {});
+  }
+  function camClose() { if (camStream) camStream.getTracks().forEach(t => t.stop()); camStream = null; $('camVid').srcObject = null; $('camBox').hidden = true; }
+  function camFrame(max) {
+    const v = $('camVid'), w = v.videoWidth || 640, h = v.videoHeight || 480, k = Math.min(1, (max || 768) / Math.max(w, h));
+    const c = document.createElement('canvas'); c.width = Math.round(w * k); c.height = Math.round(h * k);
+    c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+    return c.toDataURL('image/jpeg', 0.8);
+  }
+  async function jrCamera(kind, prompt) {
+    if (/(自撮り|じどり|わたし|ぼく|おれ|私|僕|俺|顔)/.test(prompt || '')) J.facing = 'user';
+    $('camTitle').textContent = kind === 'video' ? '動画を撮るよ（10びょう）' : '写真を撮るよ';
+    $('camBox').hidden = false; $('camCount').textContent = '';
+    try { await camOpen(); } catch (e) { camClose(); addBubble('バターちゃん', 'カメラが使えなかったよ。LINEの設定でカメラを許可してね。', 'her'); return; }
+    let cancelled = false, now = false;
+    camCancel = () => { cancelled = true; };
+    $('camShot').onclick = () => { now = true; };
+    for (let i = 3; i > 0 && !now && !cancelled; i--) { $('camCount').textContent = i; await new Promise(r => setTimeout(r, 1000)); }
+    if (cancelled) { camClose(); addBubble('バターちゃん', 'わかった、撮るのはやめたよ。', 'her'); return; }
+    if (kind !== 'video') {
+      const data = camFrame(768); camClose();
+      const b = addBubble('あなた', '（写真）', 'me'); b.append(Object.assign(document.createElement('img'), { className: 'snap', src: data, alt: '撮った写真' }));
+      jrSend({ type: 'photo', data, prompt });
+      return;
+    }
+    // 動画：10びょう撮って、とちゅうの3枚をバターちゃんが見る。動画はこの端末にだけ残る
+    $('camCount').textContent = '● 撮影中';
+    const frames = [], parts = [];
+    let rec = null;
+    try {
+      const tracks = camStream.getVideoTracks().concat(J.mic ? J.mic.getAudioTracks() : []);
+      rec = new MediaRecorder(new MediaStream(tracks)); rec.ondataavailable = e => { if (e.data.size) parts.push(e.data); }; rec.start();
+    } catch (e) { rec = null; }
+    for (let t = 0; t < 10 && !cancelled && !now; t++) {
+      await new Promise(r => setTimeout(r, 1000));
+      $('camCount').textContent = '● ' + (9 - t);
+      if (t === 1 || t === 5 || t === 8) frames.push(camFrame(640));
+    }
+    if (!frames.length) frames.push(camFrame(640));
+    const done = rec ? new Promise(r => { rec.onstop = r; }) : Promise.resolve();
+    try { rec && rec.stop(); } catch (e) {}
+    await done; camClose();
+    if (cancelled) { addBubble('バターちゃん', '動画はやめたよ。', 'her'); return; }
+    const b = addBubble('あなた', '（動画）', 'me');
+    if (parts.length) {
+      const url = URL.createObjectURL(new Blob(parts, { type: parts[0].type || 'video/mp4' }));
+      b.append(Object.assign(document.createElement('video'), { className: 'snap', src: url, controls: true, playsInline: true }));
+      const a2 = Object.assign(document.createElement('a'), { href: url, download: 'butter-' + Date.now() + (/(mp4)/.test(parts[0].type) ? '.mp4' : '.webm'), textContent: '動画を保存' });
+      b.append(document.createElement('br'), a2);
+    }
+    jrSend({ type: 'photo', data: frames[0], frames, prompt });
+  }
+  $('camCancel').addEventListener('click', () => { camCancel ? camCancel() : camClose(); });
+  $('camFlip').addEventListener('click', () => { J.facing = J.facing === 'user' ? 'environment' : 'user'; camOpen().catch(() => {}); });
+  // ご縁つなぎ
+  function goenShow() {
+    const p = J.profile;
+    $('gCode').textContent = p && p.code ? 'あなたのご縁コード：' + p.code : '';
+    if (p) { $('gChar').value = p.character || 'ジャム猫'; $('gName').value = p.name || ''; $('gSkills').value = p.skills || ''; $('gSeek').value = p.seeking || ''; $('gShare').value = p.shareable || ''; }
+  }
+  function goenOpen() { goenShow(); $('gLines').textContent = ''; $('goenBox').hidden = false; }
+  function goenResult(m) {
+    const box = $('gLines'); box.textContent = '';
+    m.lines.forEach(l => { const p = document.createElement('p'); p.textContent = l.who + '：' + l.text; box.append(p); addBubble(l.who, l.text, 'dog'); });
+    [m.match, m.next].filter(Boolean).forEach(t => { const p = document.createElement('p'); p.textContent = t; p.style.fontWeight = '700'; box.append(p); });
+  }
+  $('goenBtn').addEventListener('click', goenOpen);
+  $('gClose').addEventListener('click', () => { $('goenBox').hidden = true; });
+  $('gSave').addEventListener('click', () => jrSend({ type: 'profile', profile: { character: $('gChar').value, name: $('gName').value.trim(), skills: $('gSkills').value.trim(), seeking: $('gSeek').value.trim(), shareable: $('gShare').value.trim() } }));
+  $('gGo').addEventListener('click', () => { const c = $('gOther').value.trim(); if (c) jrSend({ type: 'goen', code: c }); });
 
   // ===== しゃべる =====
   function jaVoices() { return speechSynthesis.getVoices().filter(v => /^ja/i.test(v.lang)); }
@@ -2347,6 +2644,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
       started = true; $('startOverlay').hidden = true; AC();
       const m = pet ? pet.melt : 0;
       convOn = true;
+      if (!J.dead) { jrConnect(); return; }
       liffSpeak(m >= 2 ? 'あつくて、とろとろだよ〜。お話しして、ひんやりさせて！' : 'やっほー！バターちゃんだよ。なんでも話しかけてね。', m >= 2 ? 'melty' : 'excited')
         .then(() => setTimeout(() => { if (!recBusy) talkOnce(); }, 300));
       return;
@@ -2379,17 +2677,20 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     } catch (e) {}
   });
   document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) document.body.classList.remove('big'); });
-  document.addEventListener('visibilitychange', () => { if (!document.hidden && started) { if (!LIFF) startRec(); else if (convOn && !recBusy && state !== 'speaking' && state !== 'thinking') setTimeout(talkOnce, 300); poll(); } });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && started) { if (!LIFF) startRec(); else if (!J.dead) jrConnect(); else if (convOn && !recBusy && state !== 'speaking' && state !== 'thinking') setTimeout(talkOnce, 300); poll(); } else if (document.hidden && J.ws && !J.dead) { try { J.ws.close(1000); } catch (e) {} } });
 
   function setHint() {
     hint.textContent = SHOW() ? 'お話しはClaudeアプリのバターちゃんと。「チーちゃん、おて」「バターちゃん、ガチャ回して」もできるよ。'
       : cfg.wake === 'wake' ? '「バターちゃん」と呼んでから話しかけてね。' : '話しかけると答えるよ。';
   }
   setHint();
-  $('talkBtn').addEventListener('click', talkOnce);
+  $('talkBtn').addEventListener('click', () => {
+    if (!J.dead && J.ready) { J.paused = !J.paused; if (J.paused) { J.queue = []; jrStopAudio(); jrSend({ type: 'barge' }); setState('idle'); } else setState('listening'); jrBtn(); return; }
+    talkOnce();
+  });
   function showMode() { const b = BIZ(); $('modeBtn').setAttribute('aria-pressed', String(b)); $('modeBtn').textContent = b ? 'ビジネスモード（家族の話はしない）' : 'ファミリーモード'; }
   $('modeBtn').addEventListener('click', () => {
-    store.set('bizMode', !store.get('bizMode', false)); history = []; showMode();
+    store.set('bizMode', !store.get('bizMode', false)); history = []; showMode(); jrSend({ type: 'mode', mode: BIZ() ? 'business' : 'family' });
     toast(BIZ() ? 'ビジネスモード：ていねいに、家族の話はしないよ' : 'ファミリーモード：おうちのバターちゃんだよ');
   });
   showMode();

@@ -97,6 +97,7 @@
   - LINEログインのチャネルは、ボットと**同じプロバイダー**に作る（ユーザーIDがそろう）
 - 話す：「おして話す」→ 16kHzの音をGASへ → Google Speech-to-Text → Claude → Google Text-to-Speech → ページで再生（自分で鳴らす声なので口がずれない）
 - GASの設定：`butterGoogleKeySetup`（GOOGLE_SPEECH_KEY）、`butterLiffSetup`（LIFF_CHANNEL_ID）、声は `TTS_VOICE`（`butterVoiceList` で一覧）
+- なめらか会話：サーバー（`server/`、Google Cloud Run）につながれば、声を流しっぱなしで聞き、一文ずつすぐ話し、途中で声をかけると止まる。写真・動画・ご縁つなぎもここ。つながらなければGASの話し方にもどる。置き方は `server/README.md`
 
 ## 台本モード（ステージ・スマホ1台）
 - URLに `?stage=1` をつける（はじめの画面の「ステージ（台本）モードにする」でも入れる）
@@ -146,6 +147,7 @@
 ---
 
 ## 更新履歴
+- 2026-11-16 バターちゃんジュニアのサーバー（なめらか会話・割りこみ・写真と動画・ご縁つなぎ）
 - 2026-11-15 表情7種・溶ける4段階・柴犬チーちゃんと芸・Edge Nanami声
 - 2026-11-15 進化・ガチャと着せかえ・子どもたちの設定・SwitchBot下準備
 - 2026-11-15 記憶：おうち日記とおさんぽ日記。チーちゃんはお出かけ担当（Claudeアプリ）
