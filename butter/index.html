@@ -1836,6 +1836,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     let bin = ''; for (let i = 0; i < u8.length; i += 0x8000) bin += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
     return btoa(bin);
   }
+  let convOn = false;   // ミニアプリ：ずっと聞くモード（おこしたら自動でオン）
   async function talkOnce() {
     const btn = $('talkBtn');
     if (recBusy) { btn._stop && btn._stop(); return; }
@@ -1845,15 +1846,19 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     let audio = null;
     try { audio = await recordVoice(btn); } catch (e) { hint.textContent = 'マイクが使えません。LINEの設定でマイクを許可してください。'; }
     btn.classList.remove('rec'); recBusy = false;
-    if (!audio) { btn.querySelector('b').textContent = 'おして話す'; setState('idle'); return; }
+    if (!audio) {
+      // ずっと聞くモード：だれも話していなければ、そのまま聞きつづける（ボタンを押さなくていい）
+      if (convOn && document.visibilityState === 'visible') { setTimeout(() => { if (!recBusy) talkOnce(); }, 150); return; }
+      btn.querySelector('b').textContent = 'おして話す'; setState('idle'); return;
+    }
     btn.classList.add('wait'); btn.querySelector('b').textContent = 'かんがえ中';
     setState('thinking');
     const out = addBubble('バターちゃん', '…', 'her');
     let r = null;
     try { r = await callGas(Object.assign({ action: 'voice', audio, messages: history.slice(-12) }, LIFF_BROWSER_VOICE() ? { tts: false } : {})); } catch (e) {}
     btn.classList.remove('wait'); btn.querySelector('b').textContent = 'おして話す';
-    if (!r || !r.ok) { out.textContent = r && r.error === 'auth' ? 'LINEの確認ができなかったよ。開き直してね。' : 'うまく聞こえなかったよ。もう一回おしてね。'; setState('idle'); setEmo('sad', 4000); return; }
-    if (!r.heard) { out.textContent = 'ん？もう一回言ってみて。'; setState('idle'); setEmo('think', 3000); return; }
+    if (!r || !r.ok) { out.textContent = r && r.error === 'auth' ? 'LINEの確認ができなかったよ。開き直してね。' : 'うまく聞こえなかったよ。もう一回言ってね。'; setState('idle'); setEmo('sad', 4000); if (convOn && !(r && r.error === 'auth')) setTimeout(() => { if (!recBusy) talkOnce(); }, 600); return; }
+    if (!r.heard) { out.parentElement.remove(); setState('idle'); if (convOn) setTimeout(() => { if (!recBusy) talkOnce(); }, 150); return; }
     // 聞こえた言葉で、ページだけでできることを先に
     if (/(ガチャ|がちゃ)/.test(r.heard)) { out.parentElement.remove(); doGacha(r.heard); return; }
     if (UFO_RE.test(r.heard)) { out.parentElement.remove(); doUfo(r.heard); return; }
@@ -1867,7 +1872,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     nextAudio = r.audio || null;
     await liffSpeak(r.text, r.emotion || 'smile');
     // 会話モード：答えおわったら、ボタンを押さなくても続けて聞く（だれも話さなければ止まる）
-    if (store.get('liffConv', true) && document.visibilityState === 'visible') setTimeout(() => { if (!recBusy) talkOnce(); }, 350);
+    if (convOn && document.visibilityState === 'visible') setTimeout(() => { if (!recBusy) talkOnce(); }, 350);
   }
   async function liffBoot() {
     if (!LIFF) return;
@@ -2313,7 +2318,9 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     if (LIFF) {
       started = true; $('startOverlay').hidden = true; AC();
       const m = pet ? pet.melt : 0;
-      speak(m >= 2 ? 'あつくて、とろとろだよ〜。お話しして、ひんやりさせて！' : 'やっほー！バターちゃんだよ。まんなかのボタンをおして、お話ししてね。', m >= 2 ? 'melty' : 'excited');
+      convOn = true;
+      liffSpeak(m >= 2 ? 'あつくて、とろとろだよ〜。お話しして、ひんやりさせて！' : 'やっほー！バターちゃんだよ。なんでも話しかけてね。', m >= 2 ? 'melty' : 'excited')
+        .then(() => setTimeout(() => { if (!recBusy) talkOnce(); }, 300));
       return;
     }
     if (!SR) {
@@ -2344,7 +2351,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     } catch (e) {}
   });
   document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) document.body.classList.remove('big'); });
-  document.addEventListener('visibilitychange', () => { if (!document.hidden && started) { if (!LIFF) startRec(); poll(); } });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && started) { if (!LIFF) startRec(); else if (convOn && !recBusy && state !== 'speaking' && state !== 'thinking') setTimeout(talkOnce, 300); poll(); } });
 
   function setHint() {
     hint.textContent = SHOW() ? 'お話しはClaudeアプリのバターちゃんと。「チーちゃん、おて」「バターちゃん、ガチャ回して」もできるよ。'
