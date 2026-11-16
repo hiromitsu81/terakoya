@@ -12,6 +12,8 @@ const gasSrv = http.createServer((req, res) => {
     res.setHeader('Content-Type', 'application/json');
     if (j.action === 'brain') {
       if (j.pass === 'flaky') return res.end('<html>error</html>');
+      if (j.idToken === 'guest-closed') return res.end(JSON.stringify({ ok: true, guest: true, closed: true }));
+      if (j.idToken === 'guest-y') return res.end(JSON.stringify({ ok: true, guest: true, owner: 'g:y', me: 'ユウ', slots: [] }));
       if (j.idToken === 'guest-x') return res.end(JSON.stringify({ ok: true, guest: true, owner: 'g:x', me: 'マー君', slots: [{ label: '11/20(木) 19時ごろ', start: '2026-11-20T10:00:00Z', end: '2026-11-20T12:00:00Z' }] }));
       const ok = j.pass === 'ok' || j.idToken === 'tok-' + 'b';
       return res.end(JSON.stringify(ok ? { ok: true, system: 'あなたはバターちゃんジュニア。', owner: j.pass ? 'fam' : 'U-b', me: j.pass ? 'パパ' : 'Bさん' } : { ok: false, error: 'auth' }));
@@ -224,6 +226,21 @@ function client(port, hello) {
   assert.ok(!gasCalls.some(c => c.action === 'log' && /宿の予約/.test(c.said || '')), '窓口の会話は家族の記録に入れない');
   deps.claude.messages.stream = os4;
 
-  console.log('OK：会話・気持ち・一文ずつの声・写真・記録の分け方・ご縁つなぎ・割りこみ・三人モード・呼ばれただけ・会話のつづき・ジュニア日記・やりなおし・窓口と案件メモ');
+  // 紹介のつながり：マー君（mac経由）が紹介した人の案件メモに「マー君さん（← mac）」
+  const myRef = gr.myRef; assert.ok(/^[a-z0-9]{6}$/.test(myRef), '自分の紹介コード');
+  const gy = await client(port, { type: 'hello', idToken: 'guest-y', ref: myRef });
+  await gy.until(m => m.type === 'ready');
+  const nL = gasCalls.filter(c => c.action === 'lead').length;
+  gy.ws.send(JSON.stringify({ type: 'text', text: 'ヒロさんに相談したい' }));
+  await gy.until(m => m.type === 'reply_end');
+  gy.ws.send(JSON.stringify({ type: 'text', text: 'よろしく伝えて' }));
+  await new Promise(r => setTimeout(r, 600));
+  const ly = gasCalls.filter(c => c.action === 'lead')[nL];
+  assert.ok(ly && /マー君さん（← mac）/.test(ly.lead.ref), '紹介のつながり: ' + (ly && ly.lead.ref));
+  // 窓口を止めているとき
+  const gc = await client(port, { type: 'hello', idToken: 'guest-closed' });
+  await gc.until(m => m.type === 'error' && m.code === 'closed');
+
+  console.log('OK：会話・気持ち・一文ずつの声・写真・記録の分け方・ご縁つなぎ・割りこみ・三人モード・呼ばれただけ・会話のつづき・ジュニア日記・やりなおし・窓口と案件メモ・紹介のつながり・窓口のお休み');
   process.exit(0);
 })().catch(e => { console.error('NG', e); process.exit(1); });

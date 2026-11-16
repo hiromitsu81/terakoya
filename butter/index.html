@@ -837,6 +837,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     <button class="modebtn" id="modeBtn" type="button" aria-pressed="false">ファミリーモード</button>
     <button class="modebtn goenbtn" id="trioBtn" type="button" aria-pressed="false" hidden>三人モード</button>
     <button class="modebtn goenbtn" id="goenBtn" type="button" hidden>ご縁つなぎ</button>
+    <button class="modebtn goenbtn" id="shareBtn" type="button" hidden>友だちに紹介する</button>
     <form class="typed" id="typed">
       <input id="typedInput" type="text" placeholder="文字でもOK（チーちゃん、おて など）" autocomplete="off" aria-label="バターちゃんに送る文字">
       <button class="btn primary" type="submit">送る</button>
@@ -2024,7 +2025,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     switch (m.type) {
       case 'ready':
         J.ready = true; J.tries = 0; J.greeted = true; J.profile = m.profile || null; $('goenBtn').hidden = false;
-        J.guest = !!m.guest;
+        J.guest = !!m.guest; J.myRef = m.myRef || ''; $('shareBtn').hidden = !J.myRef;
         document.body.classList.toggle('familyok', !J.guest);
         document.body.classList.toggle('guestmode', J.guest);
         if (J.guest) { $('typedInput').placeholder = 'ヒロさんにしてほしいこと、なんでもどうぞ'; }
@@ -2087,6 +2088,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
         break;
       case 'notice': if (diag && m.detail) { diag.hidden = false; diag.textContent = '（パパへ：' + m.why + ' ' + m.detail + '）'; } break;
       case 'error':
+        if (m.code === 'closed') { J.dead = true; hint.textContent = 'いま窓口はお休み中だぜ。また今度話してくんな！'; addBubble('ジュニア', 'いま窓口はお休み中だぜ。ヒロさんには直接連絡してくんな！', 'her'); }
         if (m.code === 'auth') { J.dead = true; J.authFail = true; hint.textContent = 'LINEの確認が切れたよ。まんなかのボタンを押すと開き直すよ。'; }
         // それ以外のエラーでは前の話し方にしない（切れたら、つなぎなおす）
         break;
@@ -2294,6 +2296,15 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     [m.match, m.next].filter(Boolean).forEach(t => { const p = document.createElement('p'); p.textContent = t; p.style.fontWeight = '700'; box.append(p); });
   }
   $('goenBtn').addEventListener('click', goenOpen);
+  // 友だちに紹介する：送るURLには、押した人の紹介コードがつく（だれの紹介で来たかがわかる）
+  $('shareBtn').addEventListener('click', async () => {
+    const url = 'https://liff.line.me/' + LIFF_ID + '?ref=' + encodeURIComponent(J.myRef || '');
+    const text = 'ヒロさんの相棒AI「バターちゃんジュニア」だよ。ヒロさんに相談したいこと、いっしょにやりたいこと、気軽に話してみて！\n' + url;
+    try {
+      if (window.liff && liff.isApiAvailable && liff.isApiAvailable('shareTargetPicker')) { const r = await liff.shareTargetPicker([{ type: 'text', text }]); if (r) toast('送ったよ！ありがとう'); return; }
+    } catch (e) {}
+    location.href = 'https://line.me/R/share?text=' + encodeURIComponent(text);
+  });
   $('trioBtn').addEventListener('click', () => jrSend({ type: 'trio', on: !J.trio }));
   $('gClose').addEventListener('click', () => { $('goenBox').hidden = true; });
   $('gSave').addEventListener('click', () => jrSend({ type: 'profile', profile: { character: $('gChar').value, name: $('gName').value.trim(), skills: $('gSkills').value.trim(), seeking: $('gSeek').value.trim(), shareable: $('gShare').value.trim() } }));

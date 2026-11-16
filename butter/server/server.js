@@ -31,7 +31,9 @@ const ENV = {
   GAS_URL: process.env.GAS_URL || '',
   ALLOWED_ORIGINS: (process.env.ALLOWED_ORIGINS || 'https://hiromitsu81.github.io,https://miniapp.line.me,https://liff.line.me').split(',').map(s => s.trim()).filter(Boolean),
   DAILY_LIMIT: Number(process.env.DAILY_LIMIT || 400),       // 一人1日に答える回数
-  DAILY_LIMIT_GUEST: Number(process.env.DAILY_LIMIT_GUEST || 30),   // 窓口（家族以外）の1日の回数
+  DAILY_LIMIT_GUEST: Number(process.env.DAILY_LIMIT_GUEST || 30),   // 窓口（家族以外）の1日の回数。紹介コードつき
+  DAILY_LIMIT_NOREF: Number(process.env.DAILY_LIMIT_NOREF || 10),   // 紹介コードなしで来た人
+  GUEST_TOTAL_LIMIT: Number(process.env.GUEST_TOTAL_LIMIT || 300),  // 窓口ぜんぶで1日に答える回数
   SESSION_MAX_MIN: Number(process.env.SESSION_MAX_MIN || 60), // 1回のつなぎっぱなしの上限
 };
 
@@ -63,12 +65,36 @@ async function gas(payload) {
 
 /* ===== 1日の回数 ===== */
 const counts = new Map();
-function quotaOk(owner, guest) {
-  const k = owner + ':' + new Date().toISOString().slice(0, 10);
+function quotaOk(owner, guest, hasRef) {
+  const day = new Date().toISOString().slice(0, 10), k = owner + ':' + day;
   const n = (counts.get(k) || 0) + 1;
   counts.set(k, n);
   if (counts.size > 5000) counts.clear();
-  return n <= (guest ? ENV.DAILY_LIMIT_GUEST : ENV.DAILY_LIMIT);
+  if (!guest) return n <= ENV.DAILY_LIMIT;
+  const tk = '__guests:' + day, t = (counts.get(tk) || 0) + 1;      // 窓口ぜんぶの上限
+  counts.set(tk, t);
+  return t <= ENV.GUEST_TOTAL_LIMIT && n <= (hasRef ? ENV.DAILY_LIMIT_GUEST : ENV.DAILY_LIMIT_NOREF);
+}
+
+/* ===== 紹介のつながり：一人ひとりの紹介コード（refs）。だれの紹介で来たかを、最初の1回だけ覚える ===== */
+const memRefs = new Map();
+const myRefOf = owner => Array.from(crypto.createHash('sha256').update('ref:' + owner).digest()).slice(0, 6).map(b => 'abcdefghjkmnpqrstuvwxyz23456789'[b % 31]).join('');
+async function getRef(code) {
+  if (!code) return null;
+  try { if (deps.db) { const d = await deps.db.collection('refs').doc(code).get(); return d.exists ? d.data() : null; } } catch (e) {}
+  return memRefs.get(code) || null;
+}
+async function putRef(code, data) {
+  try { if (deps.db) return void await deps.db.collection('refs').doc(code).set(data, { merge: true }); } catch (e) {}
+  memRefs.set(code, Object.assign(memRefs.get(code) || {}, data));
+}
+/** 紹介元の名前（「マー君さん」）。手で作ったコード（mac など）はそのまま */
+async function refLabel(code) {
+  if (!code) return '';
+  const r = await getRef(code);
+  if (!r || !r.name) return code;
+  const up = r.parent ? await getRef(r.parent) : null;
+  return r.name + 'さん' + (r.parent ? '（← ' + (up && up.name ? up.name + 'さん' : r.parent) + '）' : '');
 }
 
 /* ===== 窓口モード：家族以外（友だち・仕事仲間）が開いたとき。家族の記録は一切読まない ===== */
@@ -285,22 +311,24 @@ function session(ws) {
       // GASはときどき失敗するので1回だけやりなおす。それでもだめなら、前に読んだもの（古くても）を使う
       for (let i = 0; i < 2 && !r; i++) {
         try {
-          const x = await gas(Object.assign({ action: 'brain', mode: S.mode }, S.auth));
+          const x = await gas(Object.assign({ action: 'brain', mode: S.mode, ref: S.ref || '' }, S.auth));
           if (x && x.ok) r = x;
           else if (x && (x.error === 'auth' || x.error === 'pass')) throw Object.assign(new Error(x.error), { code: x.error });
           else console.error('brain ng', JSON.stringify(x).slice(0, 200));
         } catch (e) {
-          if (e.code === 'auth' || e.code === 'pass') throw e;
+          if (e.code === 'auth' || e.code === 'pass' || e.code === 'closed') throw e;
           console.error('brain error', String(e.message).slice(0, 200));
         }
         if (!r && i === 0) await new Promise(ok => setTimeout(ok, 800));
       }
+      if (r && r.closed) throw Object.assign(new Error('closed'), { code: 'closed' });
       if (!r && hit) r = hit.r;
       if (!r) throw Object.assign(new Error('brain'), { code: 'brain' });
       brainCache.set(key, { r, at: Date.now() }); if (brainCache.size > 200) brainCache.clear();
     }
     const who = String(r.me || '');
     if (r.guest) {
+      if (r.closed) throw Object.assign(new Error('closed'), { code: 'closed' });
       S.guest = true; S.mode = 'guest'; S.trio = false;
       S.slots = (Array.isArray(r.slots) ? r.slots : []).slice(0, 10).map(x => ({ label: String(x.label || ''), start: String(x.start || ''), end: String(x.end || '') })).filter(x => x.label);
       S.system = GUEST_PERSONA + SELF + (who ? '\n\n【いま話している人】' + who + 'さん（LINEの名前）。' : '') +
@@ -404,7 +432,7 @@ function session(ws) {
       await saveConvo(key, { summary: S.memo, newTurns: S.newTurns, turns: S.history.slice(-12), at: Date.now() });
       if (j.worth) {
         const slot = S.slots.find(x => j.slot && (x.label === j.slot || String(j.slot).indexOf(x.label) >= 0)) || null;
-        const lead = { who: S.me, ref: S.ref || '', kind: String(j.kind || ''), title: String(j.title || ''), need: String(j.need || ''), when: String(j.when || ''), budget: String(j.budget || ''), next: String(j.next || ''), slot };
+        const lead = { who: S.me, ref: await refLabel(S.refFrom || S.ref || ''), kind: String(j.kind || ''), title: String(j.title || ''), need: String(j.need || ''), when: String(j.when || ''), budget: String(j.budget || ''), next: String(j.next || ''), slot };
         const g = await gas(Object.assign({ action: 'lead', lead }, S.auth));
         if (!g || !g.ok) console.error('lead ng', JSON.stringify(g).slice(0, 200));
       }
@@ -479,7 +507,7 @@ function session(ws) {
   async function reply(content, logText, as) {
     const jam = as === 'jam';
     const voice = jam ? JAM_VOICE : S.voice;
-    if (!quotaOk(S.owner || 'anon', S.guest)) return speakOnly(S.guest ? 'きょうはたくさん話したな。続きはヒロさんに伝えとくぜ、また明日な！' : 'きょうはたくさんお話ししたから、また明日ね。', 'shy');
+    if (!quotaOk(S.owner || 'anon', S.guest, !!S.refFrom)) return speakOnly(S.guest ? 'きょうはたくさん話したな。続きはヒロさんに伝えとくぜ、また明日な！' : 'きょうはたくさんお話ししたから、また明日ね。', 'shy');
     if (Date.now() - (S.brainAt || 0) > 10 * 60 * 1000) { try { await loadBrain(true); } catch (e) {} }   // 記録は10分ごとに読みなおす
     stopReply('new');
     const gen = S.gen, utt0 = S.utt; S.speaking = true;
@@ -589,11 +617,20 @@ function session(ws) {
         S.ref = String(m.ref || '').replace(/[^\w-]/g, '').slice(0, 20);
         try { await loadBrain(); } catch (e) {
           if (e.code === 'auth' || e.code === 'pass') return fail('auth', String(e.message).slice(0, 80));
+          if (e.code === 'closed') return fail('closed', 'いま窓口はお休み中');
           // GASが読めないときも切らずに話す（家族の記録なし）。三人モードなどはページから受けとる
           S.system = MIN_PERSONA + SELF; S.brainAt = Date.now() - 9 * 60 * 1000;
           send({ type: 'notice', why: 'brain', detail: 'GASが読めないので、記録なしで話しています' });
         }
         S.ready = true;
+        // 紹介コード：自分のコードを作り、はじめて来た人は「だれの紹介か」を覚える
+        S.myRef = S.owner ? myRefOf(S.owner) : '';
+        if (S.myRef) {
+          const mine = await getRef(S.myRef);
+          const parent = mine && mine.parent ? mine.parent : (S.ref && S.ref !== S.myRef ? S.ref : '');
+          S.refFrom = parent;
+          await putRef(S.myRef, { owner: S.owner, name: S.me || (mine && mine.name) || '', parent, at: (mine && mine.at) || Date.now() });
+        }
         const pr = await loadPrefs(S.owner);
         S.trio = S.guest ? false : typeof m.trio === 'boolean' ? m.trio : !!pr.trio;
         if (typeof pr.waitMs === 'number') S.waitMs = pr.waitMs;
@@ -606,7 +643,7 @@ function session(ws) {
             if (S.newTurns >= 2) setTimeout(summarize, 3000);       // 前回まとめきれなかった分（強制で切ったときなど）
           }
         }
-        send({ type: 'ready', me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs, guest: !!S.guest });
+        send({ type: 'ready', me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs, guest: !!S.guest, myRef: S.myRef || '' });
         const hi = m.greet ? (S.guest ? (S.history.length ? 'よう、また来てくれたな！つづきを話そうぜ。' : guestGreeting(S.me)) : greeting(S.me, S.mode, S.trio)) : '';
         if (hi) speakOnly(hi, 'excited');
         return;
