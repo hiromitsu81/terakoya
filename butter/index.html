@@ -1955,7 +1955,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   // ===== なめらか会話（バターちゃんジュニアのサーバー／Google Cloud Run） =====
   // ミニアプリで、サーバーにつながればこちらで話す。声は流しっぱなしで聞き、返事は一文ずつ届いてすぐ話す。
   // 話している途中に声をかけると、止まって聞く。つながらなければ、これまでのGASの話し方にもどる。
-  const JR_DEFAULT = '';   // デプロイしたら Cloud Run のホスト名（…run.app）を入れる
+  const JR_DEFAULT = 'butter-junior-722073142596.asia-northeast1.run.app';   // デプロイしたら Cloud Run のホスト名（…run.app）を入れる
   const SRV = String(Q.get('s') || store.get('srv', '') || JR_DEFAULT).replace(/^(wss?|https?):\/\//, '').replace(/\/.*$/, '');
   if (Q.get('s')) store.set('srv', SRV);
   const J = { ws: null, ready: false, dead: !SRV || !LIFF, tries: 0, gen: -1, queue: [], playing: false, src: null, endEmo: null,
