@@ -2298,7 +2298,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   $('goenBtn').addEventListener('click', goenOpen);
   // 友だちに紹介する：送るURLには、押した人の紹介コードがつく（だれの紹介で来たかがわかる）
   $('shareBtn').addEventListener('click', async () => {
-    const url = 'https://liff.line.me/' + LIFF_ID + '?ref=' + encodeURIComponent(J.myRef || '');
+    const url = 'https://miniapp.line.me/' + LIFF_ID + '?ref=' + encodeURIComponent(J.myRef || '');
     const text = 'ヒロさんの相棒AI「バターちゃんジュニア」だよ。ヒロさんに相談したいこと、いっしょにやりたいこと、気軽に話してみて！\n' + url;
     try {
       if (window.liff && liff.isApiAvailable && liff.isApiAvailable('shareTargetPicker')) { const r = await liff.shareTargetPicker([{ type: 'text', text }]); if (r) toast('送ったよ！ありがとう'); return; }
