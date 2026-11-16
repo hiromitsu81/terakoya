@@ -181,6 +181,9 @@ function client(port, hello) {
   q.ws.send(JSON.stringify({ type: 'text', text: 'ジュニア、聞いてる？' }));
   const qe = await q.until(m => m.type === 'reply_end');
   assert.ok(/てやんでぃ/.test(qe.text) && streamed === 0, '名前だけはすぐ返事');
+  q.ws.send(JSON.stringify({ type: 'text', text: '気合い入れていくぞー！' }));
+  const kg = await q.until(m => m.type === 'reply_end' && /バターッ/.test(m.text));
+  assert.ok(/根性があれば/.test(kg.text), '家族の掛け声');
   // 話したことは、切っても次につづく（まとめ・ジュニア日記）
   q.ws.send(JSON.stringify({ type: 'text', text: 'ピョン吉のトレーナー買ったよ' }));
   await q.until(m => m.type === 'reply_end' && m !== qe);

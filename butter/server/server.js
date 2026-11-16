@@ -207,6 +207,10 @@ function nowLine() {
   return '\n\n【いまの時刻】' + (d.getUTCMonth() + 1) + '月' + d.getUTCDate() + '日（' + w + '）' + d.getUTCHours() + '時' + d.getUTCMinutes() + '分。あいさつは時刻に合わせる（5〜10時は「おはよう」、10〜18時は「こんにちは」、それ以外は「こんばんは」。夜中に「おはよう」と言わない）。';
 }
 /** 名前を呼ばれただけ（「ジュニア」「ジュニア、聞いてる？」）なら、Claudeにきかずにすぐ一言で返す */
+/** 掛け声：家族は「根性があれば…」、窓口はジュニアだけの「ご縁があれば…」 */
+const KAKEGOE_RE = /(行くぞ|いくぞ|イクゾ|気合い?(を)?入れ|きあい|掛け声|かけ声|かけごえ|バターッ|いち、?に、?さん|1、?2、?3)/;
+const KAKEGOE_FAMILY = '根性があれば何でもできる！行くぞー！いち、に、さん、バターッ！！';
+const KAKEGOE_GUEST = 'ご縁があれば、なんとかなるってもんよ！いくぜー！いち、に、さん、バターッ！！';
 const QUICK = ['てやんでぃ！おいらを呼んだかい？', 'てやんでぃ、なんでぃ？', 'おうよ、てやんでぃ！どうした？'];   // 呼ばれたときの江戸っ子のひとこと
 function nameOnly(text) {
   const rest = String(text).replace(/(ジュニア|じゅにあ|ジュニヤ|junior)(くん|ちゃん)?/ig, '')
@@ -465,6 +469,7 @@ function session(ws) {
       }
     }
     if (calledJunior(text) && nameOnly(text)) return speakOnly(QUICK[Math.floor(Math.random() * QUICK.length)], 'smile');
+    if (KAKEGOE_RE.test(text)) return speakOnly(S.guest || S.mode === 'business' ? KAKEGOE_GUEST : KAKEGOE_FAMILY, 'excited');
     if (QUIET_RE.test(text)) { S.quiet = true; send({ type: 'quiet', on: true }); return speakOnly('おう、しずかにしてるぜ。用があったら名前を呼んでくんな。', 'smile'); }
     if (S.quiet) { if (!(S.trio ? (calledJunior(text) || calledJam(text)) : /(バター|ばたー|ジュニア|ジャム)/.test(text))) return; S.quiet = false; send({ type: 'quiet', on: false }); }
     if (VOLUME_UP.test(text)) { send({ type: 'volume', delta: +0.25 }); return speakOnly('このくらいでどうかな？', 'smile'); }
