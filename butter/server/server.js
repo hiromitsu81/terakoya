@@ -417,10 +417,10 @@ function session(ws) {
     if (S.speaking) send({ type: 'stopped', why });
     S.speaking = false;
   }
-  async function speakOnly(text, emotion, as) {
+  async function speakOnly(text, emotion, as, nobubble) {
     stopReply('new');
     const gen = S.gen; S.speaking = true;
-    send({ type: 'reply_start', gen, emotion, as: as || 'ジュニア' });
+    send({ type: 'reply_start', gen, emotion, as: as || 'ジュニア', nobubble: !!nobubble });
     try { send({ type: 'audio', gen, seq: 0, text, mp3: await synth(text, S.voice) }); } catch (e) { send({ type: 'notice', why: 'tts', detail: String(e.message).slice(0, 80) }); }
     if (gen === S.gen) { send({ type: 'reply_end', gen, emotion, text }); S.speaking = false; }
   }
@@ -555,7 +555,7 @@ function session(ws) {
       if (m.type === 'text') return onHeard(String(m.text || '').slice(0, 500));
       if (m.type === 'photo') return onPhoto(m);
       if (m.type === 'trio') return setTrio(!!m.on);
-      if (m.type === 'say') { if (!quotaOk(S.owner || 'anon')) return; return speakOnly(clean(String(m.text || '')).slice(0, 200), 'smile', String(m.as || 'お知らせ').slice(0, 10)); }
+      if (m.type === 'say') { if (!quotaOk(S.owner || 'anon')) return; return speakOnly(clean(String(m.text || '')).slice(0, 200), 'smile', String(m.as || 'お知らせ').slice(0, 10), !!m.nobubble); }
       if (m.type === 'mode') {
         if (S.newTurns >= 2) await summarize();
         S.mode = m.mode === 'business' ? 'business' : 'family'; S.history = []; S.memo = ''; S.newTurns = 0;

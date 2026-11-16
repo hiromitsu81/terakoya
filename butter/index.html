@@ -1829,6 +1829,9 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   }
   const LIFF_BROWSER_VOICE = () => store.get('liffVoice', 'google') === 'browser' && jaVoices().length > 0;
   async function liffSpeak(text, mood) {
+    // サーバーにつながっていれば、ページのお知らせ（ガチャ・UFOなど）もジュニアの声で話す
+    if (jrLive()) { setEmo(mood || 'smile', 5000); if (text) jrSend({ type: 'say', text, as: 'ジュニア', nobubble: true }); return; }
+    if (SRV && LIFF && !J.fallback) { setEmo(mood || 'smile', 5000); return; }   // つなぎなおし中は声を出さない（前の声にしない）
     setEmo(mood || 'smile');
     if (!text) { setState('idle'); return; }
     if (LIFF_BROWSER_VOICE()) { nextAudio = null; await liffBrowserSay(text, mood); return; }
@@ -1909,6 +1912,8 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   }
   let convOn = false;   // ミニアプリ：ずっと聞くモード（おこしたら自動でオン）
   async function talkOnce() {
+    // サーバーで話すときは、前のGASの話し方を動かさない（2つが同時に答えて、声が2つになるので）。動くのは、サーバーにつながらなかったときだけ
+    if (SRV && LIFF && !J.fallback) return;
     const btn = $('talkBtn');
     if (recBusy) { btn._stop && btn._stop(); return; }
     try { if (curSrc) curSrc.stop(); } catch (e) {}
@@ -1922,6 +1927,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
       if (convOn && document.visibilityState === 'visible') { setTimeout(() => { if (!recBusy) talkOnce(); }, 150); return; }
       btn.querySelector('b').textContent = 'おして話す'; setState('idle'); return;
     }
+    if (SRV && LIFF && !J.fallback) { btn.classList.remove('wait'); return; }
     btn.classList.add('wait'); btn.querySelector('b').textContent = 'かんがえ中';
     setState('thinking');
     const out = addBubble('バターちゃん', '…', 'her');
@@ -1999,7 +2005,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     };
   }
   function jrFallback() {
-    J.dead = true; $('goenBtn').hidden = true; $('trioBtn').hidden = true;
+    J.dead = true; J.fallback = true; $('goenBtn').hidden = true; $('trioBtn').hidden = true;
     if (diag) { diag.hidden = false; diag.textContent = '（パパへ：サーバーにつながらないので、いつもの話し方にしています。この話し方は三人モードがききません）'; }
     hint.textContent = 'いまは、いつもの話し方です（サーバーにつながっていません）。';
     if (convOn && !recBusy) setTimeout(talkOnce, 300);
@@ -2029,7 +2035,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
         jrHeard(m.text); break;
       case 'reply_start':
         J.gen = m.gen; J.queue = []; J.endEmo = null; jrStopAudio();
-        J.out = addBubble(m.as || 'ジュニア', '…', 'her'); J.outText = ''; J.thinkAt = Date.now();
+        J.out = m.nobubble ? null : addBubble(m.as || 'ジュニア', '…', 'her'); J.outText = ''; J.thinkAt = Date.now();
         if (m.emotion) setEmo(m.emotion);
         setState('thinking');
         break;
@@ -2068,7 +2074,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
         break;
       case 'notice': if (diag && m.detail) { diag.hidden = false; diag.textContent = '（パパへ：' + m.why + ' ' + m.detail + '）'; } break;
       case 'error':
-        if (m.code === 'auth') { J.dead = true; hint.textContent = 'LINEの確認ができなかったよ。ミニアプリを開き直してね。'; }
+        if (m.code === 'auth') { J.dead = true; J.authFail = true; hint.textContent = 'LINEの確認が切れたよ。まんなかのボタンを押すと開き直すよ。'; }
         // それ以外のエラーでは前の話し方にしない（切れたら、つなぎなおす）
         break;
     }
@@ -2385,6 +2391,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   function announce(text) {
     // 家族OSからのお知らせ：ジュニアのときは「お知らせ」として出す。三人モードでは声に出さず、吹き出しだけ
     if (jrLive()) { if (J.trio) addBubble('お知らせ', text, 'her'); else jrSend({ type: 'say', text, as: 'お知らせ' }); return; }
+    if (SRV && LIFF && !J.fallback) { addBubble('お知らせ', text, 'her'); return; }
     if (!SHOW() && (state === 'speaking' || state === 'thinking')) { sayQueue.push(text); return; }
     addBubble('バターちゃん', text, 'her');
     history.push({ role: 'user', content: '（パパかママからのお知らせを読み上げて）' }, { role: 'assistant', content: text });
@@ -2758,6 +2765,8 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   }
   setHint();
   $('talkBtn').addEventListener('click', () => {
+    if (J.authFail) { location.reload(); return; }
+    if (SRV && LIFF && !J.fallback && !J.ready) { jrConnect(); return; }    // つないでいる最中は、前の話し方を始めない
     if (!J.dead && J.ready) { J.paused = !J.paused; if (J.paused) { J.queue = []; jrStopAudio(); jrSend({ type: 'barge' }); setState('idle'); } else setState('listening'); jrBtn(); return; }
     talkOnce();
   });
