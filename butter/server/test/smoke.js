@@ -12,6 +12,7 @@ const gasSrv = http.createServer((req, res) => {
     res.setHeader('Content-Type', 'application/json');
     if (j.action === 'brain') {
       if (j.pass === 'flaky') return res.end('<html>error</html>');
+      if (j.idToken === 'guest-x') return res.end(JSON.stringify({ ok: true, guest: true, owner: 'g:x', me: 'マー君', slots: [{ label: '11/20(木) 19時ごろ', start: '2026-11-20T10:00:00Z', end: '2026-11-20T12:00:00Z' }] }));
       const ok = j.pass === 'ok' || j.idToken === 'tok-' + 'b';
       return res.end(JSON.stringify(ok ? { ok: true, system: 'あなたはバターちゃんジュニア。', owner: j.pass ? 'fam' : 'U-b', me: j.pass ? 'パパ' : 'Bさん' } : { ok: false, error: 'auth' }));
     }
@@ -29,7 +30,7 @@ let lastMessages = null;
 deps.claude = {
   messages: {
     stream: (p) => { lastMessages = p.messages; return fakeStream('[わくわく]やっほー！今日はなにして遊ぶ？クイズもできるよ。'); },
-    create: async p => /記録係/.test(p.system || '') ? ({ content: [{ type: 'text', text: '===まとめ===\n- ピョン吉のトレーナーの話をした\n===日記===\n- パパがトレーナーを買った' }] }) : ({ content: [{ type: 'text', text: '{"lines":[{"who":"チーちゃん","text":"こんにちは"},{"who":"ジャム猫","text":"千客万来なのだ"}],"match":"お祭りと宿で相性ばっちり。","next":"一度お茶してみてね。"}' }] }),
+    create: async p => /窓口AIの記録係/.test(p.system || '') ? ({ content: [{ type: 'text', text: '{"worth":true,"kind":"仕事","title":"宿のDX","need":"予約の仕組み","when":"来月","budget":"","slot":"11/20(木) 19時ごろ","next":"連絡する","memo":"宿のDXの相談"}' }] }) : /記録係/.test(p.system || '') ? ({ content: [{ type: 'text', text: '===まとめ===\n- ピョン吉のトレーナーの話をした\n===日記===\n- パパがトレーナーを買った' }] }) : ({ content: [{ type: 'text', text: '{"lines":[{"who":"チーちゃん","text":"こんにちは"},{"who":"ジャム猫","text":"千客万来なのだ"}],"match":"お祭りと宿で相性ばっちり。","next":"一度お茶してみてね。"}' }] }),
   },
 };
 deps.tts = { synthesizeSpeech: async ({ input }) => [{ audioContent: Buffer.from('mp3:' + input.text) }] };
@@ -195,6 +196,34 @@ function client(port, hello) {
   assert.ok(lastMessages.some(m => m.role === 'user' && /ピョン吉/.test(typeof m.content === 'string' ? m.content : '')), 'さいきんのやりとりもつづく');
   deps.claude.messages.stream = os2;
 
-  console.log('OK：会話・気持ち・一文ずつの声・写真・記録の分け方・ご縁つなぎ・割りこみ・三人モード・呼ばれただけ・会話のつづき・ジュニア日記');
+  // 返事の作成が1回失敗しても、2回目で答える。空の返事は記録しない
+  let failOnce = true; const os3 = deps.claude.messages.stream;
+  deps.claude.messages.stream = p => { if (failOnce) { failOnce = false; return { async *[Symbol.asyncIterator]() { throw new Error('boom 500'); } }; } return os3(p); };
+  const rt = await client(port, { type: 'hello', pass: 'ok', trio: false });
+  await rt.until(m => m.type === 'ready');
+  rt.ws.send(JSON.stringify({ type: 'text', text: 'こんばんは' }));
+  const re2 = await rt.until(m => m.type === 'reply_end');
+  assert.ok(re2.text, '2回目で答える');
+  deps.claude.messages.stream = os3;
+
+  // 窓口：家族以外は家族の記録を読まず、案件メモをヒロさんへ
+  const gst = await client(port, { type: 'hello', idToken: 'guest-x', ref: 'mac', greet: true });
+  const gr = await gst.until(m => m.type === 'ready');
+  assert.ok(gr.guest && !gr.trio, '窓口モード');
+  const gg = await gst.until(m => m.type === 'reply_end');
+  assert.ok(/マー君さん/.test(gg.text) && /ヒロさんに伝える/.test(gg.text), 'はじめに伝わることを知らせる: ' + gg.text);
+  const os4 = deps.claude.messages.stream; let gsys = '';
+  deps.claude.messages.stream = p => { gsys = p.system; return os4(p); };
+  gst.ws.send(JSON.stringify({ type: 'text', text: '宿の予約の仕組みを相談したい' }));
+  await gst.until(m => m.type === 'reply_end' && m.gen > gg.gen);
+  assert.ok(/ヒロさんの窓口/.test(gsys) && /11\/20/.test(gsys) && !/家族OSの記録/.test(gsys), '窓口の人格・空き時間・家族の記録なし');
+  gst.ws.send(JSON.stringify({ type: 'text', text: 'ヒロさんに伝えて' }));
+  await new Promise(r => setTimeout(r, 600));
+  const ld = gasCalls.find(c => c.action === 'lead');
+  assert.ok(ld && ld.lead.ref === 'mac' && ld.lead.who === 'マー君' && ld.lead.slot && ld.lead.slot.start, '案件メモ（紹介元・候補日つき）');
+  assert.ok(!gasCalls.some(c => c.action === 'log' && /宿の予約/.test(c.said || '')), '窓口の会話は家族の記録に入れない');
+  deps.claude.messages.stream = os4;
+
+  console.log('OK：会話・気持ち・一文ずつの声・写真・記録の分け方・ご縁つなぎ・割りこみ・三人モード・呼ばれただけ・会話のつづき・ジュニア日記・やりなおし・窓口と案件メモ');
   process.exit(0);
 })().catch(e => { console.error('NG', e); process.exit(1); });

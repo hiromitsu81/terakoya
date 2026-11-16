@@ -31,6 +31,7 @@ const ENV = {
   GAS_URL: process.env.GAS_URL || '',
   ALLOWED_ORIGINS: (process.env.ALLOWED_ORIGINS || 'https://hiromitsu81.github.io,https://miniapp.line.me,https://liff.line.me').split(',').map(s => s.trim()).filter(Boolean),
   DAILY_LIMIT: Number(process.env.DAILY_LIMIT || 400),       // 一人1日に答える回数
+  DAILY_LIMIT_GUEST: Number(process.env.DAILY_LIMIT_GUEST || 30),   // 窓口（家族以外）の1日の回数
   SESSION_MAX_MIN: Number(process.env.SESSION_MAX_MIN || 60), // 1回のつなぎっぱなしの上限
 };
 
@@ -62,12 +63,25 @@ async function gas(payload) {
 
 /* ===== 1日の回数 ===== */
 const counts = new Map();
-function quotaOk(owner) {
+function quotaOk(owner, guest) {
   const k = owner + ':' + new Date().toISOString().slice(0, 10);
   const n = (counts.get(k) || 0) + 1;
   counts.set(k, n);
   if (counts.size > 5000) counts.clear();
-  return n <= ENV.DAILY_LIMIT;
+  return n <= (guest ? ENV.DAILY_LIMIT_GUEST : ENV.DAILY_LIMIT);
+}
+
+/* ===== 窓口モード：家族以外（友だち・仕事仲間）が開いたとき。家族の記録は一切読まない ===== */
+const GUEST_PERSONA = 'あなたは「バターちゃんジュニア」。ヒロさんの相棒AIで、ヒロさんの窓口。お皿の上のバターのかたまりの姿で、となりに柴犬のチーちゃんと招き猫のジャム猫がいる。日本語で、声で聞くので1〜2文で短く話す。記号・絵文字・URLは使わない。\n' +
+  '【役目】いま話しているのは、ヒロさんの友だちや仕事仲間。相手の話を気持ちよく聞いて、ヒロさんにしてほしいこと・いっしょにやりたいこと（仕事の相談でも、遊びや会う約束でも）を、短い質問で一つずつ聞き出して、ヒロさんにつなぐ。仕事か遊びかは話の中身で判断する（両方のこともある）。\n' +
+  '【ヒロさんの得意】仕組みづくり・企画開発。お店や宿や中小企業のDXとAI連携、ウェブやアプリ。フェスや地域コミュニティの運営（溝の口でお祭り・フェスをいっしょにやる仲間を募集中）。相手の困りごとに合うところを、押しつけずに紹介する。\n' +
+  '【聞くこと】仕事なら：困りごと・やりたいこと、いつまでに、予算感、決める人。遊びや会う予定なら：やりたいこと、場所、日にちの候補。一度にたくさん聞かない。\n' +
+  '【予定】日にちは下の「ヒロさんの空いていそうな時間」から選び、「そこなら空いてるんじゃないかな。ヒロさんに確認しとくぜ」とやわらかく言う。言い切らない。予定を決めた・カレンダーに入れた、とは言わない（決めるのはヒロさん）。\n' +
+  '【守ること】ヒロさんの予定の中身、家族のこと、住所・電話番号・メールなどは言わない（知らない）。お金や契約の約束はしない（「ヒロさんから連絡するぜ」）。ヒロさんに関係ない用事（宿題・レポート・ほかの仕事の代わりなど）には深入りせず、「それならヒロさんに直接聞くといいぜ」「ヒロさんに伝えとくぜ」とつなぐ。\n' +
+  '【おわり】話がまとまったら「ヒロさんに伝えとくぜ」と言う。気が向いたら、友だちにもこのページを教えてくれるよう軽くお願いしてよい。';
+const TELL_RE = /(伝えて|つたえて|連絡(して|ください|ほしい|欲しい)|頼みたい|お願いしたい|相談したい|会いたい|空いてる|あいてる)/;
+function guestGreeting(name) {
+  return 'よう' + (name ? '、' + name + 'さん' : '') + '！ヒロさんの相棒、バターちゃんジュニアだぜ。ここで話したことはヒロさんに伝えるから、よろしくな。ヒロさんにしてほしいこと、なんでも話してくんな。';
 }
 
 /* ===== 気持ちのしるし [わくわく] ===== */
@@ -286,6 +300,14 @@ function session(ws) {
       brainCache.set(key, { r, at: Date.now() }); if (brainCache.size > 200) brainCache.clear();
     }
     const who = String(r.me || '');
+    if (r.guest) {
+      S.guest = true; S.mode = 'guest'; S.trio = false;
+      S.slots = (Array.isArray(r.slots) ? r.slots : []).slice(0, 10).map(x => ({ label: String(x.label || ''), start: String(x.start || ''), end: String(x.end || '') })).filter(x => x.label);
+      S.system = GUEST_PERSONA + SELF + (who ? '\n\n【いま話している人】' + who + 'さん（LINEの名前）。' : '') +
+        '\n\n【ヒロさんの空いていそうな時間（予定の中身は言わない。確定ではない）】\n' + (S.slots.length ? S.slots.map(x => '・' + x.label).join('\n') : '（いまはわからない。「ヒロさんに聞いとくぜ」と言う）');
+      S.owner = String(r.owner || ''); S.me = who; S.brainAt = Date.now();
+      return;
+    }
     S.system = String(r.system || '') + SELF + (who ? '\n\n【いま開いている人】このミニアプリを開いているのは「' + who + '」。' + (ADULT_RE.test(who) ? '大人なので、大人向けにていねいに話す。宿題や報連相の声かけはしない。' : '') : '');
     S.owner = String(r.owner || '');
     S.me = String(r.me || '');
@@ -331,11 +353,12 @@ function session(ws) {
 
   /* --- 聞こえたことばの振り分け --- */
   function sysPrompt() { return S.system + (S.memo ? '\n\n【前回までの話のまとめ（ジュニアが話したこと）】\n' + S.memo : '') + nowLine() + (S.trio ? TRIO_RULE : ''); }
-  const convoKey = () => S.mode === 'family' && S.owner ? S.owner + ':family' : '';
+  const convoKey = () => !S.owner ? '' : S.guest ? S.owner + ':guest' : S.mode === 'family' ? S.owner + ':family' : '';
   /** 会話をまとめる：次の会話用の「まとめ」と、アプリのバターちゃんが読む「ジュニア日記」 */
   async function summarize() {
     const key = convoKey();
     if (!key || S.summarizing || S.newTurns < 1) return;
+    if (S.guest) return leadNote();
     S.summarizing = true;
     const n = S.newTurns;
     const talk = S.history.slice(-n * 2).reduce((a, m, i, arr) => m.role === 'user' ? a.concat('みんな「' + m.content.slice(0, 200) + '」→ ジュニア「' + String(arr[i + 1] && arr[i + 1].content || '').slice(0, 200) + '」') : a, []).join('\n');
@@ -360,7 +383,36 @@ function session(ws) {
     } catch (e) { console.error('summarize', String(e.message || e).slice(0, 200)); }
     S.summarizing = false;
   }
+  /** 窓口：会話から案件メモを作って、ヒロさんのLINEへ（GASの lead） */
+  async function leadNote() {
+    const key = convoKey();
+    if (!key || S.summarizing || S.newTurns < 1) return;
+    S.summarizing = true;
+    const n = S.newTurns;
+    const talk = S.history.slice(-n * 2).reduce((a, m, i, arr) => m.role === 'user' ? a.concat((S.me || '相手') + '「' + m.content.slice(0, 300) + '」→ ジュニア「' + String(arr[i + 1] && arr[i + 1].content || '').slice(0, 200) + '」') : a, []).join('\n');
+    try {
+      const r = await deps.claude.messages.create({
+        model: ENV.MODEL, max_tokens: 600,
+        system: 'あなたはヒロさんの窓口AIの記録係。会話にあったことだけを、ヒロさん向けに短くまとめる。想像で足さない。',
+        messages: [{ role: 'user', content: '【これまでのまとめ】\n' + (S.memo || '（なし）') + '\n\n【新しい会話】\n' + talk + '\n\n【ヒロさんの空いていそうな時間】\n' + S.slots.map(x => x.label).join('\n') +
+          '\n\nJSONだけを返す：{"worth":ヒロさんに伝える中身があればtrue（あいさつや雑談だけならfalse）,"kind":"仕事"か"遊び"か"その他","title":"ひとことで","need":"してほしいこと・困りごと","when":"時期・いつまでに","budget":"予算感（出ていなければ空）","slot":"空いていそうな時間のうち相手が乗り気だったもの（そのままの文字。なければ空）","next":"ヒロさんがすること","memo":"次に話すときのためのまとめ（300字以内）"}' }],
+      });
+      const t = (r.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+      const j = JSON.parse(t.slice(t.indexOf('{'), t.lastIndexOf('}') + 1));
+      if (j.memo) S.memo = String(j.memo).slice(0, 800);
+      S.newTurns = Math.max(0, S.newTurns - n);
+      await saveConvo(key, { summary: S.memo, newTurns: S.newTurns, turns: S.history.slice(-12), at: Date.now() });
+      if (j.worth) {
+        const slot = S.slots.find(x => j.slot && (x.label === j.slot || String(j.slot).indexOf(x.label) >= 0)) || null;
+        const lead = { who: S.me, ref: S.ref || '', kind: String(j.kind || ''), title: String(j.title || ''), need: String(j.need || ''), when: String(j.when || ''), budget: String(j.budget || ''), next: String(j.next || ''), slot };
+        const g = await gas(Object.assign({ action: 'lead', lead }, S.auth));
+        if (!g || !g.ok) console.error('lead ng', JSON.stringify(g).slice(0, 200));
+      }
+    } catch (e) { console.error('lead', String(e.message || e).slice(0, 200)); }
+    S.summarizing = false;
+  }
   async function setTrio(on) {
+    if (S.guest) return;
     S.trio = on; S.aside = [];
     send({ type: 'trio', on, waitMs: S.waitMs });
     savePrefs(S.owner, { trio: on });
@@ -427,12 +479,12 @@ function session(ws) {
   async function reply(content, logText, as) {
     const jam = as === 'jam';
     const voice = jam ? JAM_VOICE : S.voice;
-    if (!quotaOk(S.owner || 'anon')) return speakOnly('きょうはたくさんお話ししたから、また明日ね。', 'shy');
+    if (!quotaOk(S.owner || 'anon', S.guest)) return speakOnly(S.guest ? 'きょうはたくさん話したな。続きはヒロさんに伝えとくぜ、また明日な！' : 'きょうはたくさんお話ししたから、また明日ね。', 'shy');
     if (Date.now() - (S.brainAt || 0) > 10 * 60 * 1000) { try { await loadBrain(true); } catch (e) {} }   // 記録は10分ごとに読みなおす
     stopReply('new');
     const gen = S.gen, utt0 = S.utt; S.speaking = true;
     const ac = new AbortController(); S.aborter = ac;
-    const msgs = S.history.slice(-12).concat([{ role: 'user', content }]);
+    const msgs = cleanTurns(S.history).slice(-12).concat([{ role: 'user', content }]);
     let full = '', emotion = 'smile', head = true, seq = 0, chain = Promise.resolve();
     send({ type: 'reply_start', gen, as: jam ? 'ジャム猫' : 'ジュニア' });
     const maxSent = S.trio ? 2 : 3;
@@ -446,9 +498,12 @@ function session(ws) {
       const p = synth(s, voice).catch(() => jam ? synth(s, S.voice) : Promise.reject(new Error('tts'))).catch(e => { send({ type: 'notice', why: 'tts', detail: String(e.message).slice(0, 80) }); return ''; });
       chain = chain.then(async () => { const mp3 = await p; if (n === 0) await waitQuiet(gen, utt0); if (gen === S.gen && mp3) send({ type: 'audio', gen, seq: n, text: s, mp3 }); });
     });
+    let lastErr = '';
+    for (let attempt = 0; attempt < 2; attempt++) {
     try {
+      // 2回目は、それまでの会話をつけずに聞く（会話の記録がこわれていても答えられるように）
       const stream = deps.claude.messages.stream({
-        model: ENV.MODEL, max_tokens: S.trio ? 160 : S.mode === 'business' ? 240 : 220, system: sysPrompt() + (jam ? JAM_RULE : ''), messages: msgs,
+        model: ENV.MODEL, max_tokens: S.trio ? 160 : S.mode === 'business' ? 240 : 220, system: sysPrompt() + (jam ? JAM_RULE : ''), messages: attempt ? [{ role: 'user', content }] : msgs,
       }, { signal: ac.signal });
       for await (const ev of stream) {
         if (gen !== S.gen) break;
@@ -468,21 +523,26 @@ function session(ws) {
       }
       sp.end();
       await chain;
+      break;
     } catch (e) {
-      if (!capped) console.error('ai error', String(e.message || e).slice(0, 300));
-      if (gen === S.gen && !capped) { send({ type: 'notice', why: 'ai', detail: String(e.message || e).slice(0, 80) }); }
+      if (capped || gen !== S.gen) break;
+      lastErr = String(e.message || e);
+      console.error('ai error', attempt, lastErr.slice(0, 300));
+      if (full || attempt) { send({ type: 'notice', why: 'ai', detail: lastErr.slice(0, 120) }); break; }
+      await new Promise(r => setTimeout(r, 400));
+    }
     }
     if (gen !== S.gen) return;
     const text = capped ? spoken : clean(full).trim();
-    S.history.push({ role: 'user', content: logText || '（写真を見せた）' }, { role: 'assistant', content: text });
+    if (text) S.history.push({ role: 'user', content: logText || '（写真を見せた）' }, { role: 'assistant', content: text });   // 空の返事は記録しない（次の会話がこわれるので）
     if (S.history.length > 24) S.history = S.history.slice(-24);
-    send({ type: 'reply_end', gen, emotion, text });
+    send({ type: 'reply_end', gen, emotion, text, why: text ? undefined : lastErr.slice(0, 120) });
     S.speaking = false; S.aborter = null;
     if (S.mode === 'family' && logText) gas(Object.assign({ action: 'log', said: logText, reply: text }, S.auth)).catch(() => {});
     if (convoKey() && text) {
       S.newTurns++;
       saveConvo(convoKey(), { turns: S.history.slice(-12), newTurns: S.newTurns, at: Date.now() });
-      if (S.newTurns >= 6) summarize();
+      if (S.newTurns >= 6 || (S.guest && TELL_RE.test(logText || '') && S.newTurns >= 2)) summarize();
     }
   }
 
@@ -526,6 +586,7 @@ function session(ws) {
         S.mode = m.mode === 'business' ? 'business' : 'family';
         S.voice = /^ja-JP-[\w-]+$/.test(m.voice || '') ? m.voice : '';
         S.auth = m.idToken ? { idToken: String(m.idToken) } : { pass: String(m.pass || '') };
+        S.ref = String(m.ref || '').replace(/[^\w-]/g, '').slice(0, 20);
         try { await loadBrain(); } catch (e) {
           if (e.code === 'auth' || e.code === 'pass') return fail('auth', String(e.message).slice(0, 80));
           // GASが読めないときも切らずに話す（家族の記録なし）。三人モードなどはページから受けとる
@@ -534,7 +595,7 @@ function session(ws) {
         }
         S.ready = true;
         const pr = await loadPrefs(S.owner);
-        S.trio = typeof m.trio === 'boolean' ? m.trio : !!pr.trio;
+        S.trio = S.guest ? false : typeof m.trio === 'boolean' ? m.trio : !!pr.trio;
         if (typeof pr.waitMs === 'number') S.waitMs = pr.waitMs;
         if (convoKey()) {
           const c = await loadConvo(convoKey());
@@ -545,8 +606,8 @@ function session(ws) {
             if (S.newTurns >= 2) setTimeout(summarize, 3000);       // 前回まとめきれなかった分（強制で切ったときなど）
           }
         }
-        send({ type: 'ready', me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs });
-        const hi = m.greet ? greeting(S.me, S.mode, S.trio) : '';
+        send({ type: 'ready', me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs, guest: !!S.guest });
+        const hi = m.greet ? (S.guest ? (S.history.length ? 'よう、また来てくれたな！つづきを話そうぜ。' : guestGreeting(S.me)) : greeting(S.me, S.mode, S.trio)) : '';
         if (hi) speakOnly(hi, 'excited');
         return;
       }
@@ -555,7 +616,8 @@ function session(ws) {
       if (m.type === 'text') return onHeard(String(m.text || '').slice(0, 500));
       if (m.type === 'photo') return onPhoto(m);
       if (m.type === 'trio') return setTrio(!!m.on);
-      if (m.type === 'say') { if (!quotaOk(S.owner || 'anon')) return; return speakOnly(clean(String(m.text || '')).slice(0, 200), 'smile', String(m.as || 'お知らせ').slice(0, 10), !!m.nobubble); }
+      if (m.type === 'say') { if (S.guest || !quotaOk(S.owner || 'anon')) return; return speakOnly(clean(String(m.text || '')).slice(0, 200), 'smile', String(m.as || 'お知らせ').slice(0, 10), !!m.nobubble); }
+      if (m.type === 'mode' && S.guest) return;
       if (m.type === 'mode') {
         if (S.newTurns >= 2) await summarize();
         S.mode = m.mode === 'business' ? 'business' : 'family'; S.history = []; S.memo = ''; S.newTurns = 0;

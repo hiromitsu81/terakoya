@@ -198,6 +198,9 @@ body.wideshow .sato-banner small { font-size: 12px; }
 .liffmode .talkbtn { width: 96px; height: 96px; }
 .modebtn { display: none; }
 .liffmode .goenbtn:not([hidden]) { display: block; }
+/* ミニアプリ：家族だと確かめられるまでは、家族用の表示（育ちぐあい・ガチャ・モード・設定・台本）を出さない */
+.liffmode:not(.familyok) .meters, .liffmode:not(.familyok) #modeBtn, .liffmode:not(.familyok) #trioBtn,
+.liffmode:not(.familyok) #openSettings, .liffmode:not(.familyok) #startStage, .liffmode:not(.familyok) #startSettings { display: none !important; }
 .cam video { width: 100%; border-radius: 14px; background: #000; max-height: 56vh; object-fit: cover; }
 .cam .count { font-family: var(--display); font-size: 40px; font-weight: 900; text-align: center; margin: 0; min-height: 1.2em; }
 .bubble img.snap, .bubble video.snap { display: block; width: 100%; max-width: 240px; border-radius: 10px; margin-top: 6px; }
@@ -1132,7 +1135,10 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     return list.length ? '貸してもらっているもの：' + list.join('、') + '。' : '「ガチャ回して」でガチャ。';
   }
   let gachaBusy = false;
+  // ミニアプリで家族だと確かめられていないときは、家族の画面（ガチャ・UFO・もちもの）を開かない
+  const famBlocked = () => LIFF && !document.body.classList.contains('familyok');
   async function doGacha(said, whoIn) {
+    if (famBlocked()) return;
     if (gachaBusy) return;
     addBubble('あなた', said || 'ガチャ回して', 'me');
     gachaBusy = true;
@@ -1384,6 +1390,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   }
   let invWho = '';
   function openInv(who) {
+    if (famBlocked()) return;
     const ps = players().filter(p => p.name !== 'みんな' || p.owned.length || p.prizes.length);
     invWho = who || invWho || (meName && playerNames().indexOf(meName) >= 0 ? meName : (ps[0] && ps[0].name) || '');
     const me = ps.find(p => p.name === invWho) || { owned: [], prizes: [], coins: 0 };
@@ -1462,6 +1469,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   }
   let ufoBusy = false;
   async function doUfo(said, whoIn) {
+    if (famBlocked()) return;
     if (ufoBusy || U.on) return;
     addBubble('あなた', said || 'UFOキャッチャー', 'me');
     ufoBusy = true;
@@ -1991,7 +1999,9 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     const giveUp = setTimeout(() => { if (!J.ready) { try { ws.close(); } catch (e) {} } }, 20000);   // サーバーが起きて家族の記録を読むまで待つ
     if (!J.greeted) hint.textContent = 'サーバーにつないでいるよ…（数びょう）';
     const tr = store.get('jrTrio', null);
-    ws.onopen = () => jrSend(Object.assign({ type: 'hello', mode: BIZ() ? 'business' : 'family', greet: !J.greeted }, typeof tr === 'boolean' ? { trio: tr } : {}, LIFF ? { idToken: idToken() } : { pass: cfg.pass }));
+    const ref = String(Q.get('ref') || store.get('jrRef', '')).replace(/[^\w-]/g, '').slice(0, 20);
+    if (Q.get('ref')) store.set('jrRef', ref);
+    ws.onopen = () => jrSend(Object.assign({ type: 'hello', mode: BIZ() ? 'business' : 'family', greet: !J.greeted, ref }, typeof tr === 'boolean' ? { trio: tr } : {}, LIFF ? { idToken: idToken() } : { pass: cfg.pass }));
     ws.onmessage = ev => { let m; try { m = JSON.parse(ev.data); } catch (e) { return; } if (m.type === 'ready') clearTimeout(giveUp); jrOn(m); };
     ws.onclose = () => {
       clearTimeout(giveUp);
@@ -2011,12 +2021,16 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     switch (m.type) {
       case 'ready':
         J.ready = true; J.tries = 0; J.greeted = true; J.profile = m.profile || null; $('goenBtn').hidden = false;
+        J.guest = !!m.guest;
+        document.body.classList.toggle('familyok', !J.guest);
+        document.body.classList.toggle('guestmode', J.guest);
+        if (J.guest) { $('typedInput').placeholder = 'ヒロさんにしてほしいこと、なんでもどうぞ'; }
         $('trioBtn').hidden = false; J.trio = !!m.trio; store.set('jrTrio', J.trio); store.set('jrOK', true); trioShow();
         if (diag) diag.hidden = true;
         if (awake.until !== 0) keepAwake(true, 0);
         jrMicStart().catch(() => { hint.textContent = 'マイクが使えません。LINEの設定でマイクを許可してください。'; });
         jrBtn(); if (!J.playing) setState('listening');
-        hint.textContent = J.trio ? '三人モード：「ジュニア」と呼んだときだけ答えるよ。' : 'そのまま話しかけてね。話している途中でも、声をかけたら止まって聞くよ。';
+        hint.textContent = J.guest ? 'ヒロさんの相棒、ジュニアだぜ。そのまま話しかけてくんな。' : J.trio ? '三人モード：「ジュニア」と呼んだときだけ答えるよ。' : 'そのまま話しかけてね。話している途中でも、声をかけたら止まって聞くよ。';
         break;
       case 'partial':
         if (pickRes && nameIn(m.text)) break;
@@ -2077,6 +2091,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   }
   // 聞こえた言葉：ページでできること（ガチャ・UFO・チーちゃんの芸・ご縁）を先に。ほかはサーバーへ
   function jrHeard(text) {
+    if (J.guest) { if (/ご縁(つなぎ|コード)/.test(text)) { addBubble('あなた', text, 'me'); goenOpen(); return; } ask(text); return; }   // 窓口：ガチャ・UFO・チーちゃんの芸など家族の画面は開かない
     // 三人モード：呼ばれていない声は「聞こえた」として出すだけ（サーバーが話の流れとして覚える）
     if (J.trio && !JR_CALL(text) && !JR_TRIO.test(text) && !(U.on || pickRes)) { addBubble('聞こえた', text, 'me partial'); jrSend({ type: 'text', text }); return; }
     if (pickRes && pickHear(text)) return;
@@ -2410,6 +2425,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     const v = $('typedInput').value.trim();
     if (!v) return;
     $('typedInput').value = '';
+    if (famBlocked()) { ask(v); return; }   // 窓口の人の文字は、そのままジュニアへ
     convoUntil = Date.now() + 25000;
     if (state === 'sleeping') setState('listening');
     if (U.on) { ufoHear(v, true); }
