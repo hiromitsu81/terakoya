@@ -245,6 +245,22 @@ function client(port, hello) {
   const gc = await client(port, { type: 'hello', idToken: 'guest-closed' });
   await gc.until(m => m.type === 'error' && m.code === 'closed');
 
-  console.log('OK：会話・気持ち・一文ずつの声・写真・記録の分け方・ご縁つなぎ・割りこみ・三人モード・呼ばれただけ・会話のつづき・ジュニア日記・やりなおし・窓口と案件メモ・紹介のつながり・窓口のお休み');
+  // いいとこ取り：天気は賢いモデル＋検索、ふつうのおしゃべりは速いモデル
+  let lastParams = null; const os5 = deps.claude.messages.stream;
+  deps.claude.messages.stream = p => { lastParams = p; return os5(p); };
+  const w = await client(port, { type: 'hello', pass: 'ok', trio: false });
+  await w.until(m => m.type === 'ready');
+  w.ws.send(JSON.stringify({ type: 'text', text: '明日の天気は？' }));
+  await w.until(m => m.type === 'searching');
+  await w.until(m => m.type === 'reply_end');
+  assert.ok(lastParams.model === 'claude-sonnet-5-5' && lastParams.tools && lastParams.tools[0].name === 'web_search', '調べもの');
+  assert.ok(/想像で答えない/.test(lastParams.system), '正直に');
+  const wn = w.msgs.filter(m => m.type === 'reply_end').length;
+  w.ws.send(JSON.stringify({ type: 'text', text: 'こんばんは' }));
+  await w.until(() => w.msgs.filter(m => m.type === 'reply_end').length > wn);
+  assert.ok(lastParams.model === 'claude-haiku-4-5-20251001' && !lastParams.tools, 'ふだんは速いモデル');
+  deps.claude.messages.stream = os5;
+
+  console.log('OK：会話・気持ち・一文ずつの声・写真・記録の分け方・ご縁つなぎ・割りこみ・三人モード・呼ばれただけ・会話のつづき・ジュニア日記・やりなおし・窓口と案件メモ・紹介のつながり・窓口のお休み・いいとこ取りと検索');
   process.exit(0);
 })().catch(e => { console.error('NG', e); process.exit(1); });

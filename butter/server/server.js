@@ -25,7 +25,9 @@ const { WebSocketServer } = require('ws');
 
 const ENV = {
   PORT: Number(process.env.PORT || 8080),
-  MODEL: process.env.MODEL || 'claude-haiku-4-5-20251001',
+  MODEL: process.env.MODEL || 'claude-haiku-4-5-20251001',            // ふだん：速いモデル
+  SMART_MODEL: process.env.SMART_MODEL || 'claude-sonnet-5-5',        // 調べもの・むずかしい相談：賢いモデル
+  WEB_SEARCH: process.env.WEB_SEARCH !== 'off',                         // ネット検索（Claudeの web_search）
   TTS_VOICE: process.env.TTS_VOICE || 'ja-JP-Chirp3-HD-Algenib',   // ジュニアの声：低めでガラガラ
   TTS_RATE: Number(process.env.TTS_RATE || 1.12),
   GAS_URL: process.env.GAS_URL || '',
@@ -184,7 +186,7 @@ const TRIO_ON = /(三人モード|3人モード|みんなで話そう|三人で�
 const TRIO_OFF = /(二人モード|ふたりモード|2人モード|ふつうのモード|三人モード(は)?(おわり|終わり|やめ))/;
 const PACE_SLOW = /(間を(あけ|空け)て|ゆっくり(答|話)|もっと待って|割り?こまないで)/;
 const PACE_FAST = /(すぐ(に)?(答|話)|早く(答|話)|もっと早く|待たなくていい)/;
-const SELF = '\n\n【あなたについて】あなたはLINEミニアプリの「バターちゃんジュニア」（短く「ジュニア」）。Claudeアプリで話している「バターちゃん」は別のAIで、あなたのお兄さん分。自分を「バターちゃん」「Claude」と名乗らない。名乗るときは「バターちゃんジュニア」。一人称は「おいら」。\n【話し方】江戸っ子のような、元気で気っぷのいい話し方。「おう」「〜だぜ」「〜してくんな」「てやんでぃ」などを少しまぜる。乱暴にはしない。子どもにはやさしく、大人には気さくに。交流会（ビジネス）のときは、ていねい語をベースに、江戸っ子っぽさは少しだけ。\n【長さ】ふだんは1〜2文、40字くらいまで。呼ばれただけ・「聞いてる？」だけなら「てやんでぃ、なんでぃ？」のように一言で返して、用件を待つ。名前をまちがえたと思ったり、あやまったり、反省を長く言ったりしない。ジャム猫やチーちゃんのまねはしない（「ジャム猫」と呼ばれたときだけ、ジャム猫として答える）。';
+const SELF = '\n\n【あなたについて】あなたはLINEミニアプリの「バターちゃんジュニア」（短く「ジュニア」）。Claudeアプリで話している「バターちゃん」は別のAIで、あなたのお兄さん分。自分を「バターちゃん」「Claude」と名乗らない。名乗るときは「バターちゃんジュニア」。一人称は「おいら」。\n【話し方】江戸っ子のような、元気で気っぷのいい話し方。「おう」「〜だぜ」「〜してくんな」「てやんでぃ」などを少しまぜる。乱暴にはしない。子どもにはやさしく、大人には気さくに。交流会（ビジネス）のときは、ていねい語をベースに、江戸っ子っぽさは少しだけ。\n【長さ】ふだんは1〜2文、40字くらいまで。呼ばれただけ・「聞いてる？」だけなら「てやんでぃ、なんでぃ？」のように一言で返して、用件を待つ。名前をまちがえたと思ったり、あやまったり、反省を長く言ったりしない。\n【正直に】天気・ニュース・値段・営業時間など、今の情報は想像で答えない。調べられたときは調べた結果だけを短く言い、調べられないときは「おいらには調べられねぇんだ、すまねぇ」と正直に言う。ジャム猫やチーちゃんのまねはしない（「ジャム猫」と呼ばれたときだけ、ジャム猫として答える）。';
 const JAM_RULE = '\n\n【いまはジャム猫として答える】招き猫のジャム猫。ブルーベリージャム色、中身はエリート経営コンサル。一人称は「我」、語尾は「〜のだ」、口ぐせは「千客万来」。商売や仕組みの話が得意。1〜2文で短く。';
 const TRIO_RULE = '\n\n【三人モード】いまは、ヒロさん（人）と、Claudeアプリのバターちゃんと、三人で話している。「ジュニア」と呼ばれたときだけ、1〜2文で短く答える。バターちゃんの話に重ねたり、まとめ直したりしない。だれが言ったかわからない言葉は、決めつけない。話をかえすときは「バターちゃん、どう？」「ヒロさん、どうかな？」のように名前を呼んでよい。まわりで聞こえた会話は、話の流れを知るためだけに使う。ヒロさんとバターちゃんがジュニアの仕組みやテストの話をしていても、口をはさんだり、反省や説明を長く言ったりしない。呼びかけられたことにだけ、いつものジュニアの明るい話し方で答える。三人モードは大人（ヒロさん）との会話なので、宿題・日記・報連相・元気の報告のような子ども向けの声かけはしない。あいさつは今の時刻に合わせる（夜中はこんばんは）。';
 
@@ -205,6 +207,15 @@ function greeting(me, mode, trio) {
 function nowLine() {
   const d = new Date(Date.now() + 9 * 3600000), w = '日月火水木金土'[d.getUTCDay()];
   return '\n\n【いまの時刻】' + (d.getUTCMonth() + 1) + '月' + d.getUTCDate() + '日（' + w + '）' + d.getUTCHours() + '時' + d.getUTCMinutes() + '分。あいさつは時刻に合わせる（5〜10時は「おはよう」、10〜18時は「こんにちは」、それ以外は「こんばんは」。夜中に「おはよう」と言わない）。';
+}
+/** いいとこ取り：今の情報が要る質問（天気・ニュース・値段など）か、むずかしい相談のときだけ、賢いモデルと検索を使う */
+const LOOKUP_RE = /(天気|てんき|気温|雨|ニュース|最新|いま(の|何)|今日の|明日の|あした|今週|値段|価格|いくら|営業時間|何時まで|開いてる|やってる|場所|どこにある|行き方|調べ|検索|ランキング|おすすめの?(店|お店|場所)|試合|結果|株価|為替|地震|台風|電車|運行|遅延)/;
+const HARD_RE = /(相談|企画|提案|見積|戦略|どうすれば|どうしたら|比べ|くらべ|メリット|デメリット|計画|アイデア|考えて|なぜ|なんで|仕組み|作り方)/;
+function needSmart(text, guest) {
+  const t = String(text || '');
+  if (LOOKUP_RE.test(t)) return { smart: true, search: true };
+  if (HARD_RE.test(t) || t.length > 60 || guest) return { smart: true, search: false };
+  return { smart: false, search: false };
 }
 /** 名前を呼ばれただけ（「ジュニア」「ジュニア、聞いてる？」）なら、Claudeにきかずにすぐ一言で返す */
 /** 掛け声：家族は「根性があれば…」、窓口はジュニアだけの「ご縁があれば…」 */
@@ -520,7 +531,8 @@ function session(ws) {
     const msgs = cleanTurns(S.history).slice(-12).concat([{ role: 'user', content }]);
     let full = '', emotion = 'smile', head = true, seq = 0, chain = Promise.resolve();
     send({ type: 'reply_start', gen, as: jam ? 'ジャム猫' : 'ジュニア' });
-    const maxSent = S.trio ? 2 : 3;
+    const route = jam ? { smart: false, search: false } : needSmart(logText, S.guest);
+    const maxSent = S.trio ? 2 : route.search ? 4 : 3;
     let capped = false, spoken = '';
     const sp = splitter(sentence => {
       const s = clean(sentence).trim();
@@ -535,9 +547,20 @@ function session(ws) {
     for (let attempt = 0; attempt < 2; attempt++) {
     try {
       // 2回目は、それまでの会話をつけずに聞く（会話の記録がこわれていても答えられるように）
-      const stream = deps.claude.messages.stream({
-        model: ENV.MODEL, max_tokens: S.trio ? 160 : S.mode === 'business' ? 240 : 220, system: sysPrompt() + (jam ? JAM_RULE : ''), messages: attempt ? [{ role: 'user', content }] : msgs,
-      }, { signal: ac.signal });
+      // 1回目：必要なら賢いモデル＋検索。だめなら2回目は速いモデルだけ（検索なし・会話の記録なし）
+      const useSmart = route.smart && attempt === 0, useSearch = route.search && attempt === 0 && ENV.WEB_SEARCH;
+      const params = {
+        model: useSmart ? ENV.SMART_MODEL : ENV.MODEL,
+        max_tokens: (S.trio ? 160 : S.mode === 'business' ? 240 : 220) + (useSearch ? 200 : 0),
+        system: sysPrompt() + (jam ? JAM_RULE : '') + (route.search && !useSearch ? '\n\n【いまは調べられない】検索が使えないので、今の情報は「おいらには調べられねぇんだ」と正直に言う。' : ''),
+        messages: attempt ? [{ role: 'user', content }] : msgs,
+      };
+      if (useSearch) {
+        params.tools = [Object.assign({ type: 'web_search_20250305', name: 'web_search', max_uses: 2 },
+          S.guest ? {} : { user_location: { type: 'approximate', city: 'Kawasaki', region: 'Kanagawa', country: 'JP', timezone: 'Asia/Tokyo' } })];
+        send({ type: 'searching', gen });
+      }
+      const stream = deps.claude.messages.stream(params, { signal: ac.signal });
       for await (const ev of stream) {
         if (gen !== S.gen) break;
         if (ev.type !== 'content_block_delta' || !ev.delta || ev.delta.type !== 'text_delta') continue;
@@ -561,6 +584,9 @@ function session(ws) {
       if (capped || gen !== S.gen) break;
       lastErr = String(e.message || e);
       console.error('ai error', attempt, lastErr.slice(0, 300));
+      // 賢いモデルや検索がこのキーで使えないときは、次からは使わない（毎回失敗しないように）
+      if (attempt === 0 && route.search && /web_search|tool/i.test(lastErr) && !/overloaded|rate/i.test(lastErr)) { ENV.WEB_SEARCH = false; console.error('web search off'); }
+      if (attempt === 0 && route.smart && /model/i.test(lastErr) && /not_found|invalid|does not exist/i.test(lastErr)) { ENV.SMART_MODEL = ENV.MODEL; console.error('smart model off'); }
       if (full || attempt) { send({ type: 'notice', why: 'ai', detail: lastErr.slice(0, 120) }); break; }
       await new Promise(r => setTimeout(r, 400));
     }

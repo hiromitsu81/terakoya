@@ -1966,8 +1966,14 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     try {
       await new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'https://static.line-scdn.net/liff/edge/2/sdk.js'; sc.onload = res; sc.onerror = rej; document.head.append(sc); });
       if (!LIFF_ID) throw new Error('LIFF IDがありません');
-      await liff.init({ liffId: LIFF_ID });
-      if (!liff.isLoggedIn()) { liff.login({ redirectUri: location.href }); return; }
+      await liff.init({ liffId: LIFF_ID, withLoginOnExternalBrowser: true });
+      // 本番用では、ログインのあと戻る住所をLINEに登録したエンドポイントURLにまかせる（今のページの住所を渡すと、ずれて400になる）
+      if (!liff.isLoggedIn()) {
+        let tried = false; try { tried = sessionStorage.getItem('butter.login') === '1'; sessionStorage.setItem('butter.login', '1'); } catch (e) {}
+        if (!tried) { liff.login(); return; }
+        throw new Error('LINEのログインができませんでした');
+      }
+      try { sessionStorage.removeItem('butter.login'); } catch (e) {}
       poll();
     } catch (e) {
       hint.textContent = 'ミニアプリの準備ができませんでした（' + (e.message || e) + '）';
@@ -2055,6 +2061,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
         break;
       case 'emotion': if (m.gen === J.gen) setEmo(m.emotion); break;
       case 'reply_text': if (m.gen === J.gen && J.out) { J.outText += m.text; J.out.textContent = J.outText; } break;
+      case 'searching': if (m.gen === J.gen) { hint.textContent = 'ちょいと調べてるぜ…'; J.thinkAt = Date.now() + 15000; setEmo('think'); } break;
       case 'waiting': if (m.gen === J.gen) hint.textContent = 'まわりの話がおわるのを待ってから話すよ…'; break;
       case 'audio':
         if (m.gen === J.gen) { J.queue.push(m); jrPump(); }
