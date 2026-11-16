@@ -475,6 +475,19 @@ body.tall .stage { padding-top: 84px; }
 body.tall.stagemode .stage svg { width: auto; height: 100%; max-width: 100%; max-height: 100%; }
 body.wideshow .stage { padding-top: 58px; }
 body.tall #floor { display: none; }
+/* つながるまでのぐるぐる：バターの黄色・ジャム猫のブルーベリー・チーちゃんのチーズ色の3色の輪が回る */
+.liffmode .talkbtn::after { content: ""; position: absolute; inset: -12px; border-radius: 50%; opacity: 0; pointer-events: none;
+  background: conic-gradient(from 0deg, #f2c94c 0 30%, transparent 0 33.3%, #6a4fa3 0 63.3%, transparent 0 66.6%, #f39a3d 0 96.6%, transparent 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 9px), #000 calc(100% - 8px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - 9px), #000 calc(100% - 8px));
+  transition: opacity .3s; }
+.liffmode.connecting .talkbtn::after { opacity: 1; animation: jrspin 1.6s linear infinite; }
+.liffmode.jrthinking .talkbtn::after { opacity: .85; animation: jrspin 1s linear infinite; }
+.liffmode.connecting .talkbtn { background: var(--card); border-color: #fff; box-shadow: 0 0 0 4px #fff, 0 8px 24px rgba(0,0,0,.12); }
+@keyframes jrspin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .liffmode.connecting .talkbtn::after, .liffmode.jrthinking .talkbtn::after { animation-duration: 6s; } }
+body.liffTall .stage { min-height: calc(84px + 100vw * 535 / 520); }
+body.liffTall .stage svg { aspect-ratio: 520 / 535; width: 100%; max-height: none; }
 /* スマホ横向き：ボタンを全部しまって、3匹を画面いっぱいに（タップでつぎのセリフ） */
 body.wideshow header, body.wideshow .meters, body.wideshow .talk, body.wideshow .stagebar { display: none !important; }
 body.wideshow .app { height: 100dvh; max-width: none; grid-template-rows: minmax(0, 1fr); padding: 4px env(safe-area-inset-right) 4px env(safe-area-inset-left); overflow: hidden; }
@@ -1657,6 +1670,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     sleepTimer = setTimeout(() => { if (state === 'listening' || state === 'idle') setState('sleeping'); }, cfg.sleepAfter * 1000);
   }
   function setState(s) {
+    document.body.classList.toggle('jrthinking', s === 'thinking');   // 考え中もぐるぐる
     const prev = state;
     state = s;
     chip.dataset.s = s; chip.textContent = (SHOW() ? LABEL_SHOW : LABEL)[s];
@@ -2013,13 +2027,15 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     ws.binaryType = 'arraybuffer'; J.ws = ws; J.ready = false;
     const giveUp = setTimeout(() => { if (!J.ready) { try { ws.close(); } catch (e) {} } }, 20000);   // サーバーが起きて家族の記録を読むまで待つ
     if (!J.greeted) hint.textContent = 'サーバーにつないでいるよ…（数びょう）';
+    document.body.classList.add('connecting'); $('talkBtn').querySelector('b').textContent = 'つないでるよ';
     const tr = store.get('jrTrio', null);
-    // 紹介元（?ref=mac）。LINEのURLから来たときは liff.state の中にあることもある
-    let r0 = new URLSearchParams(location.search).get('ref') || Q.get('ref');
-    if (!r0) { try { const st = new URLSearchParams(location.search).get('liff.state'); if (st) r0 = new URLSearchParams(decodeURIComponent(st).split('?')[1] || '').get('ref'); } catch (e) {} }
+    // 紹介元（?ref=mac）・窓口のテスト（&test=guest）。LINEのURLから来たときは liff.state の中にあることもある
+    const urlParam = n => { let v = new URLSearchParams(location.search).get(n) || Q.get(n); if (!v) { try { const st = new URLSearchParams(location.search).get('liff.state'); if (st) v = new URLSearchParams(decodeURIComponent(st).split('?')[1] || '').get(n); } catch (e) {} } return v; };
+    let r0 = urlParam('ref');
+    const asGuest = urlParam('test') === 'guest';
     const ref = String(r0 || store.get('jrRef', '')).replace(/[^\w-]/g, '').slice(0, 20);
     if (r0) store.set('jrRef', ref);
-    ws.onopen = () => jrSend(Object.assign({ type: 'hello', mode: BIZ() ? 'business' : 'family', greet: !J.greeted, ref }, typeof tr === 'boolean' ? { trio: tr } : {}, LIFF ? { idToken: idToken() } : { pass: cfg.pass }));
+    ws.onopen = () => jrSend(Object.assign({ type: 'hello', mode: BIZ() ? 'business' : 'family', greet: !J.greeted, ref, asGuest }, typeof tr === 'boolean' ? { trio: tr } : {}, LIFF ? { idToken: idToken() } : { pass: cfg.pass }));
     ws.onmessage = ev => { let m; try { m = JSON.parse(ev.data); } catch (e) { return; } if (m.type === 'ready') clearTimeout(giveUp); jrOn(m); };
     ws.onclose = () => {
       clearTimeout(giveUp);
@@ -2038,6 +2054,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   function jrOn(m) {
     switch (m.type) {
       case 'ready':
+        document.body.classList.remove('connecting');
         J.ready = true; J.tries = 0; J.greeted = true; J.profile = m.profile || null; $('goenBtn').hidden = false;
         J.guest = !!m.guest; J.myRef = m.myRef || ''; $('shareBtn').hidden = !J.myRef;
         document.body.classList.toggle('familyok', !J.guest);
@@ -2103,6 +2120,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
         break;
       case 'notice': if (diag && m.detail) { diag.hidden = false; diag.textContent = '（パパへ：' + m.why + ' ' + m.detail + '）'; } break;
       case 'error':
+        document.body.classList.remove('connecting');
         if (m.code === 'closed') { J.dead = true; hint.textContent = 'いま窓口はお休み中だぜ。また今度話してくんな！'; addBubble('ジュニア', 'いま窓口はお休み中だぜ。ヒロさんには直接連絡してくんな！', 'her'); }
         if (m.code === 'auth') { J.dead = true; J.authFail = true; hint.textContent = 'LINEの確認が切れたよ。まんなかのボタンを押すと開き直すよ。'; }
         // それ以外のエラーでは前の話し方にしない（切れたら、つなぎなおす）
@@ -2546,7 +2564,10 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     const on = tallMQ.matches, wide = wideMQ.matches;
     document.body.classList.toggle('tall', on);
     document.body.classList.toggle('wideshow', wide);
-    scene.setAttribute('viewBox', on ? '-40 110 580 560' : wide ? '-175 112 900 300' : '-160 0 880 420');
+    // ミニアプリを縦で開いたとき：まわりの余白を切って、キャラクターを大きく見せる
+    const liffTall = on && document.body.classList.contains('liffmode');
+    document.body.classList.toggle('liffTall', liffTall);
+    scene.setAttribute('viewBox', liffTall ? '-10 108 520 535' : on ? '-40 110 580 560' : wide ? '-175 112 900 300' : '-160 0 880 420');
     // 下の段は少し大きく（1.2倍）。足もとを (95,600) と (405,600) に
     $('nekoWrap').setAttribute('transform', on ? 'translate(95 600) scale(1.2) translate(65 -345)' : '');
     $('chiWrap').setAttribute('transform', on ? 'translate(405 600) scale(1.2) translate(-565 -345)' : '');

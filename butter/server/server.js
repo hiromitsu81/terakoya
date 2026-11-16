@@ -338,14 +338,14 @@ function session(ws) {
 
   async function loadBrain(fresh) {
     // GASで家族の記録を読むのは数秒かかるので、同じ人・同じモードなら10分は使いまわす（つながるのが速くなる）
-    const key = crypto.createHash('sha256').update(JSON.stringify(S.auth) + S.mode).digest('hex');
+    const key = crypto.createHash('sha256').update(JSON.stringify(S.auth) + S.mode + (S.asGuest ? ':guest' : '')).digest('hex');
     const hit = brainCache.get(key);
     let r = !fresh && hit && Date.now() - hit.at < 10 * 60 * 1000 ? hit.r : null;
     if (!r) {
       // GASはときどき失敗するので1回だけやりなおす。それでもだめなら、前に読んだもの（古くても）を使う
       for (let i = 0; i < 2 && !r; i++) {
         try {
-          const x = await gas(Object.assign({ action: 'brain', mode: S.mode, ref: S.ref || '' }, S.auth));
+          const x = await gas(Object.assign({ action: 'brain', mode: S.mode, ref: S.ref || '', asGuest: !!S.asGuest }, S.auth));
           if (x && x.ok) r = x;
           else if (x && (x.error === 'auth' || x.error === 'pass')) throw Object.assign(new Error(x.error), { code: x.error });
           else console.error('brain ng', JSON.stringify(x).slice(0, 200));
@@ -667,6 +667,7 @@ function session(ws) {
         S.voice = /^ja-JP-[\w-]+$/.test(m.voice || '') ? m.voice : '';
         S.auth = m.idToken ? { idToken: String(m.idToken) } : { pass: String(m.pass || '') };
         S.ref = String(m.ref || '').replace(/[^\w-]/g, '').slice(0, 20);
+        S.asGuest = !!m.asGuest;          // 家族が「窓口の画面」を試すとき（&test=guest）
         try { await loadBrain(); } catch (e) {
           if (e.code === 'auth' || e.code === 'pass') return fail('auth', String(e.message).slice(0, 80));
           if (e.code === 'closed') return fail('closed', 'いま窓口はお休み中');
