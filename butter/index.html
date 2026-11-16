@@ -1087,7 +1087,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     gachaBusy = true;
     const who = whoIn || nameIn(said) || await choosePlayer('ガチャ');
     gachaBusy = false;
-    if (!who && playerNames().length) return;
+    if (!who && playerNames().length && !forceDemo) return;
     $('gachaPop').querySelector('.gtitle').textContent = (DEMO() ? '【おためし】' : cfg.test ? '【テスト】' : '') + (who ? who + 'のガチャ' : 'GACHA ガチャ');
     gachaBusy = true;
     stopRec(); setState('thinking');
@@ -1174,7 +1174,8 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   }
 
   // ===== おためし（合言葉なし・ステージ）：ガチャとUFOをこの端末だけで動かす。ポイントは使わない =====
-  const DEMO = () => STAGE || !canCall();
+  let forceDemo = false;   // 名前を選ばなかったときの、ポイントを使わないおためし
+  const DEMO = () => STAGE || !canCall() || forceDemo;
   let demoEquip = {};
   function demoState() {
     const p = JSON.parse(JSON.stringify(pet || { melt: 0, meltName: 'ひんやり' }));
@@ -1294,12 +1295,17 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     $('pickGrid').innerHTML = players().filter(p => p.name !== 'みんな' || p.owned.length || p.prizes.length).map(p =>
       '<button type="button" data-n="' + p.name + '">' + p.name + '<small>' + p.coins + 'pt' + (what === 'UFOキャッチャー' && p.ufoFree ? '・おためしOK' : '') + '</small></button>').join('');
     $('pick').hidden = false;
+    forceDemo = false;
+    $('pickTitle').textContent = 'だれの' + what + '？（名前を言ってね。言わないと、おためしで始まるよ）';
     sfx.notes([659, 784], 0.08, 'triangle', 0.1);
-    return new Promise(res => { pickRes = n => { pickRes = null; $('pick').hidden = true; res(n); }; });
+    return new Promise(res => {
+      const t = setTimeout(() => { if (pickRes) { forceDemo = true; pickRes(''); } }, 7000);
+      pickRes = n => { clearTimeout(t); pickRes = null; $('pick').hidden = true; res(n); };
+    });
   }
   $('pickGrid').addEventListener('click', ev => { const b = ev.target.closest('button'); if (b && pickRes) pickRes(b.dataset.n); });
-  $('pickCancel').addEventListener('click', () => { if (pickRes) pickRes(''); });
-  function pickHear(text) { if (!pickRes) return false; const n = nameIn(text); if (n) { pickRes(n); return true; } if (/(やめる|やめ)/.test(text)) { pickRes(''); return true; } return true; }
+  $('pickCancel').addEventListener('click', () => { if (pickRes) { forceDemo = false; pickRes(''); } });
+  function pickHear(text) { if (!pickRes) return false; const n = nameIn(text); if (n) { pickRes(n); return true; } if (/(おためし|お試し|ためし|だれでも|みんな)/.test(text)) { forceDemo = true; pickRes(''); return true; } if (/(やめる|やめ)/.test(text)) { forceDemo = false; pickRes(''); return true; } return true; }
 
   // ===== アイテムの一覧と絵 =====
   const ITEMS = [
@@ -1390,8 +1396,9 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   function uMsg(t) { const m = $('uMsg'); m.textContent = t; m.classList.remove('show'); void m.offsetWidth; m.classList.add('show'); }
   function uHum(on) {
     try {
-      if (on && !U.hum) { const a = AC(), o = a.createOscillator(), g = a.createGain(); o.type = 'sawtooth'; o.frequency.value = 70; g.gain.value = 0.025; o.connect(g); g.connect(a.destination); o.start(); U.hum = { o, g }; }
-      if (!on && U.hum) { U.hum.o.stop(); U.hum = null; }
+      // アームが動いているあいだは、やさしい「ピコ、ピコ」（前の「ビー」はやめた）
+      if (on && !U.hum) { let k = 0; U.hum = setInterval(() => { try { const t = AC().currentTime; tone(k++ % 2 ? 988 : 1319, t, 0.07, 'sine', 0.035); } catch (e) {} }, 420); }
+      if (!on && U.hum) { clearInterval(U.hum); U.hum = null; }
     } catch (e) {}
   }
   function toast(t) {
@@ -1407,7 +1414,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     ufoBusy = true;
     const who = whoIn || nameIn(said) || await choosePlayer('UFOキャッチャー');
     ufoBusy = false;
-    if (!who && playerNames().length) return;
+    if (!who && playerNames().length && !forceDemo) return;
     U.who = who;
     if (!DEMO()) toast((who ? who + 'の' : '') + 'UFOキャッチャーをじゅんびちゅう…');
     ufoBusy = true;
@@ -1506,7 +1513,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     }
     ufoClose();
   }
-  function ufoClose() { clearInterval(U.timer); uHum(false); U.on = false; U.phase = 'idle'; $('ufoPop').hidden = true; $('ufoPop').classList.remove('cine', 'shake'); $('uCard').classList.remove('in'); uCam(0); $('uDrop').style.animation = ''; }
+  function ufoClose() { forceDemo = false; clearInterval(U.timer); uHum(false); U.on = false; U.phase = 'idle'; $('ufoPop').hidden = true; $('ufoPop').classList.remove('cine', 'shake'); $('uCard').classList.remove('in'); uCam(0); $('uDrop').style.animation = ''; }
   function confettiIn(host, n) {
     const cv = document.createElement('canvas');
     cv.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none';
@@ -1518,6 +1525,8 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     if (!U.on) return false;
     const fresh = text.startsWith(uLastText) ? text.slice(uLastText.length) : text;
     uLastText = fin ? '' : text;
+    const whole = String(text).replace(/[、。,.!！?？\s]/g, '');
+    if (BUTTER_TALK.test(whole) && whole.length > 8) return true;          // 説明の声（「ストップって言うと…」）では止めない
     if (/(ストップ|すとっぷ|とまれ|止まれ|とめて|止めて|いま|今|おろして|下ろして|さげて|下げて|いけ|ゴー|ごー)/.test(fresh)) { uDrop(); return true; }
     if (/(みぎ|右)/.test(fresh)) { uNudge(28); return true; }
     if (/(ひだり|左)/.test(fresh)) { uNudge(-28); return true; }
@@ -1525,6 +1534,14 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     return true;                                            // UFOの間はほかの会話にしない
   }
   const UFO_RE = /(UFO|ＵＦＯ|ユーフォ|ゆーふぉ|ユーホー|ゆーほー|ゆうほう|クレーン|キャッチャー|きゃっちゃー)/i;
+  // バターちゃん（Claudeアプリ）が説明している声は、合図にしない（「ストップって言うと…」など）
+  const BUTTER_TALK = /(って言う|と言う|っていう|言ってね|押してね|見てね|教えてね|動かしてね|おりるよ|始まるよ|はじまるよ|動くよ|できるよ|かな|だよ|だね|からね|画面|ボタン)/;
+  const ASK_PLAY = /(やる|やりたい|やろ|お願い|おねがい|して|しよ|はじめ|始め|スタート|あそ|遊|まわ|回|ひいて|引いて|ちょうだい|やって)/;
+  function playCmd(text, re) {
+    const t = String(text).replace(/[、。,.!！?？\s]/g, '');
+    if (!re.test(t) || BUTTER_TALK.test(t)) return false;
+    return ASK_PLAY.test(t) || t.length <= 12;            // 「UFOキャッチャー！」のように短く言ったときも
+  }
 
   // ===== チーちゃんの芸 =====
   let poseTimer = null;
@@ -1671,8 +1688,8 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     }
     if (tapOpen && /(あけて|開けて|ひらいて|オープン|あけろ)/.test(text)) { tapOpen(); return; }
     if (CHI.test(text) && TRICKS.some(t => t.re.test(text))) { handleChi(text); return; }
-    if (/(ガチャ|がちゃ)[をは、\s]*(回|まわ|ひ|引|やり|やる)/.test(text) || (WAKE.test(text) && /(ガチャ|がちゃ)/.test(text))) { doGacha(text); return; }
-    if (UFO_RE.test(text) && !/(UFOキャッチャーもある|1回5)/.test(text)) { doUfo(text); return; }
+    if (playCmd(text, /(ガチャ|がちゃ|ガシャ)/)) { doGacha(text); return; }
+    if (playCmd(text, UFO_RE) && !/(UFOキャッチャーもある|1回5)/.test(text)) { doUfo(text); return; }
     const m = MOODS.find(([, re]) => re.test(text));
     if (m) setEmo(m[0], 6000);
   }
@@ -1691,8 +1708,8 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     const body = text.replace(/^(ねえ|ねぇ|おーい|おい)?[、,\s]*/, '').replace(WAKE, '').replace(/^[、,。\s]+/, '').trim();
     convoUntil = Date.now() + 25000;
     if (!body) { setEmo('excited', 3000); speak('はーい！なあに？'); return; }
-    if (/(ガチャ|がちゃ)/.test(body)) { doGacha(body); return; }
-    if (UFO_RE.test(body)) { doUfo(body); return; }
+    if (playCmd(body, /(ガチャ|がちゃ|ガシャ)/)) { doGacha(body); return; }
+    if (playCmd(body, UFO_RE)) { doUfo(body); return; }
     ask(body);
   }
 
@@ -1860,8 +1877,8 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     if (!r || !r.ok) { out.textContent = r && r.error === 'auth' ? 'LINEの確認ができなかったよ。開き直してね。' : 'うまく聞こえなかったよ。もう一回言ってね。'; setState('idle'); setEmo('sad', 4000); if (convOn && !(r && r.error === 'auth')) setTimeout(() => { if (!recBusy) talkOnce(); }, 600); return; }
     if (!r.heard) { out.parentElement.remove(); setState('idle'); if (convOn) setTimeout(() => { if (!recBusy) talkOnce(); }, 150); return; }
     // 聞こえた言葉で、ページだけでできることを先に
-    if (/(ガチャ|がちゃ)/.test(r.heard)) { out.parentElement.remove(); doGacha(r.heard); return; }
-    if (UFO_RE.test(r.heard)) { out.parentElement.remove(); doUfo(r.heard); return; }
+    if (playCmd(r.heard, /(ガチャ|がちゃ|ガシャ)/)) { out.parentElement.remove(); doGacha(r.heard); return; }
+    if (playCmd(r.heard, UFO_RE)) { out.parentElement.remove(); doUfo(r.heard); return; }
     out.parentElement.before(Object.assign(document.createElement('div'), { className: 'bubble me', innerHTML: '<span class="who">あなた</span>' }));
     out.parentElement.previousSibling.append(document.createTextNode(r.heard));
     if (CHI.test(r.heard) && TRICKS.some(t => t.re.test(r.heard))) { const t = TRICKS.find(x => x.re.test(r.heard)); if ((pet && pet.chi && pet.chi.tricks || []).indexOf(t.name) >= 0) { chiDo(t.pose); bark(); } }
