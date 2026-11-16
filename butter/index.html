@@ -1998,6 +1998,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
       case 'ready':
         J.ready = true; J.tries = 0; J.greeted = true; J.profile = m.profile || null; $('goenBtn').hidden = false;
         $('trioBtn').hidden = false; J.trio = !!m.trio; trioShow();
+        if (awake.until !== 0) keepAwake(true, 0);
         jrMicStart().catch(() => { hint.textContent = 'マイクが使えません。LINEの設定でマイクを許可してください。'; });
         jrBtn(); if (!J.playing) setState('listening');
         hint.textContent = J.trio ? '三人モード：「ジュニア」と呼んだときだけ答えるよ。' : 'そのまま話しかけてね。話している途中でも、声をかけたら止まって聞くよ。';
@@ -2011,7 +2012,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
       case 'heard': clearPartial(); jrHeard(m.text); break;
       case 'reply_start':
         J.gen = m.gen; J.queue = []; J.endEmo = null; jrStopAudio();
-        J.out = addBubble(m.as || 'ジュニア', '…', 'her'); J.outText = '';
+        J.out = addBubble(m.as || 'ジュニア', '…', 'her'); J.outText = ''; J.thinkAt = Date.now();
         if (m.emotion) setEmo(m.emotion);
         setState('thinking');
         break;
@@ -2027,7 +2028,8 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
         break;
       case 'stopped':
         J.queue = []; jrStopAudio();
-        if (J.out && J.outText) J.out.textContent = J.outText + '…';
+        if (m.why === 'stale' && J.out && J.out.parentElement) J.out.parentElement.remove();   // 話が先に進んだので、言わずにやめた
+        else if (J.out && J.outText) J.out.textContent = J.outText + '…';
         setState('listening');
         break;
       case 'trio':
@@ -2058,6 +2060,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     if (U.on && ufoHear(text, true)) return;
     if (playCmd(text, /(ガチャ|がちゃ|ガシャ)/)) { doGacha(text); return; }
     if (playCmd(text, UFO_RE)) { doUfo(text); return; }
+    if (screenCmd(text)) { addBubble('あなた', text, 'me'); return; }
     if (/ご縁(つなぎ|コード)/.test(text)) { addBubble('あなた', text, 'me'); goenOpen(); return; }
     if (CHI.test(text) && !WAKE.test(text) && TRICKS.some(t => t.re.test(text))) {
       const t = TRICKS.find(x => x.re.test(text));
@@ -2147,6 +2150,37 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     const btn = $('talkBtn');
     btn.classList.toggle('rec', !J.paused); btn.querySelector('b').textContent = J.paused ? 'おして話す' : 'きいてるよ';
   }
+  // 画面をつけたままにする（ミニアプリは画面が消えると、マイクも声も止まる）
+  const WAKE_MP4 = 'data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAMpbW9vdgAAAGxtdmhkAAAAAAAAAAAAAAAAAAAD6AAAB9AAAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAlN0cmFrAAAAXHRraGQAAAADAAAAAAAAAAAAAAABAAAAAAAAB9AAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAABAAAAAQAAAAAAAkZWR0cwAAABxlbHN0AAAAAAAAAAEAAAfQAAAAAAABAAAAAAHLbWRpYQAAACBtZGhkAAAAAAAAAAAAAAAAAABAAAAAgABVxAAAAAAALWhkbHIAAAAAAAAAAHZpZGUAAAAAAAAAAAAAAABWaWRlb0hhbmRsZXIAAAABdm1pbmYAAAAUdm1oZAAAAAEAAAAAAAAAAAAAACRkaW5mAAAAHGRyZWYAAAAAAAAAAQAAAAx1cmwgAAAAAQAAATZzdGJsAAAAtnN0c2QAAAAAAAAAAQAAAKZhdmMxAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAABAAEABIAAAASAAAAAAAAAABFUxhdmM2MC4zMS4xMDIgbGlieDI2NAAAAAAAAAAAAAAAGP//AAAALGF2Y0MBQsAK/+EAFWdCwAraewEQAAADABAAAAMAIPEiagEABGjOD8gAAAAQcGFzcAAAAAEAAAABAAAAFGJ0cnQAAAAAAAAKMAAACjAAAAAYc3R0cwAAAAAAAAABAAAAAgAAQAAAAAAUc3RzcwAAAAAAAAABAAAAAQAAABxzdHNjAAAAAAAAAAEAAAABAAAAAgAAAAEAAAAcc3RzegAAAAAAAAAAAAAAAgAAAoMAAAAJAAAAFHN0Y28AAAAAAAAAAQAAA1kAAABidWR0YQAAAFptZXRhAAAAAAAAACFoZGxyAAAAAAAAAABtZGlyYXBwbAAAAAAAAAAAAAAAAC1pbHN0AAAAJal0b28AAAAdZGF0YQAAAAEAAAAATGF2ZjYwLjE2LjEwMAAAAAhmcmVlAAAClG1kYXQAAAJtBgX//2ncRem95tlIt5Ys2CDZI+7veDI2NCAtIGNvcmUgMTY0IHIzMTA4IDMxZTE5ZjkgLSBILjI2NC9NUEVHLTQgQVZDIGNvZGVjIC0gQ29weWxlZnQgMjAwMy0yMDIzIC0gaHR0cDovL3d3dy52aWRlb2xhbi5vcmcveDI2NC5odG1sIC0gb3B0aW9uczogY2FiYWM9MCByZWY9MSBkZWJsb2NrPTE6MDowIGFuYWx5c2U9MHgxOjB4MSBtZT1oZXggc3VibWU9MiBwc3k9MSBwc3lfcmQ9MS4wMDowLjAwIG1peGVkX3JlZj0wIG1lX3JhbmdlPTE2IGNocm9tYV9tZT0xIHRyZWxsaXM9MCA4eDhkY3Q9MCBjcW09MCBkZWFkem9uZT0yMSwxMSBmYXN0X3Bza2lwPTEgY2hyb21hX3FwX29mZnNldD0wIHRocmVhZHM9MSBsb29rYWhlYWRfdGhyZWFkcz0xIHNsaWNlZF90aHJlYWRzPTAgbnI9MCBkZWNpbWF0ZT0xIGludGVybGFjZWQ9MCBibHVyYXlfY29tcGF0PTAgY29uc3RyYWluZWRfaW50cmE9MCBiZnJhbWVzPTAgd2VpZ2h0cD0wIGtleWludD0yNTAga2V5aW50X21pbj0xIHNjZW5lY3V0PTQwIGludHJhX3JlZnJlc2g9MCByY19sb29rYWhlYWQ9MTAgcmM9Y3JmIG1idHJlZT0xIGNyZj0yMy4wIHFjb21wPTAuNjAgcXBtaW49MCBxcG1heD02OSBxcHN0ZXA9NCBpcF9yYXRpbz0xLjQwIGFxPTE6MS4wMACAAAAADmWIhAW///8PRQABT3+AAAAABUGaIBX1';
+  const awake = { lock: null, vid: null, until: Infinity, timer: null };
+  async function keepAwake(on, minutes) {
+    clearTimeout(awake.timer);
+    if (!on) {
+      try { awake.lock && awake.lock.release(); } catch (e) {} awake.lock = null;
+      if (awake.vid) { awake.vid.pause(); } awake.until = 0; return;
+    }
+    awake.until = minutes ? Date.now() + minutes * 60000 : Infinity;
+    if (minutes) awake.timer = setTimeout(() => keepAwake(false), minutes * 60000);
+    try { if (navigator.wakeLock) { awake.lock = await navigator.wakeLock.request('screen'); return; } } catch (e) {}
+    // wakeLock が使えない端末：音のない小さな動画をくりかえし流して、画面が消えないようにする
+    if (!awake.vid) { awake.vid = Object.assign(document.createElement('video'), { src: WAKE_MP4, muted: true, loop: true, playsInline: true }); awake.vid.setAttribute('playsinline', ''); awake.vid.style.cssText = 'position:fixed;width:1px;height:1px;opacity:0;pointer-events:none'; document.body.append(awake.vid); }
+    awake.vid.play().catch(() => {});
+  }
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && awake.until > Date.now() && !J.dead) keepAwake(true, awake.until === Infinity ? 0 : Math.ceil((awake.until - Date.now()) / 60000)); });
+  const KANSU = { '一': 1, '二': 2, '三': 3, '五': 5, '十': 10, '十五': 15, '二十': 20, '三十': 30, '六十': 60 };
+  function screenCmd(text) {
+    if (!/画面|がめん/.test(text)) return false;
+    if (/(消して|けして)(いい|も)|ロック(して|もどして|戻して)|(つけ|点け)なくていい/.test(text)) { keepAwake(false); jrSend({ type: 'say', text: 'わかった、画面は消えてもいいようにしたよ。' }); return true; }
+    if (!/(つけて|点けて|つけたまま|消さないで|けさないで|おきて|起きて)/.test(text)) return false;
+    const m = text.match(/(\d+|十五|二十|三十|六十|一|二|三|五|十)\s*(分|ふん|ぷん)/), h = text.match(/(\d+|一|二|三)\s*時間/);
+    const min = m ? (Number(m[1]) || KANSU[m[1]]) : h ? (Number(h[1]) || KANSU[h[1]]) * 60 : 0;
+    keepAwake(true, min);
+    jrSend({ type: 'say', text: min ? min + '分、画面をつけておくね。' : 'ミニアプリを開いているあいだ、画面をつけておくね。' });
+    return true;
+  }
+  // 「考え中」のまま止まらないように：声が来ないまま15びょうたったら、聞く状態にもどす
+  setInterval(() => { if (jrLive() && state === 'thinking' && !J.playing && Date.now() - (J.thinkAt || 0) > 15000) { if (J.out && J.outText === '') J.out.textContent = '…（うまく答えられなかったよ）'; setState('listening'); } }, 3000);
+
   // カメラ：「写真撮って」「動画撮って」と言われたときだけ。お知らせを出して、3びょう数えて撮る
   let camStream = null, camCancel = null;
   async function camOpen() {
@@ -2328,6 +2362,8 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
 
   // ===== LINE の「バターちゃん 〇〇」と、様子の更新 =====
   function announce(text) {
+    // 家族OSからのお知らせ：ジュニアのときは「お知らせ」として出す。三人モードでは声に出さず、吹き出しだけ
+    if (jrLive()) { if (J.trio) addBubble('お知らせ', text, 'her'); else jrSend({ type: 'say', text, as: 'お知らせ' }); return; }
     if (!SHOW() && (state === 'speaking' || state === 'thinking')) { sayQueue.push(text); return; }
     addBubble('バターちゃん', text, 'her');
     history.push({ role: 'user', content: '（パパかママからのお知らせを読み上げて）' }, { role: 'assistant', content: text });

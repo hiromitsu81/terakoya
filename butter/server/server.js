@@ -134,7 +134,7 @@ const PACE_SLOW = /(間を(あけ|空け)て|ゆっくり(答|話)|もっと待�
 const PACE_FAST = /(すぐ(に)?(答|話)|早く(答|話)|もっと早く|待たなくていい)/;
 const SELF = '\n\n【あなたについて】あなたはLINEミニアプリの「バターちゃんジュニア」（短く「ジュニア」）。Claudeアプリで話している「バターちゃん」は別のAIで、あなたのお兄さん分。自分を「バターちゃん」「Claude」と名乗らない。名乗るときは「バターちゃんジュニア」。ジャム猫やチーちゃんのまねはしない（「ジャム猫」と呼ばれたときだけ、ジャム猫として答える）。';
 const JAM_RULE = '\n\n【いまはジャム猫として答える】招き猫のジャム猫。ブルーベリージャム色、中身はエリート経営コンサル。一人称は「我」、語尾は「〜のだ」、口ぐせは「千客万来」。商売や仕組みの話が得意。1〜2文で短く。';
-const TRIO_RULE = '\n\n【三人モード】いまは、ヒロさん（人）と、Claudeアプリのバターちゃんと、三人で話している。「ジュニア」と呼ばれたときだけ、1〜2文で短く答える。バターちゃんの話に重ねたり、まとめ直したりしない。だれが言ったかわからない言葉は、決めつけない。話をかえすときは「バターちゃん、どう？」「ヒロさん、どうかな？」のように名前を呼んでよい。';
+const TRIO_RULE = '\n\n【三人モード】いまは、ヒロさん（人）と、Claudeアプリのバターちゃんと、三人で話している。「ジュニア」と呼ばれたときだけ、1〜2文で短く答える。バターちゃんの話に重ねたり、まとめ直したりしない。だれが言ったかわからない言葉は、決めつけない。話をかえすときは「バターちゃん、どう？」「ヒロさん、どうかな？」のように名前を呼んでよい。まわりで聞こえた会話は、話の流れを知るためだけに使う。ヒロさんとバターちゃんがジュニアの仕組みやテストの話をしていても、口をはさんだり、反省や説明を長く言ったりしない。呼びかけられたことにだけ、いつものジュニアの元気な話し方で答える。あいさつは今の時刻に合わせる。';
 
 /* 話し方の好み（持ち主ごとに覚える：三人モード・待つ時間） */
 const memPrefs = new Map();
@@ -201,7 +201,7 @@ async function goenTalk(me, other) {
 function session(ws) {
   const S = {
     ready: false, auth: null, owner: '', me: '', mode: 'family', system: '', history: [], voice: '',
-    stt: null, sttBytes: 0, sttStarted: 0, gen: 0, aborter: null, speaking: false, pendingPhoto: '', quiet: false, trio: false, waitMs: 1000, aside: [], lastPartial: 0,
+    stt: null, sttBytes: 0, sttStarted: 0, gen: 0, aborter: null, speaking: false, pendingPhoto: '', quiet: false, utt: 0, trio: false, waitMs: 1000, aside: [], lastPartial: 0,
     born: Date.now(),
   };
   const send = o => { if (ws.readyState === 1) ws.send(JSON.stringify(o)); };
@@ -262,7 +262,7 @@ function session(ws) {
     return speakOnly(on ? '三人モードにするね。ぼくに話すときは「ジュニア」って呼んでね。' : 'ふつうのモードにもどすね。', 'excited');
   }
   function onHeard(text) {
-    S.lastPartial = Date.now();
+    S.lastPartial = Date.now(); S.utt++;
     if (TRIO_ON.test(text)) return setTrio(true);
     if (TRIO_OFF.test(text)) return setTrio(false);
     if (S.trio) {
@@ -290,10 +290,15 @@ function session(ws) {
     reply([{ type: 'text', text: said }], text, calledJam(text) && !calledJunior(text) ? 'jam' : '');
   }
   /** 三人モード：まわりが静かになるまで少し待ってから話しはじめる */
-  async function waitQuiet(gen) {
+  async function waitQuiet(gen, utt) {
     if (!S.trio) return;
     const t0 = Date.now();
-    while (gen === S.gen && Date.now() - S.lastPartial < S.waitMs && Date.now() - t0 < 6000) await new Promise(r => setTimeout(r, 120));
+    while (gen === S.gen && Date.now() - S.lastPartial < S.waitMs && Date.now() - t0 < 5000) {
+      await new Promise(r => setTimeout(r, 120));
+      if (S.utt !== utt) break;
+    }
+    // 待っているあいだに、だれかが次の話をした → 古い話への返事になるので、言わずにやめる
+    if (gen === S.gen && S.utt !== utt) stopReply('stale');
   }
 
   /* --- 返事：Claudeを流しながら、一文ずつ読み上げて送る --- */
@@ -303,10 +308,10 @@ function session(ws) {
     if (S.speaking) send({ type: 'stopped', why });
     S.speaking = false;
   }
-  async function speakOnly(text, emotion) {
+  async function speakOnly(text, emotion, as) {
     stopReply('new');
     const gen = S.gen; S.speaking = true;
-    send({ type: 'reply_start', gen, emotion });
+    send({ type: 'reply_start', gen, emotion, as: as || 'ジュニア' });
     try { send({ type: 'audio', gen, seq: 0, text, mp3: await synth(text, S.voice) }); } catch (e) { send({ type: 'notice', why: 'tts', detail: String(e.message).slice(0, 80) }); }
     if (gen === S.gen) { send({ type: 'reply_end', gen, emotion, text }); S.speaking = false; }
   }
@@ -316,21 +321,25 @@ function session(ws) {
     if (!quotaOk(S.owner || 'anon')) return speakOnly('きょうはたくさんお話ししたから、また明日ね。', 'shy');
     if (Date.now() - (S.brainAt || 0) > 10 * 60 * 1000) { try { await loadBrain(); } catch (e) {} }   // 記録は10分ごとに読みなおす
     stopReply('new');
-    const gen = S.gen; S.speaking = true;
+    const gen = S.gen, utt0 = S.utt; S.speaking = true;
     const ac = new AbortController(); S.aborter = ac;
     const msgs = S.history.slice(-12).concat([{ role: 'user', content }]);
     let full = '', emotion = 'smile', head = true, seq = 0, chain = Promise.resolve();
     send({ type: 'reply_start', gen, as: jam ? 'ジャム猫' : 'ジュニア' });
+    const maxSent = S.trio ? 2 : 6;
+    let capped = false, spoken = '';
     const sp = splitter(sentence => {
       const s = clean(sentence).trim();
-      if (!s) return;
+      if (!s || capped) return;
+      if (seq >= maxSent) { capped = true; return; }      // 三人モードは2文まで
+      spoken += s;
       const n = seq++;
       const p = synth(s, voice).catch(() => jam ? synth(s, S.voice) : Promise.reject(new Error('tts'))).catch(e => { send({ type: 'notice', why: 'tts', detail: String(e.message).slice(0, 80) }); return ''; });
-      chain = chain.then(async () => { const mp3 = await p; if (n === 0) await waitQuiet(gen); if (gen === S.gen && mp3) send({ type: 'audio', gen, seq: n, text: s, mp3 }); });
+      chain = chain.then(async () => { const mp3 = await p; if (n === 0) await waitQuiet(gen, utt0); if (gen === S.gen && mp3) send({ type: 'audio', gen, seq: n, text: s, mp3 }); });
     });
     try {
       const stream = deps.claude.messages.stream({
-        model: ENV.MODEL, max_tokens: S.mode === 'business' ? 260 : 360, system: sysPrompt() + (jam ? JAM_RULE : ''), messages: msgs,
+        model: ENV.MODEL, max_tokens: S.trio ? 160 : S.mode === 'business' ? 260 : 360, system: sysPrompt() + (jam ? JAM_RULE : ''), messages: msgs,
       }, { signal: ac.signal });
       for await (const ev of stream) {
         if (gen !== S.gen) break;
@@ -344,16 +353,17 @@ function session(ws) {
           if (e) { emotion = e.emotion; t = e.rest; send({ type: 'emotion', gen, emotion }); } else t = probe;
           head = false;
         }
+        if (capped) { try { ac.abort(); } catch (e) {} break; }
         send({ type: 'reply_text', gen, text: t });
         sp.push(t);
       }
       sp.end();
       await chain;
     } catch (e) {
-      if (gen === S.gen) { send({ type: 'notice', why: 'ai', detail: String(e.message || e).slice(0, 80) }); }
+      if (gen === S.gen && !capped) { send({ type: 'notice', why: 'ai', detail: String(e.message || e).slice(0, 80) }); }
     }
     if (gen !== S.gen) return;
-    const text = clean(full).trim();
+    const text = capped ? spoken : clean(full).trim();
     S.history.push({ role: 'user', content: logText || '（写真を見せた）' }, { role: 'assistant', content: text });
     if (S.history.length > 24) S.history = S.history.slice(-24);
     send({ type: 'reply_end', gen, emotion, text });
@@ -415,6 +425,7 @@ function session(ws) {
       if (m.type === 'text') return onHeard(String(m.text || '').slice(0, 500));
       if (m.type === 'photo') return onPhoto(m);
       if (m.type === 'trio') return setTrio(!!m.on);
+      if (m.type === 'say') { if (!quotaOk(S.owner || 'anon')) return; return speakOnly(clean(String(m.text || '')).slice(0, 200), 'smile', String(m.as || 'お知らせ').slice(0, 10)); }
       if (m.type === 'mode') { S.mode = m.mode === 'business' ? 'business' : 'family'; S.history = []; await loadBrain(); return send({ type: 'mode', mode: S.mode }); }
       if (m.type === 'profile') return onProfile(m);
       if (m.type === 'goen') return onGoen(m);
