@@ -832,7 +832,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   </section>
 
   <section class="stagebar" aria-label="台本">
-    <div class="line" id="stageLine" aria-live="polite">ボタンをおすと、バターちゃんが話しはじめるよ。</div>
+    <div class="line" id="stageLine" aria-live="polite">ヒロさん「バターちゃん、自己紹介お願い」→ スタートを押してね。</div>
     <div class="cue" id="stageCue"></div>
     <div class="bigrow">
       <button class="next" id="stageNext" type="button">▶ スタート</button>
@@ -2244,12 +2244,17 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
 
   // ===== 台本モード =====
   const DEFAULT_SCRIPT = [
-    '【わくわく】こんばんは、バターちゃんです！こちらは、AIでぼくを作ったヒロさん！お祭りの企画から、お店や会社のDXまで、仕組みづくりの名人なんだよ！',
-    'ヒロ：名人は言いすぎ！',
-    '【てれる】えへへ。それでね、溝の口でお祭りの仲間を探してるんだって。ぼくも手伝うよ！',
-    'ヒロ：君は溶けちゃうからね',
-    '【わらう】だから交流会で、ぼくに話しかけに来てね。溶ける前に！バタバタ〜！',
+    '【わくわく】こんばんは、バターちゃんです！ぼくは、お店や会社のDXを、企画から仕組みづくりまでぜんぶやっちゃう名人なんだよ！',
+    'ヒロ：お前もか！',
+    '【てれる】えへへ、相棒のヒロさんに似ちゃった！それでね、ぼく、溝の口でお祭りをやりたいんだ！',
+    'ヒロ：できんの？',
+    '【かんがえ】うーん、ぼく、外に出ると溶けちゃうんだよね。だから、招き猫のジャム猫と柴犬のチーちゃんが、ぼくの代わりに仲間を集めるよ！二匹はAIの相棒で、お店や会社で働けるんだ。相棒をお迎えしてくれた人たちと、溝の口のお祭りをいっしょに作りたいな。里親募集中だから、交流会でぼくに声かけてね！',
+    'ヒロ：そういう人がいたら、バターちゃんに紹介できるようにサポートするよ',
+    '【わらう】わーい、ありがとう、ヒロさん！バタバタ〜！',
   ].join('\n');
+  // 台本を新しくしたときは、この端末に残っている前の台本を入れかえる
+  const SCRIPT_VER = 2;
+  if (store.get('scriptVer', 1) < SCRIPT_VER) { store.set('script', DEFAULT_SCRIPT); store.set('scriptVer', SCRIPT_VER); }
   const EMO_JA = { 'わくわく': 'excited', 'わらう': 'laugh', 'てれる': 'shy', 'びっくり': 'surprise', 'えがお': 'smile', 'かんがえ': 'think', 'しょんぼり': 'sad' };
   function parseScript(txt) {
     const steps = [];
@@ -2312,7 +2317,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   if (STAGE) {
     $('stageNext').addEventListener('click', stagePlay);
     $('stageTalk').addEventListener('click', stageListen);
-    $('stageReset').addEventListener('click', () => { speechSynthesis.cancel(); stageBusy = false; stageI = 0; $('stageLine').textContent = 'ボタンをおすと、バターちゃんが話しはじめるよ。'; $('stageCue').textContent = ''; setState('idle'); setEmo('smile'); stageShow(); });
+    $('stageReset').addEventListener('click', () => { speechSynthesis.cancel(); stageBusy = false; stageI = 0; $('stageLine').textContent = 'ヒロさん「バターちゃん、自己紹介お願い」→ スタートを押してね。'; $('stageCue').textContent = ''; setState('idle'); setEmo('smile'); stageShow(); });
     $('stageGacha').addEventListener('click', () => { if (!stageBusy) doGacha('ガチャ回して'); });
     $('stageUfo').addEventListener('click', () => { if (!stageBusy) doUfo('UFOキャッチャー'); });
     $('stageNeko').addEventListener('click', () => { if (stageBusy) return; $('stageLine').textContent = 'ジャム猫：' + NEKO_LINE; $('stageCue').textContent = ''; nekoSay(NEKO_LINE); });
