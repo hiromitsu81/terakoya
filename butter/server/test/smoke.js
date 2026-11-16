@@ -29,7 +29,7 @@ let lastMessages = null;
 deps.claude = {
   messages: {
     stream: (p) => { lastMessages = p.messages; return fakeStream('[わくわく]やっほー！今日はなにして遊ぶ？クイズもできるよ。'); },
-    create: async () => ({ content: [{ type: 'text', text: '{"lines":[{"who":"チーちゃん","text":"こんにちは"},{"who":"ジャム猫","text":"千客万来なのだ"}],"match":"お祭りと宿で相性ばっちり。","next":"一度お茶してみてね。"}' }] }),
+    create: async p => /記録係/.test(p.system || '') ? ({ content: [{ type: 'text', text: '===まとめ===\n- ピョン吉のトレーナーの話をした\n===日記===\n- パパがトレーナーを買った' }] }) : ({ content: [{ type: 'text', text: '{"lines":[{"who":"チーちゃん","text":"こんにちは"},{"who":"ジャム猫","text":"千客万来なのだ"}],"match":"お祭りと宿で相性ばっちり。","next":"一度お茶してみてね。"}' }] }),
   },
 };
 deps.tts = { synthesizeSpeech: async ({ input }) => [{ audioContent: Buffer.from('mp3:' + input.text) }] };
@@ -170,6 +170,31 @@ function client(port, hello) {
   f.ws.send(JSON.stringify({ type: 'text', text: 'ジュニア、こんばんは' }));
   await f.until(m => m.type === 'reply_end');
 
-  console.log('OK：会話・気持ち・一文ずつの声・写真・記録の分け方・ご縁つなぎ・割りこみ・三人モード');
+  // 呼ばれただけなら、すぐ一言（Claudeにきかない）
+  const q = await client(port, { type: 'hello', pass: 'ok', trio: false });
+  await q.until(m => m.type === 'ready');
+  let streamed = 0; const os2 = deps.claude.messages.stream;
+  deps.claude.messages.stream = p => { streamed++; sys = p.system; return os2(p); };
+  q.ws.send(JSON.stringify({ type: 'text', text: 'ジュニア、聞いてる？' }));
+  const qe = await q.until(m => m.type === 'reply_end');
+  assert.ok(/なんでぃ|聞いてるぜ|どうした/.test(qe.text) && streamed === 0, '名前だけはすぐ返事');
+  // 話したことは、切っても次につづく（まとめ・ジュニア日記）
+  q.ws.send(JSON.stringify({ type: 'text', text: 'ピョン吉のトレーナー買ったよ' }));
+  await q.until(m => m.type === 'reply_end' && m !== qe);
+  assert.ok(/いまの時刻/.test(sys) && /一人称は「おいら」/.test(sys), '時刻と話し方');
+  q.ws.send(JSON.stringify({ type: 'text', text: 'こんどスマホを入れるんだ' }));
+  await new Promise(r => setTimeout(r, 900));
+  q.ws.close();
+  await new Promise(r => setTimeout(r, 300));
+  assert.ok(gasCalls.some(c => c.action === 'note' && /トレーナー/.test(c.text)), 'ジュニア日記をGASへ');
+  const q2 = await client(port, { type: 'hello', pass: 'ok', trio: false });
+  await q2.until(m => m.type === 'ready');
+  q2.ws.send(JSON.stringify({ type: 'text', text: 'さっきの話おぼえてる？' }));
+  await q2.until(m => m.type === 'reply_end');
+  assert.ok(/前回までの話のまとめ/.test(sys) && /トレーナー/.test(sys), 'まとめを読んでつづきから');
+  assert.ok(lastMessages.some(m => m.role === 'user' && /ピョン吉/.test(typeof m.content === 'string' ? m.content : '')), 'さいきんのやりとりもつづく');
+  deps.claude.messages.stream = os2;
+
+  console.log('OK：会話・気持ち・一文ずつの声・写真・記録の分け方・ご縁つなぎ・割りこみ・三人モード・呼ばれただけ・会話のつづき・ジュニア日記');
   process.exit(0);
 })().catch(e => { console.error('NG', e); process.exit(1); });

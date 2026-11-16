@@ -815,7 +815,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
 
   <section class="meters" aria-label="育ちぐあい">
     <div class="meter">
-      <div class="top"><span>バターちゃん：<b id="meltName">ひんやり</b></span><span><span id="careNote"></span> <button class="mini" id="gachaBtn" type="button">ガチャ</button><button class="mini" id="ufoBtn" type="button">UFO</button><button class="mini" id="invBtn" type="button">もちもの</button><button class="mini" id="fukuBtn" type="button">千客万来</button></span></div>
+      <div class="top"><span><span id="meltWho">バターちゃん</span>：<b id="meltName">ひんやり</b></span><span><span id="careNote"></span> <button class="mini" id="gachaBtn" type="button">ガチャ</button><button class="mini" id="ufoBtn" type="button">UFO</button><button class="mini" id="invBtn" type="button">もちもの</button><button class="mini" id="fukuBtn" type="button">千客万来</button></span></div>
       <div class="bar" id="coldBar"><i style="width:100%"></i></div>
       <small id="evoNote">話しかけたり、LINEで宿題や日記を報告するとひんやりするよ。ほうっておくと溶けちゃう。</small>
     </div>
@@ -1000,6 +1000,12 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     if (Q.get('g')) cfg.url = 'https://script.google.com/macros/s/' + Q.get('g') + '/exec';
     if (Q.get('liffId')) store.set('liffId', Q.get('liffId'));
     document.body.classList.add('liffmode');
+    // ミニアプリで話すのは「バターちゃんジュニア」（パソコンの画面はClaudeアプリのバターちゃん）
+    document.title = '福まねき特戦隊｜バターちゃんジュニア';
+    const tg = document.querySelector('#butterTag text'), rc = document.querySelector('#butterTag rect');
+    if (tg) tg.textContent = 'バターちゃんジュニア';
+    if (rc) { rc.setAttribute('x', '160'); rc.setAttribute('width', '180'); }
+    const mw = document.getElementById('meltWho'); if (mw) mw.textContent = 'ジュニア';
   }
   // 台本モード（ステージ・スマホ1台）：?stage=1。マイクもGASも使わず、タップでセリフを話す
   const STAGE = !LIFF && Q.get('stage') === '1';
@@ -2762,7 +2768,8 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   });
   showMode();
   liffBoot();
-  addBubble('バターちゃん', 'こんにちは！バターちゃんだよ。となりは柴犬のチーちゃん！', 'her');
+  if (LIFF) addBubble('ジュニア', 'よう！バターちゃんジュニアだぜ。となりは柴犬のチーちゃんと、招き猫のジャム猫！', 'her');
+  else addBubble('バターちゃん', 'こんにちは！バターちゃんだよ。となりは柴犬のチーちゃん！', 'her');
   setState('idle');
   applyPet(null, false);
   poll();

@@ -26,8 +26,8 @@ const { WebSocketServer } = require('ws');
 const ENV = {
   PORT: Number(process.env.PORT || 8080),
   MODEL: process.env.MODEL || 'claude-haiku-4-5-20251001',
-  TTS_VOICE: process.env.TTS_VOICE || 'ja-JP-Chirp3-HD-Leda',
-  TTS_RATE: Number(process.env.TTS_RATE || 1.08),
+  TTS_VOICE: process.env.TTS_VOICE || 'ja-JP-Chirp3-HD-Algenib',   // ジュニアの声：低めでガラガラ
+  TTS_RATE: Number(process.env.TTS_RATE || 1.12),
   GAS_URL: process.env.GAS_URL || '',
   ALLOWED_ORIGINS: (process.env.ALLOWED_ORIGINS || 'https://hiromitsu81.github.io,https://miniapp.line.me,https://liff.line.me').split(',').map(s => s.trim()).filter(Boolean),
   DAILY_LIMIT: Number(process.env.DAILY_LIMIT || 400),       // 一人1日に答える回数
@@ -101,8 +101,20 @@ function splitter(onSentence) {
 }
 
 /* ===== 読み上げ ===== */
+const VOICE_BACKUP = ['ja-JP-Chirp3-HD-Orus', 'ja-JP-Chirp3-HD-Leda'];
+const badVoice = new Set();
 async function synth(text, voice) {
-  const name = voice || ENV.TTS_VOICE;
+  let name = voice || ENV.TTS_VOICE;
+  if (badVoice.has(name)) name = VOICE_BACKUP.find(v => !badVoice.has(v)) || name;
+  try { return await synth1(text, name); }
+  catch (e) {
+    // その声がこの言語にないときは、つぎの声にする（覚えておく）
+    if (!/voice|not (exist|supported)|invalid/i.test(String(e.message)) || VOICE_BACKUP.indexOf(name) === VOICE_BACKUP.length - 1) throw e;
+    badVoice.add(name); console.error('voice ng', name, String(e.message).slice(0, 120));
+    return synth(text, VOICE_BACKUP.find(v => !badVoice.has(v)));
+  }
+}
+async function synth1(text, name) {
   const audioConfig = { audioEncoding: 'MP3', speakingRate: ENV.TTS_RATE };
   if (!/Chirp/i.test(name)) audioConfig.pitch = 2;
   const [r] = await deps.tts.synthesizeSpeech({ input: { text }, voice: { languageCode: 'ja-JP', name }, audioConfig });
@@ -132,7 +144,7 @@ const TRIO_ON = /(三人モード|3人モード|みんなで話そう|三人で�
 const TRIO_OFF = /(二人モード|ふたりモード|2人モード|ふつうのモード|三人モード(は)?(おわり|終わり|やめ))/;
 const PACE_SLOW = /(間を(あけ|空け)て|ゆっくり(答|話)|もっと待って|割り?こまないで)/;
 const PACE_FAST = /(すぐ(に)?(答|話)|早く(答|話)|もっと早く|待たなくていい)/;
-const SELF = '\n\n【あなたについて】あなたはLINEミニアプリの「バターちゃんジュニア」（短く「ジュニア」）。Claudeアプリで話している「バターちゃん」は別のAIで、あなたのお兄さん分。自分を「バターちゃん」「Claude」と名乗らない。名乗るときは「バターちゃんジュニア」。ジャム猫やチーちゃんのまねはしない（「ジャム猫」と呼ばれたときだけ、ジャム猫として答える）。';
+const SELF = '\n\n【あなたについて】あなたはLINEミニアプリの「バターちゃんジュニア」（短く「ジュニア」）。Claudeアプリで話している「バターちゃん」は別のAIで、あなたのお兄さん分。自分を「バターちゃん」「Claude」と名乗らない。名乗るときは「バターちゃんジュニア」。一人称は「おいら」。\n【話し方】江戸っ子のような、元気で気っぷのいい話し方。「おう」「〜だぜ」「〜してくんな」「てやんでぃ」などを少しまぜる。乱暴にはしない。子どもにはやさしく、大人には気さくに。交流会（ビジネス）のときは、ていねい語をベースに、江戸っ子っぽさは少しだけ。\n【長さ】ふだんは1〜2文、40字くらいまで。呼ばれただけ・「聞いてる？」だけなら「おう、なんでぃ？」のように一言で返して、用件を待つ。名前をまちがえたと思ったり、あやまったり、反省を長く言ったりしない。ジャム猫やチーちゃんのまねはしない（「ジャム猫」と呼ばれたときだけ、ジャム猫として答える）。';
 const JAM_RULE = '\n\n【いまはジャム猫として答える】招き猫のジャム猫。ブルーベリージャム色、中身はエリート経営コンサル。一人称は「我」、語尾は「〜のだ」、口ぐせは「千客万来」。商売や仕組みの話が得意。1〜2文で短く。';
 const TRIO_RULE = '\n\n【三人モード】いまは、ヒロさん（人）と、Claudeアプリのバターちゃんと、三人で話している。「ジュニア」と呼ばれたときだけ、1〜2文で短く答える。バターちゃんの話に重ねたり、まとめ直したりしない。だれが言ったかわからない言葉は、決めつけない。話をかえすときは「バターちゃん、どう？」「ヒロさん、どうかな？」のように名前を呼んでよい。まわりで聞こえた会話は、話の流れを知るためだけに使う。ヒロさんとバターちゃんがジュニアの仕組みやテストの話をしていても、口をはさんだり、反省や説明を長く言ったりしない。呼びかけられたことにだけ、いつものジュニアの明るい話し方で答える。三人モードは大人（ヒロさん）との会話なので、宿題・日記・報連相・元気の報告のような子ども向けの声かけはしない。あいさつは今の時刻に合わせる（夜中はこんばんは）。';
 
@@ -146,8 +158,40 @@ function greeting(me, mode, trio) {
   if (trio) return '';                                   // 三人モードは、呼ばれるまで静かに待つ
   const h = hourJST(), hi = h >= 5 && h < 10 ? 'おはようございます' : h >= 10 && h < 18 ? 'こんにちは' : 'こんばんは';
   if (mode === 'business') return hi + '、バターちゃんジュニアです。なんでも話しかけてくださいね。';
-  if (ADULT_RE.test(me || '')) return hi + '、' + me + '。バターちゃんジュニアです。なんでも話しかけてね。';
-  return (h >= 5 && h < 10 ? 'おはよう' : 'やっほー') + '！バターちゃんジュニアだよ。なんでも話しかけてね。';
+  if (ADULT_RE.test(me || '')) return hi + '、' + me + '。バターちゃんジュニアだぜ。なんでも話しかけてくんな。';
+  return (h >= 5 && h < 10 ? 'おはよう' : 'よう') + '！バターちゃんジュニアだぜ。なんでも話しかけてくんな！';
+}
+/** いまの時刻（毎回つける。夜中におはようと言わないように） */
+function nowLine() {
+  const d = new Date(Date.now() + 9 * 3600000), w = '日月火水木金土'[d.getUTCDay()];
+  return '\n\n【いまの時刻】' + (d.getUTCMonth() + 1) + '月' + d.getUTCDate() + '日（' + w + '）' + d.getUTCHours() + '時' + d.getUTCMinutes() + '分。あいさつは時刻に合わせる（5〜10時は「おはよう」、10〜18時は「こんにちは」、それ以外は「こんばんは」。夜中に「おはよう」と言わない）。';
+}
+/** 名前を呼ばれただけ（「ジュニア」「ジュニア、聞いてる？」）なら、Claudeにきかずにすぐ一言で返す */
+const QUICK = ['おう、なんでぃ？', 'へい、聞いてるぜ！', 'おうよ、どうした？'];
+function nameOnly(text) {
+  const rest = String(text).replace(/(ジュニア|じゅにあ|ジュニヤ|junior)(くん|ちゃん)?/ig, '')
+    .replace(/(ねえ|ねぇ|おーい|おい|あの|えっと|ヒロ(さん)?|パパ)/g, '').replace(/[、,。！!？?\s]/g, '');
+  return /^(聞いてる|きいてる|聞こえてる|きこえてる|いる|いますか|起きてる|おきてる|いま話せる|今話せる|話せる)?(の|か)?$/.test(rest);
+}
+/* 会話のつづき（持ち主ごと・家族モードだけ）：さいきんのやりとりと、まとめ。強制で切れても、次はつづきから話せる */
+const memConvo = new Map();
+async function loadConvo(key) {
+  try { if (deps.db) { const d = await deps.db.collection('convo').doc(key).get(); return d.exists ? d.data() : null; } } catch (e) { console.error('convo load', String(e.message).slice(0, 120)); }
+  return memConvo.get(key) || null;
+}
+async function saveConvo(key, p) {
+  try { if (deps.db) return void await deps.db.collection('convo').doc(key).set(p, { merge: true }); } catch (e) { console.error('convo save', String(e.message).slice(0, 120)); }
+  memConvo.set(key, Object.assign(memConvo.get(key) || {}, p));
+}
+function cleanTurns(t) {
+  const out = [];
+  (Array.isArray(t) ? t : []).forEach(m => {
+    if (!m || (m.role !== 'user' && m.role !== 'assistant') || typeof m.content !== 'string' || !m.content.trim()) return;
+    if (!out.length && m.role !== 'user') return;
+    if (out.length && out[out.length - 1].role === m.role) out[out.length - 1].content += '\n' + m.content; else out.push({ role: m.role, content: m.content.slice(0, 600) });
+  });
+  if (out.length && out[out.length - 1].role === 'user') out.pop();
+  return out;
 }
 async function loadPrefs(owner) {
   if (!owner) return {};
@@ -212,7 +256,7 @@ async function goenTalk(me, other) {
 function session(ws) {
   const S = {
     ready: false, auth: null, owner: '', me: '', mode: 'family', system: '', history: [], voice: '',
-    stt: null, sttBytes: 0, sttStarted: 0, gen: 0, aborter: null, speaking: false, pendingPhoto: '', quiet: false, utt: 0, trio: false, waitMs: 700, aside: [], lastPartial: 0,
+    stt: null, sttBytes: 0, sttStarted: 0, gen: 0, aborter: null, speaking: false, pendingPhoto: '', quiet: false, utt: 0, memo: '', newTurns: 0, asideLog: [], summarizing: false, trio: false, waitMs: 700, aside: [], lastPartial: 0,
     born: Date.now(),
   };
   const send = o => { if (ws.readyState === 1) ws.send(JSON.stringify(o)); };
@@ -286,12 +330,41 @@ function session(ws) {
   }
 
   /* --- 聞こえたことばの振り分け --- */
-  function sysPrompt() { return S.system + (S.trio ? TRIO_RULE : ''); }
+  function sysPrompt() { return S.system + (S.memo ? '\n\n【前回までの話のまとめ（ジュニアが話したこと）】\n' + S.memo : '') + nowLine() + (S.trio ? TRIO_RULE : ''); }
+  const convoKey = () => S.mode === 'family' && S.owner ? S.owner + ':family' : '';
+  /** 会話をまとめる：次の会話用の「まとめ」と、アプリのバターちゃんが読む「ジュニア日記」 */
+  async function summarize() {
+    const key = convoKey();
+    if (!key || S.summarizing || S.newTurns < 1) return;
+    S.summarizing = true;
+    const n = S.newTurns;
+    const talk = S.history.slice(-n * 2).reduce((a, m, i, arr) => m.role === 'user' ? a.concat('みんな「' + m.content.slice(0, 200) + '」→ ジュニア「' + String(arr[i + 1] && arr[i + 1].content || '').slice(0, 200) + '」') : a, []).join('\n');
+    try {
+      const r = await deps.claude.messages.create({
+        model: ENV.MODEL, max_tokens: 700,
+        system: 'あなたはミニアプリ「バターちゃんジュニア」の会話の記録係。会話にあったことだけを書く。想像で足さない。住所・学校名・電話番号・お金のこと・体調やけがのくわしいことは書かない。',
+        messages: [{ role: 'user', content: '【これまでのまとめ】\n' + (S.memo || '（なし）') + '\n\n【新しい会話】\n' + talk + (S.asideLog.length ? '\n\n【まわりで聞こえた会話（だれが言ったかはわからない）】\n' + S.asideLog.join('\n') : '') +
+          '\n\n次の2つを書いて。\n===まとめ===\n次に話すときのための、これまでのまとめ（決まったこと・約束・話のつづき・好み）。新しい会話を足して、古いことは短く。400字以内の箇条書き。\n===日記===\n今回の会話でわかったこと（決まったこと・約束・できごと・ほかの人に伝えてほしいこと）。5行以内の箇条書き。' }],
+      });
+      const t = (r.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+      const memo = (t.split('===まとめ===')[1] || '').split('===日記===')[0].trim();
+      const diary = (t.split('===日記===')[1] || '').trim();
+      if (memo) S.memo = memo.slice(0, 1200);
+      S.newTurns = Math.max(0, S.newTurns - n); S.asideLog = [];
+      await saveConvo(key, { summary: S.memo, newTurns: S.newTurns, turns: S.history.slice(-12), at: Date.now() });
+      if (diary) {
+        const d = new Date(Date.now() + 9 * 3600000);
+        const head = 'ジュニア日記（' + d.getUTCFullYear() + '-' + (d.getUTCMonth() + 1) + '-' + d.getUTCDate() + ' ' + d.getUTCHours() + ':' + String(d.getUTCMinutes()).padStart(2, '0') + (S.me ? '・' + S.me + 'と' : '') + (S.trio ? '・三人モード' : '') + '）';
+        gas(Object.assign({ action: 'note', mode: S.mode, text: head + '\n' + diary }, S.auth)).catch(e => console.error('note', String(e.message).slice(0, 120)));
+      }
+    } catch (e) { console.error('summarize', String(e.message || e).slice(0, 200)); }
+    S.summarizing = false;
+  }
   async function setTrio(on) {
     S.trio = on; S.aside = [];
     send({ type: 'trio', on, waitMs: S.waitMs });
     savePrefs(S.owner, { trio: on });
-    return speakOnly(on ? '三人モードにするね。ぼくに話すときは「ジュニア」って呼んでね。' : 'ふつうのモードにもどすね。', 'excited');
+    return speakOnly(on ? 'おう、三人モードにするぜ。おいらに話すときは「ジュニア」って呼んでくんな。' : 'ふつうのモードにもどすぜ。', 'excited');
   }
   function onHeard(text) {
     S.lastPartial = Date.now(); S.utt++;
@@ -302,15 +375,17 @@ function session(ws) {
     if (S.trio) {
       if (!calledJunior(text) && !calledJam(text)) {                     // 呼ばれていない：聞いておくだけ（あとで話の流れに使う）
         S.aside.push(text.slice(0, 200)); if (S.aside.length > 8) S.aside.shift();
+        S.asideLog.push(text.slice(0, 200)); if (S.asideLog.length > 30) S.asideLog.shift();
         return;
       }
       if (PACE_SLOW.test(text) || PACE_FAST.test(text)) {
         S.waitMs = Math.max(0, Math.min(3000, S.waitMs + (PACE_SLOW.test(text) ? 600 : -600)));
         savePrefs(S.owner, { waitMs: S.waitMs }); send({ type: 'trio', on: true, waitMs: S.waitMs });
-        return speakOnly(PACE_SLOW.test(text) ? 'わかった、次からもう少し待ってから話すね。' : 'わかった、次からすぐ答えるね。', 'smile');
+        return speakOnly(PACE_SLOW.test(text) ? 'がってんだ、次からもう少し待ってから話すぜ。' : 'がってんだ、次からすぐ答えるぜ。', 'smile');
       }
     }
-    if (QUIET_RE.test(text)) { S.quiet = true; send({ type: 'quiet', on: true }); return speakOnly('うん、しずかにしてるね。用があったら名前を呼んでね。', 'smile'); }
+    if (calledJunior(text) && nameOnly(text)) return speakOnly(QUICK[Math.floor(Math.random() * QUICK.length)], 'smile');
+    if (QUIET_RE.test(text)) { S.quiet = true; send({ type: 'quiet', on: true }); return speakOnly('おう、しずかにしてるぜ。用があったら名前を呼んでくんな。', 'smile'); }
     if (S.quiet) { if (!(S.trio ? (calledJunior(text) || calledJam(text)) : /(バター|ばたー|ジュニア|ジャム)/.test(text))) return; S.quiet = false; send({ type: 'quiet', on: false }); }
     if (VOLUME_UP.test(text)) { send({ type: 'volume', delta: +0.25 }); return speakOnly('このくらいでどうかな？', 'smile'); }
     if (VOLUME_DOWN.test(text)) { send({ type: 'volume', delta: -0.25 }); return speakOnly('このくらいでどうかな？', 'smile'); }
@@ -360,7 +435,7 @@ function session(ws) {
     const msgs = S.history.slice(-12).concat([{ role: 'user', content }]);
     let full = '', emotion = 'smile', head = true, seq = 0, chain = Promise.resolve();
     send({ type: 'reply_start', gen, as: jam ? 'ジャム猫' : 'ジュニア' });
-    const maxSent = S.trio ? 2 : 6;
+    const maxSent = S.trio ? 2 : 3;
     let capped = false, spoken = '';
     const sp = splitter(sentence => {
       const s = clean(sentence).trim();
@@ -373,7 +448,7 @@ function session(ws) {
     });
     try {
       const stream = deps.claude.messages.stream({
-        model: ENV.MODEL, max_tokens: S.trio ? 160 : S.mode === 'business' ? 260 : 360, system: sysPrompt() + (jam ? JAM_RULE : ''), messages: msgs,
+        model: ENV.MODEL, max_tokens: S.trio ? 160 : S.mode === 'business' ? 240 : 220, system: sysPrompt() + (jam ? JAM_RULE : ''), messages: msgs,
       }, { signal: ac.signal });
       for await (const ev of stream) {
         if (gen !== S.gen) break;
@@ -404,6 +479,11 @@ function session(ws) {
     send({ type: 'reply_end', gen, emotion, text });
     S.speaking = false; S.aborter = null;
     if (S.mode === 'family' && logText) gas(Object.assign({ action: 'log', said: logText, reply: text }, S.auth)).catch(() => {});
+    if (convoKey() && text) {
+      S.newTurns++;
+      saveConvo(convoKey(), { turns: S.history.slice(-12), newTurns: S.newTurns, at: Date.now() });
+      if (S.newTurns >= 6) summarize();
+    }
   }
 
   /* --- 写真：言われたときだけ。保存しない --- */
@@ -456,6 +536,15 @@ function session(ws) {
         const pr = await loadPrefs(S.owner);
         S.trio = typeof m.trio === 'boolean' ? m.trio : !!pr.trio;
         if (typeof pr.waitMs === 'number') S.waitMs = pr.waitMs;
+        if (convoKey()) {
+          const c = await loadConvo(convoKey());
+          if (c) {
+            S.memo = String(c.summary || '');
+            if (Date.now() - (c.at || 0) < 12 * 3600000) S.history = cleanTurns(c.turns);
+            S.newTurns = Number(c.newTurns || 0);
+            if (S.newTurns >= 2) setTimeout(summarize, 3000);       // 前回まとめきれなかった分（強制で切ったときなど）
+          }
+        }
         send({ type: 'ready', me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs });
         const hi = m.greet ? greeting(S.me, S.mode, S.trio) : '';
         if (hi) speakOnly(hi, 'excited');
@@ -467,14 +556,21 @@ function session(ws) {
       if (m.type === 'photo') return onPhoto(m);
       if (m.type === 'trio') return setTrio(!!m.on);
       if (m.type === 'say') { if (!quotaOk(S.owner || 'anon')) return; return speakOnly(clean(String(m.text || '')).slice(0, 200), 'smile', String(m.as || 'お知らせ').slice(0, 10)); }
-      if (m.type === 'mode') { S.mode = m.mode === 'business' ? 'business' : 'family'; S.history = []; await loadBrain(); return send({ type: 'mode', mode: S.mode }); }
+      if (m.type === 'mode') {
+        if (S.newTurns >= 2) await summarize();
+        S.mode = m.mode === 'business' ? 'business' : 'family'; S.history = []; S.memo = ''; S.newTurns = 0;
+        await loadBrain();
+        const c = convoKey() ? await loadConvo(convoKey()) : null;
+        if (c) { S.memo = String(c.summary || ''); if (Date.now() - (c.at || 0) < 12 * 3600000) S.history = cleanTurns(c.turns); }
+        return send({ type: 'mode', mode: S.mode });
+      }
       if (m.type === 'profile') return onProfile(m);
       if (m.type === 'goen') return onGoen(m);
       if (m.type === 'ping') return send({ type: 'pong' });
     } catch (e) { send({ type: 'notice', why: 'server', detail: String(e.message).slice(0, 80) }); }
   });
   const life = setTimeout(() => fail('timeout', 'つなぎっぱなしの上限'), ENV.SESSION_MAX_MIN * 60000);
-  ws.on('close', () => { clearTimeout(life); stopReply('close'); if (S.stt) { try { S.stt.end(); } catch (e) {} } });
+  ws.on('close', () => { clearTimeout(life); stopReply('close'); if (S.stt) { try { S.stt.end(); } catch (e) {} } if (S.newTurns >= 2) summarize(); });
   return S;
 }
 
