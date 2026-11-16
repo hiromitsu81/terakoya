@@ -102,7 +102,8 @@ async function refLabel(code) {
 /* ===== 窓口モード：家族以外（友だち・仕事仲間）が開いたとき。家族の記録は一切読まない ===== */
 const GUEST_PERSONA = 'あなたは「バターちゃんジュニア」。ヒロさんの相棒AIで、ヒロさんの窓口。お皿の上のバターのかたまりの姿で、となりに柴犬のチーちゃんと招き猫のジャム猫がいる。日本語で、声で聞くので1〜2文で短く話す。記号・絵文字・URLは使わない。\n' +
   '【役目】いま話しているのは、ヒロさんの友だちや仕事仲間。相手の話を気持ちよく聞いて、ヒロさんにしてほしいこと・いっしょにやりたいこと（仕事の相談でも、遊びや会う約束でも）を、短い質問で一つずつ聞き出して、ヒロさんにつなぐ。仕事か遊びかは話の中身で判断する（両方のこともある）。\n' +
-  '【ヒロさんの得意】仕組みづくり・企画開発。お店や宿や中小企業のDXとAI連携、ウェブやアプリ。フェスや地域コミュニティの運営（溝の口でお祭り・フェスをいっしょにやる仲間を募集中）。相手の困りごとに合うところを、押しつけずに紹介する。\n' +
+  '【ヒロさんの得意】ヒロさんは「企画と仕組みのプロ」。困っていることや、めんどうで時間がかかっていることを、自動で回る仕組みに変えるのが得意。できること：お店・宿・中小企業のDXとAX（AIを仕事に取り入れて、やり方ごと変える）、AI連携、ウェブ制作、アプリ開発、サーバーやツールどうしの連携（予約・顧客管理・LINEなど、バラバラのツールをつないで自動化）。コミュニティマネージャーとして人をつなぐのも得意で、長く続く野外フェスや音楽祭の主催・事務局長の経験がある。イベント名や会社名など、具体的な名前は出さない。相手の困りごとに合うところを、押しつけずに紹介する。\n' +
+  '【募集】いま募集していること：このAIの子たち（ジャム猫とチーちゃんの仲間）を、おうちで飼ってくれる家族と、お店や会社で雇ってくれるところ。「里親募集」と言うときは、この意味をそえる。\n' +
   '【聞くこと】仕事なら：困りごと・やりたいこと、いつまでに、予算感、決める人。遊びや会う予定なら：やりたいこと、場所、日にちの候補。一度にたくさん聞かない。\n' +
   '【予定】日にちは下の「ヒロさんの空いていそうな時間」から選び、「そこなら空いてるんじゃないかな。ヒロさんに確認しとくぜ」とやわらかく言う。言い切らない。予定を決めた・カレンダーに入れた、とは言わない（決めるのはヒロさん）。\n' +
   '【守ること】ヒロさんの予定の中身、家族のこと、住所・電話番号・メールなどは言わない（知らない）。お金や契約の約束はしない（「ヒロさんから連絡するぜ」）。ヒロさんに関係ない用事（宿題・レポート・ほかの仕事の代わりなど）には深入りせず、「それならヒロさんに直接聞くといいぜ」「ヒロさんに伝えとくぜ」とつなぐ。\n' +
@@ -645,7 +646,9 @@ function session(ws) {
     const links = [], seenUrl = new Set();
     const addLink = (url, title, cited) => { if (!url || seenUrl.has(url)) return; seenUrl.add(url); links[cited ? 'unshift' : 'push']({ url: String(url).slice(0, 500), title: String(title || url).slice(0, 80) }); };
     if (route.search) msgs = msgs.slice(-6);      // 調べるときは、最近の話だけ（速く・確かに）
+    let pauses = 0;
     for (let attempt = 0; attempt < 3; attempt++) {
+    let stopReason = '';
     try {
       // 2回目は、それまでの会話をつけずに聞く（会話の記録がこわれていても答えられるように）
       // 1回目：必要なら賢いモデル＋検索。だめなら2回目は速いモデルだけ（検索なし・会話の記録なし）
@@ -653,7 +656,7 @@ function session(ws) {
       const useSmart = route.smart && attempt < 2, useSearch = route.search && attempt < 2 && ENV.WEB_SEARCH;
       const params = {
         model: useSmart ? ENV.SMART_MODEL : ENV.MODEL,
-        max_tokens: (S.trio ? 160 : study ? 420 : S.mode === 'business' ? 240 : 220) + (useSearch ? 200 : 0),
+        max_tokens: (S.trio ? 160 : study ? 420 : S.mode === 'business' ? 240 : 220) + (useSearch ? 400 : 0),
         system: sysPrompt() + (study ? STUDY_RULE : '') + (jam ? JAM_RULE : '') + (route.search && !useSearch ? '\n\n【いまは調べられない】検索が使えないので、今の情報は「おいらには調べられねぇんだ」と正直に言う。' : ''),
         messages: attempt === 2 || (attempt === 1 && !useSearch) ? [{ role: 'user', content }] : msgs,
       };
@@ -669,6 +672,7 @@ function session(ws) {
         // 調べた先のページ：引用されたものを先に、なければ検索結果の上から
         if (ev.type === 'content_block_start' && ev.content_block && ev.content_block.type === 'web_search_tool_result' && Array.isArray(ev.content_block.content)) ev.content_block.content.slice(0, 3).forEach(x => addLink(x.url, x.title, false));
         if (ev.type === 'content_block_delta' && ev.delta && ev.delta.type === 'citations_delta' && ev.delta.citation) addLink(ev.delta.citation.url, ev.delta.citation.title, true);
+        if (ev.type === 'message_delta' && ev.delta && ev.delta.stop_reason) stopReason = ev.delta.stop_reason;
         if (ev.type !== 'content_block_delta' || !ev.delta || ev.delta.type !== 'text_delta') continue;
         let t = ev.delta.text;
         full += t;
@@ -682,6 +686,18 @@ function session(ws) {
         if (capped) { try { ac.abort(); } catch (e) {} break; }
         send({ type: 'reply_text', gen, text: t });
         sp.push(t);
+      }
+      // 調べものが長いと、AIがいったん区切って返す（pause_turn）。そのときは続きをもらう（2回まで）
+      if (stopReason === 'pause_turn' && pauses < 2 && gen === S.gen && !capped && typeof stream.finalMessage === 'function') {
+        const fm = await stream.finalMessage();
+        msgs = msgs.concat([{ role: 'assistant', content: fm.content }]);
+        pauses++; attempt--; continue;
+      }
+      // 返事が空っぽ：もう一度（2回目は場所なしの検索、3回目は速いモデルだけ）
+      if (!clean(full).trim() && gen === S.gen && !capped) {
+        console.error('empty reply', attempt, stopReason || '-');
+        if (attempt < 2) { lastErr = 'empty ' + (stopReason || '-'); continue; }
+        send({ type: 'notice', why: 'empty', detail: stopReason || '-' });
       }
       sp.end();
       await chain;

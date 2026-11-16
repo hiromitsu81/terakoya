@@ -319,6 +319,16 @@ function client(port, hello) {
     } });
     f.ws.send(JSON.stringify({ type: 'text', text: 'あしたの天気を調べて' }));
     const ln = await f.until(m => m.type === 'links' && m.links.some(x => /tenki/.test(x.url)));
+    // 調べものが区切られた（pause_turn）ら続きをもらう・空っぽならやり直す
+    let calls = 0, contMsgs = null;
+    deps.claude.messages.stream = p => { calls++; const c = calls; if (c === 2) contMsgs = p.messages; return Object.assign({ async *[Symbol.asyncIterator]() {
+      if (c === 1) { yield { type: 'message_delta', delta: { stop_reason: 'pause_turn' } }; return; }
+      if (c === 2) { yield { type: 'message_delta', delta: { stop_reason: 'end_turn' } }; return; }   // 空っぽ
+      for (const ch of ['駅のそばに', 'あるぜ。']) yield { type: 'content_block_delta', delta: { type: 'text_delta', text: ch } };
+    } }, { finalMessage: async () => ({ content: [{ type: 'server_tool_use', id: 'x', name: 'web_search', input: { query: 'ラーメン' } }] }) }); };
+    f.ws.send(JSON.stringify({ type: 'text', text: '近くのラーメン屋を調べて' }));
+    await f.until(m => m.type === 'reply_end' && /駅のそば/.test(m.text || ''), 6000);
+    assert.ok(calls === 3 && contMsgs[contMsgs.length - 1].role === 'assistant', '区切られたら続きを、空ならやり直し');
     // 三人モード：ジュニアが質問したら、つぎの1回は名前がなくても答える
     deps.claude.messages.stream = () => fakeStream('[わくわく]どれが好きなんだい？');
     const t = await client(port, { type: 'hello', pass: 'ok', mode: 'family', trio: true });
@@ -331,6 +341,6 @@ function client(port, hello) {
     deps.claude.messages.stream = o;
     [f, h, t].forEach(x => x.ws.close());
   }
-  console.log('OK：家族は勉強を教える・覚える・メールはヒロさんだけ・議事録（文字とPDF）・窓口の役割と相談メモ・写真の保存・調べた先のリンク・質問のあとの続き・会話・気持ち・一文ずつの声・写真・記録の分け方・ご縁つなぎ・割りこみ・三人モード・呼ばれただけ・会話のつづき・ジュニア日記・やりなおし・窓口と案件メモ・紹介のつながり・窓口のお休み・いいとこ取りと検索・近くの場所');
+  console.log('OK：区切られた返事の続き・空の返事のやり直し・家族は勉強を教える・覚える・メールはヒロさんだけ・議事録（文字とPDF）・窓口の役割と相談メモ・写真の保存・調べた先のリンク・質問のあとの続き・会話・気持ち・一文ずつの声・写真・記録の分け方・ご縁つなぎ・割りこみ・三人モード・呼ばれただけ・会話のつづき・ジュニア日記・やりなおし・窓口と案件メモ・紹介のつながり・窓口のお休み・いいとこ取りと検索・近くの場所');
   process.exit(0);
 })().catch(e => { console.error('NG', e); process.exit(1); });

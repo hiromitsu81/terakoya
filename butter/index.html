@@ -537,7 +537,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
 
   <div class="stage">
     <button class="sato-banner" id="satoBanner" type="button" aria-label="里親募集中（おすと、ジャム猫とチーちゃんが話します）">
-      <b>里親募集中！</b><small>ジャム猫とチーちゃんの仲間を、あなたの相棒に</small>
+      <b>里親募集中！</b><small>AIの子たちを飼ってくれる家族、雇ってくれるお店や会社を募集中</small>
     </button>
     <svg id="scene" viewBox="-160 0 880 420" role="img" aria-label="まんなかにバターちゃん、左に招き猫のジャム猫、右にチーズ色の柴犬チーちゃん">
       <defs>
@@ -2653,8 +2653,8 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
 
 
   // ===== 里親さがし：ジャム猫とチーちゃんの仲間を、相棒としてお迎え =====
-  const SATO_NEKO = '我はジャム猫。里親をさがしているのだ。我の仲間を、お店の相棒にどうなのだ？';
-  const SATO_CHI = 'ぼくはチーちゃん。ぼくの仲間を、おうちに迎えてほしいワン！';
+  const SATO_NEKO = '我はジャム猫。我の仲間を、お店や会社で雇ってほしいのだ。めんどうな作業を、我らが引き受けるのだ！';
+  const SATO_CHI = 'ぼくはチーちゃん。ぼくの仲間を、おうちで飼ってほしいワン！';
   async function satoCall() {
     if (fukuBusy || (typeof stageBusy !== 'undefined' && stageBusy)) return;
     fukuBusy = true; speechSynthesis.cancel();
