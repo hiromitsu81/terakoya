@@ -312,9 +312,13 @@ function client(port, hello) {
     assert.ok(!/勉強を教える/.test(gs), '窓口は勉強モードにしない'); assert.ok(/便利屋/.test(gs) && /介護/.test(gs) && !/【家族の画面】/.test(gs), '窓口は事例案内'); assert.ok(/役割：サポート/.test(gs) && /役割：コンサル相談/.test(gs) && /AirHost/.test(gs) && /恋の話/.test(gs), '役割と相談メモ');
     deps.claude.messages.stream = o2; gx.ws.close();
     // 相談メモがある人は、開いたら振り返りからはじめる
+    let recapSys = ''; const oc = deps.claude.messages.create;
+    deps.claude.messages.create = p => { if (/ページを開いた/.test(JSON.stringify(p.messages))) recapSys = p.system; return oc(p); };
     const gr = await client(port, { type: 'hello', idToken: 'guest-x', ref: 'macpmo', greet: true });
     const rg = await gr.until(m => m.type === 'reply_end' && m.text);
     assert.ok(!/ヒロさんの相棒、バターちゃんジュニアだぜ/.test(rg.text), '振り返りのあいさつ');
+    assert.ok(/AirHost/.test(recapSys) && !/前回までの話のまとめ/.test(recapSys), '振り返りは相談メモだけ');
+    deps.claude.messages.create = oc;
     gr.ws.close();
     f.ws.send(JSON.stringify({ type: 'save_media', kind: 'photo', mime: 'image/jpeg', data: 'data:image/jpeg;base64,AAAA' }));
     await f.until(m => m.type === 'links' && /写真/.test(m.links[0].title));
@@ -357,6 +361,6 @@ function client(port, hello) {
     deps.claude.messages.stream = o;
     [f, h, t].forEach(x => x.ws.close());
   }
-  console.log('OK：開いたら振り返り・自分で学ぶ・切れた文は読まない・家族の画面は家族の話をする・窓口の事例案内・区切られた返事の続き・空の返事のやり直し・家族は勉強を教える・覚える・メールはヒロさんだけ・議事録（文字とPDF）・窓口の役割と相談メモ・写真の保存・調べた先のリンク・質問のあとの続き・会話・気持ち・一文ずつの声・写真・記録の分け方・ご縁つなぎ・割りこみ・三人モード・呼ばれただけ・会話のつづき・ジュニア日記・やりなおし・窓口と案件メモ・紹介のつながり・窓口のお休み・いいとこ取りと検索・近くの場所');
+  console.log('OK：開いたら振り返り（相談メモだけ）・自分で学ぶ・切れた文は読まない・家族の画面は家族の話をする・窓口の事例案内・区切られた返事の続き・空の返事のやり直し・家族は勉強を教える・覚える・メールはヒロさんだけ・議事録（文字とPDF）・窓口の役割と相談メモ・写真の保存・調べた先のリンク・質問のあとの続き・会話・気持ち・一文ずつの声・写真・記録の分け方・ご縁つなぎ・割りこみ・三人モード・呼ばれただけ・会話のつづき・ジュニア日記・やりなおし・窓口と案件メモ・紹介のつながり・窓口のお休み・いいとこ取りと検索・近くの場所');
   process.exit(0);
 })().catch(e => { console.error('NG', e); process.exit(1); });

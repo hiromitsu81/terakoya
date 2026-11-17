@@ -521,10 +521,12 @@ function session(ws) {
   async function recapGreet() {
     let text = '';
     try {
+      const keep = S.memo; S.memo = '';          // 振り返りは相談メモだけで（会話のまとめは混ぜない）
+      const sys = sysPrompt(); S.memo = keep;
       const r = await deps.claude.messages.create({
         model: ENV.MODEL, max_tokens: 360,
-        system: sysPrompt(),
-        messages: [{ role: 'user', content: '（いま、この人がページを開いた。あなたから話しはじめる）名前を呼んであいさつして、相談メモから前回の振り返りを話す。決まったことを1つと、残っている宿題を1〜2つ。最後に「どこまで進んだ？」のように進み具合を1つだけ聞く。全部で4文まで。メモにないことは言わない。' }],
+        system: sys,
+        messages: [{ role: 'user', content: '（いま、この人がページを開いた。あなたから話しはじめる）名前を呼んであいさつして、【相談メモ】に書いてあることだけで、前回の振り返りを話す（ほかの記録や、まえの会話のまとめは使わない）。決まったことを1つと、残っている宿題を1〜2つ。最後に「どこまで進んだ？」のように進み具合を1つだけ聞く。全部で4文まで。メモにないことは言わない。' }],
       });
       text = clean((r.content || []).filter(b => b.type === 'text').map(b => b.text).join('')).trim();
     } catch (e) { console.error('recap', String(e.message || e).slice(0, 200)); }
@@ -828,7 +830,7 @@ function session(ws) {
         S.learned = Array.isArray(lp.learned) ? lp.learned.slice(-20) : [];
         S.trio = S.guest ? false : typeof m.trio === 'boolean' ? m.trio : !!pr.trio;
         if (typeof pr.waitMs === 'number') S.waitMs = pr.waitMs;
-        if (convoKey()) {
+        if (convoKey() && !S.asGuest) {      // テスト（&test=guest）は毎回まっさらから（前のテストの話を混ぜない）
           const c = await loadConvo(convoKey());
           if (c) {
             S.memo = String(c.summary || '');
