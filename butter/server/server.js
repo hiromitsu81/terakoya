@@ -114,6 +114,7 @@ const ROLE_RULE = {
   '営業': '【この窓口の役割：営業】ヒロさんの得意なことを、相手の困りごとに合わせて短く紹介する。困りごと・時期・予算感・決める人を一つずつ聞いて、会う約束（候補の日にち）までつなぐ。押し売りはしない。',
   'サポート': '【この窓口の役割：サポート】ヒロさんとの相談の続きを受ける。下の「相談メモ」を元に、細かい質問に答えたり、決まったことを確かめたりする。メモにないことや決めることは「ヒロさんに確認しとくぜ」とつなぐ。',
   'コンサル相談': '【この窓口の役割：コンサル相談】相手の困りごとをじっくり聞いて、何が問題か・何から手をつけるかを一緒に整理する。方向の案は出してよいが、言い切らず、くわしくはヒロさんにつなぐ。下の「相談メモ」があれば、その続きから話す。',
+  'PMO': '【この窓口の役割：PMO（プロジェクトの進み具合を見る係）】下の「相談メモ」の宿題と進める順番をもとに、だれが・何を・いつまでにを確かめる。終わったこと・止まっていること・次の一歩を短く整理して、止まっていたら「どこで引っかかってる？」と一緒に考える。新しく決まったことや期限は「ヒロさんに伝えとくぜ」と言って残す。報酬や契約などの決めごとは、おいらが勝手に決めない。',
   '友だち': '【この窓口の役割：友だち】気さくに話す。遊びや会う約束、お祭り・フェスの話が中心。仕事の話が出たら、ふつうに聞いてヒロさんにつなぐ。',
 };
 function roleRule(role) {
@@ -402,6 +403,7 @@ function session(ws) {
       S.guest = true; S.mode = 'guest'; S.trio = false;
       S.slots = (Array.isArray(r.slots) ? r.slots : []).slice(0, 10).map(x => ({ label: String(x.label || ''), start: String(x.start || ''), end: String(x.end || '') })).filter(x => x.label);
       S.role = String(r.role || '汎用');
+      S.consult = String(r.consult || '');
       S.system = GUEST_PERSONA + SELF + (who ? '\n\n【いま話している人】' + who + 'さん（LINEの名前）。' : '') +
         (roleRule(S.role) ? '\n\n' + roleRule(S.role) + (r.roleNote ? '\n（ヒロさんからのメモ：' + String(r.roleNote).slice(0, 300) + '）' : '') : '') +
         (r.consult ? '\n\n【相談メモ（この人とヒロさんの相談の記録。この人にだけ使う。ほかの人の話はしない）】\n' + String(r.consult).slice(0, 2500) : '') +
@@ -514,6 +516,21 @@ function session(ws) {
       }
     } catch (e) { console.error('lead', String(e.message || e).slice(0, 200)); }
     S.summarizing = false;
+  }
+  /** 開いたときの振り返り：相談メモから、前回決まったこと・残っている宿題を短く話して、進み具合を聞く */
+  async function recapGreet() {
+    let text = '';
+    try {
+      const r = await deps.claude.messages.create({
+        model: ENV.MODEL, max_tokens: 360,
+        system: sysPrompt(),
+        messages: [{ role: 'user', content: '（いま、この人がページを開いた。あなたから話しはじめる）名前を呼んであいさつして、相談メモから前回の振り返りを話す。決まったことを1つと、残っている宿題を1〜2つ。最後に「どこまで進んだ？」のように進み具合を1つだけ聞く。全部で4文まで。メモにないことは言わない。' }],
+      });
+      text = clean((r.content || []).filter(b => b.type === 'text').map(b => b.text).join('')).trim();
+    } catch (e) { console.error('recap', String(e.message || e).slice(0, 200)); }
+    if (!text) return speakOnly(S.history.length ? 'よう、また来てくれたな！つづきを話そうぜ。' : guestGreeting(S.me), 'excited');
+    S.history.push({ role: 'user', content: '（ページを開いた）' }, { role: 'assistant', content: text });
+    speakOnly(text, 'excited');
   }
   /** 「〜を覚えて」：教わったことを持ち主ごとに覚える（30こまで。家族だけ） */
   function learn(text) {
@@ -821,6 +838,7 @@ function session(ws) {
           }
         }
         send({ type: 'ready', me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs, guest: !!S.guest, myRef: S.myRef || '' });
+        if (m.greet && S.guest && S.consult) return recapGreet();      // 相談メモがある人には、振り返りからはじめる
         const hi = m.greet ? (S.guest ? (S.history.length ? 'よう、また来てくれたな！つづきを話そうぜ。' : guestGreeting(S.me)) : greeting(S.me, S.mode, S.trio)) : '';
         if (hi) speakOnly(hi, 'excited');
         return;

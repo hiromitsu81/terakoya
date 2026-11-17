@@ -14,7 +14,7 @@ const gasSrv = http.createServer((req, res) => {
       if (j.pass === 'flaky') return res.end('<html>error</html>');
       if (j.idToken === 'guest-closed') return res.end(JSON.stringify({ ok: true, guest: true, closed: true }));
       if (j.idToken === 'guest-y') return res.end(JSON.stringify({ ok: true, guest: true, owner: 'g:y', me: 'ユウ', slots: [] }));
-      if (j.idToken === 'guest-x') return res.end(JSON.stringify({ ok: true, guest: true, owner: 'g:x', me: 'マー君', role: 'サポート・コンサル相談', consult: '清掃シートのAirHost連携を来月までに', slots: [{ label: '11/20(木) 19時ごろ', start: '2026-11-20T10:00:00Z', end: '2026-11-20T12:00:00Z' }] }));
+      if (j.idToken === 'guest-x') return res.end(JSON.stringify({ ok: true, guest: true, owner: 'g:x', me: 'マー君', role: 'サポート・コンサル相談', consult: j.ref === 'macpmo' ? '清掃シートのAirHost連携を来月までに' : '', slots: [{ label: '11/20(木) 19時ごろ', start: '2026-11-20T10:00:00Z', end: '2026-11-20T12:00:00Z' }] }));
       const ok = j.pass === 'ok' || j.idToken === 'tok-' + 'b';
       return res.end(JSON.stringify(ok ? { ok: true, system: 'あなたはバターちゃんジュニア。', owner: j.pass ? 'fam' : 'U-b', me: j.pass ? 'パパ' : 'Bさん' } : { ok: false, error: 'auth' }));
     }
@@ -305,12 +305,17 @@ function client(port, hello) {
     // 窓口の役割と相談メモ
     let gs = ''; const o2 = deps.claude.messages.stream;
     deps.claude.messages.stream = p => { gs = p.system; return o2(p); };
-    const gx = await client(port, { type: 'hello', idToken: 'guest-x', ref: 'mac' });
+    const gx = await client(port, { type: 'hello', idToken: 'guest-x', ref: 'macpmo' });
     await gx.until(m => m.type === 'ready');
     gx.ws.send(JSON.stringify({ type: 'text', text: 'この前の続きなんだけど' }));
     await gx.until(m => m.type === 'reply_end');
     assert.ok(!/勉強を教える/.test(gs), '窓口は勉強モードにしない'); assert.ok(/便利屋/.test(gs) && /介護/.test(gs) && !/【家族の画面】/.test(gs), '窓口は事例案内'); assert.ok(/役割：サポート/.test(gs) && /役割：コンサル相談/.test(gs) && /AirHost/.test(gs) && /恋の話/.test(gs), '役割と相談メモ');
     deps.claude.messages.stream = o2; gx.ws.close();
+    // 相談メモがある人は、開いたら振り返りからはじめる
+    const gr = await client(port, { type: 'hello', idToken: 'guest-x', ref: 'macpmo', greet: true });
+    const rg = await gr.until(m => m.type === 'reply_end' && m.text);
+    assert.ok(!/ヒロさんの相棒、バターちゃんジュニアだぜ/.test(rg.text), '振り返りのあいさつ');
+    gr.ws.close();
     f.ws.send(JSON.stringify({ type: 'save_media', kind: 'photo', mime: 'image/jpeg', data: 'data:image/jpeg;base64,AAAA' }));
     await f.until(m => m.type === 'links' && /写真/.test(m.links[0].title));
     // 調べた先のリンク
@@ -352,6 +357,6 @@ function client(port, hello) {
     deps.claude.messages.stream = o;
     [f, h, t].forEach(x => x.ws.close());
   }
-  console.log('OK：自分で学ぶ・切れた文は読まない・家族の画面は家族の話をする・窓口の事例案内・区切られた返事の続き・空の返事のやり直し・家族は勉強を教える・覚える・メールはヒロさんだけ・議事録（文字とPDF）・窓口の役割と相談メモ・写真の保存・調べた先のリンク・質問のあとの続き・会話・気持ち・一文ずつの声・写真・記録の分け方・ご縁つなぎ・割りこみ・三人モード・呼ばれただけ・会話のつづき・ジュニア日記・やりなおし・窓口と案件メモ・紹介のつながり・窓口のお休み・いいとこ取りと検索・近くの場所');
+  console.log('OK：開いたら振り返り・自分で学ぶ・切れた文は読まない・家族の画面は家族の話をする・窓口の事例案内・区切られた返事の続き・空の返事のやり直し・家族は勉強を教える・覚える・メールはヒロさんだけ・議事録（文字とPDF）・窓口の役割と相談メモ・写真の保存・調べた先のリンク・質問のあとの続き・会話・気持ち・一文ずつの声・写真・記録の分け方・ご縁つなぎ・割りこみ・三人モード・呼ばれただけ・会話のつづき・ジュニア日記・やりなおし・窓口と案件メモ・紹介のつながり・窓口のお休み・いいとこ取りと検索・近くの場所');
   process.exit(0);
 })().catch(e => { console.error('NG', e); process.exit(1); });
