@@ -220,6 +220,9 @@ function client(port, hello) {
   const gr = await gst.until(m => m.type === 'ready');
   assert.ok(gr.guest && !gr.trio, '窓口モード');
   const gg = await gst.until(m => m.type === 'reply_end');
+  gst.ws.send(JSON.stringify({ type: 'plan', plan: 'super' }));
+  await new Promise(r => setTimeout(r, 300));
+  assert.ok(!gst.msgs.some(m => m.type === 'plan'), '窓口からはプランを切りかえられない');
   assert.ok(/マー君さん/.test(gg.text) && /ヒロさんに伝える/.test(gg.text), 'はじめに伝わることを知らせる: ' + gg.text);
   const os4 = deps.claude.messages.stream; let gsys = '';
   deps.claude.messages.stream = p => { gsys = p.system; return os4(p); };
@@ -262,6 +265,17 @@ function client(port, hello) {
   w.ws.send(JSON.stringify({ type: 'text', text: 'こんばんは' }));
   await w.until(() => w.msgs.filter(m => m.type === 'reply_end').length > wn);
   assert.ok(lastParams.model === 'claude-haiku-4-5-20251001' && !lastParams.tools, 'ふだんは速いモデル');
+  // 料金プランのおためし：家族の画面は切りかえられる（スーパー上位は一番賢いモデル＋長い記憶）、窓口からは受けつけない
+  w.ws.send(JSON.stringify({ type: 'plan', plan: 'super' }));
+  const pl = await w.until(m => m.type === 'plan');
+  assert.ok(pl.plan === 'super' && pl.label === 'スーパー上位', 'プラン切りかえ');
+  const wnP = w.msgs.filter(m => m.type === 'reply_end').length;
+  w.ws.send(JSON.stringify({ type: 'text', text: 'こんばんは' }));
+  await w.until(() => w.msgs.filter(m => m.type === 'reply_end').length > wnP);
+  const pe = w.msgs.filter(m => m.type === 'reply_end').pop();
+  assert.ok(lastParams.model === 'claude-opus-5-5' && lastParams.max_tokens > 320 && pe.usage && pe.usage.plan === 'スーパー上位', 'スーパー上位は一番賢いモデル');
+  w.ws.send(JSON.stringify({ type: 'plan', plan: 'std' }));
+  await w.until(m => m.type === 'plan' && m.plan === 'std');
   // 近くを聞かれたら、スマホの位置（およそ）を基準に
   w.ws.send(JSON.stringify({ type: 'loc', lat: 35.6, lon: 139.61 }));
   const wn2 = w.msgs.filter(m => m.type === 'reply_end').length;
@@ -361,6 +375,6 @@ function client(port, hello) {
     deps.claude.messages.stream = o;
     [f, h, t].forEach(x => x.ws.close());
   }
-  console.log('OK：開いたら振り返り（相談メモだけ）・自分で学ぶ・切れた文は読まない・家族の画面は家族の話をする・窓口の事例案内・区切られた返事の続き・空の返事のやり直し・家族は勉強を教える・覚える・メールはヒロさんだけ・議事録（文字とPDF）・窓口の役割と相談メモ・写真の保存・調べた先のリンク・質問のあとの続き・会話・気持ち・一文ずつの声・写真・記録の分け方・ご縁つなぎ・割りこみ・三人モード・呼ばれただけ・会話のつづき・ジュニア日記・やりなおし・窓口と案件メモ・紹介のつながり・窓口のお休み・いいとこ取りと検索・近くの場所');
+  console.log('OK：開いたら振り返り（相談メモだけ）・自分で学ぶ・切れた文は読まない・家族の画面は家族の話をする・窓口の事例案内・区切られた返事の続き・空の返事のやり直し・家族は勉強を教える・覚える・メールはヒロさんだけ・議事録（文字とPDF）・窓口の役割と相談メモ・写真の保存・調べた先のリンク・質問のあとの続き・会話・気持ち・一文ずつの声・写真・記録の分け方・ご縁つなぎ・割りこみ・三人モード・呼ばれただけ・会話のつづき・ジュニア日記・やりなおし・窓口と案件メモ・紹介のつながり・窓口のお休み・いいとこ取りと検索・近くの場所・プランのおためし');
   process.exit(0);
 })().catch(e => { console.error('NG', e); process.exit(1); });

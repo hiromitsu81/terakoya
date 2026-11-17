@@ -204,11 +204,12 @@ body.wideshow .sato-banner small { font-size: 12px; }
 .liffmode .talkrow { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; }
 .liffmode .talkrow .side { display: grid; gap: 8px; justify-items: center; align-content: center; min-width: 0; }
 .liffmode .talkrow .modebtn { font-size: 13px; padding: 7px 12px; max-width: 100%; white-space: nowrap; }
+.bubble .usage { font-size: 11px; opacity: .6; margin-top: 4px; }
 .bubble .links { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .bubble .links a { font-size: 12px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--butter-deep); color: var(--ink); text-decoration: none; background: color-mix(in srgb, var(--butter) 30%, var(--card)); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .liffmode .goenbtn:not([hidden]) { display: block; }
 /* ミニアプリ：家族だと確かめられるまでは、家族用の表示（育ちぐあい・ガチャ・モード・設定・台本）を出さない */
-.liffmode:not(.familyok) .meters, .liffmode:not(.familyok) #modeBtn, .liffmode:not(.familyok) #trioBtn,
+.liffmode:not(.familyok) .meters, .liffmode:not(.familyok) #modeBtn, .liffmode:not(.familyok) #trioBtn, .liffmode:not(.familyok) #planBtn,
 .liffmode:not(.familyok) #openSettings, .liffmode:not(.familyok) #startStage, .liffmode:not(.familyok) #startSettings { display: none !important; }
 .cam video { width: 100%; border-radius: 14px; background: #000; max-height: 56vh; object-fit: cover; }
 .cam .count { font-family: var(--display); font-size: 40px; font-weight: 900; text-align: center; margin: 0; min-height: 1.2em; }
@@ -859,6 +860,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
       <div class="side">
         <button class="modebtn" id="modeBtn" type="button" aria-pressed="false">いま：ファミリー</button>
         <button class="modebtn goenbtn" id="trioBtn" type="button" aria-pressed="false" hidden>三人：オフ</button>
+        <button class="modebtn goenbtn" id="planBtn" type="button" hidden title="料金プランのおためし（家族の画面だけ）">プラン：標準</button>
       </div>
       <button class="talkbtn" id="talkBtn" type="button"><i id="lvlLive"></i><b>おして話す</b></button>
       <div class="side">
@@ -2033,6 +2035,9 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     const r = new RegExp('^\\s*' + lead + '(?:ジュニア|じゅにあ|ジュニヤ|junior|ジャム猫|ジャムねこ|ジャムネコ|じゃむねこ|ジャムちゃん)' + not, 'i');
     return t => String(t).split(/(?<=[。！？!?\n])/).some(seg => r.test(seg.trim()));   // 文のはじめで呼ばれたときだけ
   })(), JR_TRIO = /(三人モード|3人モード|みんなで話そう|三人で話そう|3人で話そう|二人モード|ふたりモード|2人モード|ふつうのモード)/;
+  // 料金プランのおためし（ヒロさんの家族の画面だけ）：標準 → 上位 → スーパー上位 → 標準
+  const PLAN_ORDER = ['std', 'high', 'super'], PLAN_NAME = { std: '標準', high: '上位', super: 'スーパー上位' };
+  function planShow() { const b = $('planBtn'); if (!b) return; const p = store.get('jrPlan', 'std'); b.textContent = 'プラン：' + (PLAN_NAME[p] || '標準'); b.hidden = !J.ready || J.guest || BIZ(); }
   function trioShow() { const b = $('trioBtn'); b.setAttribute('aria-pressed', String(J.trio)); b.textContent = J.trio ? '三人：オン' : '三人：オフ'; }
   const jrLive = () => !J.dead && J.ready && J.ws && J.ws.readyState === 1;
   let lipLive = false;   // 声の大きさで口を動かしている間は、ランダムの口パクを止める
@@ -2077,6 +2082,8 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
         document.body.classList.toggle('guestmode', J.guest);
         if (J.guest) { $('typedInput').placeholder = 'ヒロさんにしてほしいこと、なんでもどうぞ'; }
         $('trioBtn').hidden = false; J.trio = !!m.trio; store.set('jrTrio', J.trio); store.set('jrOK', true); trioShow();
+        if (!J.guest && !BIZ() && store.get('jrPlan', 'std') !== 'std') jrSend({ type: 'plan', plan: store.get('jrPlan', 'std') });
+        planShow();
         if (diag) diag.hidden = true;
         if (awake.until !== 0) keepAwake(true, 0);
         jrMicStart().catch(() => { hint.textContent = 'マイクが使えません。LINEの設定でマイクを許可してください。'; });
@@ -2113,6 +2120,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
         if (J.out) J.out.textContent = m.text || J.outText || '（うまく答えられなかったよ。もう一回呼んでね）';
         if (m.text && history.length && history[history.length - 1].role === 'user') { history.push({ role: 'assistant', content: m.text }); if (history.length > 12) history = history.slice(-12); }
         J.endEmo = m.emotion || 'smile';
+        if (m.usage && J.out && J.out.parentElement) { const u = m.usage, d = document.createElement('div'); d.className = 'usage'; d.textContent = u.plan + '・' + String(u.model || '').replace(/^claude-/, '') + '・入力' + u.in + (u.cache ? '（キャッシュ' + u.cache + '）' : '') + '／出力' + u.out + (u.searches ? '・検索' + u.searches : ''); J.out.parentElement.appendChild(d); }
         jrDrain();
         break;
       case 'stopped':
@@ -2120,6 +2128,10 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
         if (m.why === 'stale' && J.out && J.out.parentElement) J.out.parentElement.remove();   // 話が先に進んだので、言わずにやめた
         else if (J.out && J.outText) J.out.textContent = J.outText + '…';
         setState('listening');
+        break;
+      case 'plan':
+        store.set('jrPlan', m.plan || 'std'); planShow();
+        hint.textContent = 'プラン：' + (m.label || '標準') + 'で答えるよ。同じ質問でくらべてみてね。';
         break;
       case 'trio':
         J.trio = !!m.on; store.set('jrTrio', J.trio); trioShow();
@@ -2389,6 +2401,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     location.href = 'https://line.me/R/share?text=' + encodeURIComponent(text);
   });
   $('trioBtn').addEventListener('click', () => jrSend({ type: 'trio', on: !J.trio }));
+  $('planBtn').addEventListener('click', () => { const p = store.get('jrPlan', 'std'); jrSend({ type: 'plan', plan: PLAN_ORDER[(PLAN_ORDER.indexOf(p) + 1) % PLAN_ORDER.length] }); });
   $('gClose').addEventListener('click', () => { $('goenBox').hidden = true; });
   $('gSave').addEventListener('click', () => jrSend({ type: 'profile', profile: { character: $('gChar').value, name: $('gName').value.trim(), skills: $('gSkills').value.trim(), seeking: $('gSeek').value.trim(), shareable: $('gShare').value.trim() } }));
   $('gGo').addEventListener('click', () => { const c = $('gOther').value.trim(); if (c) jrSend({ type: 'goen', code: c }); });
@@ -2882,7 +2895,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     if (!J.dead && J.ready) { J.paused = !J.paused; if (J.paused) { J.queue = []; jrStopAudio(); jrSend({ type: 'barge' }); setState('idle'); } else setState('listening'); jrBtn(); return; }
     talkOnce();
   });
-  function showMode() { const b = BIZ(); $('modeBtn').setAttribute('aria-pressed', String(b)); $('modeBtn').textContent = b ? 'いま：ビジネス' : 'いま：ファミリー'; $('modeBtn').title = b ? '押すとファミリーにもどる' : '押すとビジネス（交流会）になる'; }
+  function showMode() { const b = BIZ(); try { planShow(); } catch (e) {} $('modeBtn').setAttribute('aria-pressed', String(b)); $('modeBtn').textContent = b ? 'いま：ビジネス' : 'いま：ファミリー'; $('modeBtn').title = b ? '押すとファミリーにもどる' : '押すとビジネス（交流会）になる'; }
   $('modeBtn').addEventListener('click', () => {
     store.set('bizMode', !store.get('bizMode', false)); history = []; showMode(); jrSend({ type: 'mode', mode: BIZ() ? 'business' : 'family' });
     toast(BIZ() ? 'ビジネスモード：ていねいに、家族の話はしないよ' : 'ファミリーモード：おうちのバターちゃんだよ');

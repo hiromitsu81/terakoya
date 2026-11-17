@@ -27,6 +27,7 @@ const ENV = {
   PORT: Number(process.env.PORT || 8080),
   MODEL: process.env.MODEL || 'claude-haiku-4-5-20251001',            // ふだん：速いモデル
   SMART_MODEL: process.env.SMART_MODEL || 'claude-sonnet-5-5',        // 調べもの・むずかしい相談：賢いモデル
+  PREMIUM_MODEL: process.env.PREMIUM_MODEL || 'claude-opus-5-5',      // 料金プランのおためし（上位・スーパー上位）：いちばん賢いモデル
   WEB_SEARCH: process.env.WEB_SEARCH !== 'off',                         // ネット検索（Claudeの web_search）
   TTS_VOICE: process.env.TTS_VOICE || 'ja-JP-Chirp3-HD-Algenib',   // ジュニアの声：低めでガラガラ
   TTS_RATE: Number(process.env.TTS_RATE || 1.12),
@@ -38,6 +39,17 @@ const ENV = {
   GUEST_TOTAL_LIMIT: Number(process.env.GUEST_TOTAL_LIMIT || 300),  // 窓口ぜんぶで1日に答える回数
   SESSION_MAX_MIN: Number(process.env.SESSION_MAX_MIN || 60), // 1回のつなぎっぱなしの上限
 };
+
+// 料金プランのおためし（ヒロさんの家族の画面だけ）：同じ質問を3つの賢さで聞きくらべる
+//   std＝いまのまま（ふだん速いモデル、むずかしい時だけ賢いモデル）
+//   high＝ぜんぶ一番賢いモデル
+//   super＝一番賢いモデル＋長い記憶（会話を倍おぼえる）＋長めの答え＋検索を多めに
+const PLANS = {
+  std:   { label: '標準',       premium: false, turns: 12, keep: 24, extraTokens: 0,   maxUses: 3, extraSent: 0 },
+  high:  { label: '上位',       premium: true,  turns: 12, keep: 24, extraTokens: 120, maxUses: 3, extraSent: 0 },
+  super: { label: 'スーパー上位', premium: true,  turns: 24, keep: 48, extraTokens: 260, maxUses: 5, extraSent: 1 },
+};
+const planOf = S => PLANS[S && !S.guest && !S.asGuest && S.mode === 'family' && PLANS[S.plan] ? S.plan : 'std'];
 
 /* ===== 外のサービス（テストでは差しかえる） ===== */
 const deps = {
@@ -660,14 +672,16 @@ function session(ws) {
     stopReply('new');
     const gen = S.gen, utt0 = S.utt; S.speaking = true;
     const ac = new AbortController(); S.aborter = ac;
-    let msgs = cleanTurns(S.history).slice(-12).concat([{ role: 'user', content }]);
+    const plan = planOf(S);
+    let msgs = cleanTurns(S.history).slice(-plan.turns).concat([{ role: 'user', content }]);
+    const use = { model: '', inTok: 0, outTok: 0, cacheTok: 0, searches: 0 };
     let full = '', emotion = 'smile', head = true, seq = 0, chain = Promise.resolve();
     send({ type: 'reply_start', gen, as: jam ? 'ジャム猫' : 'ジュニア' });
     if (S.placeP) { await S.placeP.catch(() => {}); S.placeP = null; }
     const study = !jam && !S.guest && S.mode === 'family' && STUDY_RE.test(logText || '');
     const route = jam ? { smart: false, search: false } : needSmart(logText, S.guest);
     if (study) route.smart = true;                  // 勉強は賢いモデルで、ていねいに
-    const maxSent = S.trio ? 2 : study ? 5 : route.search ? 4 : 3;
+    const maxSent = (S.trio ? 2 : study ? 5 : route.search ? 4 : 3) + (S.trio ? 0 : plan.extraSent);
     let capped = false, spoken = '';
     const sp = splitter(sentence => {
       const s = clean(sentence).trim();
@@ -691,20 +705,24 @@ function session(ws) {
       // 1回目：必要なら賢いモデル＋検索（場所つき）。2回目：検索だけもう一度（場所の設定なし）。3回目：速いモデルだけ
       const useSmart = route.smart && attempt < 2, useSearch = route.search && attempt < 2 && ENV.WEB_SEARCH;
       const params = {
-        model: useSmart ? ENV.SMART_MODEL : ENV.MODEL,
-        max_tokens: (S.trio ? 240 : study ? 520 : S.mode === 'business' ? 340 : 320) + (useSearch ? 400 : 0),
+        model: plan.premium && attempt < 2 && !jam ? ENV.PREMIUM_MODEL : useSmart ? ENV.SMART_MODEL : ENV.MODEL,
+        max_tokens: (S.trio ? 240 : study ? 520 : S.mode === 'business' ? 340 : 320) + (useSearch ? 400 : 0) + (S.trio ? 0 : plan.extraTokens),
         system: sysPrompt() + (study ? STUDY_RULE : '') + (jam ? JAM_RULE : '') + (route.search && !useSearch ? '\n\n【いまは調べられない】検索が使えないので、今の情報は「おいらには調べられねぇんだ」と正直に言う。' : ''),
         messages: attempt === 2 || (attempt === 1 && !useSearch) ? [{ role: 'user', content }] : msgs,
       };
       if (useSearch) {
         // 場所は英字の決まった形だけ渡す（日本語の地名を入れると失敗することがあるので、くわしい地名はシステムの文に書く）
-        params.tools = [Object.assign({ type: 'web_search_20250305', name: 'web_search', max_uses: 3 },
+        params.tools = [Object.assign({ type: 'web_search_20250305', name: 'web_search', max_uses: plan.maxUses },
           attempt === 0 && !S.guest ? { user_location: { type: 'approximate', city: 'Kawasaki', region: 'Kanagawa', country: 'JP', timezone: 'Asia/Tokyo' } } : {})];
         if (attempt === 0) send({ type: 'searching', gen });
       }
       const stream = deps.claude.messages.stream(params, { signal: ac.signal });
+      use.model = params.model;
       for await (const ev of stream) {
         if (gen !== S.gen) break;
+        // 使った量（プランのくらべ用）：入力・出力・キャッシュのトークンと検索の回数
+        if (ev.type === 'message_start' && ev.message && ev.message.usage) { const u = ev.message.usage; use.inTok += u.input_tokens || 0; use.cacheTok += (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0); }
+        if (ev.type === 'message_delta' && ev.usage) { use.outTok += ev.usage.output_tokens || 0; const st = ev.usage.server_tool_use; if (st && st.web_search_requests) use.searches += st.web_search_requests; }
         // 調べた先のページ：引用されたものを先に、なければ検索結果の上から
         if (ev.type === 'content_block_start' && ev.content_block && ev.content_block.type === 'web_search_tool_result' && Array.isArray(ev.content_block.content)) ev.content_block.content.slice(0, 3).forEach(x => addLink(x.url, x.title, false));
         if (ev.type === 'content_block_delta' && ev.delta && ev.delta.type === 'citations_delta' && ev.delta.citation) addLink(ev.delta.citation.url, ev.delta.citation.title, true);
@@ -745,6 +763,7 @@ function session(ws) {
       // 賢いモデルや検索がこのキーで使えないときは、次からは使わない（毎回失敗しないように）
       if (route.search && /(not enabled|not allowed|disabled|permission)/i.test(lastErr) && /web/i.test(lastErr)) { ENV.WEB_SEARCH = false; console.error('web search off'); }
       if (attempt === 0 && route.smart && /model/i.test(lastErr) && /not_found|invalid|does not exist/i.test(lastErr)) { ENV.SMART_MODEL = ENV.MODEL; console.error('smart model off'); }
+      if (attempt === 0 && plan.premium && /model/i.test(lastErr) && /not_found|invalid|does not exist/i.test(lastErr)) { ENV.PREMIUM_MODEL = ENV.SMART_MODEL; console.error('premium model off'); }
       if (full || attempt === 2) { send({ type: 'notice', why: 'ai', detail: lastErr.slice(0, 120) }); break; }
       await new Promise(r => setTimeout(r, 400));
     }
@@ -755,8 +774,10 @@ function session(ws) {
     if (text && !noRecord) S.history.push({ role: 'user', content: logText || '（写真を見せた）' }, { role: 'assistant', content: text });
     if (links.length && text) send({ type: 'links', gen, links: links.slice(0, 3) });
     if (S.trio && /[？?]\s*$/.test(text)) S.followUntil = Date.now() + 12000;   // ジュニアが質問した → つぎの1回は名前なしでも   // 空の返事は記録しない（次の会話がこわれるので）
-    if (S.history.length > 24) S.history = S.history.slice(-24);
-    send({ type: 'reply_end', gen, emotion, text, why: text ? undefined : lastErr.slice(0, 120) });
+    if (S.history.length > plan.keep) S.history = S.history.slice(-plan.keep);
+    const usage = plan === PLANS.std && !S.plan ? undefined : { plan: plan.label, model: use.model, in: use.inTok, out: use.outTok, cache: use.cacheTok, searches: use.searches };
+    if (usage) console.log('plan usage', JSON.stringify(usage));
+    send({ type: 'reply_end', gen, emotion, text, why: text ? undefined : lastErr.slice(0, 120), usage });
     S.speaking = false; S.aborter = null;
     if (S.mode === 'family' && logText && !noRecord) gas(Object.assign({ action: 'log', said: logText, reply: text }, S.auth)).catch(() => {});
     if (convoKey() && text && !noRecord) {
@@ -850,6 +871,11 @@ function session(ws) {
       if (m.type === 'text') return onHeard(String(m.text || '').slice(0, 500));
       if (m.type === 'photo') return onPhoto(m);
       if (m.type === 'trio') return setTrio(!!m.on);
+      if (m.type === 'plan') {                      // 料金プランのおためし：ヒロさんの家族の画面だけ（お客さんからは受けつけない）
+        if (S.guest || S.asGuest || S.mode !== 'family') return;
+        S.plan = PLANS[m.plan] ? String(m.plan) : 'std';
+        return send({ type: 'plan', plan: S.plan, label: PLANS[S.plan].label });
+      }
       if (m.type === 'save_media') {               // 写真・動画をおうちのドライブへ（家族だけ）
         if (S.guest || S.asGuest) return;
         const data = String(m.data || '').replace(/^data:[\w/+.-]+;base64,/, '');
