@@ -467,7 +467,15 @@ function session(ws) {
   }
 
   /* --- 聞こえたことばの振り分け --- */
-  function sysPrompt() { return S.system + (S.lessons && S.lessons.length ? '\n\n【教わったこと（いつも守る・使う）】\n' + S.lessons.map(x => '・' + x).join('\n') : '') + (S.memo ? '\n\n【前回までの話のまとめ（ジュニアが話したこと）】\n' + S.memo : '') + nowLine() + (S.place ? '\n\n【いまいる場所（スマホの位置から。およそ。住所としては口に出さない）】' + S.place.text + '。「近く」はここを基準に調べる。' : '') + (S.learned && S.learned.length ? '\n\n【自分で気づいたこと（前の会話から。次から生かす）】\n' + S.learned.map(x => '・' + x).join('\n') : '') + (!S.guest && S.mode === 'family' ? FAMILY_RULE : '') + (S.guest || S.mode === 'business' ? SERVICE_GUIDE : '') + (S.trio ? TRIO_RULE : '') + EDO_LAST; }
+  // システムの文は2つに分ける：前半（人がら・決まり・教わったこと）は会話のあいだ変わらないのでキャッシュする。後半（まとめ・いまの時刻・場所・気づき）は毎回かわる
+  function sysParts() {
+    const fixed = S.system + (!S.guest && S.mode === 'family' ? FAMILY_RULE : '') + (S.guest || S.mode === 'business' ? SERVICE_GUIDE : '') + (S.trio ? TRIO_RULE : '') + (S.lessons && S.lessons.length ? '\n\n【教わったこと（いつも守る・使う）】\n' + S.lessons.map(x => '・' + x).join('\n') : '');
+    const live = (S.memo ? '\n\n【前回までの話のまとめ（ジュニアが話したこと）】\n' + S.memo : '') + nowLine() + (S.place ? '\n\n【いまいる場所（スマホの位置から。およそ。住所としては口に出さない）】' + S.place.text + '。「近く」はここを基準に調べる。' : '') + (S.learned && S.learned.length ? '\n\n【自分で気づいたこと（前の会話から。次から生かす）】\n' + S.learned.map(x => '・' + x).join('\n') : '');
+    return [fixed, live];
+  }
+  function sysPrompt() { const [a, b] = sysParts(); return a + b + EDO_LAST; }
+  // APIに渡す形：前半にキャッシュの印をつける（短すぎるときはAPIがキャッシュしないだけで、そのまま動く）
+  function sysBlocks(extra) { const [a, b] = sysParts(); return [{ type: 'text', text: a, cache_control: { type: 'ephemeral' } }, { type: 'text', text: (b + (extra || '') + EDO_LAST).trim() || '。' }]; }
   const convoKey = () => !S.owner ? '' : S.guest ? S.owner + ':guest' : S.mode === 'family' ? S.owner + ':family' : '';
   /** 会話をまとめる：次の会話用の「まとめ」と、アプリのバターちゃんが読む「ジュニア日記」 */
   async function summarize() {
@@ -707,7 +715,7 @@ function session(ws) {
       const params = {
         model: plan.premium && attempt < 2 && !jam ? ENV.PREMIUM_MODEL : useSmart ? ENV.SMART_MODEL : ENV.MODEL,
         max_tokens: (S.trio ? 240 : study ? 520 : S.mode === 'business' ? 340 : 320) + (useSearch ? 400 : 0) + (S.trio ? 0 : plan.extraTokens),
-        system: sysPrompt() + (study ? STUDY_RULE : '') + (jam ? JAM_RULE : '') + (route.search && !useSearch ? '\n\n【いまは調べられない】検索が使えないので、今の情報は「おいらには調べられねぇんだ」と正直に言う。' : ''),
+        system: sysBlocks((study ? STUDY_RULE : '') + (jam ? JAM_RULE : '') + (route.search && !useSearch ? '\n\n【いまは調べられない】検索が使えないので、今の情報は「おいらには調べられねぇんだ」と正直に言う。' : '')),
         messages: attempt === 2 || (attempt === 1 && !useSearch) ? [{ role: 'user', content }] : msgs,
       };
       if (useSearch) {

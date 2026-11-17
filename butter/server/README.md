@@ -64,6 +64,8 @@ gcloud run deploy butter-junior --source terakoya/butter/server --region asia-no
 | 名前 | ふだん |
 |---|---|
 | MODEL | claude-haiku-4-5-20251001 |
+| SMART_MODEL | claude-sonnet-5-5（調べもの・勉強） |
+| PREMIUM_MODEL | claude-opus-5-5（家族の画面のプランおためし：上位・スーパー上位） |
 | TTS_VOICE | ja-JP-Chirp3-HD-Leda |
 | TTS_RATE | 1.08 |
 | DAILY_LIMIT | 400（一人1日に答える回数） |

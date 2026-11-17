@@ -1,5 +1,6 @@
 // 外のサービスをにせものにして、会話・写真・ご縁つなぎが一通り動くか確かめる
 'use strict';
+const sysText = s => Array.isArray(s) ? s.map(b => b.text).join('') : String(s || '');
 const http = require('http');
 const assert = require('assert');
 const WebSocket = require('ws');
@@ -125,7 +126,7 @@ function client(port, hello) {
   assert.ok(!c.msgs.some(m => m.type === 'reply_start'), '呼ばれていないので答えない');
   let sys = '';
   const origStream = deps.claude.messages.stream;
-  deps.claude.messages.stream = p => { sys = p.system; lastMessages = p.messages; return origStream(p); };
+  deps.claude.messages.stream = p => { sys = sysText(p.system); lastMessages = p.messages; return origStream(p); };
   c.ws.send(JSON.stringify({ type: 'text', text: 'ジュニア、どう思う？' }));
   await c.until(m => m.type === 'reply_end');
   assert.ok(/バターちゃんジュニア/.test(sys) && /三人モード/.test(sys), 'ジュニアとして三人モードで話す');
@@ -180,7 +181,7 @@ function client(port, hello) {
   const q = await client(port, { type: 'hello', pass: 'ok', trio: false });
   await q.until(m => m.type === 'ready');
   let streamed = 0; const os2 = deps.claude.messages.stream;
-  deps.claude.messages.stream = p => { streamed++; sys = p.system; return os2(p); };
+  deps.claude.messages.stream = p => { streamed++; sys = sysText(p.system); return os2(p); };
   q.ws.send(JSON.stringify({ type: 'text', text: 'ジュニア、聞いてる？' }));
   const qe = await q.until(m => m.type === 'reply_end');
   assert.ok(/てやんでぃ/.test(qe.text) && streamed === 0, '名前だけはすぐ返事');
@@ -225,7 +226,7 @@ function client(port, hello) {
   assert.ok(!gst.msgs.some(m => m.type === 'plan'), '窓口からはプランを切りかえられない');
   assert.ok(/マー君さん/.test(gg.text) && /ヒロさんに伝える/.test(gg.text), 'はじめに伝わることを知らせる: ' + gg.text);
   const os4 = deps.claude.messages.stream; let gsys = '';
-  deps.claude.messages.stream = p => { gsys = p.system; return os4(p); };
+  deps.claude.messages.stream = p => { gsys = sysText(p.system); return os4(p); };
   gst.ws.send(JSON.stringify({ type: 'text', text: '宿の予約の仕組みを相談したい' }));
   await gst.until(m => m.type === 'reply_end' && m.gen > gg.gen);
   assert.ok(/ヒロさんの窓口/.test(gsys) && /11\/20/.test(gsys) && !/家族OSの記録/.test(gsys), '窓口の人格・空き時間・家族の記録なし');
@@ -260,7 +261,7 @@ function client(port, hello) {
   await w.until(m => m.type === 'searching');
   await w.until(m => m.type === 'reply_end');
   assert.ok(lastParams.model === 'claude-sonnet-5-5' && lastParams.tools && lastParams.tools[0].name === 'web_search', '調べもの');
-  assert.ok(/想像で答えない/.test(lastParams.system), '正直に');
+  assert.ok(/想像で答えない/.test(sysText(lastParams.system)), '正直に');
   const wn = w.msgs.filter(m => m.type === 'reply_end').length;
   w.ws.send(JSON.stringify({ type: 'text', text: 'こんばんは' }));
   await w.until(() => w.msgs.filter(m => m.type === 'reply_end').length > wn);
@@ -274,6 +275,7 @@ function client(port, hello) {
   await w.until(() => w.msgs.filter(m => m.type === 'reply_end').length > wnP);
   const pe = w.msgs.filter(m => m.type === 'reply_end').pop();
   assert.ok(lastParams.model === 'claude-opus-5-5' && lastParams.max_tokens > 320 && pe.usage && pe.usage.plan === 'スーパー上位', 'スーパー上位は一番賢いモデル');
+  assert.ok(Array.isArray(lastParams.system) && lastParams.system[0].cache_control && /バターちゃんジュニア/.test(lastParams.system[0].text), 'システムの前半はキャッシュ');
   w.ws.send(JSON.stringify({ type: 'plan', plan: 'std' }));
   await w.until(m => m.type === 'plan' && m.plan === 'std');
   // 近くを聞かれたら、スマホの位置（およそ）を基準に
@@ -281,7 +283,7 @@ function client(port, hello) {
   const wn2 = w.msgs.filter(m => m.type === 'reply_end').length;
   w.ws.send(JSON.stringify({ type: 'text', text: '近くのラーメン屋は？' }));
   await w.until(() => w.msgs.filter(m => m.type === 'reply_end').length > wn2, 8000);
-  assert.ok(/いまいる場所/.test(lastParams.system) && lastParams.tools, '近くは位置を基準に調べる');
+  assert.ok(/いまいる場所/.test(sysText(lastParams.system)) && lastParams.tools, '近くは位置を基準に調べる');
   deps.claude.messages.stream = os5;
 
   // 11こ：覚える・メールはヒロさんだけ・議事録（文字とPDF）・窓口の役割と相談メモ・写真の保存・調べた先のリンク・質問のあとの続き
@@ -289,7 +291,7 @@ function client(port, hello) {
     const f = await client(port, { type: 'hello', pass: 'ok', mode: 'family' });
     await f.until(m => m.type === 'ready');
     let sy = ''; const o = deps.claude.messages.stream;
-    deps.claude.messages.stream = p => { sy = p.system; lastMessages = p.messages; return o(p); };
+    deps.claude.messages.stream = p => { sy = sysText(p.system); lastMessages = p.messages; return o(p); };
     f.ws.send(JSON.stringify({ type: 'text', text: 'ジュニア、カイトの好きなポケモンはピカチュウって覚えて' }));
     await f.until(m => m.type === 'reply_end' && /覚えたぜ/.test(m.text || ''));
     f.ws.send(JSON.stringify({ type: 'text', text: 'カイトの好きなのは？' }));
@@ -318,7 +320,7 @@ function client(port, hello) {
     assert.ok(gasCalls.some(c => c.action === 'minutes' && c.pdf === true), '頼まれたらPDF');
     // 窓口の役割と相談メモ
     let gs = ''; const o2 = deps.claude.messages.stream;
-    deps.claude.messages.stream = p => { gs = p.system; return o2(p); };
+    deps.claude.messages.stream = p => { gs = sysText(p.system); return o2(p); };
     const gx = await client(port, { type: 'hello', idToken: 'guest-x', ref: 'macpmo' });
     await gx.until(m => m.type === 'ready');
     gx.ws.send(JSON.stringify({ type: 'text', text: 'この前の続きなんだけど' }));
@@ -354,7 +356,7 @@ function client(port, hello) {
     await f.until(m => m.type === 'reply_end' && /駅のそば/.test(m.text || ''), 6000);
     assert.ok(calls === 3 && contMsgs[contMsgs.length - 1].role === 'assistant', '区切られたら続きを、空ならやり直し');
     // 上限で切れた文は読まない・家族の画面は家族の話をしてよい・自分で気づいたことを次に生かす
-    deps.claude.messages.stream = p => { sy = p.system; return { async *[Symbol.asyncIterator]() {
+    deps.claude.messages.stream = p => { sy = sysText(p.system); return { async *[Symbol.asyncIterator]() {
       for (const ch of ['6人家族だぜ。', 'パパとママと、子ども', 'が4人']) yield { type: 'content_block_delta', delta: { type: 'text_delta', text: ch } };
       yield { type: 'message_delta', delta: { stop_reason: 'max_tokens' } };
     } }; };
