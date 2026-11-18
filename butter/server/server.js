@@ -56,6 +56,7 @@ const ENV = {
   SUPER_REFS: (process.env.SUPER_REFS || 'site').split(',').map(s => s.trim().toLowerCase()).filter(Boolean),
   SUPER_OWNERS: (process.env.SUPER_OWNERS || '').split(',').map(s => s.trim()).filter(Boolean),
   MAC_OWNERS: (process.env.MAC_OWNERS || '').split(/[,\s]+/).map(s => s.trim()).filter(Boolean),   // 馬越さんのLINEのID（「g:」つきでもなしでも。期限は最後に「:YYYY-MM-DD」）。コムギを制限なしで使える・紹介の手数料の受け取り手
+  SITE_URL: process.env.SITE_URL || '',   // ハタボのサービスサイト（公開したらURLを入れる。トーク・カード・Myハタボから、ときどき案内する）
   BRIDGE_DAILY: Number(process.env.BRIDGE_DAILY || 20),   // 馬越さんの紹介でコムギと話す人の1日の回数（契約したらグレードの回数）
 };
 /** 期限つきでスーパー上位を使える人か */
@@ -220,7 +221,7 @@ async function myPage(S) {
   const limit = !S.guest ? ENV.DAILY_LIMIT : gradeCap(S) || (S.refFrom ? ENV.DAILY_LIMIT_GUEST : ENV.DAILY_LIMIT_NOREF);
   const mine = S.myRef ? await getRef(S.myRef).catch(() => null) : null;
   const tot = st.tot || 0, lv = Math.floor(Math.sqrt(tot / 4)) + 1, base = Math.pow(lv - 1, 2) * 4, next = Math.pow(lv, 2) * 4;
-  return { type: 'mypage', name: S.me || '', avatar: S.avatar || 'hatabo', plan: plan.label, superUntil: superUntil(S.owner) || (plan === PLANS.super && S.guest ? 'サイトからのおためし' : ''),
+  return { type: 'mypage', site: ENV.SITE_URL, name: S.me || '', avatar: S.avatar || 'hatabo', plan: plan.label, superUntil: superUntil(S.owner) || (plan === PLANS.super && S.guest ? 'サイトからのおためし' : ''),
     today: used, limit, month: st.mon === day.slice(0, 7) ? st.monN || 0 : 0, total: tot, days: st.at ? Math.max(1, Math.ceil((Date.now() - st.at) / 86400000)) : 1,
     streak: st.last === day || st.last === new Date(Date.now() - 15 * 3600000).toISOString().slice(0, 10) ? st.streak || 0 : 0,
     lv, lvPct: Math.round((tot - base) / Math.max(1, next - base) * 100), learned: (S.learned || []).length + (S.lessons || []).length,
@@ -474,6 +475,11 @@ function kmSkin(obj) {
   walk(obj);
   return obj;
 }
+/** カードに「サービスサイト」のボタンを足す（サイトのURLが決まっていれば） */
+function kmSite(card) {
+  if (ENV.SITE_URL) { card.footer.contents.push({ type: 'button', style: 'secondary', color: '#E9E4F5', height: 'sm', action: { type: 'uri', label: 'サービスサイトを見る', uri: ENV.SITE_URL } }); card.footer.spacing = 'sm'; }
+  return card;
+}
 /** 馬越さんの紹介で来た人へのあいさつ（友だち追加のとき） */
 function komugiWelcome(name) {
   const M = LINE_CH.komugi.mini;
@@ -481,7 +487,7 @@ function komugiWelcome(name) {
     kmCard('WELCOME', 'はじめまして、コムギです', [(name ? name + 'さん、' : '') + 'あ、あの……友だち追加、ありがとうございます。馬越 雅哉さんの相棒の、コムギです。', '馬越さんへのご相談は、うちが先にお聞きして、馬越さんにつなぎますけん。'], 'コムギと話す', M),
     kmCard('HOW TO', 'お話のしかた', ['メニューの「コムギと話す」を押して、声か文字で話しかけてください。', '話したことは、馬越さんに伝わります。会ってお話ししたいときも、うちに言うてもらえたら。'], '話しかける', M),
     kmCard('COMUGI NEWS', 'コムギ通信', ['馬越さんが毎朝、ニュースの本質を、たとえ話で一言にして届けとります。', 'コムギに「今日の速報」と聞いてみてください。'], '速報を聞く', M),
-    kmCard('HATABO', 'あなた専用の相棒を', ['うちの仲間の「ハタボ」は、あなた専用のAIの相棒です。調べもの・段取り・文章・予定まで、いっしょに動きます。', '10日間は無料で試せますけん。'], 'お試しを見る', M + '?page=plan'),
+    kmSite(kmCard('HATABO', 'あなた専用の相棒を', ['うちの仲間の「ハタボ」は、あなた専用のAIの相棒です。調べもの・段取り・文章・予定まで、いっしょに動きます。', '10日間は無料で試せますけん。'], 'お試しを見る', M + '?page=plan')),
   ] } };
 }
 /** 馬越さん本人へのあいさつ */
@@ -514,7 +520,7 @@ function groupCards(gref) {
   const join = CH().mini + '?ref=' + gref;
   if (CH().id === 'komugi') {      // コムギのグループ用（馬越さんへの橋渡し役として）
     const k1 = kmCard('HELLO', 'コムギが入りました', ['あ、あの……はじめまして。馬越 雅哉さんの相棒の、コムギです。', 'このグループでは「コムギ」と呼ばれたときだけ、出てきますけん。ふだんは静かにしとります。'], 'コムギと話す', join);
-    const k2 = kmCard('FOR YOU', '馬越さんへのご相談は、コムギに', ['ひとりずつ、下のボタンからコムギと話せます。困りごとややりたいことを、うちが先にお聞きして、馬越さんにつなぎます。', 'あなた専用のAIの相棒「ハタボ」も、10日間は無料で試せますけん。'], 'コムギと話す', join);
+    const k2 = kmSite(kmCard('FOR YOU', '馬越さんへのご相談は、コムギに', ['ひとりずつ、下のボタンからコムギと話せます。困りごとややりたいことを、うちが先にお聞きして、馬越さんにつなぎます。', 'あなた専用のAIの相棒「ハタボ」も、10日間は無料で試せますけん。'], 'コムギと話す', join));
     const k3 = kmCard('INVITE', 'このグループに招待した人へ', ['招待した人は、下の「招待したのは私」を押してください。このグループから来た人が、あなたのご縁になります。', '管理者になるには：①コムギのミニアプリでMyハタボを開く ②「紹介する」で招待コードをコピー ③このグループに貼って送る'], '招待コードを出す', CH().mini + '?page=share');
     k3.footer.contents.unshift({ type: 'button', style: 'primary', color: '#FF2E9A', height: 'sm', action: { type: 'postback', label: '招待したのは私', data: 'act=inviter', displayText: '招待したのは私です' } });
     k3.footer.contents[1].style = 'secondary'; k3.footer.contents[1].color = '#E9E4F5'; k3.footer.spacing = 'sm';
@@ -1622,6 +1628,9 @@ function session(ws) {
     if (cut && !capped) { const k = Math.max(text.lastIndexOf('。'), text.lastIndexOf('！'), text.lastIndexOf('？'), text.lastIndexOf('!'), text.lastIndexOf('?')); if (k > 0) text = text.slice(0, k + 1); }
     if (text && !noRecord) S.history.push({ role: 'user', content: logText || '（写真を見せた）' }, { role: 'assistant', content: text });
     if (S.visit && logText) S.visitLog.push(String(logText).slice(0, 200));
+    // ハタボの話が出たら、ときどき（8回に1回まで）サービスサイトへの道をそえる（声では読まない）
+    S.replyN = (S.replyN || 0) + 1;
+    if (ENV.SITE_URL && text && S.guest && (S.avatar === 'komugi' || S.avatar === 'hatabo') && /ハタボ/.test(text) && S.replyN - (S.siteAt || -99) >= 8) { S.siteAt = S.replyN; links.push({ url: ENV.SITE_URL, title: 'ハタボのサービスサイトを見る' }); }
     if (links.length && text) send({ type: 'links', gen, links: links.slice(0, 3) });
     if (longMode && text && text.length > 200 && S.owner) addNote(S.owner, { kind: 'doc', title: (logText || '書いた文章').replace(/\s+/g, ' ').slice(0, 30), text }).then(() => send({ type: 'note_saved', kind: 'doc' })).catch(() => {});
     if (S.trio && /[？?]\s*$/.test(text)) S.followUntil = Date.now() + 12000;   // ジュニアが質問した → つぎの1回は名前なしでも   // 空の返事は記録しない（次の会話がこわれるので）

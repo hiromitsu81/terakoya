@@ -3195,6 +3195,7 @@ body.av-hatabo #shareBtn, body.av-komugi #shareBtn { display: none !important; }
     } else if (p === 'plan') {
       const f = d.funnel || {}, LU = d.lineups || {}, st = f.stage || '';
       const steps = [['紹介', true], ['お試し', st === 'trial' || st === 'contract' || st === 'cancel'], ['契約', st === 'contract']];
+      const siteLink = d.site ? `<a class="hbbtn w" href="${esc(d.site)}" target="_blank" rel="noopener">ハタボのサービスサイトを見る</a>` : '';
       const stepper = `<div class="hbstep">${steps.map(([l, on], i) => `<div class="${on ? 'on' : ''}${(i === 1 && st === 'trial') || (i === 2 && st === 'contract') || (i === 0 && !st) ? ' now' : ''}"><i>${on ? '✓' : i + 1}</i><span>${l}</span></div>`).join('<b></b>')}</div>`;
       const yen0 = v => { const m = String(v).match(/([\d,]+)円/); return m ? Number(m[1].replace(/,/g, '')) : 0; }, p0 = yen0(f.price);
       const cur = f.lineupName ? `${esc(f.lineupName)} ${esc(f.grade)}（${f.pay === 'y' && p0 ? (p0 * 10).toLocaleString('ja-JP') + '円／年' : esc(f.price) + (p0 ? '／月' : '')}）` : '';
@@ -3210,7 +3211,7 @@ body.av-hatabo #shareBtn, body.av-komugi #shareBtn { display: none !important; }
           <button type="button" class="hbbtn" id="hbpGo">${btnLabel}</button>
           <p style="font-size:11.5px">お支払いの登録（Apple Pay・Google Pay・PayPay）は準備中です。申し込みのあと、ハタラボ（HATHA LAB）からご案内します。</p></div>`;
       };
-      let html = `<div class="hbc"><div class="k">PLAN</div><h3>紹介 → お試し → 契約</h3>${stepper}`;
+      let html = `<div class="hbc"><div class="k">PLAN</div><h3>紹介 → お試し → 契約</h3>${stepper}${siteLink}`;
       if (!st) html += `<p>まず10日間、いちばん上の<b>Z</b>で無料で試せます（1日${d.trialDaily || 10}回まで）。先に、11日目からのプランを選んでおきます。10日以内にやめれば0円です。</p></div>` + form(`10日間無料ではじめる`);
       else if (st === 'trial') html += `<div class="big" style="margin-top:10px">あと${f.daysLeft}<small>日 お試し中（Z）</small></div><p>11日目（${new Date(f.trialUntil).toLocaleDateString('ja-JP')}のあと）から <b>${cur}</b> に切りかわります。</p>
           <button type="button" class="hbbtn w" id="hbpChange">プランを変える</button><button type="button" class="hbbtn w" id="hbpCancel" style="border-color:#C9CFDA;color:#5E6B85">お試しをやめる（0円）</button></div>` + (HBP.edit ? form('このプランに変える') : '');
