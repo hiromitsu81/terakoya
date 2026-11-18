@@ -1397,7 +1397,8 @@ function session(ws) {
         S.ref = String(m.ref || '').replace(/[^\w-]/g, '').slice(0, 20);
         S.agent = m.agent === 'service' ? 'service' : '';
         S.visit = String(m.visit || '').replace(/[^\w-]/g, '').slice(0, 20);   // ご縁の図から、その人のAI棒と話す   // 公式LINEのリッチメニューの「ハタボに相談」：サイトと同じサービス相談
-        S.asGuest = !!m.asGuest;          // 家族が「窓口の画面」を試すとき（&test=guest）
+        S.asGuest = !!m.asGuest;
+        S.peek = !!m.peek;               // 見るだけ（&test=peek）：紹介のつながり・アバターの記録を変えない          // 家族が「窓口の画面」を試すとき（&test=guest）
         try { await loadBrain(); } catch (e) {
           if (e.code === 'auth' || e.code === 'pass') return fail('auth', String(e.message).slice(0, 80));
           if (e.code === 'closed') return fail('closed', 'いま窓口はお休み中');
@@ -1413,7 +1414,7 @@ function session(ws) {
         S.ready = true;
         // 紹介コード：自分のコードを作り、はじめて来た人は「だれの紹介か」を覚える
         S.myRef = S.owner ? myRefOf(S.owner) : '';
-        if (S.myRef) {
+        if (S.myRef && !S.peek) {
           const mine = await getRef(S.myRef);
           const parent = mine && mine.parent ? mine.parent : (S.ref && S.ref !== S.myRef ? S.ref : '');
           S.refFrom = parent;
