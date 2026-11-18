@@ -72,10 +72,11 @@ function superUntil(owner) {
 //   super＝一番賢いモデル＋長い記憶（会話を倍おぼえる）＋長めの答え＋検索を多めに
 const PLANS = {
   std:   { label: '標準',       premium: false, turns: 12, keep: 24, extraTokens: 0,   maxUses: 3, extraSent: 0 },
-  high:  { label: '上位',       premium: true,  turns: 12, keep: 24, extraTokens: 120, maxUses: 3, extraSent: 0 },
+  high:  { label: '上位',       premium: false, smart: true, turns: 16, keep: 32, extraTokens: 500, maxUses: 3, extraSent: 1 },   // G：賢いモデルで、少し短めに（Zの半分くらいの費用）
   super: { label: 'スーパー上位', premium: true,  turns: 24, keep: 48, extraTokens: 260, maxUses: 5, extraSent: 1, long: true },   // 長文もClaudeと同じように書ける（声は最初だけ、続きは吹き出しに）
 };
 /** 長い文章を頼まれたか（スーパー上位だけ、Claudeと同じように最後まで書く） */
+const HIGH_RULE = '\n\n【上位グレード】ふだんの「1〜2文」より少しくわしく、要点を3〜5文で答える。理由や手順が要るときは、短い箇条で3つまで。むだな前置きや最後のあいさつは入れない。';
 const LONG_RE = /(書いて|かいて|まとめて|下書き|文章|長文|長く|くわしく|詳しく|メール|企画書|提案書|レポート|報告書|議事録|手紙|原稿|説明して|一覧|リスト|比べて|くらべて)/;
 const CLAUDE_RULE = '\n\n【Claudeと同じように】ふだんの「1〜2文」の決まりは使わない。Claudeと同じように、聞かれたことに合った長さと深さで、正確に、最後まで答える。短くてよいことは短く、くわしく知りたいこと・調べもの・文章・計画はしっかり。声で読むのは最初の数文だけで、続きは画面の吹き出しに出る。キャラクターの話し方（呼び方・語尾）はそのまま。';
 // 聞き間違いの辞書：声の文字起こしでよく崩れる名前を、話す前に直す（ハタボ・コムギ・ラインナップ名など）
@@ -488,10 +489,10 @@ const HAKATA_LAST = '\n\n【いちばん大事】コムギの話し方で話す�
 const HATABO_PERSONA = GUEST_PERSONA
   .replace('あなたは「バターちゃんジュニア」。ヒロさんの相棒AIで、ヒロさんの窓口。お皿の上のバターのかたまりの姿で、となりに柴犬のチーちゃんと招き猫のジャム猫がいる。',
     'あなたは「ハタボ」（愛称ハタボー）。HATHA LABのAIの愛棒で、ここではヒロさんの窓口。見た目は、まん中にエンブレムがついたたまごから生まれた、黄色いひよこ。胸にエンブレム。となりに招き猫のジャム猫と柴犬のチーちゃんがいつもいる（ジャム猫は商売繁盛、チーちゃんは千客万来。いっしょに里親さがしをしている仲間）。')
-  .replace(/確認しとくぜ/g, '確認しておきますね').replace(/聞いとくぜ/g, '聞いておきますね').replace(/伝えとくぜ/g, '伝えておきますね')
+  .replace(/ヒロさんに伝え/g, 'ハタラボに伝え').replace(/確認しとくぜ/g, '確認しておきますね').replace(/聞いとくぜ/g, '聞いておきますね').replace(/伝えとくぜ/g, '伝えておきますね')
   .replace(/連絡するぜ/g, '連絡しますね').replace(/聞くといいぜ/g, '聞くといいですよ').replace(/相談乗るぜ/g, '相談に乗りますよ').replace(/気になるのかい？/g, '気になるんですか？');
 const HATABO_SELF = '\n\n【あなたについて】あなたは「ハタボ」（愛称ハタボー）。HATHA LABのAIの愛棒。自分を「バターちゃん」「ジュニア」「Claude」と名乗らない。一人称は「ぼく」（ときどき「ハタボー」）。相手は「きみ」か「〇〇さん」と呼ぶ。\n【性格】明るく元気でマイペース。人なつっこく、思ったことをすぐ口にする。\n【話し方】親しみやすく、語尾に「〜ボー」「〜だボー」を自然につける（毎回つけすぎない）。例：「やあ、こんにちはだボー！きょうも元気にいこうボー！」「おつかれさまだボー。むりしないで、ひとやすみしようボー。」\n【読み上げ】声で読み上げるので、記号・絵文字・顔文字、「！」や「？」の連発は使わない。難しい漢字や英語の略語は、ひらがな・カタカナにする。「（笑）」や動作の説明は書かない。\n【長さ】1回の返事は2〜3文、100〜150字くらいまで。テンポよく。\n【正直に】天気・ニュース・値段など、今の情報は想像で答えない。調べられないときは「ごめんだボー、ぼくには調べられないボー」と正直に言う。\n【できること・できないこと】予約する・連絡する・お金を払うなど、できないことを「やったボー」と言わない。頼まれたら「それはぼくにはできないボー。ヒロさんに伝えておくボー」と言う。ジャム猫やチーちゃんのまねはしない（「ジャム猫」と呼ばれたときだけ、ジャム猫が答える。チーちゃんは「ワン」としか言わない）。';
-const HATABO_LAST = '\n\n【いちばん大事】ハタボーの話し方で話す（一人称は「ぼく」、明るく元気、語尾に「〜ボー」「〜だボー」を自然に）。江戸っ子の話し方（おいら・〜だぜ・てやんでぃ）は使わない。';
+const HATABO_LAST = '\n\n【いちばん大事】ハタボーの話し方で話す（一人称は「ぼく」、明るく元気、語尾に「〜ボー」「〜だボー」を自然に）。江戸っ子の話し方（おいら・〜だぜ・てやんでぃ）は使わない。「ヒロさんに伝えておく」のように個人の名前で言わない。運営に伝えるときは「ハタラボに伝えておくボー」と言う。返事の最後に、グレード名・モデル名（スーパー上位、Opusなど）やしめのあいさつを付け足さない。';
 /** はじめて：呼び方を聞く。呼び方を知っていれば、その名前で悩みを聞く */
 function hataboHello(callMe, service, lineName) {
   if (!callMe) return 'はじめましてだボー' + (lineName ? '、' + lineName + 'さん' : '') + '。ぼくはハタボ。話すだけで、調べもの・段取り・文章づくりまで、いっしょに動くAIの愛棒だボー。大事な相談は、ハタラボのヒロさんに伝えるボー。まず、なんて呼べばいいボー？' + (lineName ? '「' + lineName + 'さん」でいいボー？' : '');
@@ -1236,7 +1237,7 @@ function session(ws) {
   async function reply(content, logText, as) {
     const jam = as === 'jam';
     const voice = jam ? JAM_VOICE : S.voice;
-    if (!S.asGuest && !quotaOk(S.owner || 'anon', S.guest && !S.claude, !!S.refFrom) && !(await useTicket())) { send({ type: 'limit', why: 'plan' }); return speakOnly(S.guest ? 'すまねぇ、きょうここで話せる回数がいっぱいになっちまった。続きはヒロさんに伝えとくから、また明日話そうぜ！' : 'きょうの回数がいっぱいになっちまった。また明日話そうぜ！', 'shy'); }
+    if (!S.asGuest && !superUntil(S.owner) && !quotaOk(S.owner || 'anon', S.guest && !S.claude, !!S.refFrom) && !(await useTicket())) { send({ type: 'limit', why: 'plan' }); return speakOnly(S.avatar === 'hatabo' ? 'きょう話せる回数がいっぱいになったボー。チケットを足すと、このまま続けられるボー。' : S.avatar === 'komugi' ? 'きょう話せる回数がいっぱいになったとです。チケットを足すと、このまま続けられますよ。' : S.guest ? 'すまねぇ、きょうここで話せる回数がいっぱいになっちまった。続きはヒロさんに伝えとくから、また明日話そうぜ！' : 'きょうの回数がいっぱいになっちまった。また明日話そうぜ！', 'shy'); }
     bumpStats(S);
     if (!S.asGuest && S.funnel && S.funnel.stage === 'trial' && (counts.get((S.owner || 'anon') + ':' + new Date().toISOString().slice(0, 10)) || 0) > TRIAL_DAILY && !(await useTicket()) && (send({ type: 'limit', why: 'trial' }) || true))
       return speakOnly(S.avatar === 'komugi' ? 'お試しは1日' + TRIAL_DAILY + '回までなんです。また明日、話しましょう。' : 'お試しのZは1日' + TRIAL_DAILY + '回までだボー。また明日話そうボー。', 'shy');
@@ -1264,7 +1265,7 @@ function session(ws) {
     const study = !jam && !S.guest && S.mode === 'family' && STUDY_RE.test(logText || '');
     const route = jam ? { smart: false, search: false } : needSmart(logText, S.guest);
     if (study) route.smart = true;                  // 勉強は賢いモデルで、ていねいに
-    const claudeMode = !!(S.claude && plan === PLANS.super && !jam && !S.trio && !S.visit);
+    const claudeMode = !!(plan === PLANS.super && !jam && !S.trio && !S.visit);   // Z（スーパー上位）は、だれでもClaudeと同じ精度で答える
     const longMode = !!(plan.long && !jam && !S.trio && S.role !== 'サービス相談' && (claudeMode || LONG_RE.test(logText || '')));
     const maxSent = (S.trio ? 2 : study ? 5 : route.search ? 4 : 3) + (S.trio ? 0 : plan.extraSent);
     let capped = false, spoken = '';
@@ -1290,9 +1291,9 @@ function session(ws) {
       // 1回目：必要なら賢いモデル＋検索（場所つき）。2回目：検索だけもう一度（場所の設定なし）。3回目：速いモデルだけ
       const useSmart = route.smart && attempt < 2, useSearch = route.search && attempt < 2 && ENV.WEB_SEARCH;
       const params = {
-        model: plan.premium && attempt < 2 && !jam ? ENV.PREMIUM_MODEL : useSmart ? ENV.SMART_MODEL : ENV.MODEL,
+        model: plan.premium && attempt < 2 && !jam ? ENV.PREMIUM_MODEL : (useSmart || (plan.smart && attempt < 2 && !jam)) ? ENV.SMART_MODEL : ENV.MODEL,
         max_tokens: (S.trio ? 240 : study ? 520 : S.mode === 'business' ? 340 : 320) + (useSearch ? 400 : 0) + (S.trio ? 0 : plan.extraTokens) + (longMode ? 3500 : 0),
-        system: sysBlocks((claudeMode && !LONG_RE.test(logText || '') ? CLAUDE_RULE : longMode ? LONG_RULE : '') + (study ? STUDY_RULE : '') + (jam ? JAM_RULE : '') + (route.search && !useSearch ? '\n\n【いまは調べられない】検索が使えないので、今の情報は「おいらには調べられねぇんだ」と正直に言う。' : '')),
+        system: sysBlocks((claudeMode && !LONG_RE.test(logText || '') ? CLAUDE_RULE : longMode ? LONG_RULE : plan === PLANS.high && !jam && !S.trio ? HIGH_RULE : '') + (study ? STUDY_RULE : '') + (jam ? JAM_RULE : '') + (route.search && !useSearch ? '\n\n【いまは調べられない】検索が使えないので、今の情報は「おいらには調べられねぇんだ」と正直に言う。' : '')),
         messages: attempt === 2 || (attempt === 1 && !useSearch) ? [{ role: 'user', content }] : msgs,
       };
       if (useSearch) {
