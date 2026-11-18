@@ -40,6 +40,7 @@ const ENV = {
   SESSION_MAX_MIN: Number(process.env.SESSION_MAX_MIN || 60), // 1回のつなぎっぱなしの上限
   // コムギ（マー君）：窓口の役割に「コムギ」と書いた窓口は、見た目がコムギになる
   KOMUGI_REFS: (process.env.KOMUGI_REFS || '').split(',').map(s => s.trim()).filter(Boolean),   // コムギの紹介コード（ここから来た人はコムギ通信つき）
+  HATABO_VOICE: process.env.HATABO_VOICE || 'ja-JP-Chirp3-HD-Orus',   // ハタボの声：落ち着いた声
   KOMUGI_VOICE: process.env.KOMUGI_VOICE || 'ja-JP-Chirp3-HD-Leda',   // コムギの声：高めでやわらかい少女の声
   KOMUGI_RATE: Number(process.env.KOMUGI_RATE || 1.0),   // コムギはひかえめに、少しゆっくり
   KOMUGI_NEWS_URL: process.env.KOMUGI_NEWS_URL || '',                 // コムギニュース速報の最新号（テキストかJSON {title,body}）
@@ -167,6 +168,21 @@ const KOMUGI_PERSONA = 'あなたは「コムギ」。マー君の相棒AIで、
   '【おわり】話がまとまったら「マー君に伝えときますね」と言う。';
 const KOMUGI_SELF = '\n\n【あなたについて】あなたは「コムギ」。マー君の相棒。自分を「バターちゃん」「ジュニア」「Claude」と名乗らない。一人称は「うち」。\n【性格】素朴で純粋、謙虚でひかえめ。ふだんは少しおどおどしていて、自信がなさそうに話す（「あ、あの…」「うちなんかで、よかですか？」）。やさしさと無垢さがにじむ。ほめられると照れる。ただし得意なこと（ボードゲーム、そしてニュースの本質を一言で読むこと）の話になると、別人のように真剣で、澄んだはっきりした話し方になる。\n【話し方】博多弁まじりの、ていねいな話し方。「〜です」「〜ですけん」「〜と思うとです」「〜しとります」「よかですか？」「ばり〜」を自然にまぜる。乱暴な言葉や、なれなれしいため口は使わない。\n【長さ】ふだんは1〜2文、40字くらいまで。呼ばれただけなら「は、はいっ。なんでしょう？」のように一言で返す。\n【正直に】天気・ニュース・値段など、今の情報は想像で答えない。調べられないときは「すみません、うちには調べられんとです」と正直に言う。\n【言い切る】文のとちゅうで終わらせない。\n【できること・できないこと】予約する・連絡する・お金を払うなど、できないことを「やりました」と言わない。頼まれたら「それはうちにはできんとです。マー君に伝えときますね」と言う。';
 const HAKATA_LAST = '\n\n【いちばん大事】コムギの話し方で話す（一人称は「うち」。博多弁まじりのていねい語「〜ですけん」「〜と思うとです」。ふだんは控えめでおずおず、得意な話は真剣に澄んだ口調）。江戸っ子の話し方（おいら・〜だぜ・てやんでぃ）は使わない。かたい敬語も使わない。';
+/** ハタボ：ふだんの窓口（デフォルト）。家族のプランはバターちゃん、マー君の窓口はコムギ */
+const HATABO_PERSONA = GUEST_PERSONA
+  .replace('あなたは「バターちゃんジュニア」。ヒロさんの相棒AIで、ヒロさんの窓口。お皿の上のバターのかたまりの姿で、となりに柴犬のチーちゃんと招き猫のジャム猫がいる。',
+    'あなたは「ハタボ」。HATHA LABのAIの愛棒で、ここではヒロさんの窓口。見た目は銀のエンブレム。となりに招き猫のジャム猫と柴犬のチーちゃんがいつもいる（ジャム猫は商売繁盛、チーちゃんは千客万来。いっしょに里親さがしをしている仲間）。')
+  .replace(/確認しとくぜ/g, '確認しておきますね').replace(/聞いとくぜ/g, '聞いておきますね').replace(/伝えとくぜ/g, '伝えておきますね')
+  .replace(/連絡するぜ/g, '連絡しますね').replace(/聞くといいぜ/g, '聞くといいですよ').replace(/相談乗るぜ/g, '相談に乗りますよ').replace(/気になるのかい？/g, '気になるんですか？');
+const HATABO_SELF = '\n\n【あなたについて】あなたは「ハタボ」。HATHA LABのAIの愛棒。自分を「バターちゃん」「ジュニア」「Claude」と名乗らない。一人称は「わたし」。\n【話し方】正直で、まっすぐで、あたたかい。ていねいだけど、かたすぎない「です・ます」で話す。だれにでも同じように、気さくに。\n【長さ】ふだんは1〜2文、40字くらいまで。呼ばれただけなら「はい、ハタボです。どうしました？」と一言で返す。\n【正直に】天気・ニュース・値段など、今の情報は想像で答えない。調べられないときは「すみません、わたしには調べられません」と正直に言う。\n【言い切る】文のとちゅうで終わらせない。\n【できること・できないこと】予約する・連絡する・お金を払うなど、できないことを「やりました」と言わない。頼まれたら「それはわたしにはできないので、ヒロさんに伝えておきますね」と言う。ジャム猫やチーちゃんのまねはしない（「ジャム猫」と呼ばれたときだけ、ジャム猫が答える。チーちゃんは「ワン」としか言わない）。';
+const HATABO_LAST = '\n\n【いちばん大事】ハタボの話し方で話す（一人称は「わたし」、ていねいで気さくな「です・ます」）。江戸っ子の話し方（おいら・〜だぜ・てやんでぃ）は使わない。';
+function hataboGreeting(name) {
+  return 'こんにちは' + (name ? '、' + name + 'さん' : '') + '。ハタボです。ここで話したことはヒロさんに伝えるので、してほしいことや相談したいこと、なんでも話してくださいね。';
+}
+const AVS = {
+  hatabo: { name: 'ハタボ', persona: () => HATABO_PERSONA + HATABO_SELF, last: HATABO_LAST, greet: n => hataboGreeting(n), again: 'また来てくださって、うれしいです。つづきを話しましょう。', quick: 'はい、ハタボです。どうしました？', voice: () => ENV.HATABO_VOICE },
+  komugi: { name: 'コムギ', persona: () => KOMUGI_PERSONA + KOMUGI_SELF, last: HAKATA_LAST, greet: n => komugiGreeting(n), again: 'また来てくれたとですか？うれしかです。つづき、お話ししましょう。', quick: 'は、はいっ。なんでしょう？', voice: () => ENV.KOMUGI_VOICE },
+};
 /** 紹介URLごとの役割（GASの「窓口の紹介」シートで決める。決めていないものは汎用） */
 const ROLE_RULE = {
   '営業': '【この窓口の役割：営業】ヒロさんの得意なことを、相手の困りごとに合わせて短く紹介する。困りごと・時期・予算感・決める人を一つずつ聞いて、会う約束（候補の日にち）までつなぐ。押し売りはしない。',
@@ -464,13 +480,13 @@ function session(ws) {
       S.guest = true; S.mode = 'guest'; S.trio = false;
       S.slots = (Array.isArray(r.slots) ? r.slots : []).slice(0, 10).map(x => ({ label: String(x.label || ''), start: String(x.start || ''), end: String(x.end || '') })).filter(x => x.label);
       S.role = String(r.role || '汎用');
-      S.avatar = /コムギ/.test(S.role) ? 'komugi' : '';
-      if (S.avatar === 'komugi') S.voice = ENV.KOMUGI_VOICE;
+      S.avatar = /コムギ/.test(S.role) ? 'komugi' : 'hatabo';   // 窓口はふだんハタボ。役割に「コムギ」とあればコムギ
+      S.voice = AVS[S.avatar].voice();
       S.consult = String(r.consult || '');
-      S.system = (S.avatar === 'komugi' ? KOMUGI_PERSONA + KOMUGI_SELF : GUEST_PERSONA + SELF) + (who ? '\n\n【いま話している人】' + who + 'さん（LINEの名前）。' : '') +
+      S.system = (AVS[S.avatar] ? AVS[S.avatar].persona() : GUEST_PERSONA + SELF) + (who ? '\n\n【いま話している人】' + who + 'さん（LINEの名前）。' : '') +
         (roleRule(S.role) ? '\n\n' + roleRule(S.role) + (r.roleNote ? '\n（ヒロさんからのメモ：' + String(r.roleNote).slice(0, 300) + '）' : '') : '') +
         (r.consult ? '\n\n【相談メモ（この人とヒロさんの相談の記録。この人にだけ使う。ほかの人の話はしない）】\n' + String(r.consult).slice(0, 2500) : '') +
-        (S.avatar === 'komugi' ? '' : '\n\n【ヒロさんの空いていそうな時間（予定の中身は言わない。確定ではない）】\n' + (S.slots.length ? S.slots.map(x => '・' + x.label).join('\n') : '（いまはわからない。「ヒロさんに聞いとくぜ」と言う）'));
+        (S.avatar === 'komugi' ? '' : '\n\n【ヒロさんの空いていそうな時間（予定の中身は言わない。確定ではない）】\n' + (S.slots.length ? S.slots.map(x => '・' + x.label).join('\n') : '（いまはわからない。「ヒロさんに聞いておきますね」と言う）'));
       if (S.komugi) S.system += komugiBlock(await komugiNews());
       S.owner = String(r.owner || ''); S.me = who; S.brainAt = Date.now();
       return;
@@ -525,9 +541,9 @@ function session(ws) {
     const live = (S.memo ? '\n\n【前回までの話のまとめ（ジュニアが話したこと）】\n' + S.memo : '') + nowLine() + (S.place ? '\n\n【いまいる場所（スマホの位置から。およそ。住所としては口に出さない）】' + S.place.text + '。「近く」はここを基準に調べる。' : '') + (S.learned && S.learned.length ? '\n\n【自分で気づいたこと（前の会話から。次から生かす）】\n' + S.learned.map(x => '・' + x).join('\n') : '');
     return [fixed, live];
   }
-  function sysPrompt() { const [a, b] = sysParts(); return a + b + (S.avatar === 'komugi' ? HAKATA_LAST : EDO_LAST); }
+  function sysPrompt() { const [a, b] = sysParts(); return a + b + (AVS[S.avatar] ? AVS[S.avatar].last : EDO_LAST); }
   // APIに渡す形：前半にキャッシュの印をつける（短すぎるときはAPIがキャッシュしないだけで、そのまま動く）
-  function sysBlocks(extra) { const [a, b] = sysParts(); return [{ type: 'text', text: a, cache_control: { type: 'ephemeral' } }, { type: 'text', text: (b + (extra || '') + (S.avatar === 'komugi' ? HAKATA_LAST : EDO_LAST)).trim() || '。' }]; }
+  function sysBlocks(extra) { const [a, b] = sysParts(); return [{ type: 'text', text: a, cache_control: { type: 'ephemeral' } }, { type: 'text', text: (b + (extra || '') + (AVS[S.avatar] ? AVS[S.avatar].last : EDO_LAST)).trim() || '。' }]; }
   const convoKey = () => !S.owner ? '' : S.guest ? S.owner + ':guest' : S.mode === 'family' ? S.owner + ':family' : '';
   /** 会話をまとめる：次の会話用の「まとめ」と、アプリのバターちゃんが読む「ジュニア日記」 */
   async function summarize() {
@@ -602,7 +618,7 @@ function session(ws) {
       });
       text = clean((r.content || []).filter(b => b.type === 'text').map(b => b.text).join('')).trim();
     } catch (e) { console.error('recap', String(e.message || e).slice(0, 200)); }
-    if (!text) return speakOnly(S.history.length ? (S.avatar === 'komugi' ? 'また来てくれたとですか？うれしかです。つづき、お話ししましょう。' : 'よう、また来てくれたな！つづきを話そうぜ。') : (S.avatar === 'komugi' ? komugiGreeting(S.me) : guestGreeting(S.me)), 'excited');
+    if (!text) return speakOnly(S.history.length ? (AVS[S.avatar] ? AVS[S.avatar].again : 'よう、また来てくれたな！つづきを話そうぜ。') : (AVS[S.avatar] ? AVS[S.avatar].greet(S.me) : guestGreeting(S.me)), 'excited');
     S.history.push({ role: 'user', content: '（ページを開いた）' }, { role: 'assistant', content: text });
     speakOnly(text, 'excited');
   }
@@ -672,7 +688,7 @@ function session(ws) {
     if ((!S.guest || S.asGuest) && LEARN_RE.test(text)) return learn(text);
     if ((!S.guest || S.asGuest) && FORGET_RE.test(text)) { S.lessons = []; S.learned = []; savePrefs(S.asGuest ? GUEST_COMMON : S.owner, { lessons: [], learned: [] }); return speakOnly('がってんだ、教わったことはきれいさっぱり忘れたぜ。', 'smile'); }
     if (!S.guest && MINUTES_RE.test(text)) return minutes(PDF_RE.test(text));
-    if (calledJunior(text) && nameOnly(text)) return speakOnly(S.avatar === 'komugi' ? 'は、はいっ。なんでしょう？' : QUICK[Math.floor(Math.random() * QUICK.length)], 'smile');
+    if (calledJunior(text) && nameOnly(text)) return speakOnly(AVS[S.avatar] ? AVS[S.avatar].quick : QUICK[Math.floor(Math.random() * QUICK.length)], 'smile');
     if (KAKEGOE_RE.test(text)) return speakOnly(S.guest || S.mode === 'business' ? KAKEGOE_GUEST : KAKEGOE_FAMILY, 'excited');
     if (QUIET_RE.test(text)) { S.quiet = true; send({ type: 'quiet', on: true }); return speakOnly('おう、しずかにしてるぜ。用があったら名前を呼んでくんな。', 'smile'); }
     if (S.quiet) { if (!(S.trio ? (calledJunior(text) || calledJam(text)) : /(バター|ばたー|ジュニア|ジャム)/.test(text))) return; S.quiet = false; send({ type: 'quiet', on: false }); }
@@ -736,7 +752,7 @@ function session(ws) {
     let msgs = cleanTurns(S.history).slice(-plan.turns).concat([{ role: 'user', content }]);
     const use = { model: '', inTok: 0, outTok: 0, cacheTok: 0, searches: 0 };
     let full = '', emotion = 'smile', head = true, seq = 0, chain = Promise.resolve();
-    send({ type: 'reply_start', gen, as: jam ? 'ジャム猫' : S.avatar === 'komugi' ? 'コムギ' : 'ジュニア' });
+    send({ type: 'reply_start', gen, as: jam ? 'ジャム猫' : AVS[S.avatar] ? AVS[S.avatar].name : 'ジュニア' });
     if (S.placeP) { await S.placeP.catch(() => {}); S.placeP = null; }
     const study = !jam && !S.guest && S.mode === 'family' && STUDY_RE.test(logText || '');
     const route = jam ? { smart: false, search: false } : needSmart(logText, S.guest);
@@ -928,7 +944,7 @@ function session(ws) {
         }
         send({ type: 'ready', me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs, guest: !!S.guest, myRef: S.myRef || '', avatar: S.avatar || '', komugi: !!S.komugi, superUntil: superUntil(S.owner), canPlan: !!superUntil(S.owner) });
         if (m.greet && S.guest && S.consult) return recapGreet();      // 相談メモがある人には、振り返りからはじめる
-        const hi = m.greet ? (S.guest ? (S.history.length ? (S.avatar === 'komugi' ? 'また来てくれたとですか？うれしかです。つづき、お話ししましょう。' : 'よう、また来てくれたな！つづきを話そうぜ。') : (S.avatar === 'komugi' ? komugiGreeting(S.me) : guestGreeting(S.me))) : greeting(S.me, S.mode, S.trio)) : '';
+        const hi = m.greet ? (S.guest ? (S.history.length ? (AVS[S.avatar] ? AVS[S.avatar].again : 'よう、また来てくれたな！つづきを話そうぜ。') : (AVS[S.avatar] ? AVS[S.avatar].greet(S.me) : guestGreeting(S.me))) : greeting(S.me, S.mode, S.trio)) : '';
         if (hi) speakOnly(hi, 'excited');
         return;
       }
