@@ -295,3 +295,39 @@ details.q summary::after{content:"+";font-weight:900}details.q[open] summary::af
 :root{--v-talk:#62AD7F;--v-listen:#4FB6C9;--v-read:#E2B23C;--v-write:#F2804A}.v-talk{color:var(--v-talk)!important;font-weight:800}.v-listen{color:var(--v-listen)!important;font-weight:800}.v-read{color:var(--v-read)!important;font-weight:800}.v-write{color:var(--v-write)!important;font-weight:800}
 .shiftband{padding:46px 0;background:#0E1526;text-align:center}.shiftband p{margin:0;font:900 clamp(22px,3.6vw,40px)/1.5 "Noto Sans JP";color:#fff}.shiftband small{display:block;margin-top:8px;font:700 14px "Noto Sans JP";color:#C6CBDB}
 :root{--v-see:#9B87E0}.v-see{color:var(--v-see)!important;font-weight:800}
+
+/* ===== motion kit (site-wide gimmicks) ===== */
+.hbprog{position:fixed;left:0;top:0;height:3px;width:100%;transform-origin:0 50%;transform:scaleX(var(--p,0));background:linear-gradient(90deg,#62AD7F,#379BD7,#EC7D8F);z-index:200;pointer-events:none}
+.hbh{transition:box-shadow .3s ease,background .3s ease}.hbh.scd{box-shadow:0 10px 30px -18px rgba(22,35,63,.35);background:rgba(255,255,255,.985)}
+.hbrv{opacity:0;translate:0 26px;transition:opacity .75s ease,translate .75s cubic-bezier(.2,.7,.2,1);transition-delay:var(--d,0s)}
+.hbrv.hbin{opacity:1;translate:0 0}
+.hbrv.hbl{translate:-34px 0}.hbrv.hbr{translate:34px 0}.hbrv.hbl.hbin,.hbrv.hbr.hbin{translate:0 0}
+.hbrv.hbz{translate:0 0;scale:.94}.hbrv.hbz.hbin{scale:1}
+.cd,.lu,.scn,.ind,.qa,.uc{transition:transform .28s cubic-bezier(.2,.7,.2,1),box-shadow .28s ease}
+.cd:hover,.lu:hover,.scn:hover,.ind:hover,.uc:hover{transform:translateY(-6px);box-shadow:0 26px 40px -24px rgba(22,35,63,.45)}
+.lu img,.scn img,.ph img{transition:transform .6s cubic-bezier(.2,.7,.2,1)}
+.lu:hover img,.scn:hover img{transform:scale(1.06)}
+.bt{position:relative;overflow:hidden;transition:transform .2s ease,box-shadow .2s ease}
+.bt:hover{transform:translateY(-2px);box-shadow:0 14px 24px -14px rgba(22,35,63,.5)}
+.bt:after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.45),transparent);transform:skewX(-18deg);transition:left .6s ease;pointer-events:none}
+.bt:hover:after{left:130%}
+.hbtop{position:fixed;right:22px;bottom:96px;width:46px;height:46px;border-radius:50%;border:0;background:#16233F;color:#fff;font-size:18px;cursor:pointer;opacity:0;translate:0 14px;pointer-events:none;transition:opacity .3s,translate .3s;z-index:90;box-shadow:0 10px 24px -12px rgba(0,0,0,.5)}
+.hbtop.on{opacity:1;translate:0 0;pointer-events:auto}
+.hbcnt{font-variant-numeric:tabular-nums}
+@media(prefers-reduced-motion:reduce){.hbrv{opacity:1!important;translate:none!important;scale:none!important;transition:none}.cd:hover,.lu:hover,.scn:hover,.ind:hover,.uc:hover,.bt:hover{transform:none}.bt:after{display:none}}
+.vpill span{color:#fff!important}
+.cw-btn.cw-p{background:#62AD7F;padding:8px 20px 8px 8px;animation:cwb 3.2s ease-in-out infinite}.cw-btn.cw-p img{width:44px;height:44px;background:#fff;border-radius:50%;padding:5px;object-fit:contain}
+@keyframes cwb{0%,100%{translate:0 0}50%{translate:0 -5px}}
+.cw-peek{position:fixed;right:20px;bottom:92px;z-index:199;max-width:270px;background:#fff;color:#16233F;border:1px solid #DCE2EC;border-radius:16px 16px 4px 16px;padding:14px 34px 14px 16px;font:700 14px/1.6 "Noto Sans JP";box-shadow:0 18px 40px -16px rgba(22,35,63,.45);cursor:pointer;opacity:0;translate:0 12px;scale:.96;transform-origin:100% 100%;pointer-events:none;transition:opacity .35s,translate .35s,scale .35s}
+.cw-peek.on{opacity:1;translate:0 0;scale:1;pointer-events:auto}.cw-peek small{display:block;font-weight:500;color:#5E6B85;margin-top:4px}.cw-peek button{position:absolute;right:8px;top:6px;border:0;background:none;font-size:16px;color:#8A93A6;cursor:pointer}
+@media(prefers-reduced-motion:reduce){.cw-btn.cw-p{animation:none}}
+.hbh nav .dd{position:relative;display:flex;align-items:center}
+.hbh nav .dda{display:inline-block;width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);margin:0 2px 3px 7px;transition:transform .25s}
+.hbh nav .dd:hover .dda,.hbh nav .dd:focus-within .dda{transform:rotate(225deg);margin-bottom:-2px}
+.hbh nav .ddm{position:absolute;top:100%;left:50%;min-width:250px;background:#fff;border:1px solid var(--hb-line);border-radius:14px;padding:8px;box-shadow:0 24px 40px -20px rgba(22,35,63,.4);opacity:0;visibility:hidden;translate:-50% 8px;transition:opacity .2s,translate .2s,visibility .2s;z-index:90}
+.hbh nav .dd:hover .ddm,.hbh nav .dd:focus-within .ddm{opacity:1;visibility:visible;translate:-50% 0}
+.hbh nav .ddm a{display:block;padding:10px 12px;border-radius:10px;border:0!important;white-space:normal}
+.hbh nav .ddm a:hover{background:#F1F5F2}.hbh nav .ddm b{display:block;font-size:14px}.hbh nav .ddm small{display:block;font-size:12px;font-weight:500;color:#5E6B85;margin-top:2px}
+@media(max-width:1080px){.hbh nav .dd{display:block}.hbh nav .dd>a{display:none}.hbh nav .ddm{position:static;opacity:1;visibility:visible;translate:none;box-shadow:none;border:0;padding:0;min-width:0}.hbh nav .ddm a{padding:8px 0}.hbh nav .ddm small{display:none}}
+body.hb-peek .hbtop{bottom:180px}
+.cw-btn span,.ask span,.bt span,.jl span,.ctab .c a span,.ctab2 .c>span span{color:inherit!important}
