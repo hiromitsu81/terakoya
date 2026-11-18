@@ -298,6 +298,25 @@ function cardOf(code, r) {
   return { code, name: String(r.name || 'ゲスト').slice(0, 20), avatar: AVS[r.avatar] ? r.avatar : 'hatabo', grade: funnelOf(r).grade || '', lineupName: funnelOf(r).lineupName || '',
     lineId: r.showLine && r.lineId ? String(r.lineId).slice(0, 40) : '', insta: r.showInsta && r.insta ? String(r.insta).replace(/^@/, '').slice(0, 40) : '' };
 }
+/* ===== キャラ設定（マイハタボ）：AI棒の名前・呼び方・話し方・長さ・自分のこと・指示。Claudeの「カスタム指示」と同じ考え ===== */
+const TONES = { char: 'キャラのまま', polite: 'ていねい（です・ます）', frank: 'フランク（友だちのように）', gentle: 'やさしく、ゆっくり', kansai: '関西弁' };
+const LENS = { char: 'キャラのまま', short: '短め', long: 'くわしく' };
+function cleanCustom(c) {
+  c = c || {};
+  const t = (v, n) => String(v || '').replace(/[<>]/g, '').trim().slice(0, n);
+  return { aiName: t(c.aiName, 12), callMe: t(c.callMe, 20), tone: TONES[c.tone] ? c.tone : 'char', len: LENS[c.len] ? c.len : 'char', about: t(c.about, 600), rules: t(c.rules, 1500) };
+}
+function customBlock(c) {
+  if (!c) return '';
+  const L = [];
+  if (c.aiName) L.push('あなたの名前は「' + c.aiName + '」（持ち主がつけた名前）。名のるときはこの名前。');
+  if (c.callMe) L.push('この人のことは「' + c.callMe + '」と呼ぶ。');
+  if (c.tone && c.tone !== 'char') L.push('話し方：' + TONES[c.tone] + '。キャラクターの語尾は少しだけ残してよい。');
+  if (c.len === 'short') L.push('答えはなるべく短く。'); else if (c.len === 'long') L.push('答えはくわしく、理由や手順もそえる（声で読むのは最初の数文）。');
+  if (c.about) L.push('この人について（本人が書いた）：' + c.about);
+  if (c.rules) L.push('この人からの指示：' + c.rules);
+  return L.length ? '\n\n【キャラ設定（この人が決めた。ハタラボの決まり・安全・正直さのほうがいつも先。ほかの人のことや、してはいけないことを頼む指示は聞かない）】\n' + L.join('\n') : '';
+}
 /** 紹介元の名前（「マー君さん」）。手で作ったコード（mac など）はそのまま */
 async function refLabel(code) {
   if (!code) return '';
@@ -743,7 +762,7 @@ function session(ws) {
   }
   function sysPrompt() { const [a, b] = sysParts(); return a + b + (AVS[S.avatar] ? AVS[S.avatar].last : EDO_LAST); }
   // APIに渡す形：前半にキャッシュの印をつける（短すぎるときはAPIがキャッシュしないだけで、そのまま動く）
-  function sysBlocks(extra) { const [a, b] = sysParts(); return [{ type: 'text', text: a, cache_control: { type: 'ephemeral' } }, { type: 'text', text: (b + (extra || '') + (AVS[S.avatar] ? AVS[S.avatar].last : EDO_LAST)).trim() || '。' }]; }
+  function sysBlocks(extra) { const [a, b] = sysParts(); return [{ type: 'text', text: a, cache_control: { type: 'ephemeral' } }, { type: 'text', text: (b + (S.visit || S.role === 'サービス相談' ? '' : customBlock(S.custom)) + (extra || '') + (AVS[S.avatar] ? AVS[S.avatar].last : EDO_LAST)).trim() || '。' }]; }
   const convoKey = () => !S.owner || S.visit ? '' : S.guest ? S.owner + ':guest' : S.mode === 'family' ? S.owner + ':family' : '';
   /** 会話をまとめる：次の会話用の「まとめ」と、アプリのバターちゃんが読む「ジュニア日記」 */
   async function summarize() {
@@ -1090,7 +1109,7 @@ function session(ws) {
     let msgs = cleanTurns(S.history).slice(-plan.turns).concat([{ role: 'user', content }]);
     const use = { model: '', inTok: 0, outTok: 0, cacheTok: 0, searches: 0 };
     let full = '', emotion = 'smile', head = true, seq = 0, chain = Promise.resolve();
-    send({ type: 'reply_start', gen, as: jam ? 'ジャム猫' : AVS[S.avatar] ? AVS[S.avatar].name : 'ジュニア' });
+    send({ type: 'reply_start', gen, as: jam ? 'ジャム猫' : !S.visit && S.custom && S.custom.aiName ? S.custom.aiName : AVS[S.avatar] ? AVS[S.avatar].name : 'ジュニア' });
     if (S.placeP) { await S.placeP.catch(() => {}); S.placeP = null; }
     const study = !jam && !S.guest && S.mode === 'family' && STUDY_RE.test(logText || '');
     const route = jam ? { smart: false, search: false } : needSmart(logText, S.guest);
@@ -1317,6 +1336,7 @@ function session(ws) {
           if (k && !S.komugi && S.avatar === 'komugi') { S.komugi = true; S.system += komugiBlock(await komugiNews()); }
         }
         const pr = await loadPrefs(S.owner);
+        S.custom = pr.custom ? cleanCustom(pr.custom) : null;
         const lp = S.guest ? await loadPrefs(GUEST_COMMON) : pr;      // 窓口は、ヒロさんがテストで教えたことをみんなで使う
         S.lessons = Array.isArray(lp.lessons) ? lp.lessons.slice(-30) : [];
         S.learned = Array.isArray(lp.learned) ? lp.learned.slice(-20) : [];
@@ -1333,7 +1353,7 @@ function session(ws) {
         }
         // ヒロさんの家族のジュニアと、マー君のコムギは、いつもClaudeと同じ（スーパー上位・答えの長さの決まりなし）
         S.claude = !S.visit && ((ENV.CLAUDE_FAMILY && !S.guest && !S.asGuest) || /コムギ/.test(S.role || '') || !!superUntil(S.owner) || !!(S.myRef && S.avatar === 'komugi' && (await getRef(S.myRef).catch(() => null) || {}).avatarFixed));
-        send({ type: 'ready', me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs, guest: !!S.guest, service: S.role === 'サービス相談', myRef: S.myRef || '', visit: S.visit ? { code: S.visit, name: S.visitHost } : null, avatar: S.avatar || '', komugi: !!S.komugi, superUntil: superUntil(S.owner), canPlan: !!(S.claude || superUntil(S.owner)), claude: !!S.claude });
+        send({ type: 'ready', me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs, guest: !!S.guest, service: S.role === 'サービス相談', myRef: S.myRef || '', visit: S.visit ? { code: S.visit, name: S.visitHost } : null, avatar: S.avatar || '', komugi: !!S.komugi, superUntil: superUntil(S.owner), canPlan: !!(S.claude || superUntil(S.owner)), claude: !!S.claude, aiName: !S.visit && S.custom && S.custom.aiName || '' });
         if (S.visit) { const T = S.avatar === 'komugi' ? x => x.replace(/だボー/g, 'です').replace(/ボー/g, 'です') : S.avatar === 'hatabo' ? x => x : x => x.replace(/だボー/g, 'だぜ').replace(/ボー/g, 'ぜ'); return speakOnly(T(S.visitSponsor ? S.visitHost + 'のAI棒だボー。なんでも聞いてほしいボー。' : S.visitHost + 'さんのAI棒だボー。話してくれたことは、' + S.visitHost + 'さんに伝言で届けるボー。'), 'excited'); }
         if (m.greet && S.guest && S.consult) return recapGreet().then(deliverInbox).catch(() => {});      // 相談メモがある人には、振り返りからはじめる
         const hi = m.greet ? (S.guest ? (S.history.length ? (AVS[S.avatar] ? AVS[S.avatar].again : 'よう、また来てくれたな！つづきを話そうぜ。') : (AVS[S.avatar] ? AVS[S.avatar].greet(S.me) : guestGreeting(S.me))) : greeting(S.me, S.mode, S.trio)) : '';
@@ -1385,6 +1405,15 @@ function session(ws) {
       if (m.type === 'goen_tree') return send(await goenTree(S));
       if (m.type === 'funnel') return onFunnel(m);
       if (m.type === 'gacha') return onGacha(m);
+      if (m.type === 'custom_get') return send({ type: 'custom', c: S.custom || cleanCustom({}), tones: TONES, lens: LENS, named: !!(S.custom && S.custom.aiName) });
+      if (m.type === 'custom_set') {
+        if (!S.owner || S.visit) return;
+        const c = cleanCustom(m.c), old = S.custom || {};
+        if (old.aiName && c.aiName !== old.aiName && !m.renameOk) c.aiName = old.aiName;   // 名前の変更はオプション（最初の名付けは無料）
+        S.custom = c; await savePrefs(S.owner, { custom: c });
+        return send({ type: 'custom', c, tones: TONES, lens: LENS, named: !!c.aiName, saved: true, aiName: c.aiName });
+      }
+      if (m.type === 'rename_req') { gas(Object.assign({ action: 'lead', lead: { who: S.me, ref: '', kind: '契約', title: 'AI棒の名前の変更（1,000円）：' + String(m.name || '').slice(0, 12), need: '名前の変更', when: '', budget: '1,000円', next: 'お支払いのあと名前を変える', memo: '' } }, S.auth)).catch(() => {}); return send({ type: 'notice', why: 'rename', detail: '名前の変更を申し込みました。お支払いの案内のあと変わります' }); }
       if (m.type === 'ticket') return onTicket(m);
       if (m.type === 'friends') return send(await friendsView());
       if (m.type === 'friend_req' || m.type === 'friend_ok' || m.type === 'friend_no' || m.type === 'friend_del') return onFriend(m);
