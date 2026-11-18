@@ -783,6 +783,8 @@ textarea.hbin { resize: vertical; line-height: 1.6; }
 .av-hatabo .mybtn, .av-komugi .mybtn { white-space: nowrap; flex-shrink: 0; padding: 0 11px; font-size: 12.5px; }
 .av-hatabo header h1, .av-komugi header h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .av-hatabo.liffmode #chip, .av-komugi.liffmode #chip { display: none; }
+
+body.pcweb #talkOaBtn, body.pcweb .pinbar { display: none !important; }
 </style>
 </head>
 <body>
@@ -2350,6 +2352,7 @@ textarea.hbin { resize: vertical; line-height: 1.6; }
         throw new Error('LINEのログインができませんでした');
       }
       try { sessionStorage.removeItem('butter.login'); } catch (e) {}
+      try { if (!liff.isInClient()) document.body.classList.add('pcweb'); } catch (e) {}   // PCやふつうのブラウザ：LINEのトークへ行くボタン・ピン留めの帯は出さない
       poll();
     } catch (e) {
       hint.textContent = 'ミニアプリの準備ができませんでした（' + (e.message || e) + '）';
@@ -2826,9 +2829,9 @@ textarea.hbin { resize: vertical; line-height: 1.6; }
       body.querySelectorAll('[data-copy]').forEach(b => b.onclick = async () => { const n = list.find(x => x.id === b.dataset.copy); try { await navigator.clipboard.writeText(n.title + '\n\n' + n.text); toast('コピーしたよ'); } catch (e) { toast('コピーできなかった'); } });
       body.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { if (confirmDel(b)) jrSend({ type: 'note_del', id: b.dataset.del }); });
     } else if (p === 'settings') {
-      const rows = [['custom', 'キャラ設定', '名前・呼び方・話し方・長さ・いつもの指示'], ['google', 'Googleアカウント連携', '議事録やメモをGoogleドライブへ'], ['social', '公開設定', 'ガチャに出る・LINE ID・Instagram'], ['plan', 'プラン・支払い', 'お試し・ラインナップ・グレード'], ['ticket', '追加チケット', '回数をこえたときのチケット'], ['share', '紹介する', 'ハタボのカードを友だちに'], ['times', 'ハタボタイムズ', 'お知らせ・使い方'], ['oa', '公式LINEのトークへ', 'トークをピン留めしておくと、いつでもすぐ開けます']];
+      const rows = [['custom', 'キャラ設定', '名前・呼び方・話し方・長さ・いつもの指示'], ['google', 'Googleアカウント連携', '議事録やメモをGoogleドライブへ'], ['social', '公開設定', 'ガチャに出る・LINE ID・Instagram'], ['plan', 'プラン・支払い', 'お試し・ラインナップ・グレード'], ['ticket', '追加チケット', '回数をこえたときのチケット'], ['share', '紹介する', 'ハタボのカードを友だちに'], ['times', 'ハタボタイムズ', 'お知らせ・使い方'], ['oa', '公式LINEのトークへ', 'トークをピン留めしておくと、いつでもすぐ開けます'], ['pc', 'PCで使う', 'PCのブラウザでも、同じハタボと話せます']];
       body.innerHTML = `<div class="hbc"><div class="k">SETTINGS</div><h3>設定</h3><p>あなたのAI棒の設定は、ここにまとまっています。公式LINEのメニューの「設定」からも開けます。</p></div>
-        <div class="hbc">${rows.map(([k, t, d0]) => `<button type="button" class="hbrow" ${k === 'oa' ? 'onclick="goOaTalkW()"' : `data-go="${k}"`}><div><b>${t}</b><span>${d0}</span></div><i>›</i></button>`).join('')}</div>`;
+        <div class="hbc">${rows.map(([k, t, d0]) => `<button type="button" class="hbrow" ${k === 'oa' ? 'onclick="goOaTalkW()"' : k === 'pc' ? 'onclick="pcLinkW()"' : `data-go="${k}"`}><div><b>${t}</b><span>${d0}</span></div><i>›</i></button>`).join('')}</div>`;
     } else if (p === 'google') {
       body.innerHTML = `<div class="hbc"><div class="k">GOOGLE</div><h3>Googleアカウント連携</h3>${gCard() || '<p>よみこみ中だボー…</p>'}<p style="font-size:11.5px">保存したものは「メモ・議事録」から開けます。</p><button type="button" class="hbbtn w" data-go="notes">メモ・議事録を見る</button></div>`;
       hbpWireGoogle(body);
@@ -3097,6 +3100,9 @@ textarea.hbin { resize: vertical; line-height: 1.6; }
   // ミニアプリ ⇄ 公式LINE：トークへ行くときは、ミニアプリをとじてトークを開く
   function goOaTalk() { const u = 'https://line.me/R/oaMessage/@024curid/'; try { if (window.liff && liff.openWindow) { liff.openWindow({ url: u, external: false }); setTimeout(() => { try { liff.closeWindow(); } catch (e) {} }, 400); return; } } catch (e) {} location.href = u; }
   $('talkOaBtn').addEventListener('click', goOaTalk); window.goOaTalkW = goOaTalk;
+  // PCで使うURL：LINEに登録したエンドポイント（ブラウザでLINEログインして、同じハタボにつながる）
+  window.pcLinkW = async () => { const u = 'https://hiromitsu81.github.io/terakoya/butter/?liff=1&g=' + encodeURIComponent(Q.get('g') || 'AKfycbxe-O1pMup7kUMVKVkmQemYknVSyTSq1ub3bHJqPI8-0QIAYG7o2eXKI_yQIk9tHwPz') + '&liffId=2012676035-yCkx6tBu';
+    try { await navigator.clipboard.writeText(u); toast('PC用のURLをコピーしたよ。PCのブラウザに貼ってね'); } catch (e) { prompt('PCのブラウザでこのURLを開いてね', u); } };
   $('pinGo').addEventListener('click', () => { try { localStorage.setItem('pinDone', '1'); } catch (e) {} $('pinBar').hidden = true; goOaTalk(); });
   $('pinX').addEventListener('click', () => { try { localStorage.setItem('pinDone', '1'); } catch (e) {} $('pinBar').hidden = true; });
   // ピン留めのおすすめ：ハタボのアプリで、まだ「とじる」していない人に、2回目に開いたときから3回まで
