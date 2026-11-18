@@ -769,6 +769,20 @@ textarea.hbin { resize: vertical; line-height: 1.6; }
 .gdrive { display: grid; gap: 4px; margin: 10px 0 2px; padding: 12px; border-radius: 14px; background: #F3F5FA; }
 .gdrive b { font: 800 14px var(--display); } .gdrive span { font-size: 12px; color: #5E6B85; }
 .gdrive.on { background: #EEF6E3; } .gdrive .hbbtn { margin-top: 6px; } .gdrive .hbtag { justify-self: start; }
+
+.hbrow { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 10px; text-align: left; padding: 12px 2px; border: 0; border-top: 1px solid #EEF1F6; background: transparent; cursor: pointer; color: #16233F; }
+.hbrow:first-child { border-top: 0; } .hbrow b { display: block; font: 800 15px var(--display); } .hbrow span { font-size: 12px; color: #5E6B85; } .hbrow i { font-style: normal; font-size: 22px; color: #8A93A6; }
+
+.mybtn.tk { background: #16233F; color: #fff; }
+.pinbar { position: fixed; z-index: 54; left: 10px; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); display: flex; gap: 8px; align-items: center; padding: 12px 10px 12px 14px; border-radius: 18px; background: #16233F; color: #fff; box-shadow: 0 16px 34px -14px rgba(22,35,63,.7); max-width: 560px; margin: 0 auto; }
+.pinbar[hidden] { display: none; }
+.pinbar b { display: block; font: 800 14px var(--display); } .pinbar span { font-size: 11.5px; color: #C9D0DC; line-height: 1.5; display: block; margin-top: 2px; }
+.pinbar #pinGo { flex-shrink: 0; border: 0; border-radius: 999px; background: #C9A24A; color: #fff; font: 800 12.5px var(--display); padding: 9px 12px; cursor: pointer; }
+.pinbar #pinX { flex-shrink: 0; border: 0; background: transparent; color: #C9D0DC; font-size: 18px; cursor: pointer; padding: 4px; }
+
+.av-hatabo .mybtn, .av-komugi .mybtn { white-space: nowrap; flex-shrink: 0; padding: 0 11px; font-size: 12.5px; }
+.av-hatabo header h1, .av-komugi header h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.av-hatabo.liffmode #chip, .av-komugi.liffmode #chip { display: none; }
 </style>
 </head>
 <body>
@@ -776,7 +790,7 @@ textarea.hbin { resize: vertical; line-height: 1.6; }
   <header>
     <h1>福まねき特戦隊</h1>
     <div class="row">
-      <button type="button" class="mybtn" id="myBtn"><img src="award_mark.svg" alt="">マイハタボ</button><span class="chip" id="chip" data-s="idle" role="status" aria-live="polite">まってるよ</span>
+      <button type="button" class="mybtn tk" id="talkOaBtn" title="公式LINEのトークへ">トーク</button><button type="button" class="mybtn" id="myBtn"><img src="award_mark.svg" alt="">マイハタボ</button><span class="chip" id="chip" data-s="idle" role="status" aria-live="polite">まってるよ</span>
       <button class="icon-btn" id="bigBtn" aria-label="プロジェクター表示" title="プロジェクター表示">⛶</button>
       <button class="icon-btn" id="openSettings" aria-label="設定" title="設定">⚙</button>
     </div>
@@ -1192,11 +1206,12 @@ textarea.hbin { resize: vertical; line-height: 1.6; }
   </section>
 </div>
 
+<div class="pinbar" id="pinBar" hidden><div><b>ハタボのトークをピン留めしよう</b><span>トーク一覧の「ハタボ」を長押し →「ピン留め」で、いつもいちばん上に。メニューからすぐこの画面にもどれます。</span></div><button type="button" id="pinGo">トークを開く</button><button type="button" id="pinX" aria-label="とじる">×</button></div>
 <div class="visitbar" id="visitBar" hidden><img src="award_mark.svg" alt=""><span id="visitName"></span><button type="button" id="visitBack">もどる</button></div>
 <div class="hbpage" id="hbPage" hidden>
   <div class="hbp-top"><img src="award_mark.svg" alt=""><b id="hbpTitle">マイハタボ</b><button type="button" id="hbpClose">ハタボと話す</button></div>
   <nav class="hbp-tabs" id="hbpTabs" aria-label="マイハタボのメニュー">
-    <button type="button" data-p="my">マイハタボ</button><button type="button" data-p="custom">キャラ設定</button><button type="button" data-p="notes">メモ・議事録</button><button type="button" data-p="grow">育てたハタボ</button><button type="button" data-p="goen">ご縁</button><button type="button" data-p="inbox">伝言</button><button type="button" data-p="gacha">ガチャ</button><button type="button" data-p="friends">友だち</button><button type="button" data-p="plan">プラン・支払い</button><button type="button" data-p="ticket">チケット</button><button type="button" data-p="aisai">AISAI・愛祭</button><button type="button" data-p="times">ハタボタイムズ</button><button type="button" data-p="share">紹介する</button>
+    <button type="button" data-p="my">マイハタボ</button><button type="button" data-p="notes">メモ・議事録</button><button type="button" data-p="inbox">伝言</button><button type="button" data-p="goen">ご縁</button><button type="button" data-p="gacha">ガチャ</button><button type="button" data-p="friends">友だち</button><button type="button" data-p="grow">育てたハタボ</button><button type="button" data-p="aisai">AISAI・愛祭</button><button type="button" data-p="settings">設定</button>
   </nav>
   <div class="hbp-body" id="hbpBody"></div>
 </div>
@@ -2399,10 +2414,10 @@ textarea.hbin { resize: vertical; line-height: 1.6; }
     switch (m.type) {
       case 'inbox': HBP.inbox = m; if (m.sent) toast('伝言をとどけたよ'); if (!$('hbPage').hidden && HBP.page === 'inbox') { if (m.sent || !HBP.inboxShown) { HBP.inboxShown = true; hbpRender(); } } break;
       case 'custom': HBP.custom = m; if (m.saved) { toast('キャラ設定を保存したよ'); window.__aiName = m.aiName || ''; avText(); const t = document.querySelector('#butterTag text'); if (t && avName()) t.textContent = avName(); } if (!$('hbPage').hidden && HBP.page === 'custom') hbpRender(); break;
-      case 'google': HBP.google = m; if (!$('hbPage').hidden && HBP.page === 'notes') hbpRender(); break;
+      case 'google': HBP.google = m; if (!$('hbPage').hidden && (HBP.page === 'notes' || HBP.page === 'google')) hbpRender(); break;
       case 'google_url': try { if (window.liff && liff.openWindow) liff.openWindow({ url: m.url, external: true }); else window.open(m.url, '_blank'); } catch (e) { location.href = m.url; } toast('ブラウザでGoogleにログインしてね。終わったらLINEにもどってきてね'); setTimeout(() => jrSend({ type: 'google_status' }), 20000); break;
       case 'gacha': HBP.gacha = m; if (!$('hbPage').hidden && HBP.page === 'gacha') hbpRender(); break;
-      case 'friends': HBP.friends = m; if (!$('hbPage').hidden && HBP.page === 'friends') hbpRender(); break;
+      case 'friends': HBP.friends = m; if (!$('hbPage').hidden && (HBP.page === 'friends' || HBP.page === 'social')) hbpRender(); break;
       case 'goen': HBP.goen = m; if (!$('hbPage').hidden && HBP.page === 'goen') hbpRender(); break;
       case 'limit': HBP.limitHit = m.why || 'plan'; setTimeout(() => hbpOpen('ticket'), 1800); break;
       case 'mypage': if (m.driveMsg) toast(m.driveMsg); if (m.ticketOk || m.ticketNg) { HBP.tMsg = m.ticketOk || m.ticketNg; toast(HBP.tMsg); if (m.ticketOk) HBP.limitHit = ''; } HBP.data = m; if (!$('hbPage').hidden) hbpRender(); break;
@@ -2775,11 +2790,12 @@ textarea.hbin { resize: vertical; line-height: 1.6; }
   ];
   function hbpRender() {
     const p = HBP.page, d = HBP.data, nm = avName() || 'ハタボ';
-    $('hbpTitle').textContent = { custom: 'キャラ設定', ticket: '追加チケット', my: 'マイハタボ', notes: 'メモ・議事録', grow: '育てた' + nm, goen: 'ご縁のひろがり', inbox: '伝言', gacha: 'AI棒ガチャ', friends: '友だち', plan: 'プラン・支払い', aisai: 'AISAI・愛祭', times: 'ハタボタイムズ', share: '紹介する' }[p] || 'マイハタボ';
-    document.querySelectorAll('#hbpTabs button').forEach(b => b.classList.toggle('on', b.dataset.p === p));
+    $('hbpTitle').textContent = { settings: '設定', google: 'Googleアカウント連携', social: '公開設定', custom: 'キャラ設定', ticket: '追加チケット', my: 'マイハタボ', notes: 'メモ・議事録', grow: '育てた' + nm, goen: 'ご縁のひろがり', inbox: '伝言', gacha: 'AI棒ガチャ', friends: '友だち', plan: 'プラン・支払い', aisai: 'AISAI・愛祭', times: 'ハタボタイムズ', share: '紹介する' }[p] || 'マイハタボ';
+    const tabOf = { custom: 'settings', google: 'settings', social: 'settings', plan: 'settings', ticket: 'settings', times: 'settings', share: 'settings' }[p] || p;
+    document.querySelectorAll('#hbpTabs button').forEach(b => b.classList.toggle('on', b.dataset.p === tabOf));
     { const on = document.querySelector('#hbpTabs .on'); if (on) try { on.scrollIntoView({ inline: 'center', block: 'nearest' }); } catch (e) {} }
     const body = $('hbpBody');
-    if (!d && p !== 'times' && p !== 'share' && p !== 'aisai' && p !== 'goen' && p !== 'inbox' && p !== 'gacha' && p !== 'friends' && p !== 'custom') { body.innerHTML = '<div class="hbc"><p>よみこみ中だボー…</p></div>'; return; }
+    if (!d && p !== 'times' && p !== 'share' && p !== 'aisai' && p !== 'goen' && p !== 'inbox' && p !== 'gacha' && p !== 'friends' && p !== 'custom' && p !== 'settings' && p !== 'google' && p !== 'social') { body.innerHTML = '<div class="hbc"><p>よみこみ中だボー…</p></div>'; return; }
     const n = x => Number(x || 0).toLocaleString('ja-JP');
     if (p === 'my') {
       const left = Math.max(0, d.limit - d.today), pct = Math.min(100, Math.round(d.today / Math.max(1, d.limit) * 100));
@@ -2798,9 +2814,7 @@ textarea.hbin { resize: vertical; line-height: 1.6; }
       body.innerHTML = `
         <div class="hbc"><div class="k">NOTES</div><h3>メモ・議事録</h3>
           <p>話しながら「〇〇をメモして」「議事録つくって」と言うと、ここに残ります。長い文章（企画書・メールの下書きなど）も自動で残ります。</p>
-          ${(() => { const G = HBP.google; if (!G) { if (J.ready) jrSend({ type: 'google_status' }); return ''; } if (!G.ready) return '<p class="hbmuted" style="font-size:11.5px">Googleドライブへの保存は準備中です。</p>';
-            return G.linked ? `<div class="gdrive on"><b>Googleドライブ：${esc(G.email || '連携ずみ')}</b><span>「ハタボ」フォルダに保存されます</span><label class="hbsw" style="padding:4px 0"><input type="checkbox" id="gAuto" ${G.auto ? 'checked' : ''}><span>新しい議事録・メモ・書いた文章を自動で保存</span></label><button type="button" class="hbtag hbmuted" id="gUnlink" style="border:0;cursor:pointer">連携をやめる</button></div>`
-              : `<div class="gdrive"><b>Googleアカウントと連携</b><span>議事録・メモ・書いた文章を、あなたのGoogleドライブの「ハタボ」フォルダに保存できます。ハタボがさわれるのは、ハタボが作ったファイルだけです。</span><button type="button" class="hbbtn" id="gLink">Googleと連携する</button></div>`; })()}
+          ${gCard()}
           <div class="hbfil">${[['all', 'ぜんぶ'], ['minutes', '議事録'], ['memo', 'メモ'], ['doc', '書いた文章']].map(([k, l]) => `<button type="button" data-f="${k}" class="${f === k ? 'on' : ''}">${l}</button>`).join('')}</div></div>
         ${d.summary ? `<details class="hbc hbnote"><summary><span class="hbtag">これまでのまとめ</span><b>前の会話のまとめ</b></summary><div class="hbntext">${esc(d.summary)}</div></details>` : ''}
         ${shown.length ? shown.map(x => `<details class="hbc hbnote"><summary><span class="hbtag${x.kind === 'minutes' ? ' gold' : ''}">${K[x.kind] || 'メモ'}</span><b>${esc(x.title)}</b><time>${dt(x.at)}</time></summary>
@@ -2808,11 +2822,21 @@ textarea.hbin { resize: vertical; line-height: 1.6; }
           : '<div class="hbc"><p class="hbmuted">まだありません。「今のをメモして」と話しかけてみてください。</p></div>'}`;
       body.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { HBP.filter = b.dataset.f; hbpRender(); });
       body.querySelectorAll('[data-drive]').forEach(b => b.onclick = () => { b.disabled = true; b.textContent = '保存中…'; jrSend({ type: 'note_drive', id: b.dataset.drive }); });
-      { const gl = document.getElementById('gLink'); if (gl) gl.onclick = () => { gl.disabled = true; gl.textContent = 'ひらいています…'; jrSend({ type: 'google_link' }); };
-        const ga = document.getElementById('gAuto'); if (ga) ga.onchange = () => jrSend({ type: 'google_auto', on: ga.checked });
-        const gu = document.getElementById('gUnlink'); if (gu) gu.onclick = () => { if (confirmDel(gu)) jrSend({ type: 'google_unlink' }); }; }
+      hbpWireGoogle(body);
       body.querySelectorAll('[data-copy]').forEach(b => b.onclick = async () => { const n = list.find(x => x.id === b.dataset.copy); try { await navigator.clipboard.writeText(n.title + '\n\n' + n.text); toast('コピーしたよ'); } catch (e) { toast('コピーできなかった'); } });
       body.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { if (confirmDel(b)) jrSend({ type: 'note_del', id: b.dataset.del }); });
+    } else if (p === 'settings') {
+      const rows = [['custom', 'キャラ設定', '名前・呼び方・話し方・長さ・いつもの指示'], ['google', 'Googleアカウント連携', '議事録やメモをGoogleドライブへ'], ['social', '公開設定', 'ガチャに出る・LINE ID・Instagram'], ['plan', 'プラン・支払い', 'お試し・ラインナップ・グレード'], ['ticket', '追加チケット', '回数をこえたときのチケット'], ['share', '紹介する', 'ハタボのカードを友だちに'], ['times', 'ハタボタイムズ', 'お知らせ・使い方'], ['oa', '公式LINEのトークへ', 'トークをピン留めしておくと、いつでもすぐ開けます']];
+      body.innerHTML = `<div class="hbc"><div class="k">SETTINGS</div><h3>設定</h3><p>あなたのAI棒の設定は、ここにまとまっています。公式LINEのメニューの「設定」からも開けます。</p></div>
+        <div class="hbc">${rows.map(([k, t, d0]) => `<button type="button" class="hbrow" ${k === 'oa' ? 'onclick="goOaTalkW()"' : `data-go="${k}"`}><div><b>${t}</b><span>${d0}</span></div><i>›</i></button>`).join('')}</div>`;
+    } else if (p === 'google') {
+      body.innerHTML = `<div class="hbc"><div class="k">GOOGLE</div><h3>Googleアカウント連携</h3>${gCard() || '<p>よみこみ中だボー…</p>'}<p style="font-size:11.5px">保存したものは「メモ・議事録」から開けます。</p><button type="button" class="hbbtn w" data-go="notes">メモ・議事録を見る</button></div>`;
+      hbpWireGoogle(body);
+    } else if (p === 'social') {
+      const F = HBP.friends;
+      if (!F) { body.innerHTML = '<div class="hbc"><p>よみこみ中だボー…</p></div>'; if (J.ready) jrSend({ type: 'friends' }); return; }
+      body.innerHTML = socialCard(F.me || {});
+      hbpWireSocial(body);
     } else if (p === 'custom') {
       const C = HBP.custom;
       if (!C) { body.innerHTML = '<div class="hbc"><p>よみこみ中だボー…</p></div>'; if (J.ready) jrSend({ type: 'custom_get' }); return; }
@@ -2876,18 +2900,11 @@ textarea.hbin { resize: vertical; line-height: 1.6; }
           ${(F.list || []).map(x => `<div class="fcard"><div class="fh">${avSvg(x.avatar, 44)}<div><b>${esc(x.name)}さん</b><span>${esc((x.lineupName || '') + ' ' + (x.grade || ''))}</span></div></div>
             <div class="fsoc">${x.lineId ? `<a href="https://line.me/ti/p/~${encodeURIComponent(x.lineId)}" target="_blank" rel="noopener">LINE：${esc(x.lineId)}</a>` : ''}${x.insta ? `<a href="https://www.instagram.com/${encodeURIComponent(x.insta)}/" target="_blank" rel="noopener">Instagram：@${esc(x.insta)}</a>` : ''}</div>
             <div class="hbnact"><button type="button" class="hbtag" onclick="hbpTo('${esc(x.code)}')">伝言</button><button type="button" class="hbtag gold" onclick="hbpVisit('${esc(x.code)}')">AI棒と話す</button><button type="button" class="hbtag hbmuted" data-fdel="${esc(x.code)}">外す</button></div></div>`).join('') || '<p class="hbmuted">まだいません。ガチャでオーナーのAI棒が出たら、友だち申請できます。</p><button type="button" class="hbbtn" data-go="gacha">ガチャを回す</button>'}</div>
-        <div class="hbc"><div class="k">SETTINGS</div><h3>わたしの公開設定</h3>
-          <label class="hbsw"><input type="checkbox" id="sGacha" ${me.gachaOn ? 'checked' : ''}><span>ガチャに自分のAI棒を出す${me.contract ? '' : '（契約するとガチャに出ます）'}</span></label>
-          <label class="hbsw"><input type="checkbox" id="sLine" ${me.showLine ? 'checked' : ''}><span>友だちにLINE IDを見せる</span></label>
-          <input class="hbin" id="sLineId" maxlength="40" placeholder="LINE ID" value="${esc(me.lineId)}">
-          <label class="hbsw"><input type="checkbox" id="sInsta" ${me.showInsta ? 'checked' : ''}><span>友だちにInstagramを紹介する</span></label>
-          <input class="hbin" id="sInstaId" maxlength="40" placeholder="Instagramのアカウント（@なし）" value="${esc(me.insta)}">
-          <p style="font-size:11.5px">LINE IDとInstagramは、オンにしたときだけ、承認した友だちにだけ見えます。ガチャで引いた人には見えません。</p>
-          <button type="button" class="hbbtn" id="sSave">保存する</button></div>`;
+        ${socialCard(me)}`;
       body.querySelectorAll('[data-fok]').forEach(b => b.onclick = () => jrSend({ type: 'friend_ok', code: b.dataset.fok }));
       body.querySelectorAll('[data-fno]').forEach(b => b.onclick = () => jrSend({ type: 'friend_no', code: b.dataset.fno }));
       body.querySelectorAll('[data-fdel]').forEach(b => b.onclick = () => { if (confirmDel(b)) jrSend({ type: 'friend_del', code: b.dataset.fdel }); });
-      const sv = document.getElementById('sSave'); if (sv) sv.onclick = () => { jrSend({ type: 'social', gachaOn: $('sGacha').checked, showLine: $('sLine').checked, lineId: $('sLineId').value, showInsta: $('sInsta').checked, insta: $('sInstaId').value }); toast('保存したよ'); };
+      hbpWireSocial(body);
     } else if (p === 'inbox') {
       const ib = HBP.inbox;
       if (!ib) { body.innerHTML = '<div class="hbc"><p>伝言をよみこみ中だボー…</p></div>'; if (J.ready) jrSend({ type: 'inbox' }); return; }
@@ -2983,7 +3000,7 @@ textarea.hbin { resize: vertical; line-height: 1.6; }
       $('hbpShare').onclick = shareHatabo;
     }
     hbpWire();
-    body.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { HBP.page = b.dataset.go; hbpRender(); });
+    body.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { HBP.page = b.dataset.go; if (J.ready && ({ my: 1, plan: 1, ticket: 1, grow: 1 })[HBP.page]) jrSend({ type: 'mypage' }); hbpRender(); });
     body.querySelectorAll('[data-ask]').forEach(b => b.onclick = () => { hbpClose(); const t = b.dataset.ask; addBubble('あなた', t, 'me'); jrSend({ type: 'text', text: t }); });
   }
   // ハタボをいつもの場所に：友だち追加・ホーム画面に追加・トークをピン留め（ピン留めはLINEの決まりで本人の操作だけ）
@@ -2995,11 +3012,11 @@ textarea.hbin { resize: vertical; line-height: 1.6; }
       <div class="hbplan"><div><b>1. 公式LINEを友だち追加</b><span>トークからいつでも話せて、メニューも出ます</span></div>${fr ? '<span class="hbtag">追加ずみ</span>' : '<a class="hbtag gold" href="https://line.me/R/ti/p/@024curid" style="text-decoration:none">追加する</a>'}</div>
       <div class="hbplan"><div><b>2. ホーム画面に置く</b><span>スマホのアプリのように、1回で開けます</span></div>${can ? '<button type="button" class="hbtag gold" id="hbpHome" style="border:0;cursor:pointer">置く</button>' : '<span class="hbtag hbmuted">準備中</span>'}</div>
       <div class="hbplan"><div><b>3. トークをいちばん上にピン留め</b><span>LINEのトーク一覧で「ハタボ」を長押し →「ピン留め」</span></div><button type="button" class="hbtag gold" id="hbpPin" style="border:0;cursor:pointer">開く</button></div>
-      <p style="font-size:11.5px">ピン留めはLINEの決まりで、アプリからは代わりにできません。「開く」でトーク一覧にもどるので、そこで長押ししてください。</p></div>`;
+      <p style="font-size:11.5px">ピン留めはLINEの決まりで、アプリからは代わりにできません。「開く」でハタボのトークにもどるので、トーク一覧の「ハタボ」を長押しして「ピン留め」してください。</p></div>`;
   }
   function hbpWire() {
     const h = document.getElementById('hbpHome'); if (h) h.onclick = async () => { try { await liff.createShortcutOnHomeScreen({ url: 'https://miniapp.line.me/2012676035-yCkx6tBu' }); } catch (e) { toast('この端末ではまだ置けないみたい'); } };
-    const p = document.getElementById('hbpPin'); if (p) p.onclick = () => { location.href = 'https://line.me/R/nv/chat'; };
+    const p = document.getElementById('hbpPin'); if (p) p.onclick = () => { try { localStorage.setItem('pinDone', '1'); } catch (e) {} goOaTalk(); };
   }
   async function hbpFriend() { try { if (window.liff && liff.getFriendship) { const r = await liff.getFriendship(); HBS.friend = !!(r && r.friendFlag); if (!$('hbPage').hidden) hbpRender(); } } catch (e) {} }
   // 消すのは2回押し（1回目で「もう一度で消す」）
@@ -3060,12 +3077,36 @@ textarea.hbin { resize: vertical; line-height: 1.6; }
     const col = av === 'komugi' ? ['#E9C27D', '#FBEBC8'] : av === 'gold' ? ['#D9AE45', '#FFF0B8'] : ['#FFE27A', '#FFF3C4'];
     return `<svg width="${size}" height="${size}" viewBox="0 0 100 100"><path d="M44 16 Q46 6 52 10 Q54 4 60 9" fill="none" stroke="#F2B84B" stroke-width="3" stroke-linecap="round"/><circle cx="50" cy="48" r="34" fill="${col[0]}"/><ellipse cx="50" cy="60" rx="21" ry="17" fill="${col[1]}"/><circle cx="39" cy="42" r="4" fill="#1C2233"/><circle cx="61" cy="42" r="4" fill="#1C2233"/><path d="M45 50 L55 50 L50 56 Z" fill="#F2994A"/><circle cx="50" cy="64" r="7" fill="#fff"/><image href="award_mark.svg" x="44.5" y="58.5" width="11" height="11"/><path d="M16 74 L24 68 L31 76 L39 68 L46 76 L54 68 L61 76 L69 68 L76 76 L84 74 Q84 94 50 95 Q16 94 16 74 Z" fill="#FFFDF7" stroke="#E6E1D3" stroke-width="1.5"/></svg>`;
   }
+  function socialCard(me) { return `<div class="hbc"><div class="k">SETTINGS</div><h3>わたしの公開設定</h3>
+          <label class="hbsw"><input type="checkbox" id="sGacha" ${me.gachaOn ? 'checked' : ''}><span>ガチャに自分のAI棒を出す${me.contract ? '' : '（契約するとガチャに出ます）'}</span></label>
+          <label class="hbsw"><input type="checkbox" id="sLine" ${me.showLine ? 'checked' : ''}><span>友だちにLINE IDを見せる</span></label>
+          <input class="hbin" id="sLineId" maxlength="40" placeholder="LINE ID" value="${esc(me.lineId)}">
+          <label class="hbsw"><input type="checkbox" id="sInsta" ${me.showInsta ? 'checked' : ''}><span>友だちにInstagramを紹介する</span></label>
+          <input class="hbin" id="sInstaId" maxlength="40" placeholder="Instagramのアカウント（@なし）" value="${esc(me.insta)}">
+          <p style="font-size:11.5px">LINE IDとInstagramは、オンにしたときだけ、承認した友だちにだけ見えます。ガチャで引いた人には見えません。</p>
+          <button type="button" class="hbbtn" id="sSave">保存する</button></div>`; }
+  function hbpWireSocial(body) { const sv = body.querySelector('#sSave'); if (sv) sv.onclick = () => { jrSend({ type: 'social', gachaOn: $('sGacha').checked, showLine: $('sLine').checked, lineId: $('sLineId').value, showInsta: $('sInsta').checked, insta: $('sInstaId').value }); toast('保存したよ'); }; }
+  function gCard() { const G = HBP.google; if (!G) { if (J.ready) jrSend({ type: 'google_status' }); return ''; } if (!G.ready) return '<p class="hbmuted" style="font-size:11.5px">Googleドライブへの保存は準備中です。</p>';
+            return G.linked ? `<div class="gdrive on"><b>Googleドライブ：${esc(G.email || '連携ずみ')}</b><span>「ハタボ」フォルダに保存されます</span><label class="hbsw" style="padding:4px 0"><input type="checkbox" id="gAuto" ${G.auto ? 'checked' : ''}><span>新しい議事録・メモ・書いた文章を自動で保存</span></label><button type="button" class="hbtag hbmuted" id="gUnlink" style="border:0;cursor:pointer">連携をやめる</button></div>`
+              : `<div class="gdrive"><b>Googleアカウントと連携</b><span>議事録・メモ・書いた文章を、あなたのGoogleドライブの「ハタボ」フォルダに保存できます。ハタボがさわれるのは、ハタボが作ったファイルだけです。</span><button type="button" class="hbbtn" id="gLink">Googleと連携する</button></div>`; }
+  function hbpWireGoogle(body) {
+    const gl = body.querySelector('#gLink'); if (gl) gl.onclick = () => { gl.disabled = true; gl.textContent = 'ひらいています…'; jrSend({ type: 'google_link' }); };
+    const ga = body.querySelector('#gAuto'); if (ga) ga.onchange = () => jrSend({ type: 'google_auto', on: ga.checked });
+    const gu = body.querySelector('#gUnlink'); if (gu) gu.onclick = () => { if (confirmDel(gu)) jrSend({ type: 'google_unlink' }); };
+  }
+  // ミニアプリ ⇄ 公式LINE：トークへ行くときは、ミニアプリをとじてトークを開く
+  function goOaTalk() { const u = 'https://line.me/R/oaMessage/@024curid/'; try { if (window.liff && liff.openWindow) { liff.openWindow({ url: u, external: false }); setTimeout(() => { try { liff.closeWindow(); } catch (e) {} }, 400); return; } } catch (e) {} location.href = u; }
+  $('talkOaBtn').addEventListener('click', goOaTalk); window.goOaTalkW = goOaTalk;
+  $('pinGo').addEventListener('click', () => { try { localStorage.setItem('pinDone', '1'); } catch (e) {} $('pinBar').hidden = true; goOaTalk(); });
+  $('pinX').addEventListener('click', () => { try { localStorage.setItem('pinDone', '1'); } catch (e) {} $('pinBar').hidden = true; });
+  // ピン留めのおすすめ：ハタボのアプリで、まだ「とじる」していない人に、2回目に開いたときから3回まで
+  if (HATABO_APP) { try { const n = Number(localStorage.getItem('pinSeen') || 0) + 1; localStorage.setItem('pinSeen', String(n)); if (!localStorage.getItem('pinDone') && n >= 2 && n <= 4) setTimeout(() => { $('pinBar').hidden = false; }, 6000); } catch (e) {} }
   function hbpOpen(p) {
     HBP.page = p || 'my'; $('hbPage').hidden = false; hbpRender(); if (HBS.friend === null) hbpFriend();
     if (J.ready) jrSend({ type: 'mypage' });
   }
   function hbpClose() { $('hbPage').hidden = true; }
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !$('hbPage').hidden && HBP.page === 'notes' && J.ready) jrSend({ type: 'google_status' }); });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !$('hbPage').hidden && (HBP.page === 'notes' || HBP.page === 'google') && J.ready) jrSend({ type: 'google_status' }); });
   $('hbpClose').addEventListener('click', hbpClose);
   $('hbpTabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; HBP.page = b.dataset.p; if (HBP.page === 'goen') HBP.goen = HBP.goen || null; hbpRender(); if (J.ready) if (HBP.page === 'inbox') HBP.inboxShown = false; jrSend(HBP.page === 'gacha' ? { type: 'gacha', peek: true } : HBP.page === 'custom' ? { type: 'custom_get' } : { type: HBP.page === 'goen' ? 'goen_tree' : HBP.page === 'inbox' ? 'inbox' : HBP.page === 'friends' ? 'friends' : 'mypage' }); });
   $('myBtn').addEventListener('click', () => hbpOpen('my'));
