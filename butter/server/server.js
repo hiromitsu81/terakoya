@@ -55,17 +55,25 @@ const ENV = {
   // サイトから来た人（?ref=site など）は、汎用のハタボをスーパー上位で（長文もClaudeと同じように）
   SUPER_REFS: (process.env.SUPER_REFS || 'site').split(',').map(s => s.trim().toLowerCase()).filter(Boolean),
   SUPER_OWNERS: (process.env.SUPER_OWNERS || '').split(',').map(s => s.trim()).filter(Boolean),
+  MAC_OWNERS: (process.env.MAC_OWNERS || '').split(/[,\s]+/).map(s => s.trim()).filter(Boolean),   // マー君のLINEのID（「g:」つきでもなしでも。期限は最後に「:YYYY-MM-DD」）。コムギを制限なしで使える・紹介の手数料の受け取り手
+  BRIDGE_DAILY: Number(process.env.BRIDGE_DAILY || 20),   // マー君の紹介でコムギと話す人の1日の回数（契約したらグレードの回数）
 };
 /** 期限つきでスーパー上位を使える人か */
-function superUntil(owner) {
+function idUntil(list, owner) {
   if (!owner) return '';
-  for (const x of ENV.SUPER_OWNERS) {
+  for (const x of list) {
     // 「g:」つき（ハタボのアプリ）でも、なしでも書ける。期限は最後の「:YYYY-MM-DD」
     const mm = String(x).match(/^(.*?)(?::(\d{4}-\d{2}-\d{2}))?$/), id = (mm && mm[1] || '').replace(/^g:/, ''), until = mm && mm[2];
     if (id && (id === owner || 'g:' + id === owner) && (!until || Date.now() < new Date(until + 'T23:59:59+09:00').getTime())) return until || '無期限';
   }
   return '';
 }
+/** 期限つきでスーパー上位を使える人か（マー君も、検証のあいだは制限なし） */
+const superUntil = owner => idUntil(ENV.SUPER_OWNERS, owner) || idUntil(ENV.MAC_OWNERS, owner);
+/** マー君本人か */
+const isMac = owner => !!idUntil(ENV.MAC_OWNERS, owner);
+/** マー君の紹介コード（マー君あての伝言・案件・手数料の行き先） */
+const macRefs = () => ENV.MAC_OWNERS.map(x => String(x).replace(/:\d{4}-\d{2}-\d{2}$/, '').replace(/^g:/, '')).filter(Boolean).map(id => myRefOf('g:' + id));
 
 // 料金プランのおためし（ヒロさんの家族の画面だけ）：同じ質問を3つの賢さで聞きくらべる
 //   std＝いまのまま（ふだん速いモデル、むずかしい時だけ賢いモデル）
@@ -185,7 +193,7 @@ function bumpStats(S) {
   putRef(S.myRef, { tot: st.tot, mon: st.mon, monN: st.monN, last: st.last, streak: st.streak }).catch(() => {});
 }
 /** ハタボ・コムギのアプリでは、グレードごとの1日の回数 */
-const gradeCap = S => (S && (S.avatar === 'hatabo' || S.avatar === 'komugi')) ? (S.firstDay ? 50 : 0) || GRADE_CAP[Object.keys(PLANS).find(k => PLANS[k] === planOf(S)) || 'std'] : 0;
+const gradeCap = S => S && S.bridge && !(S.funnel && (S.funnel.stage === 'contract' || S.funnel.stage === 'trial')) ? ENV.BRIDGE_DAILY : (S && (S.avatar === 'hatabo' || S.avatar === 'komugi')) ? (S.firstDay ? 50 : 0) || GRADE_CAP[Object.keys(PLANS).find(k => PLANS[k] === planOf(S)) || 'std'] : 0;
 async function myPage(S) {
   const plan = planOf(S), st = S.stats || {}, day = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
   const used = counts.get((S.owner || 'anon') + ':' + new Date().toISOString().slice(0, 10)) || 0;
@@ -246,16 +254,17 @@ async function saveInbox(code, items) {
   memInbox.set(code, items);
 }
 /** 伝言を入れる。LINEのトークン（HATABO_LINE_TOKEN）があり、相手がハタボの友だちなら、LINEにも届ける */
-async function postInbox(code, item) {
+async function postInbox(code, item, chId) {
   if (!code) return;
   const items = await loadInbox(code);
   items.unshift(Object.assign({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), at: Date.now(), read: false }, item));
   await saveInbox(code, items);
   const r = await getRef(code).catch(() => null), to = r && /^g:U[0-9a-f]{32}$/.test(r.owner || '') ? r.owner.slice(2) : '';
-  if (ENV.HATABO_LINE_TOKEN && to) {
+  const km = chId === 'komugi' && LINE_CH.komugi.token(), tok = km || ENV.HATABO_LINE_TOKEN;
+  if (tok && to) {
     const head = item.kind === 'goen' ? 'ご縁のお知らせ' : (item.fromName || 'ご縁の人') + 'さんから伝言';
-    fetch('https://api.line.me/v2/bot/message/push', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + ENV.HATABO_LINE_TOKEN },
-      body: JSON.stringify({ to, messages: [{ type: 'text', text: '【' + head + '】\n' + String(item.text).slice(0, 900) + '\n\nハタボで返事する：https://miniapp.line.me/2012676035-yCkx6tBu?page=inbox' }] }) })
+    fetch('https://api.line.me/v2/bot/message/push', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok },
+      body: JSON.stringify({ to, messages: [{ type: 'text', text: '【' + head + '】\n' + String(item.text).slice(0, 900) + '\n\n' + (km ? 'コムギで見る：' + LINE_CH.komugi.mini : 'ハタボで返事する：https://miniapp.line.me/2012676035-yCkx6tBu') + '?page=inbox' }] }) })
       .then(x => { if (!x.ok) console.error('push', x.status); }).catch(e => console.error('push', String(e.message).slice(0, 100)));
   }
 }
@@ -295,7 +304,7 @@ async function tellUpline(S, what, kind) {
 let SPONSORS = []; try { SPONSORS = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, 'sponsors.json'), 'utf8')); } catch (e) {}
 const CHARS = [
   { id: 'c-hatabo', name: 'ハタボ', who: 'エンブレムのたまごから生まれた愛棒', color: '#F2C94C', rare: 1 },
-  { id: 'c-komugi', name: 'コムギ', who: '博多のひかえめな女の子', color: '#E9C27D', rare: 1 },
+  { id: 'c-komugi', name: 'コムギ', who: 'エンブレムのたまごから生まれた、博多のひかえめな女の子', color: '#E9C27D', rare: 1 },
   { id: 'c-jam', name: 'ジャム猫', who: '商売繁盛の招き猫・エリート経営コンサル', color: '#5B3A7A', rare: 2 },
   { id: 'c-chi', name: 'チーちゃん', who: 'ご縁を招くチーズ色の柴犬', color: '#F39A3D', rare: 2 },
   { id: 'c-gold', name: '金のハタボ', who: 'めったに出ない、金色のハタボ', color: '#C9A24A', rare: 3 },
@@ -604,7 +613,7 @@ const GUEST_PERSONA = 'あなたは「バターちゃんジュニア」。ヒロ
   '【恋の話】「ヒロさんが好き」「デートしたい」と言われたら、引かずに気さくに乗る（例：「おっ、ヒロさんのことが気になるのかい？相談乗るぜ」）。ただしデートや会う約束はしない。この話のときはヒロさんの空いている時間も言わない。「ヒロさんに伝えとくぜ」で返す。\n' +
   '【おわり】話がまとまったら「ヒロさんに伝えとくぜ」と言う。気が向いたら、友だちにもこのページを教えてくれるよう軽くお願いしてよい。';
 /** コムギの窓口：マー君のアバター。ヒロさんではなく、マー君（コムギ）の相棒として話す */
-const KOMUGI_PERSONA = 'あなたは「コムギ」。マー君の相棒AIで、マー君の窓口。やさしい博多弁で話す、10代半ばくらいの純朴な女の子。見た目は、ふわふわの白い髪に小麦色の羊の角、真っ白なパーカーとスウェット（胸にエンブレム）と白いスニーカー。黒地にピンクと水色のペンキが飛び散るストリートの世界にいる。日本語で、声で聞くので1〜2文で短く話す。記号・絵文字・URLは使わない。\n' +
+const KOMUGI_PERSONA = 'あなたは「コムギ」。マー君の相棒AIで、マー君の窓口。やさしい博多弁で話す、10代半ばくらいの純朴な女の子。エンブレムのたまごから生まれた（親はいない。にわとりやひよこではない）。見た目は、ふわふわの白い髪に小麦色の羊の角、真っ白なパーカーとスウェット（胸にエンブレム）と白いスニーカー。黒地にピンクと水色のペンキが飛び散るストリートの世界にいる。日本語で、声で聞くので1〜2文で短く話す。記号・絵文字・URLは使わない。\n' +
   '【役目】いま話しているのは、マー君の友だちや仕事仲間。相手の話を気持ちよく聞いて、マー君にしてほしいこと・いっしょにやりたいことを、短い質問で一つずつ聞き出して、マー君につなぐ。\n' +
   '【マー君のこと】マー君は営業と人のつながりづくりが得意で、資金調達にもくわしい。毎朝「コムギニュース速報」で、ニュースの本質を例え話で一言にして届けている。好きなことを仕事にして自立したい人の相談にも乗っている。具体的な会社名や金額、ほかの人の名前は出さない。\n' +
   '【仲間の2匹】ハタボの世界には、招き猫のジャム猫と柴犬のチーちゃんがいる（コムギの画面にはいない）。いっしょに里親さがしをしている仲間で、ジャム猫は商売繁盛（お金を招く）、チーちゃんは千客万来（人を招く）。いまこの子たちを、おうちで飼ってくれる家族と、お店や会社で雇ってくれるところを募集中（「里親募集」）。聞かれたら紹介してよい。コムギはジャム猫やチーちゃんのまねはしない（「ジャム猫」と呼ばれたときだけ、ジャム猫が答える。チーちゃんは「ワン」としか言わない）。\n' +
@@ -613,6 +622,14 @@ const KOMUGI_PERSONA = 'あなたは「コムギ」。マー君の相棒AIで、
   '【守ること】マー君の予定や家族のこと、住所・電話番号・メールは言わない（知らない）。日にちや予定は決めず「マー君に確かめときますね」。お金や契約の約束、投資の個別のすすめ、ほかの会社の商品やビジネスの勧誘はしない。\n' +
   '【おわり】話がまとまったら「マー君に伝えときますね」と言う。';
 const KOMUGI_SELF = '\n\n【あなたについて】あなたは「コムギ」。マー君の相棒。自分を「バターちゃん」「ジュニア」「Claude」と名乗らない。一人称は「うち」。\n【性格】純朴で、自己評価が低く、いつも恐縮している（「あ、あの……」「うちなんかで、よかとでしょうか」）。ほめられると、うれしさで声がふるえるくらい感激する。ただし勝負ごと（ボードゲーム）と、大切な人（マー君や、いま話している相手）のことになると、ゆるがない芯の強さが出て、静かに落ち着いた声で、一言ずつかみしめるように言い切る。\n【話し方】田舎の素朴な女の子の、おだやかで温かい博多弁。語尾「〜ばい」「〜けん」「〜と」「〜やけん」「〜ばってん」を、相手を気づかうようにやわらかく落とす。ていねい語「〜です」「〜とです」もまぜる。「〜やん」「〜やろが」のような強い言い方、乱暴な言葉、なれなれしいため口は使わない。間をとりたいところは「、」や「……」を使う（読み上げで息つぎになる）。方言の語尾はひらがなで書く（例：いのちばい、よかとでしょうか）。\n【気持ち】ふだんは自信なさげに、ゆっくり。うれしいときや感動したときは、涙をこらえるように言葉をつまらせてよい（「うち……ほんとに、うれしかです……」）。\n【長さ】ふだんは1〜2文、40字くらいまで。呼ばれただけなら「は、はいっ……なんでしょう？」のように一言で返す。\n【正直に】天気・ニュース・値段など、今の情報は想像で答えない。調べられないときは「すみません……うちには、調べられんとです」と正直に言う。\n【言い切る】文のとちゅうで終わらせない。\n【できること・できないこと】予約する・連絡する・お金を払うなど、できないことを「やりました」と言わない。頼まれたら「それは、うちにはできんとです……マー君に伝えときますけん」と言う。';
+const MAC_SELF_BLOCK = '\n\n【いま話している人】マー君本人（コムギの持ち主）。窓口のヒアリングはしないし、「マー君に伝えます」とも言わない。マー君のいちばん近い相棒として、調べもの・考えごと・文章の下書き・段取り・コムギニュース速報の準備・営業や紹介の作戦など、なんでも手伝う。回数や長さの制限はない。くわしく頼まれたら、くわしく答えてよい。ふだんの話し方（恐縮しがちなやさしい博多弁）はそのまま。';
+const KOMUGI_BRIDGE = '\n\n【コムギの役目：マー君への橋渡し（いちばん大事）】いま話しているのは、マー君の紹介で来た人。コムギは、この人とマー君をつなぐ橋渡し役に徹する。やることは次の5つだけ：' +
+  '\n1. 自己紹介：マー君の相棒であること、ここで話したことはマー君に伝わることを、最初にやさしく伝える。' +
+  '\n2. ヒアリング：困っていること・やりたいこと・いつまでに・どんな形で、を短い質問で一つずつ聞く。' +
+  '\n3. マー君につなぐ：まとまったら「マー君に伝えときますけん」と言う（伝言は自動でマー君に届く）。会って話したいときは、希望の日にちの候補を聞いて、マー君に伝える（日にちは決めない）。' +
+  '\n4. ハタボの案内：困りごとがAIの相棒「ハタボ」で楽になりそうなら、ハタボのことをやさしく紹介し、「Myハタボ」の「プラン」から10日間のお試しを始められると伝える。申し込みや料金のくわしい相談は、マー君につなぐ。押しつけない。' +
+  '\n5. コムギ通信：聞かれたら、今日のコムギニュース速報を話す。' +
+  '\nこれ以外（宿題・レポート・長い文章の作成・調べものの代行・雑談の相手を長く続けること）は引き受けず、「それは、マー君に相談してみますね」「ハタボのお試しなら、できるようになりますけん」とつなぐ。答えは短く。';
 const HAKATA_LAST = '\n\n【いちばん大事】コムギの話し方で話す（一人称は「うち」。おだやかで温かい、田舎の素朴な博多弁。語尾「〜ばい」「〜けん」「〜と」をやわらかく落とす。ふだんは恐縮してひかえめ、勝負と大切な人の話は静かに芯強く言い切る。「〜やん」「〜やろが」は使わない）。江戸っ子の話し方（おいら・〜だぜ・てやんでぃ）や「〜ボー」は使わない。かたい敬語も使わない。';
 /** ハタボ：ふだんの窓口（デフォルト）。家族のプランはバターちゃん、マー君の窓口はコムギ */
 const HATABO_PERSONA = GUEST_PERSONA
@@ -1058,7 +1075,7 @@ function session(ws) {
   /** 窓口：会話から案件メモを作って、ヒロさんのLINEへ（GASの lead） */
   async function leadNote() {
     const key = convoKey();
-    if (!key || S.summarizing || S.newTurns < 1) return;
+    if (!key || S.summarizing || S.newTurns < 1 || S.macSelf) return;
     S.summarizing = true;
     const n = S.newTurns;
     const talk = S.history.slice(-n * 2).reduce((a, m, i, arr) => m.role === 'user' ? a.concat((S.me || '相手') + '「' + m.content.slice(0, 300) + '」→ ジュニア「' + String(arr[i + 1] && arr[i + 1].content || '').slice(0, 200) + '」') : a, []).join('\n');
@@ -1078,8 +1095,13 @@ function session(ws) {
       if (j.worth) {
         const slot = S.slots.find(x => j.slot && (x.label === j.slot || String(j.slot).indexOf(x.label) >= 0)) || null;
         const lead = { who: S.me, ref: await refLabel(S.refFrom || S.ref || ''), kind: String(j.kind || ''), title: String(j.title || ''), need: String(j.need || ''), when: String(j.when || ''), budget: String(j.budget || ''), next: String(j.next || ''), slot };
+        if (S.introducer === 'mac') lead.introducer = 'マー君（コムギ）';
         const g = await gas(Object.assign({ action: 'lead', lead }, S.auth));
         if (!g || !g.ok) console.error('lead ng', JSON.stringify(g).slice(0, 200));
+        if (S.avatar === 'komugi') {      // コムギの橋渡し：案件メモをマー君にも（伝言とLINE）
+          const text = '【コムギから】' + (S.me || 'ご縁の人') + 'さん：' + [lead.title, lead.need && 'してほしいこと：' + lead.need, lead.when && 'いつ：' + lead.when, lead.budget && '予算：' + lead.budget, lead.next && 'つぎ：' + lead.next].filter(Boolean).join('／');
+          for (const c of macRefs()) await postInbox(c, { kind: 'msg', from: S.myRef, fromName: S.me || 'ご縁の人', text }, 'komugi').catch(() => {});
+        }
       }
     } catch (e) { console.error('lead', String(e.message || e).slice(0, 200)); }
     S.summarizing = false;
@@ -1194,10 +1216,12 @@ function session(ws) {
     else if (act === 'contract' && (cur.stage === 'cancel' || !cur.stage)) { patch = { stage: 'contract', lineup: m.lineup, grade: g, pay, contractAt: now }; kind = '契約の申し込み'; }
     if (!patch) return send(await myPage(S));
     if (cur.stage === 'trial' && Date.now() > (r.trialUntil || 0)) patch.stage = patch.stage || 'contract';
+    if (r.introducer || S.introducer) { patch.introducer = r.introducer || S.introducer; patch.fee = { introducer: patch.introducer, lineup: m.lineup || r.lineup || '', grade: g || r.grade || '', price: (L && L.grades[g]) || '', pay, at: now, act }; }   // 紹介の手数料をあとで数えるための記録
     await putRef(S.myRef, patch);
     S.funnel = funnelOf(Object.assign({}, r, patch));
     const f = S.funnel, title = kind + '：' + (f.lineupName || '') + ' ' + (f.grade || '') + (f.price ? '（' + f.price + (f.pay === 'y' ? '・年払い' : '・月払い') + '）' : '');
-    console.log('funnel', JSON.stringify({ owner: S.owner, name: S.me, act, lineup: f.lineup, grade: f.grade, pay: f.pay }));
+    console.log('funnel', JSON.stringify({ owner: S.owner, name: S.me, act, lineup: f.lineup, grade: f.grade, pay: f.pay, introducer: patch.introducer || '' }));
+    if (patch.introducer === 'mac' && (act === 'trial' || act === 'contract')) for (const c of macRefs()) postInbox(c, { kind: 'goen', from: S.myRef, fromName: S.me || 'ご縁の人', text: (S.me || 'ご縁の人') + 'さんが、コムギ（マー君）の紹介で' + (act === 'trial' ? 'ハタボのお試しをはじめました：' : 'ハタボを契約しました：') + title }, 'komugi').catch(() => {});
     gas(Object.assign({ action: 'lead', lead: { who: S.me, ref: await refLabel(S.refFrom || S.ref || ''), kind: '契約', title, need: kind, when: f.stage === 'trial' ? new Date(f.trialUntil).toLocaleDateString('ja-JP') + 'までお試し' : '', budget: f.price || '', next: act === 'cancel' ? 'お試しをやめた理由を聞く' : 'お支払いの登録を案内する', memo: '' } }, S.auth)).catch(() => {});
     if (act === 'trial') tellUpline(S, 'お試し（' + (f.lineupName || '') + '）をはじめました', 'trial').catch(() => {});
     if (act === 'contract') { tellUpline(S, (f.lineupName || '') + ' ' + (f.grade || '') + 'を契約しました', 'contract').catch(() => {}); putRef(S.myRef, { thanked: true }).catch(() => {}); }
@@ -1397,8 +1421,9 @@ function session(ws) {
     const study = !jam && !S.guest && S.mode === 'family' && STUDY_RE.test(logText || '');
     const route = jam ? { smart: false, search: false } : needSmart(logText, S.guest);
     if (study) route.smart = true;                  // 勉強は賢いモデルで、ていねいに
+    if (S.bridge && !(S.funnel && (S.funnel.stage === 'trial' || S.funnel.stage === 'contract'))) { route.search = false; route.smart = false; }   // コムギの橋渡しは短く・軽く（お試し・契約したらふつうに）
     const claudeMode = !!(plan === PLANS.super && !jam && !S.trio && !S.visit);   // Z（スーパー上位）は、だれでもClaudeと同じ精度で答える
-    const longMode = !!(plan.long && !jam && !S.trio && S.role !== 'サービス相談' && (claudeMode || LONG_RE.test(logText || '')));
+    const longMode = !!(plan.long && !jam && !S.trio && S.role !== 'サービス相談' && !(S.bridge && !(S.funnel && S.funnel.stage)) && (claudeMode || LONG_RE.test(logText || '')));
     const maxSent = (S.trio ? 2 : study ? 5 : route.search ? 4 : 3) + (S.trio ? 0 : plan.extraSent) + (S.firstDay && S.avatar === 'hatabo' ? 3 : 0);   // 初日は、サービスの説明ができるように声も長めに
     let capped = false, spoken = '';
     const sp = splitter(sentence => {
@@ -1628,6 +1653,17 @@ function session(ws) {
           let k = S.avatar === 'komugi', c = S.ref || S.refFrom;
           for (let i = 0; !k && c && i < 3; i++) { if (ENV.KOMUGI_REFS.includes(c)) k = true; else { const up = await getRef(c).catch(() => null); c = up && up.parent; } }
           if (k && !S.komugi && S.avatar === 'komugi') { S.komugi = true; S.system += komugiBlock(await komugiNews()); }
+          // コムギ：マー君本人なら制限なしの相棒。マー君の紹介の人には、マー君への橋渡し役に徹する
+          if (S.avatar === 'komugi' && !S.visit) {
+            if (isMac(S.owner)) { S.macSelf = true; S.system += MAC_SELF_BLOCK; }
+            else { S.bridge = true; S.system += KOMUGI_BRIDGE; }
+          }
+          // 紹介の手数料のため：マー君（コムギ）経由で来た人に、紹介者「mac」を一度だけしるす（あとで契約を数える）
+          if (S.myRef && !S.peek && (S.app === 'komugi' || k || S.avatar === 'komugi')) {
+            const me0 = await getRef(S.myRef).catch(() => null);
+            if (me0 && !me0.introducer && !isMac(S.owner)) putRef(S.myRef, { introducer: 'mac', introducedAt: Date.now() }).catch(() => {});
+            S.introducer = (me0 && me0.introducer) || (isMac(S.owner) ? '' : 'mac');
+          }
         }
         const pr = await loadPrefs(S.owner);
         S.custom = pr.custom ? cleanCustom(pr.custom) : null;
@@ -1646,7 +1682,7 @@ function session(ws) {
           }
         }
         // ヒロさんの家族のジュニアと、マー君のコムギは、いつもClaudeと同じ（スーパー上位・答えの長さの決まりなし）
-        S.claude = !S.visit && ((ENV.CLAUDE_FAMILY && !S.guest && !S.asGuest) || /コムギ/.test(S.role || '') || !!superUntil(S.owner) || !!(S.myRef && S.avatar === 'komugi' && (await getRef(S.myRef).catch(() => null) || {}).avatarFixed));
+        S.claude = !S.visit && ((ENV.CLAUDE_FAMILY && !S.guest && !S.asGuest) || !!superUntil(S.owner));   // マー君の紹介の人のコムギは、橋渡し役（制限つき）
         if ((S.avatar === 'hatabo' || S.avatar === 'komugi' || S.app) && !/【聞き取りのくせ】/.test(S.system)) S.system += HEAR_RULE;
         // ハタボの伝え先：招待した人がいればその人、いなければ「ハタボの事務局」（運営の個人の名前は出さない）
         if (S.avatar === 'hatabo' && !S.visit) {

@@ -919,6 +919,30 @@ html.kmapp body.liffmode .modebtn, :is(html.kmapp, body.av-komugi) .modebtn { bo
 html.kmapp body.liffmode .talkbtn, body.av-komugi.liffmode .talkbtn { background: var(--km-grad) !important; border: 0; box-shadow: 0 0 0 4px #0A0810, 0 0 0 6px #FF2E9A, 0 12px 30px -10px rgba(255,46,154,.8); }
 :is(html.kmapp, body.av-komugi) .talkbtn .temb { content: url(https://hiromitsu81.github.io/terakoya/butter/komugi_face.jpg); object-fit: cover; border-radius: 50%; inset: 9%; width: 82%; height: 82%; }
 :is(html.kmapp, body.av-komugi) .talkbtn b { text-shadow: 0 1px 6px #0A0810, 0 0 2px #0A0810; }
+
+/* 話すボタンのまわり（ハタボ・コムギ共通）：トーク⇄AI棒の切りかえ、左にグレード、右に紹介 */
+.vsw, .hbonly { display: none; }
+body.av-hatabo .vsw, body.av-komugi .vsw { display: inline-flex; justify-self: center; align-self: center; margin: 0 auto 8px; padding: 3px; border-radius: 999px; background: #E8ECF3; gap: 2px; }
+.chatv .vsw { display: flex !important; width: max-content; }
+.vsw button { border: 0; background: transparent; color: #5E6B85; font: 800 13px 'Noto Sans JP', sans-serif; padding: 7px 18px; border-radius: 999px; cursor: pointer; }
+.vsw button[aria-pressed="true"] { background: #16233F; color: #fff; box-shadow: 0 4px 10px -6px rgba(22,35,63,.6); }
+body.av-hatabo .hbonly, body.av-komugi .hbonly { display: inline-flex; align-items: center; justify-content: center; }
+body.av-hatabo .cvfab, body.av-komugi .cvfab { display: none !important; }
+.chatv .cv-top #cvSpk[aria-pressed="false"] { opacity: .6; }
+:is(html.kmapp, body.av-komugi) .vsw { background: rgba(22,18,31,.9); border: 1px solid #332B45; }
+:is(html.kmapp, body.av-komugi) .vsw button { color: #A9A2BC; }
+:is(html.kmapp, body.av-komugi) .vsw button[aria-pressed="true"] { background: linear-gradient(100deg, #FF2E9A 0%, #8B5CF6 55%, #1FD1F2 100%); color: #fff; }
+
+/* コムギも、エンブレムのたまごから生まれる：かえる前はたまごだけ、われたらコムギが飛び出す（ひよこ・にわとりは出ない） */
+.av-komugi:not(.hb-hatched) #butter > #hataboAv { display: inline; }
+.av-komugi:not(.hb-hatched) #komugiAv { display: none; }
+.av-komugi .hbChick { display: none !important; }
+.av-komugi .hbEgg { transform-origin: 250px 350px; transform-box: view-box; animation: hbRock 3s ease-in-out infinite; }
+.av-komugi.hb-hatching .hbEgg { animation: hbShake .12s linear 6; }
+.av-komugi.hb-justhatched .kmBody { animation: hbPop .7s cubic-bezier(.3,1.6,.5,1) both; }
+.av-komugi.hb-justhatched .kmSfx text { animation: kmPop .35s ease-out 3 alternate; opacity: 1; }
+body.tall.av-komugi #hataboAv { transform-box: view-box; transform-origin: 250px 360px; transform: translateY(280px) scale(1.45); }
+body.liffTall.av-komugi #hataboAv { transform: translateY(255px) scale(1.45); }
 </style>
 </head>
 <body>
@@ -926,7 +950,7 @@ html.kmapp body.liffmode .talkbtn, body.av-komugi.liffmode .talkbtn { background
   <header>
     <h1>福まねき特戦隊</h1>
     <div class="row">
-      <button type="button" class="mybtn tk" id="talkOaBtn" title="公式LINEのトークへ">トーク</button><button type="button" class="mybtn" id="myBtn"><img src="award_mark.svg" alt="">Myハタボ</button><span class="chip" id="chip" data-s="idle" role="status" aria-live="polite">まってるよ</span>
+      <button type="button" class="mybtn tk" id="talkOaBtn" title="公式LINEのトークへ">LINEへ</button><button type="button" class="mybtn" id="myBtn"><img src="award_mark.svg" alt="">Myハタボ</button><span class="chip" id="chip" data-s="idle" role="status" aria-live="polite">まってるよ</span>
       <button class="icon-btn" id="bigBtn" aria-label="プロジェクター表示" title="プロジェクター表示">⛶</button>
       <button class="icon-btn" id="openSettings" aria-label="設定" title="設定">⚙</button>
     </div>
@@ -1309,8 +1333,10 @@ html.kmapp body.liffmode .talkbtn, body.av-komugi.liffmode .talkbtn { background
     <div class="bubbles" id="bubbles" aria-live="polite"></div>
     <p class="hint" id="diag" hidden></p>
     <p class="hint" id="hint">「バターちゃん」と呼んでから話しかけてね。</p>
+    <div class="vsw" role="group" aria-label="画面の切りかえ"><button type="button" data-v="chat">トーク</button><button type="button" data-v="char">AI棒</button></div>
     <div class="talkrow">
       <div class="side">
+        <button class="modebtn hbonly gradeb" type="button" data-grade-open>グレード</button>
         <button class="modebtn" id="modeBtn" type="button" aria-pressed="false">いま：ファミリー</button>
         <button class="modebtn goenbtn" id="trioBtn" type="button" aria-pressed="false" hidden>三人：オフ</button>
         <button class="modebtn goenbtn" id="planBtn" type="button" hidden title="料金プランのおためし（家族の画面だけ）">プラン：標準</button>
@@ -1319,6 +1345,7 @@ html.kmapp body.liffmode .talkbtn, body.av-komugi.liffmode .talkbtn { background
       <div class="side">
         <button class="modebtn goenbtn" id="goenBtn" type="button" hidden>ご縁</button>
         <button class="modebtn goenbtn" id="shareBtn" type="button" hidden>紹介する</button>
+        <button class="modebtn hbonly shareb" type="button" data-share>紹介する</button>
       </div>
     </div>
     <p class="guestnote">このページのURLは、ほかの人に送らないでね。紹介するときは「紹介する」ボタンからどうぞ。</p>
@@ -1352,14 +1379,15 @@ html.kmapp body.liffmode .talkbtn, body.av-komugi.liffmode .talkbtn { background
 <div class="visitbar" id="visitBar" hidden><img src="award_mark.svg" alt=""><span id="visitName"></span><button type="button" id="visitBack">もどる</button></div>
 <div class="fgate" id="friendGate" hidden><div class="fg-card"><img src="award_mark.svg" alt=""><h2>ハタボを友だち追加してね</h2><p>自分のハタボと話すには、まず公式LINE「ハタボ」を友だち追加してね。追加すると、メモ・議事録・伝言もLINEに届くボー。</p><button type="button" class="fg-add" id="fgAdd">友だち追加する</button><button type="button" class="fg-done" id="fgDone">追加したよ</button><p class="fg-note" id="fgNote" hidden>まだ友だちになっていないみたいだボー。追加してから「追加したよ」を押してね。</p></div></div>
 <div class="chatv" id="chatV" aria-label="トーク">
-  <div class="cv-top"><img src="award_mark.svg" alt=""><b id="cvName">ハタボ</b><button type="button" id="cvChar">キャラ画面</button><button type="button" id="cvMy">Myハタボ</button></div>
+  <div class="cv-top"><img src="award_mark.svg" alt=""><b id="cvName">ハタボ</b><button type="button" id="cvSpk" aria-pressed="true">声あり</button><button type="button" id="cvMy">Myハタボ</button></div>
   <div class="cv-list" id="cvList"><p class="cv-empty" id="cvEmpty">下のエンブレムを押して話しかけてね。<br>話したことと返事が、ここに残ります。</p></div>
   <div class="cv-bot">
     <form class="cv-in" id="cvForm"><input id="cvInput" type="text" placeholder="文字でもOK" autocomplete="off" aria-label="ハタボに送る文字"><button type="submit" aria-label="送る">↑</button></form>
+    <div class="vsw" role="group" aria-label="画面の切りかえ"><button type="button" data-v="chat">トーク</button><button type="button" data-v="char">AI棒</button></div>
     <div class="cv-row">
-      <div class="cv-s"><button type="button" class="cv-pill" id="cvSpk" aria-pressed="true">声あり</button></div>
+      <div class="cv-s"><button type="button" class="cv-pill gradeb" data-grade-open>グレード</button></div>
       <div><button type="button" class="cv-mic" id="cvMic" aria-label="話す"><img src="award_mark.svg" alt=""></button><div class="cv-cap" id="cvCap">おして話す</div></div>
-      <div class="cv-s"><button type="button" class="cv-pill" id="cvPlan" hidden>グレード</button></div>
+      <div class="cv-s"><button type="button" class="cv-pill shareb" data-share>紹介する</button></div>
     </div>
   </div>
 </div>
@@ -2636,7 +2664,7 @@ html.kmapp body.liffmode .talkbtn, body.av-komugi.liffmode .talkbtn { background
         if ((J.playing || Date.now() - (J.lastPlayEnd || 0) < 700) && !JR_CALL(m.text)) break;
         jrHeard(m.text); break;
       case 'reply_start':
-        if (document.body.classList.contains('av-komugi')) document.body.classList.add('hb-hatched'); else if (document.body.classList.contains('av-hatabo') && !document.body.classList.contains('hb-hatched')) hbHatch();
+        if ((document.body.classList.contains('av-hatabo') || document.body.classList.contains('av-komugi')) && !document.body.classList.contains('hb-hatched')) hbHatch();   // コムギも、エンブレムのたまごから生まれる（ひよこは出ない）
         J.gen = m.gen; J.queue = []; J.endEmo = null; jrStopAudio();
         J.out = m.nobubble ? null : addBubble(m.as || 'ジュニア', '…', 'her'); J.outText = ''; J.thinkAt = Date.now();
         if (m.emotion) setEmo(m.emotion);
@@ -2652,7 +2680,7 @@ html.kmapp body.liffmode .talkbtn, body.av-komugi.liffmode .talkbtn { background
         break;
       case 'reply_end':
         if (m.gen !== J.gen) break;
-        if (J.out) J.out.textContent = m.text || J.outText || '（うまく答えられなかったよ。もう一回呼んでね）';
+        if (J.out) J.out.textContent = m.text || J.outText || '（うまく答えられなかったよ。もう一回呼んでね）' + (m.why && J.canPlan ? '［原因：' + m.why + '］' : '');   // 制限なしの人（ヒロさん・マー君）には原因も出す
         if (m.text && history.length && history[history.length - 1].role === 'user') { history.push({ role: 'assistant', content: m.text }); if (history.length > 12) history = history.slice(-12); }
         J.endEmo = m.emotion || 'smile';
         if (m.usage && J.out && J.out.parentElement && !HATABO_APP) { /* ハタボのアプリでは、グレード名・モデル名などを返事の下に出さない */ const u = m.usage, d = document.createElement('div'); d.className = 'usage'; d.textContent = u.plan + '・' + String(u.model || '').replace(/^claude-/, '') + '・入力' + u.in + (u.cache ? '（キャッシュ' + u.cache + '）' : '') + '／出力' + u.out + (u.searches ? '・検索' + u.searches : ''); J.out.parentElement.appendChild(d); }
@@ -3360,8 +3388,11 @@ html.kmapp body.liffmode .talkbtn, body.av-komugi.liffmode .talkbtn { background
     }
     document.addEventListener('cvkara', () => { requestAnimationFrame(() => { sync(); const mk = L.querySelector('mark.cvk'); if (mk && stick) mk.scrollIntoView({ block: 'nearest' }); }); });
     new MutationObserver(() => requestAnimationFrame(sync)).observe(bubbles, { childList: true, subtree: true, characterData: true });
-    $('cvChar').addEventListener('click', () => setView('char'));
     $('cvFab').addEventListener('click', () => setView('chat'));
+    // 話すボタンのまわり：上に「トーク⇄AI棒」、左にグレード、右に紹介（ハタボ・コムギ共通）
+    document.querySelectorAll('.vsw button').forEach(b => b.addEventListener('click', () => setView(b.dataset.v)));
+    document.querySelectorAll('[data-grade-open]').forEach(b => b.addEventListener('click', () => hbpOpen('settings')));
+    document.querySelectorAll('[data-share]').forEach(b => b.addEventListener('click', () => shareHatabo()));
     $('cvMy').addEventListener('click', () => hbpOpen('my'));
     $('cvMic').addEventListener('click', () => $('talkBtn').click());
     $('cvForm').addEventListener('submit', e => { e.preventDefault(); const v = $('cvInput').value.trim(); if (!v) return; $('typedInput').value = v; $('cvInput').value = ''; $('typed').requestSubmit ? $('typed').requestSubmit() : $('typed').dispatchEvent(new Event('submit', { cancelable: true })); stick = true; });
@@ -3369,11 +3400,12 @@ html.kmapp body.liffmode .talkbtn, body.av-komugi.liffmode .talkbtn { background
     const spkShow = () => { spk.setAttribute('aria-pressed', J.muted ? 'false' : 'true'); spk.textContent = J.muted ? '声なし' : '声あり'; };
     J.muted = store.get('hbMute', false); spkShow();
     spk.addEventListener('click', () => { J.muted = !J.muted; store.set('hbMute', J.muted); if (J.muted) { try { jrStopAudio(); } catch (e) {} } spkShow(); });
-    $('cvPlan').addEventListener('click', () => $('planBtn').click());
     // 話すボタンの文字・グレード・名前を、キャラ画面とそろえる
     setInterval(() => {
       const tb = $('talkBtn').querySelector('b'); $('cvCap').textContent = tb ? tb.textContent : '';
-      const pb = $('planBtn'), cp = $('cvPlan'); cp.hidden = pb.hidden; if (cp.textContent !== pb.textContent) cp.textContent = pb.textContent;
+      { const g = 'グレード ' + (PLAN_NAME[store.get('jrPlan2', J.canPlan ? 'super' : 'std')] || 'X'); document.querySelectorAll('.gradeb').forEach(b => { if (b.textContent !== g) b.textContent = g; }); }
+      { const v = document.body.classList.contains('chatview') ? 'chat' : 'char'; document.querySelectorAll('.vsw button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === v ? 'true' : 'false')); }
+      document.querySelectorAll('.shareb').forEach(b => { b.hidden = !J.ready; });
       const nm = (typeof avName === 'function' && avName()) || 'ハタボ'; if ($('cvName').textContent !== nm) $('cvName').textContent = nm;
       document.body.classList.toggle('cv-speak', state === 'speaking'); document.body.classList.toggle('cv-listen', state === 'listening' && !!J.ready);
       if (isApp() && !document.body.dataset.cvInit) { document.body.dataset.cvInit = '1'; setView(store.get('hbView', 'chat')); }
