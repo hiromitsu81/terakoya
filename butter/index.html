@@ -3063,7 +3063,9 @@ body.av-hatabo:not(.chatview) .cvfab,body.av-komugi:not(.chatview) .cvfab{displa
       body.innerHTML = `<div class="hbc"><div class="k">HATABO TIMES</div><h3>お知らせ</h3>${NEWS.map(x => `<div class="hbnews"><time>${x.d.replace(/-/g, '.')}</time><b>${esc(x.t)}</b><p>${esc(x.b)}</p></div>`).join('')}</div>`;
     } else if (p === 'share') {
       body.innerHTML = `<div class="hbc"><div class="k">SHARE</div><h3>${esc(nm)}を紹介する</h3><p>話すだけで、動く愛棒を友だちに。紹介した人とされた人は、ご縁としてつながります。</p>
-        ${d ? '<p>これまでのご縁：<b style="color:#16233F">' + n(d.kids) + '人</b></p>' : ''}<button type="button" class="hbbtn" id="hbpShare">カードで送る</button></div>`;
+        ${d ? '<p>これまでのご縁：<b style="color:#16233F">' + n(d.kids) + '人</b></p>' : ''}<button type="button" class="hbbtn" id="hbpShare">カードで送る</button></div>
+        ${J.myRef ? `<div class="hbc"><div class="k">GROUP</div><h3>LINEグループに入れる</h3><p>グループにハタボを追加すると、自己紹介とはじめ方のカードが出ます。グループを管理したいときは、この招待コードをグループに投稿してね。そのグループから来た人が、あなたのご縁になります。</p><p style="font:900 26px ui-monospace,monospace;letter-spacing:.12em;color:#16233F;margin:8px 0">${esc(J.myRef)}</p><button type="button" class="hbbtn w" id="hbpCode">招待コードをコピー</button></div>` : ''}`;
+      if ($('hbpCode')) $('hbpCode').onclick = () => { const t = '招待コード ' + J.myRef; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast('コピーしたよ。グループに貼ってね'), () => prompt('コピーしてね', t)); };
       $('hbpShare').onclick = shareHatabo;
     }
     hbpWire();

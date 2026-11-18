@@ -278,8 +278,10 @@ async function goenPeople(me) {
 /** 紹介した人（と、その上の人）に、お試し・契約を知らせる */
 async function tellUpline(S, what, kind) {
   let c = S.refFrom, who = S.me || 'ご縁の人';
-  for (let i = 0; i < 2 && c; i++) {
-    const pt = Math.round((THANKS[kind] || 0) / (i === 0 ? 1 : 2)), up = await getRef(c).catch(() => null);
+  for (let i = 0, hop = 0; i < 2 && c && hop < 4; i++, hop++) {
+    const up = await getRef(c).catch(() => null);
+    if (up && up.kind === 'group') { c = up.parent; i--; continue; }   // LINEグループの紹介コードは通りぬけて、招待した人・管理者へ
+    const pt = Math.round((THANKS[kind] || 0) / (i === 0 ? 1 : 2));
     if (pt) await putRef(c, { pts: ((up && up.pts) || 0) + pt }).catch(() => {});
     const text = (i === 0 ? who + 'さんが、あなたの紹介で' + what + '。' : '（ご縁の先）' + who + 'さんが' + what + '。') + (pt ? 'ありがとうポイント +' + pt + 'pt' : '');
     await postInbox(c, { kind: 'goen', from: S.myRef, fromName: who, text, pt }).catch(() => {});
@@ -397,6 +399,46 @@ function welcomeCards(name) {
     oaCard('TIPS', 'トークをピン留めしよう', ['トーク一覧の「ハタボ」を長押し →「ピン留め」で、いつもいちばん上に。', 'メニューからすぐハタボを呼べるボー。'], '設定を見る', MINI + '?page=settings'),
   ] } };
 }
+/* ===== LINEグループ：入ったら自己紹介とサービスガイド。招待した人のボタン、グループ専用の紹介コード、招待コードの投稿でグループを登録 ===== */
+const groupRefOf = gid => 'g' + Array.from(crypto.createHash('sha256').update('grp:' + gid).digest()).slice(0, 6).map(b => 'abcdefghjkmnpqrstuvwxyz23456789'[b % 31]).join('');
+const lineApi = (path, body) => fetch('https://api.line.me/v2/bot/' + path, { method: body ? 'POST' : 'GET', headers: Object.assign({ Authorization: 'Bearer ' + ENV.HATABO_LINE_TOKEN }, body ? { 'Content-Type': 'application/json' } : {}), body: body ? JSON.stringify(body) : undefined });
+async function lineName(src) {
+  try {
+    const path = src.type === 'group' ? 'group/' + src.groupId + '/member/' + src.userId : src.type === 'room' ? 'room/' + src.roomId + '/member/' + src.userId : 'profile/' + src.userId;
+    return (await (await lineApi(path)).json()).displayName || '';
+  } catch (e) { return ''; }
+}
+function groupCards(gref) {
+  const join = MINI + '?ref=' + gref;
+  const c1 = oaCard('HELLO', 'ハタボが入ったボー！', ['はじめまして、AIの愛棒「ハタボ」だボー。話すだけで、調べもの・段取り・文章づくり・予定の相談まで、いっしょに動くボー。', 'このグループでは、「ハタボ」と呼ばれたときだけ出てくるボー。うるさくしないから安心してね。'], '自分のハタボをもつ', join, true);
+  const c2 = oaCard('GUIDE', 'ひとり1体、自分のハタボ', ['下のボタンから、ひとりずつ自分のハタボをもてるボー（公式LINEを友だち追加して、ミニアプリで話す）。', 'まず10日間、いちばん上のZグレードで無料。メモ・議事録・伝言・ご縁も、マイハタボにまとまるボー。'], '10日間無料ではじめる', join);
+  const c3 = oaCard('INVITE', 'このグループに招待した人へ', ['招待した人は、下の「招待したのは私」を押してね。このグループから来た人が、あなたのご縁になるボー。', 'グループを管理したい人は、マイハタボ →「紹介する」にある招待コードを、このグループに投稿してね。'], '招待したのは私', join);
+  c3.footer.contents = [{ type: 'button', style: 'primary', color: '#16233F', height: 'sm', action: { type: 'postback', label: '招待したのは私', data: 'act=inviter', displayText: '招待したのは私です' } }];
+  return { type: 'flex', altText: 'ハタボがグループに入ったボー。自己紹介とはじめ方です', contents: { type: 'carousel', contents: [c1, c2, c3] } };
+}
+const gidOf = src => src.groupId || src.roomId || '';
+async function groupJoin(src) {
+  const gid = gidOf(src), gref = groupRefOf(gid), g = await loadCol(gid, 'groups');
+  await saveCol(gid, 'groups', { gid, type: src.type, ref: gref, at: g.at || Date.now(), active: true });
+  await putRef(gref, { owner: '', name: 'LINEグループ', kind: 'group', gid, at: Date.now() });
+  return gref;
+}
+/** 招待した人（最初の1人）や、招待コードを投稿した管理者をグループにひもづける。グループの紹介コードの「親」をその人にする */
+async function groupLink(src, uid, role) {
+  const gid = gidOf(src), gref = groupRefOf(gid), g = await loadCol(gid, 'groups');
+  const myRef = myRefOf('g:' + uid);
+  const upd = { gid, ref: gref };
+  if (role === 'inviter') { if (g.inviter) return { already: g.inviter === uid }; upd.inviter = uid; }
+  if (role === 'admin') { if (g.admin && g.admin !== uid) return { taken: true }; upd.admin = uid; if (!g.inviter) upd.inviter = uid; }
+  await saveCol(gid, 'groups', upd);
+  const gr = await getRef(gref).catch(() => null);
+  if (!gr || !gr.parent) {
+    await putRef(gref, { parent: myRef, kind: 'group', name: 'LINEグループ', gid });
+    const up = await getRef(myRef).catch(() => null); if (up) await putRef(myRef, { kids: (up.kids || 0) + 1 }).catch(() => {});
+  }
+  return { ok: true };
+}
+const INVITE_RE = /(?:招待|紹介)コード[\s:：は]*([a-z0-9]{6})\b|^\s*([a-z0-9]{6})\s*$/i;
 function lineWebhook(req, res) {
   let raw = ''; req.setEncoding('utf8'); req.on('data', c => { raw += c; if (raw.length > 1e6) req.destroy(); });
   req.on('end', async () => {
@@ -407,7 +449,27 @@ function lineWebhook(req, res) {
       if (sig !== req.headers['x-line-signature']) return console.error('webhook sig ng');
       for (const ev of (JSON.parse(raw).events || [])) {
         let messages = null;
-        if (ev.type === 'follow') {
+        const src = ev.source || {}, inGroup = src.type === 'group' || src.type === 'room';
+        if (ev.type === 'join') {                                   // グループに追加された：自己紹介とサービスガイド（退出はしない）
+          const gref = await groupJoin(src); messages = [groupCards(gref)];
+        } else if (ev.type === 'leave') {
+          await saveCol(gidOf(src), 'groups', { active: false, leftAt: Date.now() }); continue;
+        } else if (ev.type === 'postback' && inGroup && /act=inviter/.test((ev.postback || {}).data || '')) {
+          const nm = await lineName(src), r = await groupLink(src, src.userId, 'inviter');
+          messages = [{ type: 'text', text: r.ok ? (nm || 'あなた') + 'さんを、このグループに招待した人として覚えたボー！このグループから来た人は、' + (nm || 'あなた') + 'さんのご縁になるボー。' : r.already ? 'もう招待した人として覚えてるボー！' : '招待した人は、もう別の人で登録ずみだボー。' }];
+        } else if (inGroup && ev.type === 'message') {
+          const t = ev.message && ev.message.type === 'text' ? String(ev.message.text || '') : '';
+          const mm = t.match(INVITE_RE), code = mm && (mm[1] || mm[2]).toLowerCase();
+          const owner = code ? await getRef(code).catch(() => null) : null;
+          if (owner && owner.owner && myRefOf('g:' + src.userId) === code) {   // 自分の招待コードを投稿した人が、グループの管理者になる
+            const nm = await lineName(src), r = await groupLink(src, src.userId, 'admin');
+            messages = [{ type: 'text', text: r.taken ? 'このグループには、もう管理者がいるボー。' : (nm || 'あなた') + 'さんを、このグループの管理者として登録したボー！マイハタボの「ご縁」で、このグループから来た人が見られるボー。' }];
+          } else if (/ハタボ|はたぼ|ハタボー|HATABO/i.test(t)) {        // 呼ばれたときだけ出てくる
+            const g = await loadCol(gidOf(src), 'groups');
+            messages = [{ type: 'flex', altText: 'ハタボだボー。自分のハタボはこちらから', contents: oaCard('HATABO', '呼んだボー？', ['グループの中では、くわしいお返事はできないんだボー。', '下のボタンから自分のハタボをもつと、話すだけで調べもの・段取り・文章づくりまで、いっしょに動くボー。'], '自分のハタボと話す', MINI + '?ref=' + (g.ref || groupRefOf(gidOf(src))), true) }];
+          } else continue;
+        } else if (inGroup) { continue;
+        } else if (ev.type === 'follow') {
           let name = ''; try { const pr = await fetch('https://api.line.me/v2/bot/profile/' + ev.source.userId, { headers: { Authorization: 'Bearer ' + ENV.HATABO_LINE_TOKEN } }); name = (await pr.json()).displayName || ''; } catch (e) {}
           messages = [welcomeCards(name)];
         } else if (ev.type === 'message') {
