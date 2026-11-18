@@ -1,1 +1,1 @@
-{ "cleanUrls": false, "functions": { "api/chat.js": { "includeFiles": "api/knowledge.txt", "maxDuration": 30 } } }
+{ "cleanUrls": false }

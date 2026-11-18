@@ -27,12 +27,14 @@
   var btn=document.createElement('button');btn.className='cw-btn';btn.type='button';btn.innerHTML='<img src="'+src+'" alt="">相談はこちら';
   var box=document.createElement('div');box.className='cw';box.setAttribute('role','dialog');box.setAttribute('aria-label','ハタボに相談');
   box.innerHTML='<div class="top"><img src="'+src+'" alt=""><div><b>ハタボに相談</b><small>文字でも、声でも。いまの会話が試乗です</small></div><button type="button" aria-label="閉じる">×</button></div><div class="log" aria-live="polite"></div><div class="qk"><button type="button">料金の目安は？</button><button type="button">何ができるの？</button><button type="button">お店で使いたい</button></div><form><button type="button" class="ic mic" title="声で話す" hidden>🎤</button><input placeholder="ハタボに話しかける" aria-label="メッセージ"><button type="button" class="ic spk" title="声で聞く" hidden>🔈</button><button type="submit">送る</button></form><div class="nt">家族の詳しいことや住所は書かないでください。契約やくわしい見積もりは担当におつなぎします。</div>';
+  var LM=!(window.claude&&claude.use);
+  if(LM){box.innerHTML='<div class="top"><img src="'+src+'" alt=""><div><b>ハタボに申込相談</b><small>公式LINEで、担当のハタボがご案内します</small></div><button type="button" aria-label="閉じる">×</button></div>'+'<div style="padding:16px 18px;font-size:14px;line-height:1.75;color:#16233F"><p style="margin:0 0 10px">ハタボの公式LINEを友だち追加すると、<b>申込相談担当のハタボ</b>と話せます。暮らしやお仕事を聞いて、合うプランをいっしょに選びます。10日間の無料お試しも、そのまま始められます。</p>'+'<ol style="margin:0 0 12px;padding-left:1.3em"><li>下のボタンかQRコードで友だち追加</li><li>トークのカードかメニューの「ハタボに相談」を押す</li><li>申込相談担当のハタボと話す</li></ol>'+'<a href="https://line.me/R/ti/p/@024curid" target="_blank" rel="noopener" style="display:block;text-align:center;background:#06C755;color:#fff;font-weight:800;border-radius:999px;padding:12px;text-decoration:none">LINEで友だち追加</a>'+'<img src="line_qr.png" alt="ハタボ公式LINEのQRコード" class="cw-qr" style="display:block;width:150px;margin:12px auto 0"></div>'+'<div class="log" hidden></div><div class="qk" hidden></div><form hidden><button type="button" class="ic mic" hidden></button><input hidden><button type="button" class="ic spk" hidden></button></form>';btn.innerHTML='<img src="'+src+'" alt="">LINEで申込相談'}
   document.body.appendChild(btn);document.body.appendChild(box);
   var log=box.querySelector('.log'),inp=box.querySelector('input'),form=box.querySelector('form'),mic=box.querySelector('.mic'),spk=box.querySelector('.spk');
   var hist=[],busy=false,sample=null,dict=null,tts=null,speakOn=false;
   function add(t,me){var d=document.createElement('div');d.className='m'+(me?' me':'');d.textContent=t;log.appendChild(d);log.scrollTop=log.scrollHeight;return d}
   add('こんにちは、ハタボです。気になることを、文字か声で聞いてください。');
-  btn.addEventListener('click',function(){box.classList.toggle('open');if(box.classList.contains('open'))inp.focus()});
+  btn.addEventListener('click',function(){box.classList.toggle('open');if(box.classList.contains('open')&&!LM)inp.focus()});
   box.querySelector('.top button').addEventListener('click',function(){box.classList.remove('open')});
   box.querySelectorAll('.qk button').forEach(function(b){b.addEventListener('click',function(){send(b.textContent)})});
   form.addEventListener('submit',function(e){e.preventDefault();var t=inp.value.trim();if(t){inp.value='';send(t)}});
@@ -48,7 +50,6 @@
     var msgs=[{role:'user',content:SYS+'\n\n（ここから相談）'},{role:'assistant',content:'わかりました。'}].concat(hist.slice(-10));
     sample(msgs,{modelTier:'quick',cache:false,onText:function(o){d.textContent=o.text}}).then(function(r){d.textContent=r.text;hist.push({role:'assistant',content:r.text});say(r.text)}).catch(function(e){var a=fallback(t);d.textContent=a;hist.push({role:'assistant',content:a})}).then(function(){busy=false;log.scrollTop=log.scrollHeight});
   }
-  if(!(window.claude&&claude.use)&&/^https?:/.test(location.protocol)){sample=function(){return fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:hist.slice(-12),page:document.title})}).then(function(r){return r.json()}).then(function(j){if(!j||!j.text)throw new Error('empty');return {text:j.text}})}}
   if(window.claude&&claude.use){
     claude.use('sample').then(function(s){sample=s}).catch(function(){});
     claude.use('dictation').then(function(d){if(!d)return;dict=d;mic.hidden=false;
