@@ -80,6 +80,12 @@ URLは2026年11月19日時点。公開ページの場所は変わることがあ
 | power-automate.svg | Power Automate | 許諾が必要（今は文字だけで表示） | [Microsoft 商標・ブランドガイドライン（ロゴは許諾が必要）](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks) |
 | salesforce.svg | Salesforce | 許諾が必要（今は文字だけで表示） | [Salesforce パートナーコミュニティ（パートナー登録が必要）](https://partners.salesforce.com/) |
 | rms.svg | 楽天市場（RMS） | 許諾が必要（今は文字だけで表示） | [楽天市場（出店者向け）— ロゴは楽天の許諾が必要](https://www.rakuten.co.jp/ec/) |
+| x9e8bf6.svg | バクラク | 広報に依頼 | [LayerX（バクラク）の広報](https://bakuraku.jp/) |
+| bill-one.svg | Bill One | 広報に依頼 | [Sansan（Bill One）の広報](https://bill-one.com/) |
+| tokium.svg | TOKIUM | 広報に依頼 | [TOKIUMの広報](https://www.keihi.com/) |
+| xbc8e59.svg | 楽楽明細 | 広報に依頼 | [ラクス（楽楽明細）の広報](https://www.rakurakumeisai.jp/) |
+| x97f5fb.svg | 勘定奉行 | 公開ページからダウンロード | [OBC ロゴガイドライン](https://www.obc.co.jp/brandguidelines/logoguideline) |
+| misoca.svg | Misoca | 広報に依頼 | [弥生（Misoca）の広報](https://www.misoca.jp/) |
 
 ## 広報への依頼文（そのまま使えます）
 
