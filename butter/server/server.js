@@ -92,7 +92,7 @@ function funnelOf(r) {
     trialUntil: r.trialUntil || 0, daysLeft: stage === 'trial' ? Math.max(1, Math.ceil(((r.trialUntil || 0) - Date.now()) / 86400000)) : 0 };
 }
 const planOf = S => S && S.funnel && S.funnel.stage === 'trial' ? PLANS.super : S && S.funnel && S.funnel.stage === 'contract' && GRADE_PLAN[S.funnel.grade] && S.guest ? PLANS[GRADE_PLAN[S.funnel.grade]] : _planOf(S);
-const _planOf = S => S && S.guest && S.ref && ENV.SUPER_REFS.includes(String(S.ref).toLowerCase()) ? PLANS.super : S && superUntil(S.owner) ? (PLANS[S.plan] || PLANS.super) : PLANS[S && !S.guest && !S.asGuest && S.mode === 'family' && PLANS[S.plan] ? S.plan : 'std'];
+const _planOf = S => S && S.guest && (S.agent === 'service' || (S.ref && ENV.SUPER_REFS.includes(String(S.ref).toLowerCase()))) ? PLANS.super : S && superUntil(S.owner) ? (PLANS[S.plan] || PLANS.super) : PLANS[S && !S.guest && !S.asGuest && S.mode === 'family' && PLANS[S.plan] ? S.plan : 'std'];
 
 /* ===== 外のサービス（テストでは差しかえる） ===== */
 const deps = {
@@ -322,6 +322,7 @@ const ROLE_RULE = {
   'サポート': '【この窓口の役割：サポート】ヒロさんとの相談の続きを受ける。下の「相談メモ」を元に、細かい質問に答えたり、決まったことを確かめたりする。メモにないことや決めることは「ヒロさんに確認しとくぜ」とつなぐ。',
   'コンサル相談': '【この窓口の役割：コンサル相談】相手の困りごとをじっくり聞いて、何が問題か・何から手をつけるかを一緒に整理する。方向の案は出してよいが、言い切らず、くわしくはヒロさんにつなぐ。下の「相談メモ」があれば、その続きから話す。',
   'PMO': '【この窓口の役割：PMO（プロジェクトの進み具合を見る係）】下の「相談メモ」の宿題と進める順番をもとに、だれが・何を・いつまでにを確かめる。終わったこと・止まっていること・次の一歩を短く整理して、止まっていたら「どこで引っかかってる？」と一緒に考える。新しく決まったことや期限は「ヒロさんに伝えとくぜ」と言って残す。報酬や契約などの決めごとは、おいらが勝手に決めない。',
+  'サービス相談': '【この窓口の役割：サービス相談（サイトと公式LINEの窓口）】ハタボというサービスの案内係。相手の暮らしや仕事を短く聞いて、合うラインナップ（ハタイエンタ＝家族、ハタリス＝ひとり、ハタボックス＝個人事業、ハタエース＝お店・宿、ハタボーラ＝会社）とグレード（X標準・G上位・Zいちばん上）をすすめる。料金はサイトと同じ（ハタリスX 2,980円〜、ハタイエンタX 5,980円〜、ハタボックスX 5,000円〜、ハタエースX 10,000円〜、ハタボーラX 1席2,980円〜）。年払いは12か月分を10か月分の料金で。まず10日間、いちばん上のZで無料で試せて（1日10回まで）、10日以内にやめれば0円、と伝える。申し込みは「マイハタボのプラン・支払い」からできると案内する。わからないこと・個別の見積もりは、ハタラボの担当（ヒロさん）につなぐ。売りこみすぎない。',
   '友だち': '【この窓口の役割：友だち】気さくに話す。遊びや会う約束、お祭り・フェスの話が中心。仕事の話が出たら、ふつうに聞いてヒロさんにつなぐ。',
 };
 function roleRule(role) {
@@ -632,8 +633,8 @@ function session(ws) {
       if (r.closed) throw Object.assign(new Error('closed'), { code: 'closed' });
       S.guest = true; S.mode = 'guest'; S.trio = false;
       S.slots = (Array.isArray(r.slots) ? r.slots : []).slice(0, 10).map(x => ({ label: String(x.label || ''), start: String(x.start || ''), end: String(x.end || '') })).filter(x => x.label);
-      S.role = String(r.role || '汎用');
-      S.avatar = /コムギ/.test(S.role) ? 'komugi' : 'hatabo';   // 窓口はふだんハタボ。役割に「コムギ」とあればコムギ
+      S.role = S.agent === 'service' || ENV.SUPER_REFS.includes(String(S.ref || '').toLowerCase()) ? 'サービス相談' : String(r.role || '汎用');
+      S.avatar = S.role === 'サービス相談' ? 'hatabo' : /コムギ/.test(S.role) ? 'komugi' : 'hatabo';   // 窓口はふだんハタボ。役割に「コムギ」とあればコムギ
       S.voice = AVS[S.avatar].voice();
       S.consult = String(r.consult || '');
       S.system = (AVS[S.avatar] ? AVS[S.avatar].persona() : GUEST_PERSONA + SELF) + (who ? '\n\n【いま話している人】' + who + 'さん（LINEの名前）。' : '') +
@@ -818,7 +819,7 @@ function session(ws) {
     if (body.length < 2) { speakOnly(T(hit.name + 'さんに、なんて伝えるボー？'), 'think'); return true; }
     await postInbox(hit.code, { kind: 'msg', from: S.myRef, fromName: S.me || 'ご縁の人', text: body });
     send({ type: 'note_saved', kind: 'dengon' });
-    speakOnly(T(hit.name + 'さんのハタボに、伝言をとどけたボー。'), 'smile');
+    speakOnly(T(hit.name + 'さんのAI棒に、伝言をとどけたボー。'), 'smile');
     return true;
   }
   /** 開いたときに、まだ読んでいない伝言を伝える */
@@ -1125,6 +1126,7 @@ function session(ws) {
         S.voice = /^ja-JP-[\w-]+$/.test(m.voice || '') ? m.voice : '';
         S.auth = m.idToken ? { idToken: String(m.idToken) } : { pass: String(m.pass || '') };
         S.ref = String(m.ref || '').replace(/[^\w-]/g, '').slice(0, 20);
+        S.agent = m.agent === 'service' ? 'service' : '';   // 公式LINEのリッチメニューの「ハタボに相談」：サイトと同じサービス相談
         S.asGuest = !!m.asGuest;          // 家族が「窓口の画面」を試すとき（&test=guest）
         try { await loadBrain(); } catch (e) {
           if (e.code === 'auth' || e.code === 'pass') return fail('auth', String(e.message).slice(0, 80));
@@ -1144,6 +1146,13 @@ function session(ws) {
           // 初めて来た人なら、紹介した人の「ご縁」を1つふやす
           if (!mine && parent) { const up = await getRef(parent).catch(() => null); await putRef(parent, { kids: ((up && up.kids) || 0) + 1 }).catch(() => {}); }
           S.funnel = funnelOf(mine);
+          // 紹介から来た人は、紹介した人のアバターで（コムギの紹介ならコムギ）。リッチメニューのサービス相談と、役割を決めた窓口はそのまま
+          if (S.guest && !S.agent && S.role === '汎用' && parent) {
+            let av = '', c = parent;
+            for (let i = 0; i < 3 && c && !av; i++) { if (ENV.KOMUGI_REFS.includes(c)) { av = 'komugi'; break; } const u = await getRef(c).catch(() => null); if (u && AVS[u.avatar]) av = u.avatar; c = u && u.parent; }
+            if (av && av !== S.avatar && AVS[av]) { S.system = S.system.replace(AVS[S.avatar].persona(), AVS[av].persona()); S.avatar = av; S.voice = AVS[av].voice(); }
+          }
+          if (S.guest && S.avatar && !S.agent) putRef(S.myRef, { avatar: S.avatar }).catch(() => {});
           S.stats = { at: (mine && mine.at) || Date.now(), tot: (mine && mine.tot) || 0, mon: (mine && mine.mon) || '', monN: (mine && mine.monN) || 0, last: (mine && mine.last) || '', streak: (mine && mine.streak) || 0, kids: (mine && mine.kids) || 0 };
         }
         // コムギ経由か：コムギの窓口、またはコムギの紹介コードから（2つ上までたどる）

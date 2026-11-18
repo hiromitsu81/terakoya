@@ -2337,9 +2337,10 @@ body.tall.av-hatabo .rothint, body.tall.av-komugi .rothint { display: inline-fle
     const urlParam = n => { let v = new URLSearchParams(location.search).get(n) || Q.get(n); if (!v) { try { const st = new URLSearchParams(location.search).get('liff.state'); if (st) v = new URLSearchParams(decodeURIComponent(st).split('?')[1] || '').get(n); } catch (e) {} } return v; };
     let r0 = urlParam('ref');
     const asGuest = urlParam('test') === 'guest';
+    const agent = urlParam('agent') === 'service' ? 'service' : '';   // 公式LINEのリッチメニュー「ハタボに相談」＝サービス相談
     const ref = String(r0 || store.get('jrRef', '')).replace(/[^\w-]/g, '').slice(0, 20);
     if (r0) store.set('jrRef', ref);
-    ws.onopen = () => jrSend(Object.assign({ type: 'hello', mode: BIZ() ? 'business' : 'family', greet: !J.greeted, ref, asGuest }, typeof tr === 'boolean' ? { trio: tr } : {}, LIFF ? { idToken: idToken() } : { pass: cfg.pass }));
+    ws.onopen = () => jrSend(Object.assign({ type: 'hello', mode: BIZ() ? 'business' : 'family', greet: !J.greeted, ref, asGuest, agent }, typeof tr === 'boolean' ? { trio: tr } : {}, LIFF ? { idToken: idToken() } : { pass: cfg.pass }));
     ws.onmessage = ev => { let m; try { m = JSON.parse(ev.data); } catch (e) { return; } if (m.type === 'ready') clearTimeout(giveUp); jrOn(m); };
     ws.onclose = () => {
       clearTimeout(giveUp);
@@ -2766,10 +2767,10 @@ body.tall.av-hatabo .rothint, body.tall.av-komugi .rothint { display: inline-fle
       const ppl = ib.people || [], to = HBP.to || (ppl[0] && ppl[0].code) || '';
       const dt = t => { const x = new Date(t); return (x.getMonth() + 1) + '/' + x.getDate() + ' ' + String(x.getHours()).padStart(2, '0') + ':' + String(x.getMinutes()).padStart(2, '0'); };
       body.innerHTML = `
-        <div class="hbc"><div class="k">MESSAGE</div><h3>ハタボどうしの伝言</h3>
-          <p>ご縁でつながった人（紹介した人・された人、3代まで）のハタボに伝言できます。話しながら「〇〇さんに△△って伝えて」でも送れます。</p>
+        <div class="hbc"><div class="k">MESSAGE</div><h3>AI棒どうしの伝言</h3>
+          <p>ご縁でつながった人（紹介した人・された人、3代まで）のAI棒に伝言できます。話しながら「〇〇さんに△△って伝えて」でも送れます。</p>
           ${ppl.length ? `<div class="hbsend"><select id="ibTo">${ppl.map(x => `<option value="${esc(x.code)}"${x.code === to ? ' selected' : ''}>${esc(x.name)}さん（${esc(x.rel)}）</option>`).join('')}</select>
-            <textarea id="ibText" rows="3" maxlength="500" placeholder="伝言を書く"></textarea><button type="button" class="hbbtn" id="ibSend">ハタボに届けてもらう</button></div>`
+            <textarea id="ibText" rows="3" maxlength="500" placeholder="伝言を書く"></textarea><button type="button" class="hbbtn" id="ibSend">AI棒に届けてもらう</button></div>`
             : '<p class="hbmuted">まだご縁でつながった人がいません。紹介すると伝言できるようになります。</p><button type="button" class="hbbtn" data-go="share">紹介する</button>'}</div>
         ${(ib.items || []).length ? (ib.items || []).map(x => `<div class="hbc hbmsg${x.read ? '' : ' unread'}"><div class="hbmh"><span class="hbtag${x.kind === 'goen' ? ' gold' : ''}">${x.kind === 'goen' ? 'ご縁のお知らせ' : esc(x.fromName) + 'さんから'}</span><time>${dt(x.at)}</time></div>
           <div class="hbntext" style="border:0;margin:6px 0 0;padding:0">${esc(x.text)}</div>${x.from && ppl.some(q => q.code === x.from) ? `<div class="hbnact"><button type="button" class="hbtag" data-rep="${esc(x.from)}">返事を書く</button></div>` : ''}</div>`).join('')
