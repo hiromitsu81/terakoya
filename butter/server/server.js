@@ -44,6 +44,7 @@ const ENV = {
   KOMUGI_VOICE: process.env.KOMUGI_VOICE || 'ja-JP-Chirp3-HD-Leda',   // コムギの声：高めでやわらかい少女の声
   KOMUGI_RATE: Number(process.env.KOMUGI_RATE || 1.0),   // コムギはひかえめに、少しゆっくり
   KOMUGI_NEWS_URL: process.env.KOMUGI_NEWS_URL || '',                 // コムギニュース速報の最新号（テキストかJSON {title,body}）
+  CLAUDE_FAMILY: process.env.CLAUDE_FAMILY !== '0',   // 家族のジュニアは、いつもClaudeと同じ（クロードのバターちゃんと同じ）
   HATABO_LINE_TOKEN: process.env.HATABO_LINE_TOKEN || '',   // ハタボ公式LINE（Messaging API）。あれば、伝言をLINEにも届ける
   // 一時的にスーパー上位：LINEのユーザーID:期限（例 Uxxxx:2026-12-31）。期限を過ぎたら自動で標準にもどる
   // サイトから来た人（?ref=site など）は、汎用のハタボをスーパー上位で（長文もClaudeと同じように）
@@ -71,6 +72,7 @@ const PLANS = {
 };
 /** 長い文章を頼まれたか（スーパー上位だけ、Claudeと同じように最後まで書く） */
 const LONG_RE = /(書いて|かいて|まとめて|下書き|文章|長文|長く|くわしく|詳しく|メール|企画書|提案書|レポート|報告書|議事録|手紙|原稿|説明して|一覧|リスト|比べて|くらべて)/;
+const CLAUDE_RULE = '\n\n【Claudeと同じように】ふだんの「1〜2文」の決まりは使わない。Claudeと同じように、聞かれたことに合った長さと深さで、正確に、最後まで答える。短くてよいことは短く、くわしく知りたいこと・調べもの・文章・計画はしっかり。声で読むのは最初の数文だけで、続きは画面の吹き出しに出る。キャラクターの話し方（呼び方・語尾）はそのまま。';
 const LONG_RULE = '\n\n【長い文章】いまは長い文章を頼まれている。ふだんの「1〜2文」の決まりは使わず、Claudeと同じように、頼まれた中身を最後まで、見出しや箇条書きも使ってしっかり書く（声で読むのは最初の数文だけで、続きは画面の吹き出しに出る）。最初の1〜2文は、声で聞いてわかる短い前おき（例：「書いたよ。画面を見てね」）にする。';
 /* ===== 紹介 → お試し → 契約（ラインナップとグレード）。サイトのプラン・料金と同じ ===== */
 const LINEUP = {
@@ -93,7 +95,7 @@ function funnelOf(r) {
   return { stage, lineup: r.lineup || '', lineupName: L ? L.name : '', grade: r.grade || '', price: L && L.grades[r.grade] || '', pay: r.pay || 'm',
     trialUntil: r.trialUntil || 0, daysLeft: stage === 'trial' ? Math.max(1, Math.ceil(((r.trialUntil || 0) - Date.now()) / 86400000)) : 0 };
 }
-const planOf = S => S && S.funnel && S.funnel.stage === 'trial' ? PLANS.super : S && S.funnel && S.funnel.stage === 'contract' && GRADE_PLAN[S.funnel.grade] && S.guest ? PLANS[GRADE_PLAN[S.funnel.grade]] : _planOf(S);
+const planOf = S => S && S.claude && !S.planChosen ? PLANS.super : S && S.funnel && S.funnel.stage === 'trial' ? PLANS.super : S && S.funnel && S.funnel.stage === 'contract' && GRADE_PLAN[S.funnel.grade] && S.guest ? PLANS[GRADE_PLAN[S.funnel.grade]] : _planOf(S);
 const _planOf = S => S && S.guest && (S.agent === 'service' || (S.ref && ENV.SUPER_REFS.includes(String(S.ref).toLowerCase()))) ? PLANS.super : S && superUntil(S.owner) ? (PLANS[S.plan] || PLANS.super) : PLANS[S && !S.guest && !S.asGuest && S.mode === 'family' && PLANS[S.plan] ? S.plan : 'std'];
 
 /* ===== 外のサービス（テストでは差しかえる） ===== */
@@ -267,7 +269,7 @@ const CHARS = [
   { id: 'c-chi', name: 'チーちゃん', who: 'ご縁を招くチーズ色の柴犬', color: '#F39A3D', rare: 2 },
   { id: 'c-gold', name: '金のハタボ', who: 'めったに出ない、金色のハタボ', color: '#C9A24A', rare: 3 },
 ];
-const TICKETS = [{ id: 't10', n: 10, yen: 300, pt: 300 }, { id: 't30', n: 30, yen: 800, pt: 800 }, { id: 't100', n: 100, yen: 2400, pt: 2400 }];
+const TICKETS = [{ id: 't1000', n: 40, yen: 1000, pt: 1000 }, { id: 't3000', n: 130, yen: 3000, pt: 3000 }, { id: 't5000', n: 230, yen: 5000, pt: 5000 }];   // 1,000円から。まとめ買いは少しおまけ
 const GACHA = { cost: 100, rate: { sponsor: 0.35, user: 0.25 } };
 const memCol = new Map();
 async function loadCol(code, name) {
@@ -1065,7 +1067,7 @@ function session(ws) {
   async function reply(content, logText, as) {
     const jam = as === 'jam';
     const voice = jam ? JAM_VOICE : S.voice;
-    if (!S.asGuest && !quotaOk(S.owner || 'anon', S.guest, !!S.refFrom) && !(await useTicket())) { send({ type: 'limit', why: 'plan' }); return speakOnly(S.guest ? 'すまねぇ、きょうここで話せる回数がいっぱいになっちまった。続きはヒロさんに伝えとくから、また明日話そうぜ！' : 'きょうの回数がいっぱいになっちまった。また明日話そうぜ！', 'shy'); }
+    if (!S.asGuest && !quotaOk(S.owner || 'anon', S.guest && !S.claude, !!S.refFrom) && !(await useTicket())) { send({ type: 'limit', why: 'plan' }); return speakOnly(S.guest ? 'すまねぇ、きょうここで話せる回数がいっぱいになっちまった。続きはヒロさんに伝えとくから、また明日話そうぜ！' : 'きょうの回数がいっぱいになっちまった。また明日話そうぜ！', 'shy'); }
     bumpStats(S);
     if (!S.asGuest && S.funnel && S.funnel.stage === 'trial' && (counts.get((S.owner || 'anon') + ':' + new Date().toISOString().slice(0, 10)) || 0) > TRIAL_DAILY && !(await useTicket()) && (send({ type: 'limit', why: 'trial' }) || true))
       return speakOnly(S.avatar === 'komugi' ? 'お試しは1日' + TRIAL_DAILY + '回までなんです。また明日、話しましょう。' : 'お試しのZは1日' + TRIAL_DAILY + '回までだボー。また明日話そうボー。', 'shy');
@@ -1093,7 +1095,8 @@ function session(ws) {
     const study = !jam && !S.guest && S.mode === 'family' && STUDY_RE.test(logText || '');
     const route = jam ? { smart: false, search: false } : needSmart(logText, S.guest);
     if (study) route.smart = true;                  // 勉強は賢いモデルで、ていねいに
-    const longMode = !!(plan.long && !jam && !S.trio && S.role !== 'サービス相談' && LONG_RE.test(logText || ''));
+    const claudeMode = !!(S.claude && plan === PLANS.super && !jam && !S.trio && !S.visit);
+    const longMode = !!(plan.long && !jam && !S.trio && S.role !== 'サービス相談' && (claudeMode || LONG_RE.test(logText || '')));
     const maxSent = (S.trio ? 2 : study ? 5 : route.search ? 4 : 3) + (S.trio ? 0 : plan.extraSent);
     let capped = false, spoken = '';
     const sp = splitter(sentence => {
@@ -1120,7 +1123,7 @@ function session(ws) {
       const params = {
         model: plan.premium && attempt < 2 && !jam ? ENV.PREMIUM_MODEL : useSmart ? ENV.SMART_MODEL : ENV.MODEL,
         max_tokens: (S.trio ? 240 : study ? 520 : S.mode === 'business' ? 340 : 320) + (useSearch ? 400 : 0) + (S.trio ? 0 : plan.extraTokens) + (longMode ? 3500 : 0),
-        system: sysBlocks((longMode ? LONG_RULE : '') + (study ? STUDY_RULE : '') + (jam ? JAM_RULE : '') + (route.search && !useSearch ? '\n\n【いまは調べられない】検索が使えないので、今の情報は「おいらには調べられねぇんだ」と正直に言う。' : '')),
+        system: sysBlocks((claudeMode && !LONG_RE.test(logText || '') ? CLAUDE_RULE : longMode ? LONG_RULE : '') + (study ? STUDY_RULE : '') + (jam ? JAM_RULE : '') + (route.search && !useSearch ? '\n\n【いまは調べられない】検索が使えないので、今の情報は「おいらには調べられねぇんだ」と正直に言う。' : '')),
         messages: attempt === 2 || (attempt === 1 && !useSearch) ? [{ role: 'user', content }] : msgs,
       };
       if (useSearch) {
@@ -1328,7 +1331,9 @@ function session(ws) {
             if (S.newTurns >= 2) setTimeout(summarize, 3000);       // 前回まとめきれなかった分（強制で切ったときなど）
           }
         }
-        send({ type: 'ready', me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs, guest: !!S.guest, service: S.role === 'サービス相談', myRef: S.myRef || '', visit: S.visit ? { code: S.visit, name: S.visitHost } : null, avatar: S.avatar || '', komugi: !!S.komugi, superUntil: superUntil(S.owner), canPlan: !!superUntil(S.owner) });
+        // ヒロさんの家族のジュニアと、マー君のコムギは、いつもClaudeと同じ（スーパー上位・答えの長さの決まりなし）
+        S.claude = !S.visit && ((ENV.CLAUDE_FAMILY && !S.guest && !S.asGuest) || /コムギ/.test(S.role || '') || !!superUntil(S.owner) || !!(S.myRef && S.avatar === 'komugi' && (await getRef(S.myRef).catch(() => null) || {}).avatarFixed));
+        send({ type: 'ready', me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs, guest: !!S.guest, service: S.role === 'サービス相談', myRef: S.myRef || '', visit: S.visit ? { code: S.visit, name: S.visitHost } : null, avatar: S.avatar || '', komugi: !!S.komugi, superUntil: superUntil(S.owner), canPlan: !!(S.claude || superUntil(S.owner)), claude: !!S.claude });
         if (S.visit) { const T = S.avatar === 'komugi' ? x => x.replace(/だボー/g, 'です').replace(/ボー/g, 'です') : S.avatar === 'hatabo' ? x => x : x => x.replace(/だボー/g, 'だぜ').replace(/ボー/g, 'ぜ'); return speakOnly(T(S.visitSponsor ? S.visitHost + 'のAI棒だボー。なんでも聞いてほしいボー。' : S.visitHost + 'さんのAI棒だボー。話してくれたことは、' + S.visitHost + 'さんに伝言で届けるボー。'), 'excited'); }
         if (m.greet && S.guest && S.consult) return recapGreet().then(deliverInbox).catch(() => {});      // 相談メモがある人には、振り返りからはじめる
         const hi = m.greet ? (S.guest ? (S.history.length ? (AVS[S.avatar] ? AVS[S.avatar].again : 'よう、また来てくれたな！つづきを話そうぜ。') : (AVS[S.avatar] ? AVS[S.avatar].greet(S.me) : guestGreeting(S.me))) : greeting(S.me, S.mode, S.trio)) : '';
@@ -1342,7 +1347,8 @@ function session(ws) {
       if (m.type === 'photo') return onPhoto(m);
       if (m.type === 'trio') return setTrio(!!m.on);
       if (m.type === 'plan') {                      // 料金プランのおためし：ヒロさんの家族の画面だけ（お客さんからは受けつけない）
-        if (!superUntil(S.owner) && (S.guest || S.asGuest || S.mode !== 'family')) return;   // 期限つきの人（マー君など）は窓口でも自分で選べる
+        if (!S.claude && !superUntil(S.owner) && (S.guest || S.asGuest || S.mode !== 'family')) return;
+        S.planChosen = true;   // 期限つきの人（マー君など）は窓口でも自分で選べる
         S.plan = PLANS[m.plan] ? String(m.plan) : 'std';
         return send({ type: 'plan', plan: S.plan, label: PLANS[S.plan].label });
       }

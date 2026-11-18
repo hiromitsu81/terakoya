@@ -2350,8 +2350,8 @@ body.svc .svcnote { display: block; }
     return t => String(t).split(/(?<=[。！？!?\n])/).some(seg => r.test(seg.trim()));   // 文のはじめで呼ばれたときだけ
   })(), JR_TRIO = /(三人モード|3人モード|みんなで話そう|三人で話そう|3人で話そう|二人モード|ふたりモード|2人モード|ふつうのモード)/;
   // 料金プランのおためし（ヒロさんの家族の画面だけ）：標準 → 上位 → スーパー上位 → 標準
-  const PLAN_ORDER = ['std', 'high', 'super'], PLAN_NAME = { std: '標準', high: '上位', super: 'スーパー上位' };
-  function planShow() { const b = $('planBtn'); if (!b) return; const p = store.get('jrPlan', J.canPlan ? 'super' : 'std'); b.textContent = 'グレード：' + (PLAN_NAME[p] || '標準'); b.hidden = !J.ready || (J.guest && !J.canPlan) || (BIZ() && !J.canPlan); }
+  const PLAN_ORDER = ['std', 'high', 'super'], PLAN_NAME = { std: '標準', high: '上位', super: 'スーパー上位（Claudeと同じ）' };
+  function planShow() { const b = $('planBtn'); if (!b) return; const p = store.get('jrPlan2', J.canPlan ? 'super' : 'std'); b.textContent = 'グレード：' + (PLAN_NAME[p] || '標準'); b.hidden = !J.ready || (J.guest && !J.canPlan) || (BIZ() && !J.canPlan); }
   function trioShow() { const b = $('trioBtn'); b.setAttribute('aria-pressed', String(J.trio)); b.textContent = J.trio ? '三人：オン' : '三人：オフ'; }
   const jrLive = () => !J.dead && J.ready && J.ws && J.ws.readyState === 1;
   let lipLive = false;   // 声の大きさで口を動かしている間は、ランダムの口パクを止める
@@ -2406,8 +2406,8 @@ body.svc .svcnote { display: block; }
         if (J.guest) { $('typedInput').placeholder = J.avatar === 'komugi' ? 'マー君にしてほしいこと、なんでもどうぞ' : 'ヒロさんにしてほしいこと、なんでもどうぞ'; }
         $('trioBtn').hidden = false; J.trio = !!m.trio; store.set('jrTrio', J.trio); store.set('jrOK', true); trioShow();
         J.canPlan = !!m.canPlan;
-        if (J.canPlan) jrSend({ type: 'plan', plan: store.get('jrPlan', 'super') });
-        else if (!J.guest && !BIZ() && store.get('jrPlan', 'std') !== 'std') jrSend({ type: 'plan', plan: store.get('jrPlan', 'std') });
+        if (J.canPlan) jrSend({ type: 'plan', plan: store.get('jrPlan2', 'super') });
+        else if (!J.guest && !BIZ() && store.get('jrPlan2', 'std') !== 'std') jrSend({ type: 'plan', plan: store.get('jrPlan2', 'std') });
         planShow();
         if (diag) diag.hidden = true;
         if (awake.until !== 0) keepAwake(true, 0);
@@ -2456,7 +2456,7 @@ body.svc .svcnote { display: block; }
         setState('listening');
         break;
       case 'plan':
-        store.set('jrPlan', m.plan || 'std'); planShow();
+        store.set('jrPlan2', m.plan || 'std'); planShow();
         hint.textContent = 'プラン：' + (m.label || '標準') + 'で答えるよ。同じ質問でくらべてみてね。';
         break;
       case 'trio':
@@ -3035,7 +3035,7 @@ body.svc .svcnote { display: block; }
   if (HBP_START && HBP_START !== 'talk') hbpOpen(HBP_START);
   window.hbpPreview = (d, pg, gn, ib, ex) => { HBP.data = d; if (gn) HBP.goen = gn; if (ib) { HBP.inbox = ib; HBP.inboxShown = true; } if (ex) Object.assign(HBP, ex); hbpOpen(pg); };   // 画面の確認用
   $('trioBtn').addEventListener('click', () => jrSend({ type: 'trio', on: !J.trio }));
-  $('planBtn').addEventListener('click', () => { const p = store.get('jrPlan', J.canPlan ? 'super' : 'std'); jrSend({ type: 'plan', plan: PLAN_ORDER[(PLAN_ORDER.indexOf(p) + 1) % PLAN_ORDER.length] }); });
+  $('planBtn').addEventListener('click', () => { const p = store.get('jrPlan2', J.canPlan ? 'super' : 'std'); jrSend({ type: 'plan', plan: PLAN_ORDER[(PLAN_ORDER.indexOf(p) + 1) % PLAN_ORDER.length] }); });
   $('gClose').addEventListener('click', () => { $('goenBox').hidden = true; });
   $('gSave').addEventListener('click', () => jrSend({ type: 'profile', profile: { character: $('gChar').value, name: $('gName').value.trim(), skills: $('gSkills').value.trim(), seeking: $('gSeek').value.trim(), shareable: $('gShare').value.trim() } }));
   $('gGo').addEventListener('click', () => { const c = $('gOther').value.trim(); if (c) jrSend({ type: 'goen', code: c }); });
