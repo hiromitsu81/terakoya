@@ -37,14 +37,14 @@ function client(port, hello) {
   const ra = await a.until(m => m.type === 'ready');
   assert.strictEqual(ra.avatar, 'komugi');
   for (let i = 0; i < 3; i++) { a.ws.send(JSON.stringify({ type: 'text', text: '相談があります' + i })); await new Promise(r => setTimeout(r, 300)); }
-  assert(/橋渡し/.test(lastSys), '紹介の人には橋渡し役の決まり');
+  require('fs').writeFileSync('/tmp/sys_bridge.txt', lastSys); assert(/橋渡し/.test(lastSys), '紹介の人には橋渡し役の決まり');
   assert(a.msgs.some(m => m.type === 'limit'), '紹介の人は1日の回数がある');
   // マー君本人：制限なし・橋渡しの決まりなし
   const m = await client(port, { type: 'hello', idToken: 'mac', app: 'komugi' });
   const rm = await m.until(x => x.type === 'ready');
   assert.strictEqual(rm.avatar, 'komugi');
   for (let i = 0; i < 4; i++) { m.ws.send(JSON.stringify({ type: 'text', text: '調べて' + i })); await new Promise(r => setTimeout(r, 300)); }
-  assert(!m.msgs.some(x => x.type === 'limit'), 'マー君は制限なし');
+  require('fs').writeFileSync('/tmp/sys_mac.txt', lastSys); assert(!m.msgs.some(x => x.type === 'limit'), 'マー君は制限なし');
   assert(/馬越 雅哉さん本人/.test(lastSys) && !/橋渡し（いちばん大事）/.test(lastSys), 'マー君には相棒の決まり');
   // マー君がコムギ通信を入れる → 紹介の人のコムギが案内できる
   m.ws.send(JSON.stringify({ type: 'text', text: 'コムギ通信に入れて：今日の速報は円安。たとえるなら、海外旅行のお小遣いが目減りする話。' }));

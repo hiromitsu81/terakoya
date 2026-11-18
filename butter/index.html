@@ -2652,7 +2652,7 @@ body.liffTall.av-komugi #hataboAv { transform: translateY(255px) scale(1.45); }
         if (awake.until !== 0) keepAwake(true, 0);
         jrMicStart().catch(() => { hint.textContent = 'マイクが使えません。LINEの設定でマイクを許可してください。'; });
         jrBtn(); if (!J.playing) setState('listening');
-        hint.textContent = J.guest ? (J.avatar === 'komugi' ? '馬越 雅哉さんのAI棒の、コムギです……。気軽に、話しかけてもらえたら。' : J.avatar === 'hatabo' ? 'ハタボーだボー。そのまま話しかけてほしいボー。' : 'ヒロさんの相棒、ジュニアだぜ。そのまま話しかけてくんな。') : J.trio ? '三人モード：「ジュニア」と呼んだときだけ答えるよ。' : 'そのまま話しかけてね。話している途中でも、声をかけたら止まって聞くよ。';
+        hint.textContent = J.guest ? (J.avatar === 'komugi' ? '馬越 雅哉さんの相棒の、コムギです……。気軽に、話しかけてもらえたら。' : J.avatar === 'hatabo' ? 'ハタボーだボー。そのまま話しかけてほしいボー。' : 'ヒロさんの相棒、ジュニアだぜ。そのまま話しかけてくんな。') : J.trio ? '三人モード：「ジュニア」と呼んだときだけ答えるよ。' : 'そのまま話しかけてね。話している途中でも、声をかけたら止まって聞くよ。';
         break;
       case 'partial':
         if (pickRes && nameIn(m.text)) break;
@@ -2974,11 +2974,11 @@ body.liffTall.av-komugi #hataboAv { transform: translateY(255px) scale(1.45); }
   // コムギのアプリからの紹介：コムギの公式LINE・ミニアプリへ（紹介コードつき＝馬越さんの紹介として記録される）
   function komugiShareCard(url) {
     const FACE = 'https://hiromitsu81.github.io/terakoya/butter/komugi_face.jpg';
-    return { type: 'flex', altText: '馬越 雅哉さんのAI棒「コムギ」の紹介です', contents: { type: 'bubble', size: 'kilo',
+    return { type: 'flex', altText: '馬越 雅哉さんの相棒「コムギ」の紹介です', contents: { type: 'bubble', size: 'kilo',
       styles: { header: { backgroundColor: '#0A0810' }, body: { backgroundColor: '#16121F' }, footer: { backgroundColor: '#16121F' } },
       header: { type: 'box', layout: 'horizontal', spacing: 'md', alignItems: 'center', paddingAll: '16px', contents: [
         { type: 'image', url: FACE, size: '52px', aspectMode: 'cover', aspectRatio: '1:1', flex: 0 },
-        { type: 'box', layout: 'vertical', contents: [{ type: 'text', text: 'コムギ', color: '#FFFFFF', weight: 'bold', size: 'xl' }, { type: 'text', text: '馬越 雅哉さんのAI棒', color: '#1FD1F2', size: 'xxs', weight: 'bold' }] }] },
+        { type: 'box', layout: 'vertical', contents: [{ type: 'text', text: 'コムギ', color: '#FFFFFF', weight: 'bold', size: 'xl' }, { type: 'text', text: '馬越 雅哉さんの相棒', color: '#1FD1F2', size: 'xxs', weight: 'bold' }] }] },
       body: { type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '16px', contents: [
         { type: 'text', text: '馬越さんへのご相談は、相棒のコムギが先にお聞きします。', wrap: true, size: 'sm', color: '#E9E4F5' },
         { type: 'text', text: '話すだけで、馬越さんにつながります。毎朝のコムギ通信も聞けます。', wrap: true, size: 'sm', color: '#A9A2BC' }] },
@@ -3005,7 +3005,7 @@ body.liffTall.av-komugi #hataboAv { transform: translateY(255px) scale(1.45); }
   async function shareHatabo() {
     // 紹介は、だれからでも汎用のハタボ（HATHA LABのミニアプリ）へ。紹介コードがあれば「だれの紹介か」もつける
     const url = MINI_URL + (J.myRef ? '?ref=' + encodeURIComponent(J.myRef) : '');
-    const text = KOMUGI_APP ? '馬越 雅哉さんのAI棒「コムギ」です。馬越さんへのご相談は、コムギが先にお聞きしてつなぎます。話しかけてみてください。\n' + url : 'AIの愛棒「ハタボ」だよ。話すだけで、調べもの・下書き・相談までいっしょにやってくれるボー。気軽に話してみて！\n' + url;
+    const text = KOMUGI_APP ? '馬越 雅哉さんの相棒「コムギ」です。馬越さんへのご相談は、コムギが先にお聞きしてつなぎます。話しかけてみてください。\n' + url : 'AIの愛棒「ハタボ」だよ。話すだけで、調べもの・下書き・相談までいっしょにやってくれるボー。気軽に話してみて！\n' + url;
     try {
       if (window.liff && liff.isApiAvailable && liff.isApiAvailable('shareTargetPicker')) {
         let r; try { r = await liff.shareTargetPicker([shareCard(url)]); } catch (e) { r = await liff.shareTargetPicker([{ type: 'text', text }]); }
@@ -3946,7 +3946,7 @@ body.liffTall.av-komugi #hataboAv { transform: translateY(255px) scale(1.45); }
   });
   showMode();
   liffBoot();
-  if (HATABO_APP) { const ib = KOMUGI_APP ? addBubble('コムギ', 'あ、あの……はじめまして。馬越 雅哉さんのAI棒の、コムギです。話しかけてもらえたら、たまごから生まれますけん。', 'her') : addBubble('ハタボ', 'はじめましてだボー。ぼくはハタボ。話しかけると、たまごから生まれるボー。', 'her'); if (ib) ib.parentElement.id = 'introBubble'; }
+  if (HATABO_APP) { const ib = KOMUGI_APP ? addBubble('コムギ', 'あ、あの……はじめまして。馬越 雅哉さんの相棒の、コムギです。話しかけてもらえたら、たまごから生まれますけん。', 'her') : addBubble('ハタボ', 'はじめましてだボー。ぼくはハタボ。話しかけると、たまごから生まれるボー。', 'her'); if (ib) ib.parentElement.id = 'introBubble'; }
   else if (LIFF) addBubble('ジュニア', 'よう！バターちゃんジュニアだぜ。となりは柴犬のチーちゃんと、招き猫のジャム猫！', 'her');
   else addBubble('バターちゃん', 'こんにちは！バターちゃんだよ。となりは柴犬のチーちゃん！', 'her');
   setState('idle');
