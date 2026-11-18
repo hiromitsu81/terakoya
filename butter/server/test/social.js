@@ -26,6 +26,7 @@ const gasSrv = http.createServer((req, res) => {
   });
 }).listen(0);
 
+process.env.CLAUDE_FAMILY = '1';
 process.env.GAS_URL = 'http://127.0.0.1:' + gasSrv.address().port;
 const srvMod = require('../server.js');
 const { createServer, deps, splitter, takeEmotion } = srvMod;
@@ -91,5 +92,12 @@ function client(port, hello) {
   const v = await client(port, { type: 'hello', idToken: 'guest-x', visit: 'sp-boshu' });
   const rv = await v.until(m => m.type === 'ready');
   assert.ok(rv.visit && /協賛/.test(rv.visit.name), '協賛のAI棒');
+  // 家族はいつもClaudeと同じ（スーパー上位・長さの決まりなし）
+  let fp = null; const o = deps.claude.messages.stream; deps.claude.messages.stream = p => { fp = p; return o(p); };
+  const fam = await client(port, { type: 'hello', pass: 'ok', mode: 'family' }); const rf = await fam.until(m => m.type === 'ready');
+  assert.ok(rf.claude && rf.canPlan, '家族はClaudeモード');
+  fam.ws.send(JSON.stringify({ type: 'text', text: 'こんにちは' })); await fam.until(m => m.type === 'reply_end');
+  assert.ok(/opus/.test(fp.model) && /Claudeと同じように/.test(sysText(fp.system)), '家族はいちばん賢いモデルとClaudeと同じ答え方');
+  deps.claude.messages.stream = o;
   console.log('OK：ガチャ・友だち・LINE ID・伝言・協賛'); process.exit(0);
 })().catch(e => { console.error('NG', e); process.exit(1); });

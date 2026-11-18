@@ -26,6 +26,7 @@ const gasSrv = http.createServer((req, res) => {
   });
 }).listen(0);
 
+process.env.CLAUDE_FAMILY = '0';   // 家族のClaudeモードは別に確かめる（ここでは速いモデルの切りかえを見る）
 process.env.GAS_URL = 'http://127.0.0.1:' + gasSrv.address().port;
 const srvMod = require('../server.js');
 const { createServer, deps, splitter, takeEmotion } = srvMod;
