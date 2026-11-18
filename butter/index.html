@@ -197,6 +197,13 @@ body.wideshow .sato-banner small { font-size: 12px; }
 .liffmode .hint { font-size: 12px; }
 .liffmode .talkbtn { width: 96px; height: 96px; }
 .modebtn { display: none; }
+
+/* コムギ（マー君の窓口）の見た目 */
+#komugiAv { display: none; }
+.av-komugi #butter > :not(#komugiAv):not(.ring) { display: none; }
+.av-komugi #komugiAv { display: inline; transform-origin: 250px 225px; transform-box: view-box; }
+.av-komugi .talking #komugiAv { animation: komugiTalk .28s ease-in-out infinite alternate; }
+@keyframes komugiTalk { from { transform: translateY(0) scale(1); } to { transform: translateY(-4px) scale(1.02); } }
 .guestnote { display: none; }
 .guestmode .guestnote { display: block; margin: 0; text-align: center; font-size: 11px; color: var(--soft); line-height: 1.5; }
 /* まるいボタンの左右に小さいボタン（縦に長くならないように） */
@@ -551,6 +558,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
 
       <!-- ===== バターちゃん ===== -->
       <g id="butter" class="butter" data-melt="0" data-emo="smile">
+        <g id="komugiAv"><clipPath id="komugiClip"><circle cx="250" cy="225" r="140"/></clipPath><circle cx="250" cy="225" r="146" fill="#fff"/><image href="komugi.jpg" x="110" y="85" width="280" height="280" clip-path="url(#komugiClip)" preserveAspectRatio="xMidYMid slice"/></g>
         <circle class="ring" cx="250" cy="225" r="150" fill="none" stroke="var(--mic-live)" stroke-width="6"/>
         <ellipse cx="250" cy="352" rx="150" ry="22" fill="var(--line)"/>
         <ellipse id="plate" cx="250" cy="334" rx="165" ry="30" fill="var(--card)" stroke="var(--line)" stroke-width="4"/>
@@ -2037,7 +2045,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   })(), JR_TRIO = /(三人モード|3人モード|みんなで話そう|三人で話そう|3人で話そう|二人モード|ふたりモード|2人モード|ふつうのモード)/;
   // 料金プランのおためし（ヒロさんの家族の画面だけ）：標準 → 上位 → スーパー上位 → 標準
   const PLAN_ORDER = ['std', 'high', 'super'], PLAN_NAME = { std: '標準', high: '上位', super: 'スーパー上位' };
-  function planShow() { const b = $('planBtn'); if (!b) return; const p = store.get('jrPlan', 'std'); b.textContent = 'プラン：' + (PLAN_NAME[p] || '標準'); b.hidden = !J.ready || J.guest || BIZ(); }
+  function planShow() { const b = $('planBtn'); if (!b) return; const p = store.get('jrPlan', J.canPlan ? 'super' : 'std'); b.textContent = 'グレード：' + (PLAN_NAME[p] || '標準'); b.hidden = !J.ready || (J.guest && !J.canPlan) || (BIZ() && !J.canPlan); }
   function trioShow() { const b = $('trioBtn'); b.setAttribute('aria-pressed', String(J.trio)); b.textContent = J.trio ? '三人：オン' : '三人：オフ'; }
   const jrLive = () => !J.dead && J.ready && J.ws && J.ws.readyState === 1;
   let lipLive = false;   // 声の大きさで口を動かしている間は、ランダムの口パクを止める
@@ -2077,18 +2085,20 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
       case 'ready':
         document.body.classList.remove('connecting');
         J.ready = true; J.tries = 0; J.greeted = true; J.profile = m.profile || null; 
-        J.guest = !!m.guest; $('goenBtn').hidden = J.guest; J.myRef = m.myRef || ''; $('shareBtn').hidden = !J.myRef;
+        J.guest = !!m.guest; J.avatar = m.avatar || ''; document.body.classList.toggle('av-komugi', J.avatar === 'komugi'); if (J.avatar === 'komugi') { const t = document.querySelector('#butterTag text'); if (t) t.textContent = 'コムギ'; } $('goenBtn').hidden = J.guest; J.myRef = m.myRef || ''; $('shareBtn').hidden = !J.myRef;
         document.body.classList.toggle('familyok', !J.guest);
         document.body.classList.toggle('guestmode', J.guest);
-        if (J.guest) { $('typedInput').placeholder = 'ヒロさんにしてほしいこと、なんでもどうぞ'; }
+        if (J.guest) { $('typedInput').placeholder = J.avatar === 'komugi' ? 'マー君にしてほしいこと、なんでもどうぞ' : 'ヒロさんにしてほしいこと、なんでもどうぞ'; }
         $('trioBtn').hidden = false; J.trio = !!m.trio; store.set('jrTrio', J.trio); store.set('jrOK', true); trioShow();
-        if (!J.guest && !BIZ() && store.get('jrPlan', 'std') !== 'std') jrSend({ type: 'plan', plan: store.get('jrPlan', 'std') });
+        J.canPlan = !!m.canPlan;
+        if (J.canPlan) jrSend({ type: 'plan', plan: store.get('jrPlan', 'super') });
+        else if (!J.guest && !BIZ() && store.get('jrPlan', 'std') !== 'std') jrSend({ type: 'plan', plan: store.get('jrPlan', 'std') });
         planShow();
         if (diag) diag.hidden = true;
         if (awake.until !== 0) keepAwake(true, 0);
         jrMicStart().catch(() => { hint.textContent = 'マイクが使えません。LINEの設定でマイクを許可してください。'; });
         jrBtn(); if (!J.playing) setState('listening');
-        hint.textContent = J.guest ? 'ヒロさんの相棒、ジュニアだぜ。そのまま話しかけてくんな。' : J.trio ? '三人モード：「ジュニア」と呼んだときだけ答えるよ。' : 'そのまま話しかけてね。話している途中でも、声をかけたら止まって聞くよ。';
+        hint.textContent = J.guest ? (J.avatar === 'komugi' ? 'マー君の相棒の、コムギです。お気軽に話しかけてください。' : 'ヒロさんの相棒、ジュニアだぜ。そのまま話しかけてくんな。') : J.trio ? '三人モード：「ジュニア」と呼んだときだけ答えるよ。' : 'そのまま話しかけてね。話している途中でも、声をかけたら止まって聞くよ。';
         break;
       case 'partial':
         if (pickRes && nameIn(m.text)) break;
@@ -2109,7 +2119,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
         break;
       case 'emotion': if (m.gen === J.gen) setEmo(m.emotion); break;
       case 'reply_text': if (m.gen === J.gen && J.out) { J.outText += m.text; J.out.textContent = J.outText; } break;
-      case 'searching': if (m.gen === J.gen) { hint.textContent = 'ちょいと調べてるぜ…'; J.thinkAt = Date.now() + 15000; setEmo('think'); } break;
+      case 'searching': if (m.gen === J.gen) { hint.textContent = J.avatar === 'komugi' ? 'ちょっと調べよります…' : 'ちょいと調べてるぜ…'; J.thinkAt = Date.now() + 15000; setEmo('think'); } break;
       case 'waiting': if (m.gen === J.gen) hint.textContent = 'まわりの話がおわるのを待ってから話すよ…'; break;
       case 'audio':
         if (m.gen === J.gen) { J.queue.push(m); jrPump(); }
@@ -2401,7 +2411,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     location.href = 'https://line.me/R/share?text=' + encodeURIComponent(text);
   });
   $('trioBtn').addEventListener('click', () => jrSend({ type: 'trio', on: !J.trio }));
-  $('planBtn').addEventListener('click', () => { const p = store.get('jrPlan', 'std'); jrSend({ type: 'plan', plan: PLAN_ORDER[(PLAN_ORDER.indexOf(p) + 1) % PLAN_ORDER.length] }); });
+  $('planBtn').addEventListener('click', () => { const p = store.get('jrPlan', J.canPlan ? 'super' : 'std'); jrSend({ type: 'plan', plan: PLAN_ORDER[(PLAN_ORDER.indexOf(p) + 1) % PLAN_ORDER.length] }); });
   $('gClose').addEventListener('click', () => { $('goenBox').hidden = true; });
   $('gSave').addEventListener('click', () => jrSend({ type: 'profile', profile: { character: $('gChar').value, name: $('gName').value.trim(), skills: $('gSkills').value.trim(), seeking: $('gSeek').value.trim(), shareable: $('gShare').value.trim() } }));
   $('gGo').addEventListener('click', () => { const c = $('gOther').value.trim(); if (c) jrSend({ type: 'goen', code: c }); });
