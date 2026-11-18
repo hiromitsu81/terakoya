@@ -286,3 +286,4 @@ details.q summary::after{content:"+";font-weight:900}details.q[open] summary::af
 @media(max-width:820px){.trg{grid-template-columns:1fr}.trg figure.big{aspect-ratio:16/9}}
 .lu .vis .ph{height:200px!important}.lu .vis .ph.real img{object-position:50% 35%}
 .trg{grid-template-columns:repeat(3,1fr)}@media(max-width:820px){.trg{grid-template-columns:1fr}}
+@media(max-width:640px){.cw-qr{display:none!important}}
