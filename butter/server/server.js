@@ -44,6 +44,7 @@ const ENV = {
   KOMUGI_VOICE: process.env.KOMUGI_VOICE || 'ja-JP-Chirp3-HD-Leda',   // コムギの声：高めでやわらかい少女の声
   KOMUGI_RATE: Number(process.env.KOMUGI_RATE || 1.0),   // コムギはひかえめに、少しゆっくり
   KOMUGI_NEWS_URL: process.env.KOMUGI_NEWS_URL || '',                 // コムギニュース速報の最新号（テキストかJSON {title,body}）
+  HATABO_LINE_TOKEN: process.env.HATABO_LINE_TOKEN || '',   // ハタボ公式LINE（Messaging API）。あれば、伝言をLINEにも届ける
   // 一時的にスーパー上位：LINEのユーザーID:期限（例 Uxxxx:2026-12-31）。期限を過ぎたら自動で標準にもどる
   // サイトから来た人（?ref=site など）は、汎用のハタボをスーパー上位で（長文もClaudeと同じように）
   SUPER_REFS: (process.env.SUPER_REFS || 'site').split(',').map(s => s.trim().toLowerCase()).filter(Boolean),
@@ -163,6 +164,7 @@ async function myPage(S) {
     streak: st.last === day || st.last === new Date(Date.now() - 15 * 3600000).toISOString().slice(0, 10) ? st.streak || 0 : 0,
     lv, lvPct: Math.round((tot - base) / Math.max(1, next - base) * 100), learned: (S.learned || []).length + (S.lessons || []).length,
     kids: (mine && mine.kids) || 0, myRef: S.myRef || '', from: S.refFrom ? await refLabel(S.refFrom) : '',
+    unread: S.myRef ? (await loadInbox(S.myRef).catch(() => [])).filter(x => !x.read).length : 0,
     funnel: S.funnel || funnelOf(mine), lineups: LINEUP, trialDays: TRIAL_DAYS, trialDaily: TRIAL_DAILY,
     notes: (await loadNotes(S.owner).catch(() => [])).slice(0, 50), summary: String(S.memo || '').slice(0, 3000) };
 }
@@ -196,6 +198,59 @@ async function goenTree(S) {
     wave = next;
   }
   return { type: 'goen', nodes, links, up: S.refFrom ? await refLabel(S.refFrom) : '' };
+}
+/* ===== 伝言箱：ご縁でつながった人どうし（ハタボどうし）の取り次ぎ。紹介した人には、お試し・契約のお知らせも ===== */
+const memInbox = new Map();
+async function loadInbox(code) {
+  if (!code) return [];
+  try { if (deps.db) { const d = await deps.db.collection('inbox').doc(code).get(); return d.exists ? (d.data().items || []) : []; } } catch (e) { console.error('inbox load', String(e.message).slice(0, 120)); }
+  return memInbox.get(code) || [];
+}
+async function saveInbox(code, items) {
+  items = items.slice(0, 50);
+  try { if (deps.db) return void await deps.db.collection('inbox').doc(code).set({ items, at: Date.now() }); } catch (e) { console.error('inbox save', String(e.message).slice(0, 120)); }
+  memInbox.set(code, items);
+}
+/** 伝言を入れる。LINEのトークン（HATABO_LINE_TOKEN）があり、相手がハタボの友だちなら、LINEにも届ける */
+async function postInbox(code, item) {
+  if (!code) return;
+  const items = await loadInbox(code);
+  items.unshift(Object.assign({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), at: Date.now(), read: false }, item));
+  await saveInbox(code, items);
+  const r = await getRef(code).catch(() => null), to = r && /^g:U[0-9a-f]{32}$/.test(r.owner || '') ? r.owner.slice(2) : '';
+  if (ENV.HATABO_LINE_TOKEN && to) {
+    const head = item.kind === 'goen' ? 'ご縁のお知らせ' : (item.fromName || 'ご縁の人') + 'さんから伝言';
+    fetch('https://api.line.me/v2/bot/message/push', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + ENV.HATABO_LINE_TOKEN },
+      body: JSON.stringify({ to, messages: [{ type: 'text', text: '【' + head + '】\n' + String(item.text).slice(0, 900) + '\n\nハタボで返事する：https://miniapp.line.me/2012676035-yCkx6tBu?page=inbox' }] }) })
+      .then(x => { if (!x.ok) console.error('push', x.status); }).catch(e => console.error('push', String(e.message).slice(0, 100)));
+  }
+}
+/** ご縁でつながっているか（上へ3代・下へ3代） */
+async function goenLinked(me, other) {
+  if (!me || !other || me === other) return false;
+  let c = me;
+  for (let i = 0; i < 3; i++) { const r = await getRef(c).catch(() => null); c = r && r.parent; if (!c) break; if (c === other) return true; }
+  let wave = [me];
+  for (let d = 0; d < 3 && wave.length; d++) { const next = []; for (const w of wave) for (const k of await refKids(w)) { if (k.code === other) return true; next.push(k.code); } wave = next.slice(0, 120); }
+  return false;
+}
+/** ご縁でつながった人の名前の一覧（伝言の宛先さがし用） */
+async function goenPeople(me) {
+  const out = [];
+  let c = me;
+  for (let i = 0; i < 3; i++) { const r = await getRef(c).catch(() => null); c = r && r.parent; if (!c) break; const u = await getRef(c).catch(() => null); out.push({ code: c, name: (u && u.name) || c, rel: i === 0 ? '紹介してくれた人' : 'ご縁の先輩' }); }
+  let wave = [me];
+  for (let d = 0; d < 3 && wave.length; d++) { const next = []; for (const w of wave) for (const k of await refKids(w)) { out.push({ code: k.code, name: k.name || 'ゲスト', rel: d === 0 ? '紹介した人' : (d + 1) + '代目のご縁' }); next.push(k.code); } wave = next.slice(0, 120); }
+  return out;
+}
+/** 紹介した人（と、その上の人）に、お試し・契約を知らせる */
+async function tellUpline(S, what) {
+  let c = S.refFrom, who = S.me || 'ご縁の人';
+  for (let i = 0; i < 2 && c; i++) {
+    const text = i === 0 ? who + 'さんが、あなたの紹介で' + what + '。' : '（ご縁の先）' + who + 'さんが' + what + '。';
+    await postInbox(c, { kind: 'goen', from: S.myRef, fromName: who, text }).catch(() => {});
+    const up = await getRef(c).catch(() => null); c = up && up.parent;
+  }
 }
 /** 紹介元の名前（「マー君さん」）。手で作ったコード（mac など）はそのまま */
 async function refLabel(code) {
@@ -451,6 +506,7 @@ async function addNote(owner, n) {
   items.unshift({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kind: n.kind, title: String(n.title || '').slice(0, 60), text: String(n.text || '').slice(0, 12000), at: Date.now() });
   await saveNotes(owner, items);
 }
+const DENGON_RE = /(さん|くん|ちゃん|様|さま)?(に|へ).{1,200}(って|と)?(伝えて|つたえて|伝言して|でんごんして|言っといて|いっといて|送っといて|おくっといて)/;
 const MEMO_RE = /(メモ(して|しといて|しておいて|っといて|に残して|にのこして|お願い|おねがい)|メモっといて|書き留めて|かきとめて)/;
 /* 会話のつづき（持ち主ごと・家族モードだけ）：さいきんのやりとりと、まとめ。強制で切れても、次はつづきから話せる */
 const memConvo = new Map();
@@ -745,9 +801,35 @@ function session(ws) {
     const f = S.funnel, title = kind + '：' + (f.lineupName || '') + ' ' + (f.grade || '') + (f.price ? '（' + f.price + (f.pay === 'y' ? '・年払い' : '・月払い') + '）' : '');
     console.log('funnel', JSON.stringify({ owner: S.owner, name: S.me, act, lineup: f.lineup, grade: f.grade, pay: f.pay }));
     gas(Object.assign({ action: 'lead', lead: { who: S.me, ref: await refLabel(S.refFrom || S.ref || ''), kind: '契約', title, need: kind, when: f.stage === 'trial' ? new Date(f.trialUntil).toLocaleDateString('ja-JP') + 'までお試し' : '', budget: f.price || '', next: act === 'cancel' ? 'お試しをやめた理由を聞く' : 'お支払いの登録を案内する', memo: '' } }, S.auth)).catch(() => {});
+    if (act === 'trial') tellUpline(S, 'お試し（' + (f.lineupName || '') + '）をはじめました').catch(() => {});
+    if (act === 'contract') tellUpline(S, (f.lineupName || '') + ' ' + (f.grade || '') + 'を申し込みました').catch(() => {});
     send(await myPage(S));
     const say = { trial: '10日間のお試しがはじまったボー！いちばん上のZで動くから、なんでも頼んでほしいボー。', change: 'プランを変えたボー。', cancel: 'お試しをやめたボー。また話したくなったら、いつでも呼んでほしいボー。', contract: 'お申し込みありがとうだボー！お支払いの案内は、ハタラボから届くボー。' }[act];
     if (say) speakOnly(S.avatar === 'komugi' ? say.replace(/だボー/g, 'です').replace(/ボー/g, 'です') : S.avatar === 'hatabo' ? say : say.replace(/だボー/g, 'だぜ').replace(/ボー/g, 'ぜ'), act === 'cancel' ? 'shy' : 'excited');
+  }
+  /** 伝言：「〇〇さんに、△△って伝えて」。ご縁でつながった人のハタボに届ける */
+  async function dengon(text) {
+    const people = await goenPeople(S.myRef).catch(() => []);
+    const hit = people.filter(p => p.name && text.indexOf(String(p.name).replace(/さん$/, '')) >= 0).sort((a, b) => b.name.length - a.name.length)[0];
+    const T = S.avatar === 'komugi' ? x => x.replace(/ボー/g, 'です') : S.avatar === 'hatabo' ? x => x : x => x.replace(/だボー/g, 'だぜ').replace(/ボー/g, 'ぜ');
+    if (!hit) return false;   // ご縁の人の名前がない（「ヒロさんに伝えて」など）は、いつもの返事へ
+    const i = text.indexOf(String(hit.name).replace(/さん$/, ''));
+    let body = text.slice(i + String(hit.name).replace(/さん$/, '').length).replace(/^(さん|くん|ちゃん|様|さま)?(に|へ)[、,\s]*/, '').replace(/(って|と)?(伝えて|つたえて|伝言して|でんごんして|言っといて|いっといて|送っといて|おくっといて)[。！!]*\s*$/, '').trim();
+    if (body.length < 2) { speakOnly(T(hit.name + 'さんに、なんて伝えるボー？'), 'think'); return true; }
+    await postInbox(hit.code, { kind: 'msg', from: S.myRef, fromName: S.me || 'ご縁の人', text: body });
+    send({ type: 'note_saved', kind: 'dengon' });
+    speakOnly(T(hit.name + 'さんのハタボに、伝言をとどけたボー。'), 'smile');
+    return true;
+  }
+  /** 開いたときに、まだ読んでいない伝言を伝える */
+  async function deliverInbox() {
+    if (!S.myRef) return;
+    const items = await loadInbox(S.myRef).catch(() => []), un = items.filter(x => !x.read);
+    if (!un.length) return;
+    const T = S.avatar === 'komugi' ? x => x.replace(/だボー/g, 'です').replace(/ボー/g, 'です') : S.avatar === 'hatabo' ? x => x : x => x.replace(/だボー/g, 'だぜ').replace(/ボー/g, 'ぜ');
+    const lines = un.slice(0, 3).map(x => x.kind === 'goen' ? x.text : x.fromName + 'さんから：「' + String(x.text).slice(0, 120) + '」');
+    await speakOnly(T('伝言が' + un.length + '件あるボー。' + lines.join('　') + (un.length > 3 ? '　ほかはマイハタボの伝言で見られるボー。' : '')), 'excited');
+    items.forEach(x => { x.read = true; }); await saveInbox(S.myRef, items);
   }
   /** メモ：「〇〇をメモして」。中身がなければ、さっきの返事をメモする */
   async function memo(text) {
@@ -796,7 +878,7 @@ function session(ws) {
     savePrefs(S.owner, { trio: on });
     return speakOnly(on ? 'おう、三人モードにするぜ。おいらに話すときは「ジュニア」って呼んでくんな。' : 'ふつうのモードにもどすぜ。', 'excited');
   }
-  function onHeard(text) {
+  async function onHeard(text) {
     S.lastPartial = Date.now(); S.utt++;
     // 声での切りかえ：三人モード中は「ジュニア、ふたりモードにして」のように呼ばれたときだけ。すでに同じモードなら何もしない
     if (TRIO_ON.test(text) && !S.trio) return setTrio(true);
@@ -821,6 +903,7 @@ function session(ws) {
     if ((!S.guest || S.asGuest) && FORGET_RE.test(text)) { S.lessons = []; S.learned = []; savePrefs(S.asGuest ? GUEST_COMMON : S.owner, { lessons: [], learned: [] }); return speakOnly('がってんだ、教わったことはきれいさっぱり忘れたぜ。', 'smile'); }
     if (MINUTES_RE.test(text)) return minutes(PDF_RE.test(text) && !S.guest);
     if (MEMO_RE.test(text)) return memo(text);
+    if (S.myRef && DENGON_RE.test(text) && await dengon(text)) return;
     if (calledJunior(text) && nameOnly(text)) return speakOnly(AVS[S.avatar] ? AVS[S.avatar].quick : QUICK[Math.floor(Math.random() * QUICK.length)], 'smile');
     if (KAKEGOE_RE.test(text)) return speakOnly(S.guest || S.mode === 'business' ? KAKEGOE_GUEST : KAKEGOE_FAMILY, 'excited');
     if (QUIET_RE.test(text)) { S.quiet = true; send({ type: 'quiet', on: true }); return speakOnly('おう、しずかにしてるぜ。用があったら名前を呼んでくんな。', 'smile'); }
@@ -1086,9 +1169,10 @@ function session(ws) {
           }
         }
         send({ type: 'ready', me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs, guest: !!S.guest, myRef: S.myRef || '', avatar: S.avatar || '', komugi: !!S.komugi, superUntil: superUntil(S.owner), canPlan: !!superUntil(S.owner) });
-        if (m.greet && S.guest && S.consult) return recapGreet();      // 相談メモがある人には、振り返りからはじめる
+        if (m.greet && S.guest && S.consult) return recapGreet().then(deliverInbox).catch(() => {});      // 相談メモがある人には、振り返りからはじめる
         const hi = m.greet ? (S.guest ? (S.history.length ? (AVS[S.avatar] ? AVS[S.avatar].again : 'よう、また来てくれたな！つづきを話そうぜ。') : (AVS[S.avatar] ? AVS[S.avatar].greet(S.me) : guestGreeting(S.me))) : greeting(S.me, S.mode, S.trio)) : '';
-        if (hi) speakOnly(hi, 'excited');
+        if (hi) await speakOnly(hi, 'excited');
+        deliverInbox().catch(() => {});
         return;
       }
       if (!S.ready) return;
@@ -1133,6 +1217,14 @@ function session(ws) {
       if (m.type === 'mypage') return send(await myPage(S));
       if (m.type === 'goen_tree') return send(await goenTree(S));
       if (m.type === 'funnel') return onFunnel(m);
+      if (m.type === 'inbox') return send({ type: 'inbox', items: await loadInbox(S.myRef), people: (await goenPeople(S.myRef).catch(() => [])).slice(0, 60) });
+      if (m.type === 'inbox_send') {
+        const to = String(m.to || ''), t = String(m.text || '').trim().slice(0, 500);
+        if (!t || !(await goenLinked(S.myRef, to))) return send({ type: 'notice', why: 'inbox', detail: 'ご縁でつながった人にだけ送れます' });
+        await postInbox(to, { kind: 'msg', from: S.myRef, fromName: S.me || 'ご縁の人', text: t });
+        return send({ type: 'inbox', items: await loadInbox(S.myRef), people: (await goenPeople(S.myRef).catch(() => [])).slice(0, 60), sent: true });
+      }
+      if (m.type === 'inbox_read') { const items = await loadInbox(S.myRef); items.forEach(x => { x.read = true; }); await saveInbox(S.myRef, items); return send({ type: 'inbox', items, people: (await goenPeople(S.myRef).catch(() => [])).slice(0, 60) }); }
       if (m.type === 'note_del') { const items = (await loadNotes(S.owner)).filter(x => x.id !== String(m.id || '')); await saveNotes(S.owner, items); return send(await myPage(S)); }
     } catch (e) { send({ type: 'notice', why: 'server', detail: String(e.message).slice(0, 80) }); }
   });
