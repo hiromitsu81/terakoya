@@ -1,0 +1,288 @@
+/* ハタボ サービスサイト 共通スタイル（KINTO型・2026-11-18） */
+:root{--hb-ink:#141A2A;--hb-navy:#16233F;--hb-soft:#5E6372;--hb-line:#E4E6EB;--hb-bg:#F6F7F9;--hb-white:#FFFFFF;--hb-pk:#EC7D8F;--hb-gr:#8DC21F;--hb-bl:#379BD7;--hb-acc:#2F6FD6;--hb-silver:#A6ABB2;--hb-r:18px}
+.hb{margin:0;background:var(--hb-white);color:var(--hb-ink);font:16px/1.8 "Noto Sans JP",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.hb *{box-sizing:border-box}.hb a{color:inherit}.hb img{max-width:100%;display:block}
+.hb .rv{opacity:1!important;transform:none!important}
+/* header */
+.hbh{position:sticky;top:0;z-index:80;background:rgba(255,255,255,.96);backdrop-filter:blur(10px);border-bottom:1px solid var(--hb-line)}
+.hbh .in{max-width:1240px;margin:0 auto;padding:0 24px;height:68px;display:flex;align-items:center;gap:28px}
+.hbh .brand{display:flex;align-items:center;gap:10px;text-decoration:none;flex:none}
+.hbh .brand img{width:36px;height:36px}
+.hbh .brand b{font:900 21px/1 "Noto Sans JP",sans-serif;letter-spacing:.06em;color:var(--hb-ink)}
+.hbh .brand small{display:block;font:700 9px/1 "Noto Sans JP";letter-spacing:.18em;color:var(--hb-soft);margin-top:4px}
+.hbh nav{display:flex;gap:22px;flex:1;font-size:14px;font-weight:700}
+.hbh nav a{text-decoration:none;padding:8px 0;border-bottom:2px solid transparent;white-space:nowrap}
+.hbh nav a:hover,.hbh nav a.on{border-bottom-color:var(--hb-ink)}
+.hbh .acts{display:flex;gap:10px;align-items:center;flex:none}
+.hbh .my{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;text-decoration:none;padding:9px 14px;border:1px solid var(--hb-line);border-radius:999px}
+.hbh .menu{display:none;background:none;border:0;font:700 14px "Noto Sans JP";cursor:pointer}
+@media(max-width:1080px){.hbh nav{display:none}.hbh nav.open{display:flex;position:absolute;top:68px;left:0;right:0;flex-direction:column;background:#fff;padding:14px 24px 22px;gap:4px;border-bottom:1px solid var(--hb-line)}.hbh .menu{display:block}.hbh .acts .bt{display:none}}
+/* buttons */
+.bt{display:inline-flex;align-items:center;justify-content:center;gap:8px;font:700 15px "Noto Sans JP";text-decoration:none;border-radius:999px;padding:14px 26px;border:0;cursor:pointer;transition:transform .2s}
+.bt:hover{transform:translateY(-1px)}
+.bt.pri{background:var(--hb-ink);color:#fff}.bt.sec{background:#fff;color:var(--hb-ink);border:1.5px solid var(--hb-ink)}.bt.line{background:#06C755;color:#fff}.bt.sm{padding:10px 18px;font-size:13px}
+/* layout */
+.wr{max-width:1240px;margin:0 auto;padding:0 24px}
+.sc{padding:88px 0}.sc.gray{background:var(--hb-bg)}.sc.navy{background:var(--hb-navy);color:#EEF0F5}
+.kicker{font:700 12px/1 "Noto Sans JP";letter-spacing:.24em;color:var(--hb-acc);margin:0 0 12px}.navy .kicker{color:#9EC2FF}
+.h1{font:900 clamp(32px,4.6vw,58px)/1.3 "Noto Sans JP";margin:0 0 18px;letter-spacing:.01em}
+.h2{font:900 clamp(24px,3vw,36px)/1.45 "Noto Sans JP";margin:0 0 14px}
+.h3{font:800 19px/1.5 "Noto Sans JP";margin:0 0 8px}
+.lead2{font-size:16px;color:var(--hb-soft);max-width:44em;margin:0 0 28px}.navy .lead2{color:#C6CBDB}
+.small{font-size:12.5px;color:var(--hb-soft)}.navy .small{color:#B9C0D2}
+.grid{display:grid;gap:18px}.g2{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}.g5{grid-template-columns:repeat(5,1fr)}
+@media(max-width:960px){.g3,.g4,.g5{grid-template-columns:repeat(2,1fr)}}@media(max-width:640px){.g2,.g3,.g4,.g5{grid-template-columns:1fr}}
+.cd{background:#fff;border:1px solid var(--hb-line);border-radius:var(--hb-r);padding:24px}.gray .cd{border-color:transparent}
+.cd p{margin:0;color:var(--hb-soft);font-size:14.5px}.navy .cd{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.14)}.navy .cd p{color:#C6CBDB}
+.num{font:900 13px/1 "Noto Sans JP";color:var(--hb-acc);letter-spacing:.1em;display:block;margin-bottom:10px}
+.tag{display:inline-block;font:700 11.5px/1 "Noto Sans JP";padding:6px 10px;border-radius:999px;background:var(--hb-bg);color:var(--hb-soft);margin:0 6px 6px 0}
+.tag.soon{background:#FFF1D6;color:#8A5A00}
+/* hero */
+.hero2{background:linear-gradient(180deg,#F3F6FB 0%,#fff 100%);padding:64px 0 40px;overflow:hidden}
+.hero2 .in{display:grid;grid-template-columns:1.05fr .95fr;gap:40px;align-items:center}
+@media(max-width:960px){.hero2 .in{grid-template-columns:1fr}}
+.hero2 .cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:6px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 0}
+.chips span{font:700 12.5px "Noto Sans JP";background:#fff;border:1px solid var(--hb-line);border-radius:999px;padding:7px 12px}
+/* phone mock */
+.phone{width:min(330px,86vw);margin:0 auto;border-radius:38px;background:#0F1626;padding:12px;box-shadow:0 30px 60px rgba(20,26,42,.22);position:relative}
+.phone .scr{background:#8CABD9;border-radius:28px;overflow:hidden;min-height:520px;display:flex;flex-direction:column}
+.phone .bar{background:#fff;padding:12px 14px;display:flex;align-items:center;gap:10px;font:700 13px "Noto Sans JP"}
+.phone .bar img{width:28px;height:28px}
+.phone .msgs{flex:1;padding:14px 12px;display:flex;flex-direction:column;gap:10px}
+.phone .m{max-width:80%;font-size:13px;line-height:1.6;padding:9px 12px;border-radius:16px;background:#fff;color:#141A2A}
+.phone .m.me{align-self:flex-end;background:#9CE07A}
+.phone .t{font:700 10.5px "Noto Sans JP";color:#EAF1FB;text-align:center}
+.phone .emb{position:absolute;right:-18px;top:-18px;width:74px;height:74px;filter:drop-shadow(0 8px 14px rgba(0,0,0,.25))}
+/* lineup cards */
+.lu{display:flex;flex-direction:column;background:#fff;border:1px solid var(--hb-line);border-radius:var(--hb-r);overflow:hidden;text-decoration:none;transition:box-shadow .2s,transform .2s}
+.lu:hover{box-shadow:0 16px 36px rgba(20,26,42,.10);transform:translateY(-2px)}
+.lu .vis{height:150px;display:flex;align-items:center;justify-content:center;position:relative}
+.lu .vis svg{width:120px;height:120px}
+.lu .bd{padding:18px 20px 22px}
+.lu .who{font:700 12px "Noto Sans JP";color:var(--hb-soft)}
+.lu .nm{font:900 22px/1.3 "Noto Sans JP";margin:4px 0 6px}
+.lu .pr{font:800 15px "Noto Sans JP"}.lu .pr small{font-size:11.5px;color:var(--hb-soft);font-weight:500}
+/* tables */
+.tbx{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.tb{width:100%;border-collapse:separate;border-spacing:0;font-size:14px;min-width:640px;background:#fff;border:1px solid var(--hb-line);border-radius:14px;overflow:hidden}
+table.tb th,table.tb td{padding:13px 14px;text-align:left;vertical-align:top;border-bottom:1px solid var(--hb-line)}
+table.tb tr:last-child td{border-bottom:0}
+table.tb th{background:var(--hb-bg);font-weight:800;white-space:nowrap}
+table.tb td.c,table.tb th.c{text-align:center}
+table.tb .hl{background:#EEF4FF}
+.ok{color:#2E7D32;font-weight:800}.no{color:#B0B4BC}
+/* plan compare (KINTO style) */
+.pc{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}@media(max-width:760px){.pc{grid-template-columns:1fr}}
+.pc .cd{border-width:2px;position:relative}.pc .cd.rec{border-color:var(--hb-ink)}
+.pc .badge{position:absolute;top:-12px;left:20px;background:var(--hb-ink);color:#fff;font:700 11.5px "Noto Sans JP";padding:5px 12px;border-radius:999px}
+.pc ul{list-style:none;padding:0;margin:14px 0 0;display:grid;gap:8px;font-size:14px}
+.pc li{display:flex;gap:8px}.pc li::before{content:"✓";color:var(--hb-acc);font-weight:900}
+/* includes */
+.inc{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}@media(max-width:860px){.inc{grid-template-columns:repeat(2,1fr)}}
+.inc div{background:#fff;border-radius:14px;padding:18px;text-align:center;border:1px solid var(--hb-line)}
+.inc b{display:block;font:800 15px "Noto Sans JP";margin:8px 0 4px}.inc span{font-size:12.5px;color:var(--hb-soft)}
+.inc i{font-style:normal;font-size:26px}
+/* model page */
+.mh{padding:56px 0 36px;background:linear-gradient(180deg,var(--c,#EEF4FF) 0%,#fff 100%)}
+.mh .in{display:grid;grid-template-columns:1fr 1fr;gap:36px;align-items:center}@media(max-width:900px){.mh .in{grid-template-columns:1fr}}
+.subnav{position:sticky;top:68px;z-index:60;background:#fff;border-bottom:1px solid var(--hb-line)}
+.subnav .wr{display:flex;gap:20px;overflow-x:auto;height:50px;align-items:center;font:700 13.5px "Noto Sans JP"}
+.subnav a{text-decoration:none;white-space:nowrap}.subnav .bt{margin-left:auto}
+.grade{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}@media(max-width:860px){.grade{grid-template-columns:1fr}}
+.grade .cd h4{font:900 34px/1 "Noto Sans JP";margin:0 0 4px}.grade .cd .p{font:900 22px "Noto Sans JP";margin:12px 0 2px}.grade .cd .p small{font-size:12px;font-weight:600;color:var(--hb-soft)}
+.grade .cd.top{border:2px solid var(--hb-ink)}
+.spec dl{display:grid;grid-template-columns:200px 1fr;margin:0;border-top:1px solid var(--hb-line)}
+.spec dt,.spec dd{padding:14px 12px;border-bottom:1px solid var(--hb-line);margin:0;font-size:14.5px}.spec dt{font-weight:800;background:var(--hb-bg)}
+@media(max-width:640px){.spec dl{grid-template-columns:1fr}}
+.day{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}@media(max-width:860px){.day{grid-template-columns:repeat(2,1fr)}}
+.day div{background:#fff;border-radius:14px;padding:16px;border:1px solid var(--hb-line)}.day b{font:900 13px "Noto Sans JP";color:var(--hb-acc)}.day p{margin:6px 0 0;font-size:14px}
+/* sim */
+.sim{display:grid;grid-template-columns:1.3fr .9fr;gap:22px;align-items:start}@media(max-width:900px){.sim{grid-template-columns:1fr}}
+.sim fieldset{border:0;margin:0 0 20px;padding:0}.sim legend{font:800 15px "Noto Sans JP";margin-bottom:10px}
+.opts{display:flex;flex-wrap:wrap;gap:8px}
+.opts label{display:flex;align-items:center;gap:8px;border:1.5px solid var(--hb-line);border-radius:12px;padding:10px 14px;cursor:pointer;font-size:14px;background:#fff}
+.opts label:has(input:checked){border-color:var(--hb-ink);background:#F3F6FB}
+.opts input{accent-color:var(--hb-ink)}
+.sim .res{position:sticky;top:130px;background:var(--hb-navy);color:#fff;border-radius:var(--hb-r);padding:26px}
+.sim .res .big2{font:900 40px/1.1 "Noto Sans JP";margin:8px 0}
+.sim .res .big2 small{font-size:15px}
+.sim .res ul{padding-left:18px;margin:12px 0;font-size:13.5px;color:#C6CBDB}
+.sim input[type=number]{width:90px;padding:9px 10px;border:1.5px solid var(--hb-line);border-radius:10px;font:700 15px "Noto Sans JP"}
+/* banner */
+.bn{display:grid;grid-template-columns:1fr auto;gap:20px;align-items:center;border-radius:var(--hb-r);padding:30px 34px;text-decoration:none}
+@media(max-width:760px){.bn{grid-template-columns:1fr}}
+.bn.dk{background:var(--hb-navy);color:#fff}.bn.lt{background:var(--hb-bg)}
+/* faq */
+details.q{border-bottom:1px solid var(--hb-line);padding:4px 0}details.q summary{cursor:pointer;font-weight:800;padding:16px 0;list-style:none;display:flex;justify-content:space-between;gap:12px}
+details.q summary::after{content:"+";font-weight:900}details.q[open] summary::after{content:"−"}details.q p{margin:0 0 16px;color:var(--hb-soft)}
+/* footer */
+.hbf{background:#0E1526;color:#C3C8D4;padding:56px 0 28px;font-size:13.5px}
+.hbf .fg{display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;gap:28px}@media(max-width:860px){.hbf .fg{grid-template-columns:1fr 1fr}}
+.hbf h5{color:#fff;font:800 13px "Noto Sans JP";margin:0 0 12px;letter-spacing:.06em}.hbf ul{list-style:none;padding:0;margin:0;display:grid;gap:8px}.hbf a{text-decoration:none;opacity:.85}.hbf a:hover{opacity:1}
+.hbf .co{display:flex;gap:12px;align-items:flex-start}.hbf .co img{width:44px;height:44px}
+.hbf .fb{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;border-top:1px solid #222B40;margin-top:36px;padding-top:18px;font-size:12px;color:#8A91A3}
+/* consult widget */
+.cw-btn{position:fixed;right:20px;bottom:20px;z-index:200;display:flex;align-items:center;gap:10px;background:var(--hb-ink);color:#fff;border:0;border-radius:999px;padding:10px 18px 10px 10px;font:800 14px "Noto Sans JP";cursor:pointer;box-shadow:0 12px 30px rgba(20,26,42,.3)}
+.cw-btn img{width:34px;height:34px;background:#fff;border-radius:50%;padding:2px}
+.cw{position:fixed;right:20px;bottom:84px;z-index:201;width:min(380px,calc(100vw - 32px));height:min(560px,calc(100vh - 120px));background:#fff;border-radius:20px;box-shadow:0 24px 60px rgba(20,26,42,.3);display:none;flex-direction:column;overflow:hidden;border:1px solid var(--hb-line)}
+.cw.open{display:flex}
+.cw .top{background:var(--hb-navy);color:#fff;padding:14px 16px;display:flex;align-items:center;gap:10px}
+.cw .top img{width:34px;height:34px}.cw .top b{font:800 15px "Noto Sans JP"}.cw .top small{display:block;font-size:11px;color:#C6CBDB}
+.cw .top button{margin-left:auto;background:none;border:0;color:#fff;font-size:20px;cursor:pointer}
+.cw .log{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;background:var(--hb-bg)}
+.cw .m{max-width:85%;font-size:13.5px;line-height:1.65;padding:9px 12px;border-radius:14px;background:#fff;white-space:pre-wrap}
+.cw .m.me{align-self:flex-end;background:#DCEBFF}
+.cw .qk{display:flex;gap:6px;flex-wrap:wrap;padding:8px 12px 0}
+.cw .qk button{font:700 12px "Noto Sans JP";border:1px solid var(--hb-line);background:#fff;border-radius:999px;padding:6px 10px;cursor:pointer}
+.cw form{display:flex;gap:6px;padding:10px 12px 12px;border-top:1px solid var(--hb-line)}
+.cw input{flex:1;border:1.5px solid var(--hb-line);border-radius:12px;padding:10px 12px;font:14px "Noto Sans JP"}
+.cw form button{border:0;border-radius:12px;padding:0 12px;font:800 13px "Noto Sans JP";cursor:pointer;background:var(--hb-ink);color:#fff}
+.cw form button.ic{background:var(--hb-bg);color:var(--hb-ink)}.cw form button.ic.on{background:#E0607A;color:#fff}
+.cw .nt{font-size:11px;color:var(--hb-soft);padding:0 12px 10px}
+.hbh .brand span small{display:none}
+.kvh{display:flex;align-items:center;justify-content:center}
+.kvh img{width:min(420px,80%);aspect-ratio:1;object-fit:contain;padding:36px;border-radius:50%;background:radial-gradient(circle at 50% 40%,#fff 0,#EEF2F8 70%);box-shadow:0 30px 60px -30px rgba(22,35,63,.35),inset 0 0 0 1px #E3E7EF}
+.mpv{display:grid;grid-template-columns:1fr 360px;gap:40px;align-items:center;margin-top:48px}
+@media(max-width:820px){.mpv{grid-template-columns:1fr}.kvh img{width:60%}}
+.hbh .brand img{display:none}
+.kvh .eng{position:relative;width:min(440px,82%);aspect-ratio:1;display:grid;place-items:center}
+.kvh .eng img{width:78%;padding:30px}
+.kvh .eng i{position:absolute;inset:0;border-radius:50%;-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 6px),#000 calc(100% - 5px));mask:radial-gradient(farthest-side,transparent calc(100% - 6px),#000 calc(100% - 5px))}
+.kvh .eng .r1{background:conic-gradient(from 0deg,rgba(47,111,214,0) 0 30%,#2F6FD6 70%,#E0607A 92%,#F2B84B 100%);animation:hbspin 2.4s linear infinite}
+.kvh .eng .r2{inset:5%;opacity:.55;background:conic-gradient(from 180deg,rgba(22,35,63,0) 0 50%,#16233F 100%);animation:hbspin 3.6s linear infinite reverse}
+@keyframes hbspin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.kvh .eng i{animation:none}}
+.ocl{background:linear-gradient(180deg,#F3F5F9,#fff);padding-top:64px}
+.ocl-in{display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center}
+@media(max-width:860px){.ocl-in{grid-template-columns:1fr}}
+.phone.lm .scr{min-height:600px}
+.phone .rich{background:#fff;border-top:1px solid #E3E7EF}
+.phone .rich .rh{font:800 12px "Noto Sans JP";color:#16233F;text-align:center;padding:8px;background:#F3F5F9}
+.phone .rich .rg{display:grid;grid-template-columns:repeat(3,1fr)}
+.phone .rich .rg a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;height:84px;border-right:1px solid #E3E7EF;border-bottom:1px solid #E3E7EF;color:#16233F;text-decoration:none}
+.phone .rich .rg a:nth-child(3n){border-right:0}
+.phone .rich .rg b{font:800 13px "Noto Sans JP"}
+.phone .rich .rg small{font-size:10.5px;color:#5A6275}
+.ocl{border-radius:0!important;margin:0!important;max-width:none!important}.ocl .cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}.ocl .chips{margin-top:16px}
+.ph{position:relative;width:100%;border-radius:16px;overflow:hidden;background:radial-gradient(120% 90% at 20% 15%,#fff 0,transparent 55%),radial-gradient(90% 80% at 85% 90%,color-mix(in srgb,var(--k) 35%,transparent),transparent 70%),linear-gradient(135deg,var(--c),#E6EAF1);display:flex;align-items:center;justify-content:center}
+.ph .g{font-size:56px;opacity:.55;filter:saturate(.7)}
+.ph .cap{position:absolute;left:10px;bottom:10px;right:10px;font:700 11px "Noto Sans JP";color:#16233F;background:rgba(255,255,255,.85);border-radius:8px;padding:5px 8px}
+.lu .vis{height:auto!important;padding:0!important}
+.lu .vis .ph{border-radius:0}
+.phband{padding:0 0 24px}
+.phband .ph .g{font-size:110px}
+.phband .ph .cap{font-size:13px;left:16px;bottom:16px;right:auto}
+.eng3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:820px){.eng3{grid-template-columns:1fr}}
+.eng3 h4{font:900 28px "Noto Sans JP";color:#16233F;margin:0}
+.mt{list-style:none;padding:0;margin:14px 0}
+.mt li{font-size:13px;color:#4A4F5C;margin:10px 0 0}
+.mt i{display:block;height:8px;border-radius:99px;background:#E6EAF1;margin-top:5px;position:relative;overflow:hidden}
+.mt i::after{content:"";position:absolute;inset:0;width:var(--v);border-radius:99px;background:linear-gradient(90deg,#2F6FD6,#E0607A)}
+.kvh .eng .r1,.kvh .eng .r2{animation:none}
+.mpv2{margin-top:56px}
+/* しくみページ */
+.hw{padding:64px 0 40px;text-align:center;background:linear-gradient(180deg,#F3F5F9,#fff)}
+.hw-h{font:900 clamp(34px,5vw,64px)/1.25 "Noto Sans JP";color:#16233F;margin:10px 0 18px;letter-spacing:-.01em}
+.hw-h span{background:linear-gradient(90deg,#2F6FD6,#E0607A);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hw-l{max-width:720px;margin:0 auto 18px}
+.hw-s{margin-top:44px;text-align:left}
+.pt3 .cd{position:relative;overflow:hidden;padding-top:70px}
+.pt3 .num{position:absolute;top:10px;left:22px;font:900 54px/1 "Noto Sans JP"!important;letter-spacing:0!important;background:linear-gradient(90deg,#2F6FD6,#E0607A);-webkit-background-clip:text;background-clip:text;color:transparent!important}
+.fl4{counter-reset:f}
+.fl4 .cd{position:relative;counter-increment:f;border-top:4px solid #2F6FD6}
+.fl4 .cd:nth-child(2){border-top-color:#8DC21F}.fl4 .cd:nth-child(3){border-top-color:#F2B84B}.fl4 .cd:nth-child(4){border-top-color:#E0607A}
+.fl4 .cd::before{content:"0" counter(f);display:block;font:900 13px "Noto Sans JP";color:#8A93A6;letter-spacing:.1em;margin-bottom:6px}
+.fl4 .cd:not(:last-child)::after{content:"→";position:absolute;right:-17px;top:50%;transform:translateY(-50%);font:900 18px "Noto Sans JP";color:#16233F;z-index:2}
+@media(max-width:820px){.fl4 .cd::after{display:none}}
+/* 市場のセクションを白と紺に */
+#market,#market *{font-family:"Noto Sans JP",sans-serif!important}
+#market [class*="eye"],#market .kicker{color:#2F6FD6!important}
+#market .mk-t td i{color:#2F6FD6!important}
+#market .mk-t tr.me td{background:#EEF3FC!important}
+#market{--gold:#2F6FD6!important}
+#market .mk-t td.hot b,#market .mk-t td.hot i{color:#fff!important}
+#market .mk-t td.hot i{color:#C6CBDB!important}
+#market .mk-t tr.me td.hot{background:#16233F!important}
+.hbw{padding:72px 0;text-align:center;background:#fff;border-top:1px solid #EEF1F6;border-bottom:1px solid #EEF1F6}
+.hbw-f{font:900 clamp(30px,4.6vw,56px)/1.2 "Noto Sans JP";margin:0;letter-spacing:.04em}
+.hbw-f i{font-style:normal;color:#141A2A;font-weight:400;margin:0 .45em}
+.hbw-f .c1{color:#E0607A}.hbw-f .c2{color:#8DC21F}.hbw-f .c3{color:#379BD7}
+.hbw-h{font:900 clamp(22px,2.6vw,32px) "Noto Sans JP";color:#16233F;margin:22px 0 10px}
+.hbw-l{max-width:640px;margin:0 auto;color:#4A4F5C;line-height:1.9}
+/* TOP：パソコンとスマホの中で話すハタボ */
+.kvh.dv{position:relative;display:block;height:460px}
+.dv .lap{position:absolute;left:0;top:10px;width:88%}
+.dv .lap .scr{position:relative;aspect-ratio:16/10;background:linear-gradient(180deg,#F7F9FC,#EEF2F8);border:12px solid #0F1626;border-radius:18px 18px 4px 4px;box-shadow:0 30px 60px -30px rgba(22,35,63,.45);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:18px;overflow:hidden}
+.dv .lap .base{height:14px;margin:0 -6%;background:linear-gradient(180deg,#D5DBE6,#AEB6C5);border-radius:0 0 14px 14px}
+.dv .mob{position:absolute;right:0;bottom:0;width:36%;max-width:200px}
+.dv .mob .scr{position:relative;aspect-ratio:9/18.5;background:linear-gradient(180deg,#F7F9FC,#EEF2F8);border:9px solid #0F1626;border-radius:30px;box-shadow:0 30px 50px -20px rgba(22,35,63,.5);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:14px 10px;overflow:hidden}
+.dv .eng{position:relative;display:grid;place-items:center;aspect-ratio:1;flex:none}
+.dv .lap .eng{width:30%}
+.dv .mob .eng{width:62%}
+.dv .eng img{width:76%;padding:0}
+.dv .eng i{position:absolute;inset:0;border-radius:50%;-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px));mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px))}
+.dv .eng .r1{background:conic-gradient(from 0deg,rgba(47,111,214,0) 0 30%,#2F6FD6 70%,#E0607A 92%,#F2B84B 100%)}
+.dv .eng .r2{inset:7%;opacity:.55;background:conic-gradient(from 180deg,rgba(22,35,63,0) 0 50%,#16233F 100%)}
+.dv .bb{max-width:78%;font:500 12.5px/1.6 "Noto Sans JP";background:#fff;color:#141A2A;border-radius:14px;padding:7px 11px;box-shadow:0 4px 12px -6px rgba(22,35,63,.25);align-self:flex-start}
+.dv .bb.me{align-self:flex-end;background:#16233F;color:#fff}
+.dv .mob .bb{font-size:10.5px;max-width:92%;padding:6px 9px}
+@media(max-width:860px){.kvh.dv{height:380px;margin-top:24px}}
+.dv .lap .scr{padding:18px 24% 18px 18px}
+.dv .lap .eng{width:34%}
+.dv .mob{width:30%;bottom:-6px}
+.dv .mob .scr{aspect-ratio:9/17}
+.tb.tier th small{display:block;font-size:11px;color:#6B7385;font-weight:500}
+.tb.tier td b{display:block;color:#16233F;font-size:13.5px;margin-bottom:3px}
+.tb.tier td span{font-size:13px;color:#4A4F5C;line-height:1.6}
+.tb.tier th a{color:#16233F;text-decoration:none;font-weight:800}
+.scn{background:#F3F5F9;border-radius:10px;padding:10px 12px;margin:10px 0 0!important;font-size:13px;line-height:1.6;color:#4A4F5C}
+.scn b{display:block;color:#16233F;font-size:12.5px}
+.inds{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+@media(max-width:820px){.inds{grid-template-columns:1fr}}
+.ind{border:1px solid #E3E7EF;border-left:5px solid var(--c);border-radius:14px;background:#fff}
+.ind summary{cursor:pointer;list-style:none;padding:14px 18px;display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline}
+.ind summary::-webkit-details-marker{display:none}
+.ind summary::after{content:"＋";margin-left:auto;color:#16233F;font-weight:800}
+.ind[open] summary::after{content:"−"}
+.ind summary b{font-size:15.5px;color:#16233F}
+.ind summary span{font-size:12.5px;color:#6B7385}
+.ind summary em{font-style:normal;font-size:12px;color:#2F6FD6;font-weight:700;width:100%}
+.ind ul{margin:0;padding:0 18px 14px 18px;list-style:none}
+.ind li{font-size:13px;color:#4A4F5C;line-height:1.7;padding:8px 0;border-top:1px solid #EEF1F6}
+.ind li b{display:block;color:#16233F;font-size:13.5px}
+.ind summary{position:relative;padding-right:44px}.ind summary::after{position:absolute;right:18px;top:14px}
+/* スマホの会話（新） */
+.ph2{width:min(320px,86vw);margin:0 auto;background:#0F1626;border-radius:38px;padding:10px;box-shadow:0 30px 60px -24px rgba(22,35,63,.45)}
+.ph2 .scr{background:linear-gradient(180deg,#F7F9FC,#EEF2F8);border-radius:30px;overflow:hidden;min-height:520px;display:flex;flex-direction:column}
+.ph2 .hd2{display:flex;align-items:center;gap:10px;padding:14px 16px;background:#fff;border-bottom:1px solid #E3E7EF;font:800 14px "Noto Sans JP";color:#16233F}
+.ph2 .msgs2{flex:1;padding:16px 14px;display:flex;flex-direction:column;gap:10px}
+.ph2 .t{font:700 10.5px "Noto Sans JP";color:#8A93A6;text-align:center}
+.ph2 .bb,.dv .bb{max-width:80%;font:500 13px/1.65 "Noto Sans JP";background:#fff;color:#141A2A;border-radius:16px;padding:9px 12px;box-shadow:0 4px 12px -6px rgba(22,35,63,.25);align-self:flex-start}
+.ph2 .bb.me{align-self:flex-end;background:#16233F;color:#fff}
+.eng.sm{position:relative;width:34px;height:34px;display:grid;place-items:center;flex:none}
+.eng.sm img{width:26px}
+.eng.sm i{position:absolute;inset:0;border-radius:50%;-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 2.5px),#000 calc(100% - 2px));mask:radial-gradient(farthest-side,transparent calc(100% - 2.5px),#000 calc(100% - 2px))}
+.eng.sm .r1{background:conic-gradient(from 0deg,rgba(47,111,214,0) 0 30%,#2F6FD6 70%,#E0607A 92%,#F2B84B 100%)}
+.eng.sm .r2{display:none}
+.dv .bb.me{background:#16233F;color:#fff;align-self:flex-end}
+.dv .lap .bb{font-size:12.5px}
+.ocl .kicker{color:#2F6FD6!important}
+.lm2 .scr{min-height:600px}
+.lm2 .rm{display:grid;grid-template-columns:1.1fr 1fr 1fr;grid-template-rows:84px 84px;gap:6px;padding:8px;background:#E9EDF4}
+.lm2 .rm div{background:#fff;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center}
+.lm2 .rm b{font:800 11px "Noto Sans JP";color:#16233F}
+.lm2 .rm i{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;font-style:normal;font-weight:800;font-size:13px}
+.lm2 .rm .big{grid-row:1/3;border:1.5px solid #16233F;background:linear-gradient(180deg,#F3F5F9,#fff)}
+.lm2 .rm .big img{width:58px}
+.ph.real{background:#0F1626}
+.ph.real img{width:100%;height:100%;object-fit:cover;display:block}
+.trg{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:28px}
+.trg figure{margin:0;position:relative;border-radius:18px;overflow:hidden;aspect-ratio:16/9;background:#0F1626}
+.trg figure.big{grid-column:1/-1;aspect-ratio:21/9}
+.trg img{width:100%;height:100%;object-fit:cover;display:block}
+.trg figcaption{position:absolute;left:14px;bottom:14px;background:rgba(255,255,255,.92);color:#16233F;font:800 13.5px "Noto Sans JP";padding:7px 12px;border-radius:10px}
+@media(max-width:820px){.trg{grid-template-columns:1fr}.trg figure.big{aspect-ratio:16/9}}
+.lu .vis .ph{height:200px!important}.lu .vis .ph.real img{object-position:50% 35%}
+.trg{grid-template-columns:repeat(3,1fr)}@media(max-width:820px){.trg{grid-template-columns:1fr}}
