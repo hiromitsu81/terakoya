@@ -65,7 +65,7 @@ const PLANS = {
   high:  { label: '上位',       premium: true,  turns: 12, keep: 24, extraTokens: 120, maxUses: 3, extraSent: 0 },
   super: { label: 'スーパー上位', premium: true,  turns: 24, keep: 48, extraTokens: 260, maxUses: 5, extraSent: 1 },
 };
-const planOf = S => S && superUntil(S.owner) ? PLANS.super : PLANS[S && !S.guest && !S.asGuest && S.mode === 'family' && PLANS[S.plan] ? S.plan : 'std'];
+const planOf = S => S && superUntil(S.owner) ? (PLANS[S.plan] || PLANS.super) : PLANS[S && !S.guest && !S.asGuest && S.mode === 'family' && PLANS[S.plan] ? S.plan : 'std'];
 
 /* ===== 外のサービス（テストでは差しかえる） ===== */
 const deps = {
@@ -925,7 +925,7 @@ function session(ws) {
             if (S.newTurns >= 2) setTimeout(summarize, 3000);       // 前回まとめきれなかった分（強制で切ったときなど）
           }
         }
-        send({ type: 'ready', me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs, guest: !!S.guest, myRef: S.myRef || '', avatar: S.avatar || '', komugi: !!S.komugi, superUntil: superUntil(S.owner) });
+        send({ type: 'ready', me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs, guest: !!S.guest, myRef: S.myRef || '', avatar: S.avatar || '', komugi: !!S.komugi, superUntil: superUntil(S.owner), canPlan: !!superUntil(S.owner) });
         if (m.greet && S.guest && S.consult) return recapGreet();      // 相談メモがある人には、振り返りからはじめる
         const hi = m.greet ? (S.guest ? (S.history.length ? (S.avatar === 'komugi' ? 'また来てくれたとですか？うれしかです。つづき、お話ししましょう。' : 'よう、また来てくれたな！つづきを話そうぜ。') : (S.avatar === 'komugi' ? komugiGreeting(S.me) : guestGreeting(S.me))) : greeting(S.me, S.mode, S.trio)) : '';
         if (hi) speakOnly(hi, 'excited');
@@ -937,7 +937,7 @@ function session(ws) {
       if (m.type === 'photo') return onPhoto(m);
       if (m.type === 'trio') return setTrio(!!m.on);
       if (m.type === 'plan') {                      // 料金プランのおためし：ヒロさんの家族の画面だけ（お客さんからは受けつけない）
-        if (S.guest || S.asGuest || S.mode !== 'family') return;
+        if (!superUntil(S.owner) && (S.guest || S.asGuest || S.mode !== 'family')) return;   // 期限つきの人（マー君など）は窓口でも自分で選べる
         S.plan = PLANS[m.plan] ? String(m.plan) : 'std';
         return send({ type: 'plan', plan: S.plan, label: PLANS[S.plan].label });
       }

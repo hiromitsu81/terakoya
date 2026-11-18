@@ -2045,7 +2045,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   })(), JR_TRIO = /(三人モード|3人モード|みんなで話そう|三人で話そう|3人で話そう|二人モード|ふたりモード|2人モード|ふつうのモード)/;
   // 料金プランのおためし（ヒロさんの家族の画面だけ）：標準 → 上位 → スーパー上位 → 標準
   const PLAN_ORDER = ['std', 'high', 'super'], PLAN_NAME = { std: '標準', high: '上位', super: 'スーパー上位' };
-  function planShow() { const b = $('planBtn'); if (!b) return; const p = store.get('jrPlan', 'std'); b.textContent = 'プラン：' + (PLAN_NAME[p] || '標準'); b.hidden = !J.ready || J.guest || BIZ(); }
+  function planShow() { const b = $('planBtn'); if (!b) return; const p = store.get('jrPlan', J.canPlan ? 'super' : 'std'); b.textContent = 'グレード：' + (PLAN_NAME[p] || '標準'); b.hidden = !J.ready || (J.guest && !J.canPlan) || (BIZ() && !J.canPlan); }
   function trioShow() { const b = $('trioBtn'); b.setAttribute('aria-pressed', String(J.trio)); b.textContent = J.trio ? '三人：オン' : '三人：オフ'; }
   const jrLive = () => !J.dead && J.ready && J.ws && J.ws.readyState === 1;
   let lipLive = false;   // 声の大きさで口を動かしている間は、ランダムの口パクを止める
@@ -2090,7 +2090,9 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
         document.body.classList.toggle('guestmode', J.guest);
         if (J.guest) { $('typedInput').placeholder = J.avatar === 'komugi' ? 'マー君にしてほしいこと、なんでもどうぞ' : 'ヒロさんにしてほしいこと、なんでもどうぞ'; }
         $('trioBtn').hidden = false; J.trio = !!m.trio; store.set('jrTrio', J.trio); store.set('jrOK', true); trioShow();
-        if (!J.guest && !BIZ() && store.get('jrPlan', 'std') !== 'std') jrSend({ type: 'plan', plan: store.get('jrPlan', 'std') });
+        J.canPlan = !!m.canPlan;
+        if (J.canPlan) jrSend({ type: 'plan', plan: store.get('jrPlan', 'super') });
+        else if (!J.guest && !BIZ() && store.get('jrPlan', 'std') !== 'std') jrSend({ type: 'plan', plan: store.get('jrPlan', 'std') });
         planShow();
         if (diag) diag.hidden = true;
         if (awake.until !== 0) keepAwake(true, 0);
@@ -2409,7 +2411,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     location.href = 'https://line.me/R/share?text=' + encodeURIComponent(text);
   });
   $('trioBtn').addEventListener('click', () => jrSend({ type: 'trio', on: !J.trio }));
-  $('planBtn').addEventListener('click', () => { const p = store.get('jrPlan', 'std'); jrSend({ type: 'plan', plan: PLAN_ORDER[(PLAN_ORDER.indexOf(p) + 1) % PLAN_ORDER.length] }); });
+  $('planBtn').addEventListener('click', () => { const p = store.get('jrPlan', J.canPlan ? 'super' : 'std'); jrSend({ type: 'plan', plan: PLAN_ORDER[(PLAN_ORDER.indexOf(p) + 1) % PLAN_ORDER.length] }); });
   $('gClose').addEventListener('click', () => { $('goenBox').hidden = true; });
   $('gSave').addEventListener('click', () => jrSend({ type: 'profile', profile: { character: $('gChar').value, name: $('gName').value.trim(), skills: $('gSkills').value.trim(), seeking: $('gSeek').value.trim(), shareable: $('gShare').value.trim() } }));
   $('gGo').addEventListener('click', () => { const c = $('gOther').value.trim(); if (c) jrSend({ type: 'goen', code: c }); });
