@@ -927,6 +927,7 @@ function session(ws) {
         }
         // コムギ経由か：コムギの窓口、またはコムギの紹介コードから（2つ上までたどる）
         if (S.guest) {
+          console.log('guest in', JSON.stringify({ owner: S.owner, name: S.me, ref: S.ref || '', avatar: S.avatar, myRef: S.myRef }));   // ミニアプリを移ると LINE のIDが変わるので、スーパー上位（SUPER_OWNERS）に入れるIDをここで見る
           let k = S.avatar === 'komugi', c = S.ref || S.refFrom;
           for (let i = 0; !k && c && i < 3; i++) { if (ENV.KOMUGI_REFS.includes(c)) k = true; else { const up = await getRef(c).catch(() => null); c = up && up.parent; } }
           if (k && !S.komugi) { S.komugi = true; S.system += komugiBlock(await komugiNews()); }
