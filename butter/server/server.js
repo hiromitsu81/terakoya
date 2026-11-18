@@ -72,7 +72,7 @@ function idUntil(list, owner) {
 /** 期限つきでスーパー上位を使える人か（馬越さんも、検証のあいだは制限なし） */
 const superUntil = owner => idUntil(ENV.SUPER_OWNERS, owner) || idUntil(ENV.MAC_OWNERS, owner);
 /** 馬越さん本人か */
-const isMac = owner => !!idUntil(ENV.MAC_OWNERS, owner);
+const isMac = owner => !!owner && ENV.MAC_OWNERS.some(x => { const id = String(x).replace(/:\d{4}-\d{2}-\d{2}$/, '').replace(/^g:/, ''); return id && (owner === id || owner === 'g:' + id); });   // 期限がすぎても馬越さんは馬越さん（制限なしだけが期限まで。そのあとは契約したグレード）
 /** 馬越さんの紹介コード（馬越さんあての伝言・案件・手数料の行き先） */
 const macRefs = () => ENV.MAC_OWNERS.map(x => String(x).replace(/:\d{4}-\d{2}-\d{2}$/, '').replace(/^g:/, '')).filter(Boolean).map(id => myRefOf('g:' + id));
 
