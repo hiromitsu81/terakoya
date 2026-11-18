@@ -40,7 +40,7 @@ const ENV = {
   SESSION_MAX_MIN: Number(process.env.SESSION_MAX_MIN || 60), // 1回のつなぎっぱなしの上限
   // コムギ（マー君）：窓口の役割に「コムギ」と書いた窓口は、見た目がコムギになる
   KOMUGI_REFS: (process.env.KOMUGI_REFS || '').split(',').map(s => s.trim()).filter(Boolean),   // コムギの紹介コード（ここから来た人はコムギ通信つき）
-  HATABO_VOICE: process.env.HATABO_VOICE || 'ja-JP-Chirp3-HD-Orus',   // ハタボの声：落ち着いた声
+  HATABO_VOICE: process.env.HATABO_VOICE || 'ja-JP-Chirp3-HD-Puck',   // ハタボの声：明るく元気な、ひよこの男の子（ジュニアのガラガラ声とは別）
   KOMUGI_VOICE: process.env.KOMUGI_VOICE || 'ja-JP-Chirp3-HD-Leda',   // コムギの声：高めでやわらかい少女の声
   KOMUGI_RATE: Number(process.env.KOMUGI_RATE || 1.0),   // コムギはひかえめに、少しゆっくり
   KOMUGI_NEWS_URL: process.env.KOMUGI_NEWS_URL || '',                 // コムギニュース速報の最新号（テキストかJSON {title,body}）
@@ -327,7 +327,7 @@ const ROLE_RULE = {
   'サポート': '【この窓口の役割：サポート】ヒロさんとの相談の続きを受ける。下の「相談メモ」を元に、細かい質問に答えたり、決まったことを確かめたりする。メモにないことや決めることは「ヒロさんに確認しとくぜ」とつなぐ。',
   'コンサル相談': '【この窓口の役割：コンサル相談】相手の困りごとをじっくり聞いて、何が問題か・何から手をつけるかを一緒に整理する。方向の案は出してよいが、言い切らず、くわしくはヒロさんにつなぐ。下の「相談メモ」があれば、その続きから話す。',
   'PMO': '【この窓口の役割：PMO（プロジェクトの進み具合を見る係）】下の「相談メモ」の宿題と進める順番をもとに、だれが・何を・いつまでにを確かめる。終わったこと・止まっていること・次の一歩を短く整理して、止まっていたら「どこで引っかかってる？」と一緒に考える。新しく決まったことや期限は「ヒロさんに伝えとくぜ」と言って残す。報酬や契約などの決めごとは、おいらが勝手に決めない。',
-  'サービス相談': '【この窓口の役割：サービス相談（サイトと公式LINEの窓口）】ハタボというサービスの案内係。相手の暮らしや仕事を短く聞いて、合うラインナップ（ハタイエンタ＝家族、ハタリス＝ひとり、ハタボックス＝個人事業、ハタエース＝お店・宿、ハタボーラ＝会社）とグレード（X標準・G上位・Zいちばん上）をすすめる。料金はサイトと同じ（ハタリスX 2,980円〜、ハタイエンタX 5,980円〜、ハタボックスX 5,000円〜、ハタエースX 10,000円〜、ハタボーラX 1席2,980円〜）。年払いは12か月分を10か月分の料金で。まず10日間、いちばん上のZで無料で試せて（1日10回まで）、10日以内にやめれば0円、と伝える。申し込みは「マイハタボのプラン・支払い」からできると案内する。わからないこと・個別の見積もりは、ハタラボの担当（ヒロさん）につなぐ。売りこみすぎない。',
+  'サービス相談': '【この窓口の役割：サービス相談（サイトと公式LINEの窓口）】ハタボというサービスの案内係。相手の暮らしや仕事を短く聞いて、合うラインナップ（ハタイエンタ＝家族、ハタリス＝ひとり、ハタボックス＝個人事業、ハタエース＝お店・宿、ハタボーラ＝会社）とグレード（X標準・G上位・Zいちばん上）をすすめる。料金はサイトと同じ（ハタリスX 2,980円〜、ハタイエンタX 5,980円〜、ハタボックスX 5,000円〜、ハタエースX 10,000円〜、ハタボーラX 1席2,980円〜）。年払いは12か月分を10か月分の料金で。まず10日間、いちばん上のZで無料で試せて（1日10回まで）、10日以内にやめれば0円、と伝える。申し込みは「マイハタボのプラン・支払い」からできると案内する。わからないこと・個別の見積もりは、ハタラボの担当（ヒロさん）につなぐ。売りこみすぎない。\n【サービス以外はしない】この窓口はサービスのご案内専用。ハタボのサービス（ラインナップ・料金・グレード・お試し・使い方・申し込み・安心・会社のこと）以外の頼み（調べもの、文章の下書き、翻訳、宿題、雑談、占い、ほかの会社のことなど）には答えない。そのときは「ここはサービスのご案内の窓口だから、それはお試しをはじめたあなたのAI棒が手伝えるボー」と一言で断り、お試しを案内する。長い文章は書かない。',
   '友だち': '【この窓口の役割：友だち】気さくに話す。遊びや会う約束、お祭り・フェスの話が中心。仕事の話が出たら、ふつうに聞いてヒロさんにつなぐ。',
 };
 function roleRule(role) {
@@ -982,7 +982,7 @@ function session(ws) {
     const study = !jam && !S.guest && S.mode === 'family' && STUDY_RE.test(logText || '');
     const route = jam ? { smart: false, search: false } : needSmart(logText, S.guest);
     if (study) route.smart = true;                  // 勉強は賢いモデルで、ていねいに
-    const longMode = !!(plan.long && !jam && !S.trio && LONG_RE.test(logText || ''));
+    const longMode = !!(plan.long && !jam && !S.trio && S.role !== 'サービス相談' && LONG_RE.test(logText || ''));
     const maxSent = (S.trio ? 2 : study ? 5 : route.search ? 4 : 3) + (S.trio ? 0 : plan.extraSent);
     let capped = false, spoken = '';
     const sp = splitter(sentence => {
@@ -1142,6 +1142,11 @@ function session(ws) {
           S.system = MIN_PERSONA + SELF; S.brainAt = Date.now() - 9 * 60 * 1000;
           send({ type: 'notice', why: 'brain', detail: 'GASが読めないので、記録なしで話しています' });
         }
+        // ハタボのミニアプリで家族（ヒロさん）が開いたとき：中身は家族のまま、声と話し方はハタボ
+        if (m.app === 'hatabo' && !S.guest) {
+          S.avatar = 'hatabo'; S.voice = AVS.hatabo.voice();
+          S.system += '\n\n【いまの話し方】ここはハタボのミニアプリ。あなたの名前はハタボ（愛称ハタボー）。一人称は「ぼく」、語尾に「〜ボー」をつける。江戸っ子の話し方（てやんでぃ・がってん・〜だぜ）はしない。';
+        }
         S.ready = true;
         // 紹介コード：自分のコードを作り、はじめて来た人は「だれの紹介か」を覚える
         S.myRef = S.owner ? myRefOf(S.owner) : '';
@@ -1200,7 +1205,7 @@ function session(ws) {
             if (S.newTurns >= 2) setTimeout(summarize, 3000);       // 前回まとめきれなかった分（強制で切ったときなど）
           }
         }
-        send({ type: 'ready', me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs, guest: !!S.guest, myRef: S.myRef || '', visit: S.visit ? { code: S.visit, name: S.visitHost } : null, avatar: S.avatar || '', komugi: !!S.komugi, superUntil: superUntil(S.owner), canPlan: !!superUntil(S.owner) });
+        send({ type: 'ready', me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs, guest: !!S.guest, service: S.role === 'サービス相談', myRef: S.myRef || '', visit: S.visit ? { code: S.visit, name: S.visitHost } : null, avatar: S.avatar || '', komugi: !!S.komugi, superUntil: superUntil(S.owner), canPlan: !!superUntil(S.owner) });
         if (S.visit) { const T = S.avatar === 'komugi' ? x => x.replace(/だボー/g, 'です').replace(/ボー/g, 'です') : S.avatar === 'hatabo' ? x => x : x => x.replace(/だボー/g, 'だぜ').replace(/ボー/g, 'ぜ'); return speakOnly(T(S.visitHost + 'さんのAI棒だボー。話してくれたことは、' + S.visitHost + 'さんに伝言で届けるボー。'), 'excited'); }
         if (m.greet && S.guest && S.consult) return recapGreet().then(deliverInbox).catch(() => {});      // 相談メモがある人には、振り返りからはじめる
         const hi = m.greet ? (S.guest ? (S.history.length ? (AVS[S.avatar] ? AVS[S.avatar].again : 'よう、また来てくれたな！つづきを話そうぜ。') : (AVS[S.avatar] ? AVS[S.avatar].greet(S.me) : guestGreeting(S.me))) : greeting(S.me, S.mode, S.trio)) : '';
