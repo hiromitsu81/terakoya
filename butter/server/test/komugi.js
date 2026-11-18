@@ -14,6 +14,8 @@ const gasSrv = http.createServer((req, res) => {
 }).listen(0);
 process.env.GAS_URL = 'http://127.0.0.1:' + gasSrv.address().port;
 process.env.MAC_OWNERS = 'Umac';
+process.env.OFFICE_OWNERS = 'Uoffice';
+process.env.CRON_KEY = 'k';
 process.env.BRIDGE_DAILY = '2';
 process.env.CLAUDE_FAMILY = '0';
 const { createServer, deps } = require('../server.js');
@@ -64,6 +66,11 @@ function client(port, hello) {
   assert(/まず業種を聞く/.test(lastSys), '親が教えたことに、紹介先のコムギも従う');
   assert(!/AIの便利屋のプロ/.test(lastSys) && !/ふだんのハタボ/.test(lastSys), 'コムギにハタボ・ジュニアの案内文が入らない');
   b.ws.close();
+  // 1日1回のまとめ：事務局への声は、まとめの箱に入り、/cron/digest で送られて空になる
+  const cron = await new Promise(r => http.get('http://127.0.0.1:' + port + '/cron/digest?key=k', res => { let b = ''; res.on('data', c => b += c); res.on('end', () => r(b)); }));
+  assert(/sent [1-9]/.test(cron), 'まとめを送る: ' + cron);
+  const bad = await new Promise(r => http.get('http://127.0.0.1:' + port + '/cron/digest?key=x', res => r(res.statusCode)));
+  assert.strictEqual(bad, 403, '合図のキーがちがえば送らない');
   a.ws.close(); m.ws.close(); srv.close(); gasSrv.close();
   console.log('OK：コムギ（マー君は制限なし・紹介の人は橋渡しで制限つき・マー君の入れたコムギ通信を紹介の人に案内）');
   process.exit(0);
