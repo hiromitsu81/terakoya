@@ -739,6 +739,9 @@ body.tall.av-hatabo .rothint, body.tall.av-komugi .rothint { display: inline-fle
 .visitbar img { width: 22px; height: 22px; border-radius: 50%; background: #fff; }
 .visitbar span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .visitbar button { border: 0; border-radius: 999px; background: #fff; color: #16233F; font: 800 12px var(--display); padding: 6px 12px; cursor: pointer; flex-shrink: 0; }
+
+.svcnote { display: none; margin: 0; font-size: 11px; line-height: 1.5; color: #5E6B85; text-align: center; padding: 0 6px; }
+body.svc .svcnote { display: block; }
 </style>
 </head>
 <body>
@@ -1119,6 +1122,7 @@ body.tall.av-hatabo .rothint, body.tall.av-komugi .rothint { display: inline-fle
 
   <section class="talk" aria-label="おしゃべり">
 <button type="button" class="rothint" id="rotHint"><svg viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>スマホを横にすると、大きく見られるよ</button>
+    <p class="svcnote" id="svcNote">※ このハタボは、サービスのご案内専用です。サービス以外のご相談（調べもの・文章の下書き・雑談など）にはお答えできません。お試しをはじめると、あなた専用のAI棒が手伝います。</p>
     <div class="bubbles" id="bubbles" aria-live="polite"></div>
     <p class="hint" id="diag" hidden></p>
     <p class="hint" id="hint">「バターちゃん」と呼んでから話しかけてね。</p>
@@ -2347,7 +2351,7 @@ body.tall.av-hatabo .rothint, body.tall.av-komugi .rothint { display: inline-fle
     const agent = urlParam('agent') === 'service' ? 'service' : '';   // 公式LINEのリッチメニュー「ハタボに相談」＝サービス相談
     const ref = String(r0 || store.get('jrRef', '')).replace(/[^\w-]/g, '').slice(0, 20);
     if (r0) store.set('jrRef', ref);
-    ws.onopen = () => jrSend(Object.assign({ type: 'hello', mode: BIZ() ? 'business' : 'family', greet: !J.greeted, ref, asGuest, agent, visit: J.visit || '' }, typeof tr === 'boolean' ? { trio: tr } : {}, LIFF ? { idToken: idToken() } : { pass: cfg.pass }));
+    ws.onopen = () => jrSend(Object.assign({ type: 'hello', mode: BIZ() ? 'business' : 'family', greet: !J.greeted, ref, asGuest, agent, visit: J.visit || '', app: HATABO_APP ? 'hatabo' : '' }, typeof tr === 'boolean' ? { trio: tr } : {}, LIFF ? { idToken: idToken() } : { pass: cfg.pass }));
     ws.onmessage = ev => { let m; try { m = JSON.parse(ev.data); } catch (e) { return; } if (m.type === 'ready') clearTimeout(giveUp); jrOn(m); };
     ws.onclose = () => {
       clearTimeout(giveUp);
@@ -2371,7 +2375,7 @@ body.tall.av-hatabo .rothint, body.tall.av-komugi .rothint { display: inline-fle
       case 'note_saved': toast({ minutes: '議事録を残したよ', memo: 'メモしたよ', doc: '書いた文章を残したよ', dengon: '伝言をとどけたよ' }[m.kind] || '残したよ'); if (!$('hbPage').hidden) jrSend({ type: 'mypage' }); break;
       case 'ready':
         document.body.classList.remove('connecting');
-        J.ready = true; J.tries = 0; J.greeted = true; { const vb = $('visitBar'); if (m.visit) { vb.hidden = false; $('visitName').textContent = m.visit.name + 'さんのAI棒と話しています'; } else { vb.hidden = true; if (J.visit) { J.visit = ''; toast('つながっていない人のAI棒には入れませんでした'); } } } J.profile = m.profile || null; if (!$('hbPage').hidden) jrSend({ type: 'mypage' }); 
+        J.ready = true; J.tries = 0; J.greeted = true; document.body.classList.toggle('svc', !!m.service); { const vb = $('visitBar'); if (m.visit) { vb.hidden = false; $('visitName').textContent = m.visit.name + 'さんのAI棒と話しています'; } else { vb.hidden = true; if (J.visit) { J.visit = ''; toast('つながっていない人のAI棒には入れませんでした'); } } } J.profile = m.profile || null; if (!$('hbPage').hidden) jrSend({ type: 'mypage' }); 
         J.guest = !!m.guest; J.avatar = m.avatar || ''; document.body.classList.toggle('av-komugi', J.avatar === 'komugi'); if (HATABO_APP && !J.avatar) J.avatar = 'hatabo'; document.body.classList.toggle('av-hatabo', J.avatar === 'hatabo'); { const t = document.querySelector('#butterTag text'), nm = { komugi: 'コムギ', hatabo: 'ハタボ' }[J.avatar]; if (t && nm) t.textContent = nm; } if (J.avatar === 'komugi') { const ib = document.getElementById('introBubble'); if (ib) ib.remove(); } if (J.avatar) { try { document.body.classList.toggle('hb-hatched', localStorage.getItem('hatched_' + J.avatar) === '1'); } catch (e) {} } $('goenBtn').hidden = J.guest; J.myRef = m.myRef || ''; J.me = String(m.me || '').replace(/（テスト）$/, ''); $('shareBtn').hidden = false;
         document.body.classList.toggle('familyok', !J.guest);
         document.body.classList.toggle('guestmode', J.guest);
