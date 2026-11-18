@@ -17,7 +17,7 @@
       "action": {
         "type": "uri",
         "label": "ハタボに相談",
-        "uri": "https://miniapp.line.me/2012676035-yCkx6tBu"
+        "uri": "https://miniapp.line.me/2012676035-yCkx6tBu?agent=service"
       }
     },
     {
