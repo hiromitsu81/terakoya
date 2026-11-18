@@ -37,7 +37,7 @@ function client(port, hello) {
   const ra = await a.until(m => m.type === 'ready');
   assert.strictEqual(ra.avatar, 'komugi');
   for (let i = 0; i < 3; i++) { a.ws.send(JSON.stringify({ type: 'text', text: '相談があります' + i })); await new Promise(r => setTimeout(r, 300)); }
-  require('fs').writeFileSync('/tmp/sys_bridge.txt', lastSys); assert(/橋渡し/.test(lastSys), '紹介の人には橋渡し役の決まり');
+  require('fs').writeFileSync('/tmp/sys_bridge.txt', lastSys); assert(/HUB役/.test(lastSys), '紹介の人にはHUB役の決まり');
   assert(a.msgs.some(m => m.type === 'limit'), '紹介の人は1日の回数がある');
   // マー君本人：制限なし・橋渡しの決まりなし
   const m = await client(port, { type: 'hello', idToken: 'mac', app: 'komugi' });
@@ -45,7 +45,10 @@ function client(port, hello) {
   assert.strictEqual(rm.avatar, 'komugi');
   for (let i = 0; i < 4; i++) { m.ws.send(JSON.stringify({ type: 'text', text: '調べて' + i })); await new Promise(r => setTimeout(r, 300)); }
   require('fs').writeFileSync('/tmp/sys_mac.txt', lastSys); assert(!m.msgs.some(x => x.type === 'limit'), 'マー君は制限なし');
-  assert(/馬越 雅哉さん本人/.test(lastSys) && !/橋渡し（いちばん大事）/.test(lastSys), 'マー君には相棒の決まり');
+  assert(/馬越 雅哉さん本人/.test(lastSys) && !/HUB役（いちばん大事）/.test(lastSys), 'マー君には相棒の決まり');
+  // マー君が教えたことは、紹介先のコムギにも引きつぐ
+  m.ws.send(JSON.stringify({ type: 'text', text: '紹介の人には、まず業種を聞くことを覚えて' }));
+  await new Promise(r => setTimeout(r, 400));
   // マー君がコムギ通信を入れる → 紹介の人のコムギが案内できる
   m.ws.send(JSON.stringify({ type: 'text', text: 'コムギ通信に入れて：今日の速報は円安。たとえるなら、海外旅行のお小遣いが目減りする話。' }));
   await m.until(x => x.type === 'note_saved' && x.kind === 'news');
@@ -53,6 +56,8 @@ function client(port, hello) {
   await b.until(x => x.type === 'ready');
   b.ws.send(JSON.stringify({ type: 'text', text: '今日の速報は？' })); await new Promise(r => setTimeout(r, 300));
   assert(/円安/.test(lastSys) && /馬越さんより/.test(lastSys), '紹介の人のコムギが、マー君の入れたコムギ通信を持っている');
+  assert(/まず業種を聞く/.test(lastSys), '親が教えたことに、紹介先のコムギも従う');
+  assert(!/AIの便利屋のプロ/.test(lastSys) && !/ふだんのハタボ/.test(lastSys), 'コムギにハタボ・ジュニアの案内文が入らない');
   b.ws.close();
   a.ws.close(); m.ws.close(); srv.close(); gasSrv.close();
   console.log('OK：コムギ（マー君は制限なし・紹介の人は橋渡しで制限つき・マー君の入れたコムギ通信を紹介の人に案内）');
