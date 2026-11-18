@@ -491,6 +491,16 @@ body.tall .stage svg { aspect-ratio: 580 / 560; max-width: 100%; }
 body.tall .stage { padding-top: 84px; }
 body.tall.stagemode .stage svg { width: auto; height: 100%; max-width: 100%; max-height: 100%; }
 body.wideshow .stage { padding-top: 58px; }
+
+/* トークボタン：ハタボのエンブレム */
+.liffmode .talkbtn { background: radial-gradient(circle at 45% 35%, #fff, #E9EDF4) !important; border-color: #C3C8D0; box-shadow: 0 10px 24px -10px rgba(22,35,63,.45); }
+.talkbtn .temb { position: absolute; inset: 14%; width: 72%; height: 72%; object-fit: contain; pointer-events: none; transition: transform .2s; }
+.liffmode .talkbtn { margin-bottom: 26px; }
+.talkbtn b { position: absolute !important; bottom: -26px; left: 50%; transform: translateX(-50%); font-size: 13px !important; color: var(--ink, #2b2310); }
+.talkbtn.rec { background: radial-gradient(circle at 45% 35%, #fff, #ffe1dd) !important; }
+.talkbtn.rec .temb { animation: tembPulse 1.4s ease-in-out infinite; }
+.talkbtn.wait .temb { opacity: .55; }
+@keyframes tembPulse { 50% { transform: scale(1.06); } }
 body.tall #floor { display: none; }
 /* つながるまでのぐるぐる：バターの黄色・ジャム猫のブルーベリー・チーちゃんのチーズ色の3色の輪が回る */
 .liffmode .talkbtn::after { content: ""; position: absolute; inset: -12px; border-radius: 50%; opacity: 0; pointer-events: none;
@@ -870,7 +880,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
         <button class="modebtn goenbtn" id="trioBtn" type="button" aria-pressed="false" hidden>三人：オフ</button>
         <button class="modebtn goenbtn" id="planBtn" type="button" hidden title="料金プランのおためし（家族の画面だけ）">プラン：標準</button>
       </div>
-      <button class="talkbtn" id="talkBtn" type="button"><i id="lvlLive"></i><b>おして話す</b></button>
+      <button class="talkbtn" id="talkBtn" type="button"><i id="lvlLive"></i><img class="temb" src="award_mark.svg" alt=""><b>おして話す</b></button>
       <div class="side">
         <button class="modebtn goenbtn" id="goenBtn" type="button" hidden>ご縁</button>
         <button class="modebtn goenbtn" id="shareBtn" type="button" hidden>紹介する</button>
