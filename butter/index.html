@@ -578,6 +578,56 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   .stagebar .line { min-height: 2.4em; font-size: 14px; padding: 6px 10px; }
   .stagebar .next { padding: 10px; font-size: 18px; }
 }
+/* ===== ハタボ・コムギの世界：エンブレムに合わせた白と紺（銀のふち、エンジンの輪） ===== */
+body.av-hatabo, body.av-komugi {
+  --bg: #F6F8FC; --card: #FFFFFF; --ink: #16233F; --soft: #5E6B85; --line: #DCE2EC; --tile: #E8ECF3;
+  --butter-deep: #16233F; --butter: #16233F; color-scheme: light; color: var(--ink);
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(circle at 50% 30%, #fff 0, rgba(255,255,255,0) 46%),
+    linear-gradient(rgba(22,35,63,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(22,35,63,.035) 1px, transparent 1px),
+    linear-gradient(180deg, #FFFFFF 0%, #F3F5FA 55%, #E4E9F2 100%);
+  background-size: auto, 32px 32px, 32px 32px, auto;
+}
+/* キャラのうしろ：エンジンの輪（細い紺の同心円と、ゆっくり回る銀の光） */
+.av-hatabo .stage::before, .av-komugi .stage::before {
+  left: 50%; right: auto; top: 54%; bottom: auto; width: min(120vw, 760px); aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,.95) 0 22%, rgba(255,255,255,0) 46%),
+    repeating-radial-gradient(circle, rgba(22,35,63,0) 0 27px, rgba(22,35,63,.075) 27px 28px, rgba(22,35,63,0) 28px 54px);
+  -webkit-mask: radial-gradient(circle, #000 30%, transparent 70%); mask: radial-gradient(circle, #000 30%, transparent 70%); }
+.av-hatabo .stage::after, .av-komugi .stage::after { content: ""; position: absolute; left: 50%; top: 54%; width: min(80vw, 470px); aspect-ratio: 1; border-radius: 50%; pointer-events: none;
+  transform: translate(-50%, -50%);
+  background: conic-gradient(from 0deg, rgba(195,200,208,0) 0deg, rgba(150,158,172,.45) 40deg, rgba(195,200,208,0) 90deg, rgba(195,200,208,0) 180deg, rgba(22,35,63,.16) 220deg, rgba(22,35,63,0) 270deg);
+  -webkit-mask: radial-gradient(circle, transparent 63%, #000 63.6%, #000 64.4%, transparent 65%); mask: radial-gradient(circle, transparent 63%, #000 63.6%, #000 64.4%, transparent 65%);
+  animation: hbEngine 14s linear infinite; }
+@keyframes hbEngine { to { transform: translate(-50%, -50%) rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .av-hatabo .stage::after, .av-komugi .stage::after { animation: none; } }
+.av-hatabo #floor, .av-komugi #floor { fill: #16233F; opacity: .07; }
+.av-hatabo h1, .av-komugi h1 { color: #16233F; letter-spacing: .06em; }
+.av-hatabo h1 .badge, .av-komugi h1 .badge { background: #16233F; box-shadow: none; }
+/* 里親の札：紺に銀のふち。小さめにして、たまごにかさならないように */
+.av-hatabo .sato-banner, .av-komugi .sato-banner { background: linear-gradient(100deg, #16233F 0%, #24365E 60%, #16233F 100%); border: 1.5px solid #C3C8D0;
+  box-shadow: 0 10px 26px -12px rgba(22,35,63,.55), inset 0 1px 0 rgba(255,255,255,.18); padding: 6px 22px 5px; border-radius: 12px; top: 1%; }
+.av-hatabo .sato-banner b, .av-komugi .sato-banner b { font-size: clamp(17px, 4.2vw, 26px); letter-spacing: .14em; text-shadow: none; }
+.av-hatabo .sato-banner small, .av-komugi .sato-banner small { font-size: clamp(9.5px, 2vw, 12px); color: #D9DEE7; }
+/* 下の文字は最小限：家族用のメーターと説明文はしまい、吹き出しは最新の1つだけ */
+.av-hatabo .meters, .av-komugi .meters, .av-hatabo #hint, .av-komugi #hint { display: none !important; }
+.av-hatabo .bubbles > :not(:last-child), .av-komugi .bubbles > :not(:last-child) { display: none; }
+.av-hatabo .bubble, .av-komugi .bubble, .av-hatabo .chip, .av-komugi .chip, .av-hatabo .icon-btn, .av-komugi .icon-btn { border-color: #DCE2EC; box-shadow: 0 6px 18px -12px rgba(22,35,63,.28); }
+.av-hatabo .bubble.her, .av-komugi .bubble.her { border-color: #16233F; border-width: 1.5px; max-width: 100%; justify-self: center; }
+.av-hatabo .bubble.me, .av-komugi .bubble.me { background: #16233F; color: #fff; border-color: #16233F; }
+.av-hatabo .bubble.me .who, .av-komugi .bubble.me .who { color: #C3C8D0; }
+.av-hatabo .btn.primary, .av-komugi .btn.primary { background: #16233F; border-color: #16233F; color: #fff; }
+.av-hatabo.liffmode .modebtn, .av-komugi.liffmode .modebtn { border: 1.5px solid #16233F; color: #16233F; background: #fff; }
+.av-hatabo .nametag rect, .av-komugi .nametag rect { fill: #fff; stroke: #16233F; stroke-width: 1.5; }
+.av-hatabo .nametag text, .av-komugi .nametag text { fill: #16233F; }
+.av-hatabo .talkbtn b, .av-komugi .talkbtn b { color: #16233F !important; }
+.av-hatabo .stage svg, .av-komugi .stage svg { aspect-ratio: 880 / 520; }
+body.tall.av-hatabo .stage svg, body.tall.av-komugi .stage svg { aspect-ratio: 580 / 660; }
+body.liffTall.av-hatabo .stage, body.liffTall.av-komugi .stage { min-height: calc(84px + 100vw * 633 / 520); }
+body.liffTall.av-hatabo .stage svg, body.liffTall.av-komugi .stage svg { aspect-ratio: 520 / 633; }
+body.wideshow.av-hatabo .stage svg, body.wideshow.av-komugi .stage svg { aspect-ratio: 900 / 392; }
 </style>
 </head>
 <body>
@@ -1136,6 +1186,17 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   const LIFF_ID = Q.get('liffId') || store.get('liffId', '');
   // ハタボのミニアプリ（HATHA LAB）で開いたときは、つながる前からハタボの見た目にする（家族のバターちゃんは寺小屋の入口）
   const HATABO_APP = /^20126760(32|33|35)-/.test(LIFF_ID);
+  // ハタボ・コムギのときは、画面の文字からバターちゃん・特戦隊の言葉を消す
+  const avName = () => document.body.classList.contains('av-komugi') ? 'コムギ' : document.body.classList.contains('av-hatabo') ? 'ハタボ' : '';
+  function avText() {
+    const nm = avName(); if (!nm) return;
+    document.title = nm + '｜HATHA LAB';
+    const h = document.querySelector('header h1'); if (h) h.textContent = nm;
+    const ti = document.getElementById('typedInput'); if (ti) { ti.placeholder = '文字でもOK'; ti.setAttribute('aria-label', nm + 'に送る文字'); }
+    const so = document.getElementById('startOverlay'); if (so) { const h2 = so.querySelector('h2'); if (h2) h2.textContent = nm + 'とはなす'; const no = so.querySelector('.note'); if (no) no.textContent = '最初に1回だけ押してください（マイクを使います）。'; const sb = document.getElementById('startBtn'); if (sb) sb.textContent = 'はじめる'; }
+    const sc = document.getElementById('scene'); if (sc) sc.setAttribute('aria-label', 'まんなかに' + nm + '、左に招き猫のジャム猫、右に柴犬のチーちゃん');
+    document.querySelectorAll('.bubble .who').forEach(w => { if (w.textContent === 'バターちゃん' || w.textContent === 'ジュニア' || ((w.textContent === 'ハタボ' || w.textContent === 'コムギ') && w.textContent !== nm)) w.textContent = nm; });
+  }
   if (HATABO_APP) { try { if (localStorage.getItem('hatched_hatabo') === '1') document.body.classList.add('hb-hatched'); } catch (e) {} document.body.classList.add('av-hatabo'); const t = document.querySelector('#butterTag text'); if (t) t.textContent = 'ハタボ'; }
   if (LIFF) {
     cfg.mode = 'liff';
@@ -1816,6 +1877,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   setInterval(() => { butter.classList.toggle('listening', state === 'listening' && Date.now() < convoUntil); }, 500);
 
   function addBubble(who, text, cls) {
+    { const nm = avName(); if (nm && (who === 'バターちゃん' || who === 'ジュニア')) who = nm; }
     const b = document.createElement('div');
     b.className = 'bubble ' + cls;
     const w = document.createElement('span'); w.className = 'who'; w.textContent = who;
@@ -2184,7 +2246,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
       case 'ready':
         document.body.classList.remove('connecting');
         J.ready = true; J.tries = 0; J.greeted = true; J.profile = m.profile || null; 
-        J.guest = !!m.guest; J.avatar = m.avatar || ''; document.body.classList.toggle('av-komugi', J.avatar === 'komugi'); if (HATABO_APP && !J.avatar) J.avatar = 'hatabo'; document.body.classList.toggle('av-hatabo', J.avatar === 'hatabo'); { const t = document.querySelector('#butterTag text'), nm = { komugi: 'コムギ', hatabo: 'ハタボ' }[J.avatar]; if (t && nm) t.textContent = nm; } if (J.avatar) { try { document.body.classList.toggle('hb-hatched', localStorage.getItem('hatched_' + J.avatar) === '1'); } catch (e) {} } $('goenBtn').hidden = J.guest; J.myRef = m.myRef || ''; $('shareBtn').hidden = !J.myRef;
+        J.guest = !!m.guest; J.avatar = m.avatar || ''; document.body.classList.toggle('av-komugi', J.avatar === 'komugi'); if (HATABO_APP && !J.avatar) J.avatar = 'hatabo'; document.body.classList.toggle('av-hatabo', J.avatar === 'hatabo'); { const t = document.querySelector('#butterTag text'), nm = { komugi: 'コムギ', hatabo: 'ハタボ' }[J.avatar]; if (t && nm) t.textContent = nm; } if (J.avatar === 'komugi') { const ib = document.getElementById('introBubble'); if (ib) ib.remove(); } if (J.avatar) { try { document.body.classList.toggle('hb-hatched', localStorage.getItem('hatched_' + J.avatar) === '1'); } catch (e) {} } $('goenBtn').hidden = J.guest; J.myRef = m.myRef || ''; $('shareBtn').hidden = !J.myRef;
         document.body.classList.toggle('familyok', !J.guest);
         document.body.classList.toggle('guestmode', J.guest);
         if (J.guest) { $('typedInput').placeholder = J.avatar === 'komugi' ? 'マー君にしてほしいこと、なんでもどうぞ' : 'ヒロさんにしてほしいこと、なんでもどうぞ'; }
@@ -2730,7 +2792,10 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
     // ミニアプリを縦で開いたとき：まわりの余白を切って、キャラクターを大きく見せる
     const liffTall = on && document.body.classList.contains('liffmode');
     document.body.classList.toggle('liffTall', liffTall);
-    scene.setAttribute('viewBox', liffTall ? '-10 108 520 535' : on ? '-40 110 580 560' : wide ? '-175 112 900 300' : '-160 0 880 420');
+    // ハタボ・コムギ（たまご・ひよこ）は背が高いので、上をのばして頭が切れないように、里親の札ともかさならないように
+    const av = /\bav-(hatabo|komugi)\b/.test(document.body.className);
+    scene.setAttribute('viewBox', av ? (liffTall ? '-10 10 520 633' : on ? '-40 10 580 660' : wide ? '-175 20 900 392' : '-160 -100 880 520')
+      : liffTall ? '-10 108 520 535' : on ? '-40 110 580 560' : wide ? '-175 112 900 300' : '-160 0 880 420');
     // 下の段は少し大きく（1.2倍）。足もとを (95,600) と (405,600) に
     $('nekoWrap').setAttribute('transform', on ? 'translate(95 600) scale(1.2) translate(65 -345)' : '');
     $('chiWrap').setAttribute('transform', on ? 'translate(405 600) scale(1.2) translate(-565 -345)' : '');
@@ -2738,6 +2803,8 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   try { tallMQ.addEventListener('change', layoutTall); wideMQ.addEventListener('change', layoutTall); } catch (e) { tallMQ.addListener && tallMQ.addListener(layoutTall); wideMQ.addListener && wideMQ.addListener(layoutTall); }
   const WIDE = () => document.body.classList.contains('wideshow');
   layoutTall();
+  { let lastAv = null; new MutationObserver(() => { const av = /\bav-(hatabo|komugi)\b/.test(document.body.className); if (av !== lastAv) { lastAv = av; layoutTall(); } avText(); }).observe(document.body, { attributes: true, attributeFilter: ['class'] }); }
+  avText();
 
   // ===== ネコちゃん（招き猫） =====
   const neko = $('neko');
@@ -3018,7 +3085,8 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   });
   showMode();
   liffBoot();
-  if (LIFF) addBubble('ジュニア', 'よう！バターちゃんジュニアだぜ。となりは柴犬のチーちゃんと、招き猫のジャム猫！', 'her');
+  if (HATABO_APP) { const ib = addBubble('ハタボ', 'はじめましてだボー。ぼくはハタボ。話しかけると、たまごから生まれるボー。', 'her'); if (ib) ib.parentElement.id = 'introBubble'; }
+  else if (LIFF) addBubble('ジュニア', 'よう！バターちゃんジュニアだぜ。となりは柴犬のチーちゃんと、招き猫のジャム猫！', 'her');
   else addBubble('バターちゃん', 'こんにちは！バターちゃんだよ。となりは柴犬のチーちゃん！', 'her');
   setState('idle');
   applyPet(null, false);
