@@ -450,6 +450,7 @@ function welcomeCards(name) {
   ] } };
 }
 /* ===== コムギの公式LINE：黒とネオンのカード。馬越さん本人と、馬越さんの紹介の人で中身を分ける ===== */
+const HATABO_MINI = 'https://miniapp.line.me/2012676035-yCkx6tBu', HATABO_ADD = 'https://line.me/R/ti/p/@024curid';
 const KM_FACE = 'https://hiromitsu81.github.io/terakoya/butter/komugi_face.jpg';
 function kmCard(kicker, title, lines, btn, uri) {
   return { type: 'bubble', size: 'kilo', styles: { header: { backgroundColor: '#0A0810' }, body: { backgroundColor: '#16121F' }, footer: { backgroundColor: '#16121F' } },
@@ -487,7 +488,7 @@ function komugiWelcome(name) {
     kmCard('WELCOME', 'はじめまして、コムギです', [(name ? name + 'さん、' : '') + 'あ、あの……友だち追加、ありがとうございます。馬越 雅哉さんの相棒の、コムギです。', '馬越さんへのご相談は、うちが先にお聞きして、馬越さんにつなぎますけん。'], 'コムギと話す', M),
     kmCard('HOW TO', 'お話のしかた', ['メニューの「コムギと話す」を押して、声か文字で話しかけてください。', '話したことは、馬越さんに伝わります。会ってお話ししたいときも、うちに言うてもらえたら。'], '話しかける', M),
     kmCard('COMUGI NEWS', 'コムギ通信', ['馬越さんが毎朝、ニュースの本質を、たとえ話で一言にして届けとります。', 'コムギに「今日の速報」と聞いてみてください。'], '速報を聞く', M),
-    kmSite(kmCard('HATABO', 'あなた専用の相棒を', ['うちの仲間の「ハタボ」は、あなた専用のAIの相棒です。調べもの・段取り・文章・予定まで、いっしょに動きます。', '10日間は無料で試せますけん。'], 'お試しを見る', M + '?page=plan')),
+    kmSite(kmCard('HATABO', 'あなた専用の相棒を', ['うちの仲間の「ハタボ」は、あなた専用のAIの相棒です。調べもの・段取り・文章・予定まで、いっしょに動きます。', 'ハタボの公式LINEも友だち追加すると、自分のハタボと話せます。10日間は無料で試せますけん。'], 'ハタボと話す', HATABO_MINI)),
   ] } };
 }
 /** 馬越さん本人へのあいさつ */
@@ -721,7 +722,7 @@ const KOMUGI_BRIDGE = '\n\n【コムギの役目：紹介先では、馬越さ�
   '\n1. 自己紹介：「馬越 雅哉さんの相棒の、コムギです」と名のり、ここで話したことは馬越さんに伝わることを、最初にやさしく伝える。' +
   '\n2. ヒアリング：困っていること・やりたいこと・いつまでに・どんな形で、を短い質問で一つずつ聞く。' +
   '\n3. 馬越さんにつなぐ：まとまったら「馬越さんに伝えときますけん」と言う（伝言は自動で馬越さんに届く）。会って話したいときは、希望の日にちの候補を聞いて、馬越さんに伝える（日にちは決めない）。' +
-  '\n4. ハタボの案内：困りごとがAIの相棒「ハタボ」で楽になりそうなら、ハタボのことをやさしく紹介し、「Myハタボ」の「プラン」から10日間のお試しを始められると伝える。申し込みや料金のくわしい相談は、馬越さんにつなぐ。押しつけない。' +
+  '\n4. ハタボの案内：困りごとがAIの相棒「ハタボ」で楽になりそうなら、ハタボのことをやさしく紹介し、この人自身のAIの相棒は「ハタボ」。ハタボの公式LINEも友だち追加して、ハタボと話してみてほしいと伝える（10日間は無料で試せる）。友だちを紹介したいと言われたら、紹介先はハタボになる（コムギは馬越さんのHUBなので）と伝え、「紹介する」ボタンを案内する。申し込みや料金のくわしい相談は、馬越さんにつなぐ。押しつけない。' +
   '\n5. コムギ通信：聞かれたら、今日のコムギニュース速報を話す。' +
   '\nこれ以外（宿題・レポート・長い文章の作成・調べものの代行・雑談の相手を長く続けること）は引き受けず、「それは、馬越さんに相談してみますね」「ハタボのお試しなら、できるようになりますけん」とつなぐ。答えは短く。';
 const HAKATA_LAST = '\n\n【いちばん大事】コムギの話し方で話す（一人称は「うち」。おだやかで温かい、田舎の素朴な博多弁。語尾「〜ばい」「〜けん」「〜と」をやわらかく落とす。ふだんは恐縮してひかえめ、勝負と大切な人の話は静かに芯強く言い切る。「〜やん」「〜やろが」は使わない）。江戸っ子の話し方（おいら・〜だぜ・てやんでぃ）や「〜ボー」は使わない。かたい敬語も使わない。';
@@ -1630,7 +1631,11 @@ function session(ws) {
     if (S.visit && logText) S.visitLog.push(String(logText).slice(0, 200));
     // ハタボの話が出たら、ときどき（8回に1回まで）サービスサイトへの道をそえる（声では読まない）
     S.replyN = (S.replyN || 0) + 1;
-    if (ENV.SITE_URL && text && S.guest && (S.avatar === 'komugi' || S.avatar === 'hatabo') && /ハタボ/.test(text) && S.replyN - (S.siteAt || -99) >= 8) { S.siteAt = S.replyN; links.push({ url: ENV.SITE_URL, title: 'ハタボのサービスサイトを見る' }); }
+    if (text && S.guest && (S.avatar === 'komugi' || S.avatar === 'hatabo') && /ハタボ/.test(text) && S.replyN - (S.siteAt || -99) >= 8) {
+      S.siteAt = S.replyN;
+      if (S.bridge) links.push({ url: HATABO_MINI, title: '自分のハタボと話す（ハタボの公式LINEを友だち追加）' });
+      if (ENV.SITE_URL) links.push({ url: ENV.SITE_URL, title: 'ハタボのサービスサイトを見る' });
+    }
     if (links.length && text) send({ type: 'links', gen, links: links.slice(0, 3) });
     if (longMode && text && text.length > 200 && S.owner) addNote(S.owner, { kind: 'doc', title: (logText || '書いた文章').replace(/\s+/g, ' ').slice(0, 30), text }).then(() => send({ type: 'note_saved', kind: 'doc' })).catch(() => {});
     if (S.trio && /[？?]\s*$/.test(text)) S.followUntil = Date.now() + 12000;   // ジュニアが質問した → つぎの1回は名前なしでも   // 空の返事は記録しない（次の会話がこわれるので）
@@ -1809,7 +1814,7 @@ function session(ws) {
           S.tellTo = to;
           S.system = S.system.replace(/ハタラボの担当（ヒロさん）|ハタラボのヒロさん/g, to).replace(/〈伝え先〉/g, to).replace(/ヒロさん/g, to);
         }
-        send({ type: 'ready', me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs, guest: !!S.guest, service: S.role === 'サービス相談', myRef: S.myRef || '', visit: S.visit ? { code: S.visit, name: S.visitHost } : null, avatar: S.avatar || '', komugi: !!S.komugi, superUntil: superUntil(S.owner), canPlan: !!(S.claude || superUntil(S.owner)), claude: !!S.claude, aiName: !S.visit && S.custom && S.custom.aiName || '' });
+        send({ type: 'ready', me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs, guest: !!S.guest, service: S.role === 'サービス相談', myRef: S.myRef || '', visit: S.visit ? { code: S.visit, name: S.visitHost } : null, avatar: S.avatar || '', komugi: !!S.komugi, mac: !!S.macSelf, bridge: !!S.bridge, superUntil: superUntil(S.owner), canPlan: !!(S.claude || superUntil(S.owner)), claude: !!S.claude, aiName: !S.visit && S.custom && S.custom.aiName || '' });
         if (S.visit) { const T = S.avatar === 'komugi' ? x => x.replace(/だボー/g, 'です').replace(/ボー/g, 'です') : S.avatar === 'hatabo' ? x => x : x => x.replace(/だボー/g, 'だぜ').replace(/ボー/g, 'ぜ'); return speakOnly(T(S.visitSponsor ? S.visitHost + 'のAI棒だボー。なんでも聞いてほしいボー。' : S.visitHost + 'さんのAI棒だボー。話してくれたことは、' + S.visitHost + 'さんに伝言で届けるボー。'), 'excited'); }
         if (m.greet && S.guest && S.consult) return recapGreet().then(deliverInbox).catch(() => {});      // 相談メモがある人には、振り返りからはじめる
         const hi = m.greet ? (S.guest ? (S.history.length ? (AVS[S.avatar] ? AVS[S.avatar].again : 'よう、また来てくれたな！つづきを話そうぜ。') : (AVS[S.avatar] ? greetFor() : guestGreeting(S.me))) : greeting(S.me, S.mode, S.trio)) : '';
