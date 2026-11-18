@@ -1537,6 +1537,8 @@ body.liffTall.av-komugi #hataboAv { transform: translateY(255px) scale(1.45); }
   const LIFF_ID = Q.get('liffId') || store.get('liffId', '');
   // ハタボのミニアプリ（HATHA LAB）で開いたときは、つながる前からハタボの見た目にする（家族のバターちゃんは寺小屋の入口）
   const KOMUGI_APP = /^201268667[012]-/.test(LIFF_ID);   // コムギ専用のミニアプリ（公式LINE @858uraou）
+  // 立ち上げはいつも、エンブレムのたまごから（つながる前に、ハタボやバターちゃんを一瞬も見せない）
+  if (KOMUGI_APP) document.body.classList.add('av-komugi'); else if (/^20126760(32|33|35)-/.test(LIFF_ID)) document.body.classList.add('av-hatabo');
   const HATABO_APP = /^20126760(32|33|35)-/.test(LIFF_ID) || KOMUGI_APP;
   const OA_ID = KOMUGI_APP ? '@858uraou' : '@024curid';
   const MINI_URL = KOMUGI_APP ? 'https://miniapp.line.me/2012686672-PRB9tb8H' : 'https://miniapp.line.me/2012676035-yCkx6tBu';
@@ -1558,16 +1560,16 @@ body.liffTall.av-komugi #hataboAv { transform: translateY(255px) scale(1.45); }
     const sc = document.getElementById('scene'); if (sc) sc.setAttribute('aria-label', 'まんなかに' + nm + '、左に招き猫のジャム猫、右に柴犬のチーちゃん');
     document.querySelectorAll('.bubble .who').forEach(w => { if (w.textContent === 'バターちゃん' || w.textContent === 'ジュニア' || ((w.textContent === 'ハタボ' || w.textContent === 'コムギ') && w.textContent !== nm)) w.textContent = nm; });
   }
-  if (HATABO_APP) { try { if (localStorage.getItem('hatched_hatabo') === '1') document.body.classList.add('hb-hatched'); } catch (e) {} document.body.classList.add('av-hatabo'); const t = document.querySelector('#butterTag text'); if (t) t.textContent = 'ハタボ'; }
+  if (HATABO_APP) { document.body.classList.add(KOMUGI_APP ? 'av-komugi' : 'av-hatabo'); const t = document.querySelector('#butterTag text'); if (t) t.textContent = KOMUGI_APP ? 'コムギ' : 'ハタボ'; }   // 立ち上げはたまご（かえるのは、つながってから）
   if (LIFF) {
     cfg.mode = 'liff';
     if (Q.get('g')) cfg.url = 'https://script.google.com/macros/s/' + Q.get('g') + '/exec';
     if (Q.get('liffId')) store.set('liffId', Q.get('liffId'));
     document.body.classList.add('liffmode');
     // ミニアプリで話すのは「バターちゃんジュニア」（パソコンの画面はClaudeアプリのバターちゃん）
-    document.title = '福まねき特戦隊｜バターちゃんジュニア';
+    if (!HATABO_APP) document.title = '福まねき特戦隊｜バターちゃんジュニア';   // ハタボ・コムギのアプリは、それぞれの名前のまま
     const tg = document.querySelector('#butterTag text'), rc = document.querySelector('#butterTag rect');
-    if (tg) tg.textContent = 'バターちゃんジュニア';
+    if (tg && !HATABO_APP) tg.textContent = 'バターちゃんジュニア';
     if (rc) { rc.setAttribute('x', '160'); rc.setAttribute('width', '180'); }
     const mw = document.getElementById('meltWho'); if (mw) mw.textContent = 'ジュニア';
   }
@@ -2637,7 +2639,7 @@ body.liffTall.av-komugi #hataboAv { transform: translateY(255px) scale(1.45); }
       case 'ready':
         document.body.classList.remove('connecting');
         J.ready = true; J.tries = 0; J.greeted = true; window.__aiName = m.visit ? '' : m.aiName || ''; setTimeout(() => { try { avText(); const t = document.querySelector('#butterTag text'); if (t && avName()) t.textContent = avName(); } catch (e) {} }, 0); document.body.classList.toggle('svc', !!m.service); { const vb = $('visitBar'); if (m.visit) { vb.hidden = false; $('visitName').textContent = m.visit.name + 'さんのAI棒と話しています'; } else { vb.hidden = true; if (J.visit) { J.visit = ''; toast('つながっていない人のAI棒には入れませんでした'); } } } J.profile = m.profile || null; if (!$('hbPage').hidden) jrSend({ type: 'mypage' }); 
-        J.guest = !!m.guest; J.avatar = m.avatar || ''; document.body.classList.toggle('av-komugi', J.avatar === 'komugi'); if (HATABO_APP && !J.avatar) J.avatar = 'hatabo'; document.body.classList.toggle('av-hatabo', J.avatar === 'hatabo'); { const t = document.querySelector('#butterTag text'), nm = { komugi: 'コムギ', hatabo: 'ハタボ' }[J.avatar]; if (t && nm) t.textContent = nm; } if (J.avatar === 'komugi') { const ib = document.getElementById('introBubble'); if (ib) ib.remove(); } if (J.avatar) { try { document.body.classList.toggle('hb-hatched', localStorage.getItem('hatched_' + J.avatar) === '1'); } catch (e) {} } $('goenBtn').hidden = J.guest; J.myRef = m.myRef || ''; J.me = String(m.me || '').replace(/（テスト）$/, ''); $('shareBtn').hidden = false;
+        J.guest = !!m.guest; J.avatar = KOMUGI_APP ? 'komugi' : m.avatar || ''; document.body.classList.toggle('av-komugi', J.avatar === 'komugi'); if (HATABO_APP && !J.avatar) J.avatar = 'hatabo'; document.body.classList.toggle('av-hatabo', J.avatar === 'hatabo'); { const t = document.querySelector('#butterTag text'), nm = { komugi: 'コムギ', hatabo: 'ハタボ' }[J.avatar]; if (t && nm) t.textContent = nm; }  if (J.avatar) { document.body.classList.remove('hb-hatched'); let was = false; try { was = localStorage.getItem('hatched_' + J.avatar) === '1'; } catch (e) {} if (was) setTimeout(hbHatch, 600); }   // 前にかえった子は、立ち上げのたびに、たまごからかえって出てくる $('goenBtn').hidden = J.guest; J.myRef = m.myRef || ''; J.me = String(m.me || '').replace(/（テスト）$/, ''); $('shareBtn').hidden = false;
         document.body.classList.toggle('familyok', !J.guest);
         document.body.classList.toggle('guestmode', J.guest);
         if (J.guest) { $('typedInput').placeholder = J.avatar === 'komugi' ? '馬越さんにしてほしいこと、なんでもどうぞ' : 'ヒロさんにしてほしいこと、なんでもどうぞ'; }
@@ -3944,7 +3946,7 @@ body.liffTall.av-komugi #hataboAv { transform: translateY(255px) scale(1.45); }
   });
   showMode();
   liffBoot();
-  if (HATABO_APP) { const ib = addBubble('ハタボ', 'はじめましてだボー。ぼくはハタボ。話しかけると、たまごから生まれるボー。', 'her'); if (ib) ib.parentElement.id = 'introBubble'; }
+  if (HATABO_APP) { const ib = KOMUGI_APP ? addBubble('コムギ', 'あ、あの……はじめまして。馬越 雅哉さんのAI棒の、コムギです。話しかけてもらえたら、たまごから生まれますけん。', 'her') : addBubble('ハタボ', 'はじめましてだボー。ぼくはハタボ。話しかけると、たまごから生まれるボー。', 'her'); if (ib) ib.parentElement.id = 'introBubble'; }
   else if (LIFF) addBubble('ジュニア', 'よう！バターちゃんジュニアだぜ。となりは柴犬のチーちゃんと、招き猫のジャム猫！', 'her');
   else addBubble('バターちゃん', 'こんにちは！バターちゃんだよ。となりは柴犬のチーちゃん！', 'her');
   setState('idle');
