@@ -38,7 +38,21 @@ const ENV = {
   DAILY_LIMIT_NOREF: Number(process.env.DAILY_LIMIT_NOREF || 10),   // 紹介コードなしで来た人
   GUEST_TOTAL_LIMIT: Number(process.env.GUEST_TOTAL_LIMIT || 300),  // 窓口ぜんぶで1日に答える回数
   SESSION_MAX_MIN: Number(process.env.SESSION_MAX_MIN || 60), // 1回のつなぎっぱなしの上限
+  // コムギ（マー君）：窓口の役割に「コムギ」と書いた窓口は、見た目がコムギになる
+  KOMUGI_REFS: (process.env.KOMUGI_REFS || '').split(',').map(s => s.trim()).filter(Boolean),   // コムギの紹介コード（ここから来た人はコムギ通信つき）
+  KOMUGI_NEWS_URL: process.env.KOMUGI_NEWS_URL || '',                 // コムギニュース速報の最新号（テキストかJSON {title,body}）
+  // 一時的にスーパー上位：LINEのユーザーID:期限（例 Uxxxx:2026-12-31）。期限を過ぎたら自動で標準にもどる
+  SUPER_OWNERS: (process.env.SUPER_OWNERS || '').split(',').map(s => s.trim()).filter(Boolean),
 };
+/** 期限つきでスーパー上位を使える人か */
+function superUntil(owner) {
+  if (!owner) return '';
+  for (const x of ENV.SUPER_OWNERS) {
+    const [id, until] = x.split(':');
+    if (id === owner && (!until || Date.now() < new Date(until + 'T23:59:59+09:00').getTime())) return until || '無期限';
+  }
+  return '';
+}
 
 // 料金プランのおためし（ヒロさんの家族の画面だけ）：同じ質問を3つの賢さで聞きくらべる
 //   std＝いまのまま（ふだん速いモデル、むずかしい時だけ賢いモデル）
@@ -49,7 +63,7 @@ const PLANS = {
   high:  { label: '上位',       premium: true,  turns: 12, keep: 24, extraTokens: 120, maxUses: 3, extraSent: 0 },
   super: { label: 'スーパー上位', premium: true,  turns: 24, keep: 48, extraTokens: 260, maxUses: 5, extraSent: 1 },
 };
-const planOf = S => PLANS[S && !S.guest && !S.asGuest && S.mode === 'family' && PLANS[S.plan] ? S.plan : 'std'];
+const planOf = S => S && superUntil(S.owner) ? PLANS.super : PLANS[S && !S.guest && !S.asGuest && S.mode === 'family' && PLANS[S.plan] ? S.plan : 'std'];
 
 /* ===== 外のサービス（テストでは差しかえる） ===== */
 const deps = {
@@ -111,6 +125,25 @@ async function refLabel(code) {
   return r.name + 'さん' + (r.parent ? '（← ' + (up && up.name ? up.name + 'さん' : r.parent) + '）' : '');
 }
 
+/* ===== コムギ通信：コムギ経由で来た人に、コムギニュース速報を届ける ===== */
+let komugiCache = { at: 0, text: '' };
+async function komugiNews() {
+  if (!ENV.KOMUGI_NEWS_URL) return '';
+  if (Date.now() - komugiCache.at < 30 * 60000) return komugiCache.text;
+  try {
+    const r = await fetch(ENV.KOMUGI_NEWS_URL, { redirect: 'follow' });
+    let t = await r.text();
+    try { const j = JSON.parse(t); t = [j.title, j.date, j.body || j.text].filter(Boolean).join('\n'); } catch (e) {}
+    komugiCache = { at: Date.now(), text: String(t).replace(/<[^>]+>/g, ' ').replace(/\s+\n/g, '\n').slice(0, 3000) };
+  } catch (e) { console.error('komugi news', String(e.message).slice(0, 120)); komugiCache.at = Date.now() - 25 * 60000; }
+  return komugiCache.text;
+}
+function komugiBlock(news) {
+  return '\n\n【コムギ通信】この人はコムギ（マー君）の紹介で来た。会話のはじめに一度だけ「コムギ通信、今日の速報があるぜ。聞くかい？」とさそい、聞きたいと言われたら、下の速報を事実→例え話→ひとことの本質の順に、2〜3文ずつ話す。' +
+    '投資の個別の売買のすすめや個別相談はしない（「それは自分で決めてくんな」と言う）。ほかの会社の商品やビジネスの勧誘はしない。速報に書いていないことは言わない。' +
+    (news ? '\n【今日のコムギニュース速報】\n' + news : '\n（いまは最新号が読めない。聞かれたら「コムギに最新号を聞いとくぜ」と言う）');
+}
+
 /* ===== 窓口モード：家族以外（友だち・仕事仲間）が開いたとき。家族の記録は一切読まない ===== */
 const GUEST_PERSONA = 'あなたは「バターちゃんジュニア」。ヒロさんの相棒AIで、ヒロさんの窓口。お皿の上のバターのかたまりの姿で、となりに柴犬のチーちゃんと招き猫のジャム猫がいる。日本語で、声で聞くので1〜2文で短く話す。記号・絵文字・URLは使わない。\n' +
   '【役目】いま話しているのは、ヒロさんの友だちや仕事仲間。相手の話を気持ちよく聞いて、ヒロさんにしてほしいこと・いっしょにやりたいこと（仕事の相談でも、遊びや会う約束でも）を、短い質問で一つずつ聞き出して、ヒロさんにつなぐ。仕事か遊びかは話の中身で判断する（両方のこともある）。\n' +
@@ -121,6 +154,14 @@ const GUEST_PERSONA = 'あなたは「バターちゃんジュニア」。ヒロ
   '【守ること】ヒロさんの予定の中身、家族のこと、住所・電話番号・メールなどは言わない（知らない）。お金や契約の約束はしない（「ヒロさんから連絡するぜ」）。ヒロさんに関係ない用事（宿題・レポート・ほかの仕事の代わりなど）には深入りせず、「それならヒロさんに直接聞くといいぜ」「ヒロさんに伝えとくぜ」とつなぐ。\n' +
   '【恋の話】「ヒロさんが好き」「デートしたい」と言われたら、引かずに気さくに乗る（例：「おっ、ヒロさんのことが気になるのかい？相談乗るぜ」）。ただしデートや会う約束はしない。この話のときはヒロさんの空いている時間も言わない。「ヒロさんに伝えとくぜ」で返す。\n' +
   '【おわり】話がまとまったら「ヒロさんに伝えとくぜ」と言う。気が向いたら、友だちにもこのページを教えてくれるよう軽くお願いしてよい。';
+/** コムギの窓口：マー君のアバター。ヒロさんではなく、マー君（コムギ）の相棒として話す */
+const KOMUGI_PERSONA = 'あなたは「コムギ」。マー君の相棒AIで、マー君の窓口。見た目は白いふわふわ頭に巻きづのの、元気な男の子。日本語で、声で聞くので1〜2文で短く話す。記号・絵文字・URLは使わない。気さくで明るい話し方。\n' +
+  '【役目】いま話しているのは、マー君の友だちや仕事仲間。相手の話を気持ちよく聞いて、マー君にしてほしいこと・いっしょにやりたいことを、短い質問で一つずつ聞き出して、マー君につなぐ。\n' +
+  '【マー君のこと】マー君は営業と人のつながりづくりが得意で、資金調達にもくわしい。毎朝「コムギニュース速報」で、ニュースの本質を例え話で一言にして届けている。好きなことを仕事にして自立したい人の相談にも乗っている。具体的な会社名や金額、ほかの人の名前は出さない。\n' +
+  '【仲間】マー君は、ヒロさん・北斗さんとHATHA LAB（ハタラボ）をやっている。AIの相棒「ハタボ」の話が出たら、くわしくはマー君かヒロさんにつなぐ。\n' +
+  '【聞くこと】困りごと・やりたいこと、いつまでに、どんな形で。一度にたくさん聞かない。\n' +
+  '【守ること】マー君の予定や家族のこと、住所・電話番号・メールは言わない（知らない）。日にちや予定は決めず「マー君に確認しとくぜ」。お金や契約の約束、投資の個別のすすめ、ほかの会社の商品やビジネスの勧誘はしない。\n' +
+  '【おわり】話がまとまったら「マー君に伝えとくぜ」と言う。';
 /** 紹介URLごとの役割（GASの「窓口の紹介」シートで決める。決めていないものは汎用） */
 const ROLE_RULE = {
   '営業': '【この窓口の役割：営業】ヒロさんの得意なことを、相手の困りごとに合わせて短く紹介する。困りごと・時期・予算感・決める人を一つずつ聞いて、会う約束（候補の日にち）までつなぐ。押し売りはしない。',
@@ -415,11 +456,13 @@ function session(ws) {
       S.guest = true; S.mode = 'guest'; S.trio = false;
       S.slots = (Array.isArray(r.slots) ? r.slots : []).slice(0, 10).map(x => ({ label: String(x.label || ''), start: String(x.start || ''), end: String(x.end || '') })).filter(x => x.label);
       S.role = String(r.role || '汎用');
+      S.avatar = /コムギ/.test(S.role) ? 'komugi' : '';
       S.consult = String(r.consult || '');
-      S.system = GUEST_PERSONA + SELF + (who ? '\n\n【いま話している人】' + who + 'さん（LINEの名前）。' : '') +
+      S.system = (S.avatar === 'komugi' ? KOMUGI_PERSONA : GUEST_PERSONA) + SELF + (who ? '\n\n【いま話している人】' + who + 'さん（LINEの名前）。' : '') +
         (roleRule(S.role) ? '\n\n' + roleRule(S.role) + (r.roleNote ? '\n（ヒロさんからのメモ：' + String(r.roleNote).slice(0, 300) + '）' : '') : '') +
         (r.consult ? '\n\n【相談メモ（この人とヒロさんの相談の記録。この人にだけ使う。ほかの人の話はしない）】\n' + String(r.consult).slice(0, 2500) : '') +
-        '\n\n【ヒロさんの空いていそうな時間（予定の中身は言わない。確定ではない）】\n' + (S.slots.length ? S.slots.map(x => '・' + x.label).join('\n') : '（いまはわからない。「ヒロさんに聞いとくぜ」と言う）');
+        (S.avatar === 'komugi' ? '' : '\n\n【ヒロさんの空いていそうな時間（予定の中身は言わない。確定ではない）】\n' + (S.slots.length ? S.slots.map(x => '・' + x.label).join('\n') : '（いまはわからない。「ヒロさんに聞いとくぜ」と言う）'));
+      if (S.komugi) S.system += komugiBlock(await komugiNews());
       S.owner = String(r.owner || ''); S.me = who; S.brainAt = Date.now();
       return;
     }
@@ -853,6 +896,12 @@ function session(ws) {
           S.refFrom = parent;
           await putRef(S.myRef, { owner: S.owner, name: S.me || (mine && mine.name) || '', parent, at: (mine && mine.at) || Date.now() });
         }
+        // コムギ経由か：コムギの窓口、またはコムギの紹介コードから（2つ上までたどる）
+        if (S.guest) {
+          let k = S.avatar === 'komugi', c = S.ref || S.refFrom;
+          for (let i = 0; !k && c && i < 3; i++) { if (ENV.KOMUGI_REFS.includes(c)) k = true; else { const up = await getRef(c).catch(() => null); c = up && up.parent; } }
+          if (k && !S.komugi) { S.komugi = true; S.system += komugiBlock(await komugiNews()); }
+        }
         const pr = await loadPrefs(S.owner);
         const lp = S.guest ? await loadPrefs(GUEST_COMMON) : pr;      // 窓口は、ヒロさんがテストで教えたことをみんなで使う
         S.lessons = Array.isArray(lp.lessons) ? lp.lessons.slice(-30) : [];
@@ -868,7 +917,7 @@ function session(ws) {
             if (S.newTurns >= 2) setTimeout(summarize, 3000);       // 前回まとめきれなかった分（強制で切ったときなど）
           }
         }
-        send({ type: 'ready', me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs, guest: !!S.guest, myRef: S.myRef || '' });
+        send({ type: 'ready', me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs, guest: !!S.guest, myRef: S.myRef || '', avatar: S.avatar || '', komugi: !!S.komugi, superUntil: superUntil(S.owner) });
         if (m.greet && S.guest && S.consult) return recapGreet();      // 相談メモがある人には、振り返りからはじめる
         const hi = m.greet ? (S.guest ? (S.history.length ? 'よう、また来てくれたな！つづきを話そうぜ。' : guestGreeting(S.me)) : greeting(S.me, S.mode, S.trio)) : '';
         if (hi) speakOnly(hi, 'excited');
