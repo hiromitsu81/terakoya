@@ -2969,7 +2969,21 @@ body.liffTall.av-komugi #hataboAv { transform: translateY(255px) scale(1.45); }
   $('goenBtn').addEventListener('click', goenOpen);
   // 友だちに紹介する：送るURLには、押した人の紹介コードがつく（だれの紹介で来たかがわかる）
   // 紹介：カードタイプ（紺と白、エンブレム）で送る。送れないときは文字だけで
+  // コムギのアプリからの紹介：コムギの公式LINE・ミニアプリへ（紹介コードつき＝マー君の紹介として記録される）
+  function komugiShareCard(url) {
+    const FACE = 'https://hiromitsu81.github.io/terakoya/butter/komugi_face.jpg';
+    return { type: 'flex', altText: 'マー君の相棒「コムギ」の紹介です', contents: { type: 'bubble', size: 'kilo',
+      styles: { header: { backgroundColor: '#0A0810' }, body: { backgroundColor: '#16121F' }, footer: { backgroundColor: '#16121F' } },
+      header: { type: 'box', layout: 'horizontal', spacing: 'md', alignItems: 'center', paddingAll: '16px', contents: [
+        { type: 'image', url: FACE, size: '52px', aspectMode: 'cover', aspectRatio: '1:1', flex: 0 },
+        { type: 'box', layout: 'vertical', contents: [{ type: 'text', text: 'コムギ', color: '#FFFFFF', weight: 'bold', size: 'xl' }, { type: 'text', text: 'マー君の相棒AI', color: '#1FD1F2', size: 'xxs', weight: 'bold' }] }] },
+      body: { type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '16px', contents: [
+        { type: 'text', text: 'マー君へのご相談は、相棒のコムギが先にお聞きします。', wrap: true, size: 'sm', color: '#E9E4F5' },
+        { type: 'text', text: '話すだけで、マー君につながります。毎朝のコムギ通信も聞けます。', wrap: true, size: 'sm', color: '#A9A2BC' }] },
+      footer: { type: 'box', layout: 'vertical', paddingAll: '12px', contents: [{ type: 'button', style: 'primary', color: '#FF2E9A', height: 'sm', action: { type: 'uri', label: 'コムギと話す', uri: url } }] } } };
+  }
   function shareCard(url) {
+    if (KOMUGI_APP || document.body.classList.contains('av-komugi')) return komugiShareCard(url);
     const EMB = 'https://app.hatha-lab.com/line/emblem.png';
     return { type: 'flex', altText: 'AIの愛棒「ハタボ」の紹介です', contents: { type: 'bubble', size: 'kilo',
       header: { type: 'box', layout: 'horizontal', spacing: 'md', alignItems: 'center', paddingAll: '16px', backgroundColor: '#16233F', contents: [
@@ -2989,7 +3003,7 @@ body.liffTall.av-komugi #hataboAv { transform: translateY(255px) scale(1.45); }
   async function shareHatabo() {
     // 紹介は、だれからでも汎用のハタボ（HATHA LABのミニアプリ）へ。紹介コードがあれば「だれの紹介か」もつける
     const url = MINI_URL + (J.myRef ? '?ref=' + encodeURIComponent(J.myRef) : '');
-    const text = 'AIの愛棒「ハタボ」だよ。話すだけで、調べもの・下書き・相談までいっしょにやってくれるボー。気軽に話してみて！\n' + url;
+    const text = KOMUGI_APP ? 'マー君の相棒AI「コムギ」です。マー君へのご相談は、コムギが先にお聞きしてつなぎます。話しかけてみてください。\n' + url : 'AIの愛棒「ハタボ」だよ。話すだけで、調べもの・下書き・相談までいっしょにやってくれるボー。気軽に話してみて！\n' + url;
     try {
       if (window.liff && liff.isApiAvailable && liff.isApiAvailable('shareTargetPicker')) {
         let r; try { r = await liff.shareTargetPicker([shareCard(url)]); } catch (e) { r = await liff.shareTargetPicker([{ type: 'text', text }]); }
