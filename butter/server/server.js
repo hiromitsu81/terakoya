@@ -358,7 +358,7 @@ function googleHttp(req, res) {
   res.writeHead(404); res.end();
 }
 /* ===== 公式LINEのWebhook：友だち追加したら、サービス紹介と使い方をカードで。トークに書かれたら、ミニアプリへ案内 ===== */
-const MINI = 'https://miniapp.line.me/2012676035-yCkx6tBu', EMB = 'https://hiromitsu81.github.io/terakoya/butter/line/emblem.png';
+const MINI = 'https://miniapp.line.me/2012676035-yCkx6tBu', EMB = 'https://app.hatha-lab.com/line/emblem.png';
 function oaCard(kicker, title, lines, btn, uri, dark) {
   return { type: 'bubble', size: 'kilo',
     header: { type: 'box', layout: 'horizontal', spacing: 'md', alignItems: 'center', paddingAll: '16px', backgroundColor: dark ? '#16233F' : '#FFFFFF', contents: [

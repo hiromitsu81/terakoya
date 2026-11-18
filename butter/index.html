@@ -2754,7 +2754,7 @@ body.pcweb #talkOaBtn, body.pcweb .pinbar { display: none !important; }
   // 友だちに紹介する：送るURLには、押した人の紹介コードがつく（だれの紹介で来たかがわかる）
   // 紹介：カードタイプ（紺と白、エンブレム）で送る。送れないときは文字だけで
   function shareCard(url) {
-    const EMB = 'https://hiromitsu81.github.io/terakoya/butter/line/emblem.png';
+    const EMB = 'https://app.hatha-lab.com/line/emblem.png';
     return { type: 'flex', altText: 'AIの愛棒「ハタボ」の紹介です', contents: { type: 'bubble', size: 'kilo',
       header: { type: 'box', layout: 'horizontal', spacing: 'md', alignItems: 'center', paddingAll: '16px', backgroundColor: '#16233F', contents: [
         { type: 'image', url: EMB, size: '48px', aspectMode: 'fit', flex: 0 },
@@ -3101,7 +3101,7 @@ body.pcweb #talkOaBtn, body.pcweb .pinbar { display: none !important; }
   function goOaTalk() { const u = 'https://line.me/R/oaMessage/@024curid/'; try { if (window.liff && liff.openWindow) { liff.openWindow({ url: u, external: false }); setTimeout(() => { try { liff.closeWindow(); } catch (e) {} }, 400); return; } } catch (e) {} location.href = u; }
   $('talkOaBtn').addEventListener('click', goOaTalk); window.goOaTalkW = goOaTalk;
   // PCで使うURL：LINEに登録したエンドポイント（ブラウザでLINEログインして、同じハタボにつながる）
-  window.pcLinkW = async () => { const u = 'https://hiromitsu81.github.io/terakoya/butter/?liff=1&g=' + encodeURIComponent(Q.get('g') || 'AKfycbxe-O1pMup7kUMVKVkmQemYknVSyTSq1ub3bHJqPI8-0QIAYG7o2eXKI_yQIk9tHwPz') + '&liffId=2012676035-yCkx6tBu';
+  window.pcLinkW = async () => { const u = 'https://app.hatha-lab.com/?liff=1&g=' + encodeURIComponent(Q.get('g') || 'AKfycbxe-O1pMup7kUMVKVkmQemYknVSyTSq1ub3bHJqPI8-0QIAYG7o2eXKI_yQIk9tHwPz') + '&liffId=2012676035-yCkx6tBu';
     try { await navigator.clipboard.writeText(u); toast('PC用のURLをコピーしたよ。PCのブラウザに貼ってね'); } catch (e) { prompt('PCのブラウザでこのURLを開いてね', u); } };
   $('pinGo').addEventListener('click', () => { try { localStorage.setItem('pinDone', '1'); } catch (e) {} $('pinBar').hidden = true; goOaTalk(); });
   $('pinX').addEventListener('click', () => { try { localStorage.setItem('pinDone', '1'); } catch (e) {} $('pinBar').hidden = true; });
