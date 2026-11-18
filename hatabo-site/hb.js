@@ -151,7 +151,7 @@ var hd=document.querySelector(".hbh"),tk=0;function onS(){tk=0;var y=window.scro
 addEventListener("scroll",function(){if(!tk){tk=1;requestAnimationFrame(onS)}},{passive:true});onS();
 if(rm||!("IntersectionObserver"in window))return;
 /* scroll reveal */
-var sel=".kicker,.eye,.h2,.h3,h2,.lead,.lead2,.cd,.lu,.scn,.ind,.qa,.tbx,.opts>*,.pc,.sim,.bb,.r1,.r2,.ph,.vis,.shiftband,.archw,section .wrap>p,section .wr>p,.ic>h2,.ic>p";
+var sel=".rkl>li,.kicker,.eye,.h2,.h3,h2,.lead,.lead2,.cd,.lu,.scn,.ind,.qa,.tbx,.opts>*,.pc,.sim,.bb,.r1,.r2,.ph,.vis,.shiftband,.archw,section .wrap>p,section .wr>p,.ic>h2,.ic>p";
 var els=[].slice.call(document.querySelectorAll(sel)).filter(function(e){return !e.closest(".hbh,.hbf,.rv,.hv,svg,.mq,.ctab")&&!e.classList.contains("rv")&&!e.querySelector(".rv")});
 var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add("hbin");io.unobserve(e.target)}})},{rootMargin:"0px 0px -6% 0px",threshold:.04});
 els.forEach(function(e){var r=e.getBoundingClientRect();if(r.top<innerHeight*.92)return;var p=e.parentNode,sib=[].filter.call(p.children,function(x){return els.indexOf(x)>=0}),k=sib.indexOf(e);
