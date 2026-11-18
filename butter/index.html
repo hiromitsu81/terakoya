@@ -672,6 +672,17 @@ body.wideshow.av-hatabo .stage svg, body.wideshow.av-komugi .stage svg { aspect-
 .hbnews time { font-size: 11px; color: #5E6B85; }
 .hbnews b { display: block; font: 800 14.5px var(--display); margin: 2px 0; }
 .hbmuted { color: #8A93A6 !important; }
+
+.hbfil { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.hbfil button { border: 1.5px solid #DCE2EC; background: #fff; color: #5E6B85; border-radius: 999px; padding: 5px 12px; font: 800 12px var(--display); cursor: pointer; }
+.hbfil button.on { background: #16233F; border-color: #16233F; color: #fff; }
+.hbnote summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: auto 1fr; gap: 4px 8px; align-items: center; }
+.hbnote summary::-webkit-details-marker { display: none; }
+.hbnote summary b { font: 800 14.5px var(--display); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hbnote summary time { grid-column: 1 / -1; font-size: 11px; color: #8A93A6; }
+.hbntext { white-space: pre-wrap; font-size: 13.5px; line-height: 1.75; color: #16233F; margin-top: 12px; padding-top: 12px; border-top: 1px solid #EEF1F6; overflow-wrap: anywhere; }
+.hbnact { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
+.hbnact button { border: 0; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -1096,7 +1107,7 @@ body.wideshow.av-hatabo .stage svg, body.wideshow.av-komugi .stage svg { aspect-
 <div class="hbpage" id="hbPage" hidden>
   <div class="hbp-top"><img src="award_mark.svg" alt=""><b id="hbpTitle">マイハタボ</b><button type="button" id="hbpClose">ハタボと話す</button></div>
   <nav class="hbp-tabs" id="hbpTabs" aria-label="マイハタボのメニュー">
-    <button type="button" data-p="my">マイハタボ</button><button type="button" data-p="grow">育てたハタボ</button><button type="button" data-p="plan">プラン・支払い</button><button type="button" data-p="aisai">AISAI・愛祭</button><button type="button" data-p="times">ハタボタイムズ</button><button type="button" data-p="share">紹介する</button>
+    <button type="button" data-p="my">マイハタボ</button><button type="button" data-p="notes">メモ・議事録</button><button type="button" data-p="grow">育てたハタボ</button><button type="button" data-p="plan">プラン・支払い</button><button type="button" data-p="aisai">AISAI・愛祭</button><button type="button" data-p="times">ハタボタイムズ</button><button type="button" data-p="share">紹介する</button>
   </nav>
   <div class="hbp-body" id="hbpBody"></div>
 </div>
@@ -2296,6 +2307,7 @@ body.wideshow.av-hatabo .stage svg, body.wideshow.av-komugi .stage svg { aspect-
   function jrOn(m) {
     switch (m.type) {
       case 'mypage': HBP.data = m; if (!$('hbPage').hidden) hbpRender(); break;
+      case 'note_saved': toast({ minutes: '議事録を残したよ', memo: 'メモしたよ', doc: '書いた文章を残したよ' }[m.kind] || '残したよ'); if (!$('hbPage').hidden) jrSend({ type: 'mypage' }); break;
       case 'ready':
         document.body.classList.remove('connecting');
         J.ready = true; J.tries = 0; J.greeted = true; J.profile = m.profile || null; if (!$('hbPage').hidden) jrSend({ type: 'mypage' }); 
@@ -2636,10 +2648,10 @@ body.wideshow.av-hatabo .stage svg, body.wideshow.av-komugi .stage svg { aspect-
         { type: 'text', text: '話すだけで、動く愛棒。', weight: 'bold', size: 'md', color: '#16233F', wrap: true },
         { type: 'text', text: 'PCとスマホで話すだけ。調べもの・下書き・相談まで、いっしょに動くAIの愛棒だボー。', size: 'sm', color: '#5E6B85', wrap: true },
         { type: 'separator', color: '#DCE2EC' },
-        { type: 'text', text: '友だち追加すると、いつものLINEのトークからすぐ話せます', size: 'xs', color: '#5E6B85', wrap: true }] },
+        { type: 'text', text: 'はじめると友だち追加の画面が出ます。追加すると、いつものLINEのトークからすぐ話せます', size: 'xs', color: '#5E6B85', wrap: true }] },
       footer: { type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '14px', contents: [
-        { type: 'button', style: 'primary', color: '#16233F', height: 'sm', action: { type: 'uri', label: '友だち追加してはじめる', uri: 'https://line.me/R/ti/p/@024curid' } },
-        { type: 'button', style: 'secondary', color: '#EEF1F6', height: 'sm', action: { type: 'uri', label: 'まず話してみる', uri: url } }] } } };
+        // ミニアプリを紹介コードつきで開く → 開いたときにLINEが「ハタボを友だち追加」を出す（友だち追加オプション）。紹介とご縁が切れない
+        { type: 'button', style: 'primary', color: '#16233F', height: 'sm', action: { type: 'uri', label: '友だち追加してはじめる', uri: url } }] } } };
   }
   async function shareHatabo() {
     // 紹介は、だれからでも汎用のハタボ（HATHA LABのミニアプリ）へ。紹介コードがあれば「だれの紹介か」もつける
@@ -2664,7 +2676,7 @@ body.wideshow.av-hatabo .stage svg, body.wideshow.av-komugi .stage svg { aspect-
   ];
   function hbpRender() {
     const p = HBP.page, d = HBP.data, nm = avName() || 'ハタボ';
-    $('hbpTitle').textContent = { my: 'マイハタボ', grow: '育てた' + nm, plan: 'プラン・支払い', aisai: 'AISAI・愛祭', times: 'ハタボタイムズ', share: '紹介する' }[p] || 'マイハタボ';
+    $('hbpTitle').textContent = { my: 'マイハタボ', notes: 'メモ・議事録', grow: '育てた' + nm, plan: 'プラン・支払い', aisai: 'AISAI・愛祭', times: 'ハタボタイムズ', share: '紹介する' }[p] || 'マイハタボ';
     document.querySelectorAll('#hbpTabs button').forEach(b => b.classList.toggle('on', b.dataset.p === p));
     const body = $('hbpBody');
     if (!d && p !== 'times' && p !== 'share' && p !== 'aisai') { body.innerHTML = '<div class="hbc"><p>よみこみ中だボー…</p></div>'; return; }
@@ -2677,7 +2689,23 @@ body.wideshow.av-hatabo .stage svg, body.wideshow.av-komugi .stage svg { aspect-
           <div style="margin-top:12px" class="big">${n(left)}<small>回 きょうの残り</small></div>
           <div class="hbbar"><i style="width:${pct}%"></i></div><p>きょう ${n(d.today)} 回 ／ 1日 ${n(d.limit)} 回まで</p></div>
         <div class="hbc"><div class="k">THIS MONTH</div><div class="hbstats"><div><b>${n(d.month)}</b><span>今月の会話</span></div><div><b>${n(d.total)}</b><span>これまで</span></div><div><b>${n(d.days)}</b><span>日目</span></div></div></div>
+        <div class="hbc"><div class="k">NOTES</div><h3>メモ・議事録</h3><div class="big">${n((d.notes || []).length)}<small>件</small></div><button type="button" class="hbbtn w" data-go="notes">メモ・議事録を見る</button></div>
         <div class="hbc"><div class="k">MEMORY</div><h3>覚えていること</h3><div class="big">${n(d.learned)}<small>こ</small></div><p>話した中で、${esc(nm)}が覚えたこと。消したいときは「〇〇を忘れて」と話しかけてください。</p></div>`;
+    } else if (p === 'notes') {
+      const K = { minutes: '議事録', memo: 'メモ', doc: '書いた文章' }, list = d.notes || [];
+      const f = HBP.filter || 'all', shown = list.filter(x => f === 'all' || x.kind === f);
+      const dt = t => { const x = new Date(t); return (x.getMonth() + 1) + '/' + x.getDate() + ' ' + String(x.getHours()).padStart(2, '0') + ':' + String(x.getMinutes()).padStart(2, '0'); };
+      body.innerHTML = `
+        <div class="hbc"><div class="k">NOTES</div><h3>メモ・議事録</h3>
+          <p>話しながら「〇〇をメモして」「議事録つくって」と言うと、ここに残ります。長い文章（企画書・メールの下書きなど）も自動で残ります。</p>
+          <div class="hbfil">${[['all', 'ぜんぶ'], ['minutes', '議事録'], ['memo', 'メモ'], ['doc', '書いた文章']].map(([k, l]) => `<button type="button" data-f="${k}" class="${f === k ? 'on' : ''}">${l}</button>`).join('')}</div></div>
+        ${d.summary ? `<details class="hbc hbnote"><summary><span class="hbtag">これまでのまとめ</span><b>前の会話のまとめ</b></summary><div class="hbntext">${esc(d.summary)}</div></details>` : ''}
+        ${shown.length ? shown.map(x => `<details class="hbc hbnote"><summary><span class="hbtag${x.kind === 'minutes' ? ' gold' : ''}">${K[x.kind] || 'メモ'}</span><b>${esc(x.title)}</b><time>${dt(x.at)}</time></summary>
+          <div class="hbntext">${esc(x.text)}</div><div class="hbnact"><button type="button" class="hbtag" data-copy="${esc(x.id)}">コピー</button><button type="button" class="hbtag hbmuted" data-del="${esc(x.id)}">消す</button></div></details>`).join('')
+          : '<div class="hbc"><p class="hbmuted">まだありません。「今のをメモして」と話しかけてみてください。</p></div>'}`;
+      body.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { HBP.filter = b.dataset.f; hbpRender(); });
+      body.querySelectorAll('[data-copy]').forEach(b => b.onclick = async () => { const n = list.find(x => x.id === b.dataset.copy); try { await navigator.clipboard.writeText(n.title + '\n\n' + n.text); toast('コピーしたよ'); } catch (e) { toast('コピーできなかった'); } });
+      body.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { if (confirmDel(b)) jrSend({ type: 'note_del', id: b.dataset.del }); });
     } else if (p === 'grow') {
       const marks = [3, 7, 30, 100, 365];
       body.innerHTML = `
@@ -2714,6 +2742,7 @@ body.wideshow.av-hatabo .stage svg, body.wideshow.av-komugi .stage svg { aspect-
       $('hbpShare').onclick = shareHatabo;
     }
     hbpWire();
+    body.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { HBP.page = b.dataset.go; hbpRender(); });
     body.querySelectorAll('[data-ask]').forEach(b => b.onclick = () => { hbpClose(); const t = b.dataset.ask; addBubble('あなた', t, 'me'); jrSend({ type: 'text', text: t }); });
   }
   // ハタボをいつもの場所に：友だち追加・ホーム画面に追加・トークをピン留め（ピン留めはLINEの決まりで本人の操作だけ）
@@ -2732,6 +2761,8 @@ body.wideshow.av-hatabo .stage svg, body.wideshow.av-komugi .stage svg { aspect-
     const p = document.getElementById('hbpPin'); if (p) p.onclick = () => { location.href = 'https://line.me/R/nv/chat'; };
   }
   async function hbpFriend() { try { if (window.liff && liff.getFriendship) { const r = await liff.getFriendship(); HBS.friend = !!(r && r.friendFlag); if (!$('hbPage').hidden) hbpRender(); } } catch (e) {} }
+  // 消すのは2回押し（1回目で「もう一度で消す」）
+  function confirmDel(b) { if (b.dataset.sure) return true; b.dataset.sure = '1'; b.textContent = 'もう一度で消す'; b.classList.remove('hbmuted'); setTimeout(() => { delete b.dataset.sure; b.textContent = '消す'; b.classList.add('hbmuted'); }, 3000); return false; }
   function hbpOpen(p) {
     HBP.page = p || 'my'; $('hbPage').hidden = false; hbpRender(); if (HBS.friend === null) hbpFriend();
     if (J.ready) jrSend({ type: 'mypage' });
