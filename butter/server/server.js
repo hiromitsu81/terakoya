@@ -185,7 +185,7 @@ function bumpStats(S) {
   putRef(S.myRef, { tot: st.tot, mon: st.mon, monN: st.monN, last: st.last, streak: st.streak }).catch(() => {});
 }
 /** ハタボ・コムギのアプリでは、グレードごとの1日の回数 */
-const gradeCap = S => (S && (S.avatar === 'hatabo' || S.avatar === 'komugi')) ? GRADE_CAP[Object.keys(PLANS).find(k => PLANS[k] === planOf(S)) || 'std'] : 0;
+const gradeCap = S => (S && (S.avatar === 'hatabo' || S.avatar === 'komugi')) ? (S.firstDay ? 50 : 0) || GRADE_CAP[Object.keys(PLANS).find(k => PLANS[k] === planOf(S)) || 'std'] : 0;
 async function myPage(S) {
   const plan = planOf(S), st = S.stats || {}, day = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
   const used = counts.get((S.owner || 'anon') + ':' + new Date().toISOString().slice(0, 10)) || 0;
@@ -1380,7 +1380,7 @@ function session(ws) {
     if (study) route.smart = true;                  // 勉強は賢いモデルで、ていねいに
     const claudeMode = !!(plan === PLANS.super && !jam && !S.trio && !S.visit);   // Z（スーパー上位）は、だれでもClaudeと同じ精度で答える
     const longMode = !!(plan.long && !jam && !S.trio && S.role !== 'サービス相談' && (claudeMode || LONG_RE.test(logText || '')));
-    const maxSent = (S.trio ? 2 : study ? 5 : route.search ? 4 : 3) + (S.trio ? 0 : plan.extraSent);
+    const maxSent = (S.trio ? 2 : study ? 5 : route.search ? 4 : 3) + (S.trio ? 0 : plan.extraSent) + (S.firstDay && S.avatar === 'hatabo' ? 3 : 0);   // 初日は、サービスの説明ができるように声も長めに
     let capped = false, spoken = '';
     const sp = splitter(sentence => {
       const s = clean(sentence).trim();
@@ -1405,7 +1405,7 @@ function session(ws) {
       const useSmart = route.smart && attempt < 2, useSearch = route.search && attempt < 2 && ENV.WEB_SEARCH;
       const params = {
         model: plan.premium && attempt < 2 && !jam ? ENV.PREMIUM_MODEL : (useSmart || (plan.smart && attempt < 2 && !jam)) ? ENV.SMART_MODEL : ENV.MODEL,
-        max_tokens: (S.trio ? 240 : study ? 520 : S.mode === 'business' ? 340 : 320) + (useSearch ? 400 : 0) + (S.trio ? 0 : plan.extraTokens) + (longMode ? 3500 : 0),
+        max_tokens: (S.trio ? 240 : study ? 520 : S.mode === 'business' ? 340 : 320) + (useSearch ? 400 : 0) + (S.trio ? 0 : plan.extraTokens) + (longMode ? 3500 : 0) + (S.firstDay && S.avatar === 'hatabo' ? 400 : 0),
         system: sysBlocks((claudeMode && !LONG_RE.test(logText || '') ? CLAUDE_RULE : longMode ? LONG_RULE : plan === PLANS.high && !jam && !S.trio ? HIGH_RULE : '') + (study ? STUDY_RULE : '') + (jam ? JAM_RULE : '') + (route.search && !useSearch ? '\n\n【いまは調べられない】検索が使えないので、今の情報は「おいらには調べられねぇんだ」と正直に言う。' : '')),
         messages: attempt === 2 || (attempt === 1 && !useSearch) ? [{ role: 'user', content }] : msgs,
       };
@@ -1476,6 +1476,10 @@ function session(ws) {
     if (longMode && text && text.length > 200 && S.owner) addNote(S.owner, { kind: 'doc', title: (logText || '書いた文章').replace(/\s+/g, ' ').slice(0, 30), text }).then(() => send({ type: 'note_saved', kind: 'doc' })).catch(() => {});
     if (S.trio && /[？?]\s*$/.test(text)) S.followUntil = Date.now() + 12000;   // ジュニアが質問した → つぎの1回は名前なしでも   // 空の返事は記録しない（次の会話がこわれるので）
     if (S.history.length > plan.keep) S.history = S.history.slice(-plan.keep);
+    // 人ごとのAI代（獲得コストを後で出すため）：LINEのIDの紹介コードに足していく（円・1ドル150円）
+    { const P = /opus/.test(use.model) ? [4, 20, 0.2] : /sonnet/.test(use.model) ? [2, 10, 0.1] : /haiku-5/.test(use.model) ? [0.1, 0.5, 0.01] : [1, 5, 0.1];
+      const yen = ((use.inTok * P[0] + use.outTok * P[1] + use.cacheTok * P[2]) / 1e6 + use.searches * 0.01) * 150 + (spoken.length || 0) * 0.0045 + 0.4;
+      if (S.myRef) { S.costYen = (S.costYen || 0) + yen; putRef(S.myRef, { costYen: Math.round(S.costYen * 10) / 10, costAt: Date.now() }).catch(() => {}); } }
     const usage = plan === PLANS.std && !S.plan ? undefined : { plan: plan.label, model: use.model, in: use.inTok, out: use.outTok, cache: use.cacheTok, searches: use.searches };
     if (usage) console.log('plan usage', JSON.stringify(usage));
     send({ type: 'reply_end', gen, emotion, text, why: text ? undefined : lastErr.slice(0, 120), usage });
@@ -1557,6 +1561,8 @@ function session(ws) {
           if (!mine && parent) { const up = await getRef(parent).catch(() => null); await putRef(parent, { kids: ((up && up.kids) || 0) + 1 }).catch(() => {}); }
           if (!mine && parent) S.newVisit = true;
           S.funnel = funnelOf(mine);
+          S.costYen = (mine && mine.costYen) || 0;
+          { const d0 = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10), born = mine && mine.at ? new Date(mine.at + 9 * 3600000).toISOString().slice(0, 10) : d0; S.firstDay = born === d0; }   // はじめて来た日は、長めに話せる・回数も多め
           if (S.newVisit && parent) tellUpline(S, 'ハタボと話しはじめました', 'visit').catch(() => {});
           if (mine && mine.stage === 'trial' && S.funnel.stage === 'contract' && !mine.thanked) { putRef(S.myRef, { stage: 'contract', thanked: true, contractAt: mine.trialUntil || Date.now() }).catch(() => {}); tellUpline(S, (S.funnel.lineupName || '') + ' ' + (S.funnel.grade || '') + 'を契約しました', 'contract').catch(() => {}); }
           // 紹介から来た人は、紹介した人のアバターで（コムギの紹介ならコムギ）。リッチメニューのサービス相談と、役割を決めた窓口はそのまま
