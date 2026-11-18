@@ -824,6 +824,14 @@ body.av-hatabo:not(.chatview) .cvfab,body.av-komugi:not(.chatview) .cvfab{displa
 .hbgrb b{font-size:22px;font-weight:900}.hbgrb span{font-size:11px;line-height:1.4;color:#5E6B85}
 .hbgrb.on{background:#16233F;color:#fff;border-color:#16233F}.hbgrb.on span{color:#C9D0DC}
 .chatv mark.cvk{background:linear-gradient(transparent 55%,#FFE9A8 55%);color:inherit;border-radius:2px;transition:background .2s}
+.fgate{position:fixed;inset:0;z-index:80;background:#F3F5FA;display:grid;place-items:center;padding:24px;font-family:'Noto Sans JP','Noto Sans CJK JP',sans-serif}
+.fgate[hidden]{display:none}
+.fg-card{width:min(420px,100%);background:#fff;border:1px solid #DCE2EC;border-radius:22px;padding:26px 22px;text-align:center;color:#16233F;box-shadow:0 20px 40px -24px rgba(22,35,63,.5)}
+.fg-card img{width:84px;height:84px;border-radius:50%;box-shadow:0 0 0 3px #16233F}
+.fg-card h2{font-size:21px;margin:14px 0 8px}.fg-card p{font-size:14.5px;line-height:1.7;margin:0 0 16px;color:#3A4560}
+.fg-add,.fg-done{display:block;width:100%;border-radius:999px;padding:13px;font:800 16px inherit;margin-top:10px}
+.fg-add{background:#06C755;color:#fff;border:0}.fg-done{background:#fff;color:#16233F;border:1px solid #DCE2EC}
+.fg-note{font-size:12.5px!important;color:#B4232A!important;margin-top:10px!important}
 </style>
 </head>
 <body>
@@ -1249,6 +1257,7 @@ body.av-hatabo:not(.chatview) .cvfab,body.av-komugi:not(.chatview) .cvfab{displa
 
 <div class="pinbar" id="pinBar" hidden><div><b>ハタボのトークをピン留めしよう</b><span>トーク一覧の「ハタボ」を長押し →「ピン留め」で、いつもいちばん上に。メニューからすぐこの画面にもどれます。</span></div><button type="button" id="pinGo">トークを開く</button><button type="button" id="pinX" aria-label="とじる">×</button></div>
 <div class="visitbar" id="visitBar" hidden><img src="award_mark.svg" alt=""><span id="visitName"></span><button type="button" id="visitBack">もどる</button></div>
+<div class="fgate" id="friendGate" hidden><div class="fg-card"><img src="award_mark.svg" alt=""><h2>ハタボを友だち追加してね</h2><p>自分のハタボと話すには、まず公式LINE「ハタボ」を友だち追加してね。追加すると、メモ・議事録・伝言もLINEに届くボー。</p><button type="button" class="fg-add" id="fgAdd">友だち追加する</button><button type="button" class="fg-done" id="fgDone">追加したよ</button><p class="fg-note" id="fgNote" hidden>まだ友だちになっていないみたいだボー。追加してから「追加したよ」を押してね。</p></div></div>
 <div class="chatv" id="chatV" aria-label="トーク">
   <div class="cv-top"><img src="award_mark.svg" alt=""><b id="cvName">ハタボ</b><button type="button" id="cvChar">キャラ画面</button><button type="button" id="cvMy">マイハタボ</button></div>
   <div class="cv-list" id="cvList"><p class="cv-empty" id="cvEmpty">下のエンブレムを押して話しかけてね。<br>話したことと返事が、ここに残ります。</p></div>
@@ -2405,10 +2414,25 @@ body.av-hatabo:not(.chatview) .cvfab,body.av-komugi:not(.chatview) .cvfab{displa
       }
       try { sessionStorage.removeItem('butter.login'); } catch (e) {}
       try { if (!liff.isInClient()) document.body.classList.add('pcweb'); } catch (e) {}   // PCやふつうのブラウザ：LINEのトークへ行くボタン・ピン留めの帯は出さない
+      if (HATABO_APP) await friendGate();   // ハタボは、公式LINEを友だち追加してから話す（グループや紹介から来た人も、まず自分のハタボを追加）
       poll();
     } catch (e) {
       hint.textContent = 'ミニアプリの準備ができませんでした（' + (e.message || e) + '）';
     }
+  }
+
+  /** 友だち追加の関所：まだなら追加をうながし、追加されたら先へ進む */
+  async function friendGate() {
+    const isFriend = async () => { try { const r = await liff.getFriendship(); return !!(r && r.friendFlag); } catch (e) { return true; } };   // 調べられないときは止めない
+    if (await isFriend()) return;
+    const g = $('friendGate'); g.hidden = false; document.documentElement.classList.remove('hbapp'); document.body.style.visibility = 'visible';
+    await new Promise(done => {
+      const check = async () => { if (await isFriend()) { g.hidden = true; document.removeEventListener('visibilitychange', onVis); done(); } else $('fgNote').hidden = false; };
+      const onVis = () => { if (document.visibilityState === 'visible') check(); };
+      document.addEventListener('visibilitychange', onVis);
+      $('fgAdd').onclick = () => { try { liff.openWindow({ url: 'https://line.me/R/ti/p/@024curid', external: false }); } catch (e) { location.href = 'https://line.me/R/ti/p/@024curid'; } };
+      $('fgDone').onclick = check;
+    });
   }
 
   // ===== なめらか会話（バターちゃんジュニアのサーバー／Google Cloud Run） =====
