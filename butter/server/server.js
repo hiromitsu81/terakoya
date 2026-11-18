@@ -384,7 +384,24 @@ function googleHttp(req, res) {
   res.writeHead(404); res.end();
 }
 /* ===== 公式LINEのWebhook：友だち追加したら、サービス紹介と使い方をカードで。トークに書かれたら、ミニアプリへ案内 ===== */
-const MINI = 'https://miniapp.line.me/2012676035-yCkx6tBu', EMB = 'https://app.hatha-lab.com/line/emblem.png';
+const EMB = 'https://app.hatha-lab.com/line/emblem.png';
+/* 公式LINEは2つ：ハタボ（受付・汎用）とコムギ（マー君のキャラ）。Webhookの住所で分けて、トークン・ミニアプリ・言葉づかいを切りかえる */
+const { AsyncLocalStorage } = require('async_hooks');
+const LINE_CH = {
+  hatabo: { id: 'hatabo', name: 'ハタボ', oa: '@024curid', mini: 'https://miniapp.line.me/2012676035-yCkx6tBu', token: () => ENV.HATABO_LINE_TOKEN, secret: () => ENV.HATABO_CHANNEL_SECRET, call: /ハタボ|はたぼ|ハタボー|HATABO/i },
+  komugi: { id: 'komugi', name: 'コムギ', oa: '@858uraou', mini: 'https://miniapp.line.me/2012686672-PRB9tb8H', token: () => process.env.KOMUGI_LINE_TOKEN || '', secret: () => process.env.KOMUGI_CHANNEL_SECRET || '', call: /コムギ|こむぎ|小麦/ },
+};
+const chStore = new AsyncLocalStorage();
+const CH = () => chStore.getStore() || LINE_CH.hatabo;
+/** コムギの公式LINEでは、カードの言葉をコムギ（博多弁・ていねい）に */
+function komugiize(obj) {
+  let t = JSON.stringify(obj);
+  t = t.replace(/ハタボが入ったボー！/g, 'コムギが入りました！').replace(/はじめまして、AIの愛棒「ハタボ」だボー。/g, 'はじめまして、マー君の相棒AI「コムギ」です。')
+    .replace(/「ハタボ」と呼ばれたとき/g, '「コムギ」と呼ばれたとき').replace(/自分のハタボ/g, '自分の相棒AI').replace(/呼んだボー？/g, '呼びましたか？')
+    .replace(/友だち追加ありがとうだボー！/g, '友だち追加、ありがとうございます！うれしかです。')
+    .replace(/だボー/g, 'です').replace(/するボー/g, 'しますけん').replace(/なるボー/g, 'なります').replace(/いるボー/g, 'います').replace(/ボー([。！？」]|")/g, '$1').replace(/ボー/g, '');
+  return JSON.parse(t);
+}
 function oaCard(kicker, title, lines, btn, uri, dark) {
   return { type: 'bubble', size: 'kilo',
     header: { type: 'box', layout: 'horizontal', spacing: 'md', alignItems: 'center', paddingAll: '16px', backgroundColor: dark ? '#16233F' : '#FFFFFF', contents: [
@@ -395,16 +412,16 @@ function oaCard(kicker, title, lines, btn, uri, dark) {
 }
 function welcomeCards(name) {
   return { type: 'flex', altText: 'ハタボへようこそ。サービスの紹介と使い方です', contents: { type: 'carousel', contents: [
-    oaCard('WELCOME', 'すべての人に、AIのある愛棒を。', [(name ? name + 'さん、' : '') + '友だち追加ありがとうだボー！', 'ハタボは、PCとスマホで話すだけで、調べもの・段取り・文章づくり・予定まで、いっしょに動くAIの愛棒だボー。', 'アプリを入れなくても、LINEからすぐ使えるボー。'], 'ハタボと話してみる', MINI, true),
-    oaCard('HOW TO 1', '話しかけるだけ', ['下のメニューの「ハタボに相談」か、ミニアプリのまん中のエンブレムを押して話すボー。', '文字で送ってもOK。「来週の予定を整理して」「お礼のメールを書いて」など、なんでもどうぞ。'], '話しかける', MINI),
-    oaCard('HOW TO 2', 'マイハタボで残す・育てる', ['「今のをメモして」「議事録つくって」で、メモ・議事録に残るボー。', '話すほど、覚えて育つボー。ご縁・伝言・AI棒ガチャ・友だちも、マイハタボから。'], 'マイハタボを開く', MINI + '?page=my'),
-    oaCard('PLAN', 'まず10日間、無料で', ['いちばん上のZグレードで、10日間無料で試せるボー（1日30回まで）。', 'ラインナップは、家族・ひとり・個人事業・お店や宿・会社の5つ。10日以内にやめれば0円だボー。'], 'プランを見る', MINI + '?page=plan'),
-    oaCard('TIPS', 'トークをピン留めしよう', ['トーク一覧の「ハタボ」を長押し →「ピン留め」で、いつもいちばん上に。', 'メニューからすぐハタボを呼べるボー。'], '設定を見る', MINI + '?page=settings'),
+    oaCard('WELCOME', 'すべての人に、AIのある愛棒を。', [(name ? name + 'さん、' : '') + '友だち追加ありがとうだボー！', 'ハタボは、PCとスマホで話すだけで、調べもの・段取り・文章づくり・予定まで、いっしょに動くAIの愛棒だボー。', 'アプリを入れなくても、LINEからすぐ使えるボー。'], 'ハタボと話してみる', CH().mini, true),
+    oaCard('HOW TO 1', '話しかけるだけ', ['下のメニューの「ハタボに相談」か、ミニアプリのまん中のエンブレムを押して話すボー。', '文字で送ってもOK。「来週の予定を整理して」「お礼のメールを書いて」など、なんでもどうぞ。'], '話しかける', CH().mini),
+    oaCard('HOW TO 2', 'マイハタボで残す・育てる', ['「今のをメモして」「議事録つくって」で、メモ・議事録に残るボー。', '話すほど、覚えて育つボー。ご縁・伝言・AI棒ガチャ・友だちも、マイハタボから。'], 'マイハタボを開く', CH().mini + '?page=my'),
+    oaCard('PLAN', 'まず10日間、無料で', ['いちばん上のZグレードで、10日間無料で試せるボー（1日30回まで）。', 'ラインナップは、家族・ひとり・個人事業・お店や宿・会社の5つ。10日以内にやめれば0円だボー。'], 'プランを見る', CH().mini + '?page=plan'),
+    oaCard('TIPS', 'トークをピン留めしよう', ['トーク一覧の「ハタボ」を長押し →「ピン留め」で、いつもいちばん上に。', 'メニューからすぐハタボを呼べるボー。'], '設定を見る', CH().mini + '?page=settings'),
   ] } };
 }
 /* ===== LINEグループ：入ったら自己紹介とサービスガイド。招待した人のボタン、グループ専用の紹介コード、招待コードの投稿でグループを登録 ===== */
 const groupRefOf = gid => 'g' + Array.from(crypto.createHash('sha256').update('grp:' + gid).digest()).slice(0, 6).map(b => 'abcdefghjkmnpqrstuvwxyz23456789'[b % 31]).join('');
-const lineApi = (path, body) => fetch('https://api.line.me/v2/bot/' + path, { method: body ? 'POST' : 'GET', headers: Object.assign({ Authorization: 'Bearer ' + ENV.HATABO_LINE_TOKEN }, body ? { 'Content-Type': 'application/json' } : {}), body: body ? JSON.stringify(body) : undefined });
+const lineApi = (path, body) => fetch('https://api.line.me/v2/bot/' + path, { method: body ? 'POST' : 'GET', headers: Object.assign({ Authorization: 'Bearer ' + CH().token() }, body ? { 'Content-Type': 'application/json' } : {}), body: body ? JSON.stringify(body) : undefined });
 async function lineName(src) {
   try {
     const path = src.type === 'group' ? 'group/' + src.groupId + '/member/' + src.userId : src.type === 'room' ? 'room/' + src.roomId + '/member/' + src.userId : 'profile/' + src.userId;
@@ -412,18 +429,18 @@ async function lineName(src) {
   } catch (e) { return ''; }
 }
 function groupCards(gref) {
-  const join = MINI + '?ref=' + gref;
+  const join = CH().mini + '?ref=' + gref;
   const c1 = oaCard('HELLO', 'ハタボが入ったボー！', ['はじめまして、AIの愛棒「ハタボ」だボー。話すだけで、調べもの・段取り・文章づくり・予定の相談まで、いっしょに動くボー。', 'このグループでは、「ハタボ」と呼ばれたときだけ出てくるボー。うるさくしないから安心してね。'], '自分のハタボをもつ', join, true);
   const c2 = oaCard('GUIDE', 'ひとり1体、自分のハタボ', ['下のボタンから、ひとりずつ自分のハタボをもてるボー（公式LINEを友だち追加して、ミニアプリで話す）。', 'まず10日間、いちばん上のZグレードで無料。メモ・議事録・伝言・ご縁も、マイハタボにまとまるボー。'], '10日間無料ではじめる', join);
   const c3 = oaCard('INVITE', 'このグループに招待した人へ', ['招待した人は、下の「招待したのは私」を押してね。このグループから来た人が、あなたのご縁になるボー。', 'グループを管理したい人は、マイハタボ →「紹介する」にある招待コードを、このグループに投稿してね。'], '招待したのは私', join);
   c3.footer.contents = [{ type: 'button', style: 'primary', color: '#16233F', height: 'sm', action: { type: 'postback', label: '招待したのは私', data: 'act=inviter', displayText: '招待したのは私です' } }];
   c3.body.contents = ['招待した人は、下の「招待したのは私」を押してね。このグループから来た人が、あなたのご縁になるボー。', 'グループの管理者になるには：①ミニアプリでマイハタボを開く ②「紹介する」で招待コードをコピー ③このグループのトークに貼って送る'].map(t => ({ type: 'text', text: t, size: 'sm', wrap: true, color: '#16233F' }));
-  c3.footer.contents.push({ type: 'button', style: 'secondary', height: 'sm', action: { type: 'uri', label: '招待コードを出す', uri: MINI + '?page=share' } });
+  c3.footer.contents.push({ type: 'button', style: 'secondary', height: 'sm', action: { type: 'uri', label: '招待コードを出す', uri: CH().mini + '?page=share' } });
   return { type: 'flex', altText: 'ハタボがグループに入ったボー。自己紹介とはじめ方です', contents: { type: 'carousel', contents: [c1, c2, c3, recCard(false)] } };
 }
 /** グループの記録カード：はじめる・とめる・議事録をつくる（管理者だけが押せる） */
 function recCard(on) {
-  const c = oaCard('RECORD', on ? 'いま記録中だボー' : 'このグループの記録', on ? ['このグループのやりとりと写真を、管理者のマイハタボとGoogleドライブに残しているボー。', '「議事録をつくる」で、ここまでをまとめるボー。'] : ['管理者が「記録をはじめる」を押すと、やりとりと写真を残して、あとで議事録にできるボー。', '記録中は、みんなに分かるようにお知らせするボー。押せるのは管理者だけ。'], 'x', MINI);
+  const c = oaCard('RECORD', on ? 'いま記録中だボー' : 'このグループの記録', on ? ['このグループのやりとりと写真を、管理者のマイハタボとGoogleドライブに残しているボー。', '「議事録をつくる」で、ここまでをまとめるボー。'] : ['管理者が「記録をはじめる」を押すと、やりとりと写真を残して、あとで議事録にできるボー。', '記録中は、みんなに分かるようにお知らせするボー。押せるのは管理者だけ。'], 'x', CH().mini);
   const pb = (label, data, style) => ({ type: 'button', style: style || 'secondary', height: 'sm', color: style === 'primary' ? '#16233F' : undefined, action: { type: 'postback', label, data, displayText: label } });
   c.footer.contents = on ? [pb('議事録をつくる', 'act=minutes', 'primary'), pb('記録をとめる', 'act=rec_off')] : [pb('記録をはじめる', 'act=rec_on', 'primary')];
   c.footer.spacing = 'sm';
@@ -472,13 +489,14 @@ async function groupLink(src, uid, role) {
   return { ok: true };
 }
 const INVITE_RE = /(?:招待|紹介)コード[\s:：は]*([a-z0-9]{6})\b|^\s*([a-z0-9]{6})\s*$/i;
-function lineWebhook(req, res) {
+function lineWebhook(req, res, chId) {
+  const ch = LINE_CH[chId] || LINE_CH.hatabo;
   let raw = ''; req.setEncoding('utf8'); req.on('data', c => { raw += c; if (raw.length > 1e6) req.destroy(); });
-  req.on('end', async () => {
+  req.on('end', () => chStore.run(ch, async () => {
     res.writeHead(200); res.end('ok');
     try {
-      if (!ENV.HATABO_CHANNEL_SECRET || !ENV.HATABO_LINE_TOKEN) return;
-      const sig = crypto.createHmac('sha256', ENV.HATABO_CHANNEL_SECRET).update(raw).digest('base64');
+      if (!ch.secret() || !ch.token()) return;
+      const sig = crypto.createHmac('sha256', ch.secret()).update(raw).digest('base64');
       if (sig !== req.headers['x-line-signature']) return console.error('webhook sig ng');
       for (const ev of (JSON.parse(raw).events || [])) {
         let messages = null;
@@ -509,23 +527,24 @@ function lineWebhook(req, res) {
           if (owner && owner.owner && myRefOf('g:' + src.userId) === code) {   // 自分の招待コードを投稿した人が、グループの管理者になる
             const nm = await lineName(src), r = await groupLink(src, src.userId, 'admin');
             messages = [{ type: 'text', text: r.taken ? 'このグループには、もう管理者がいるボー。' : (nm || 'あなた') + 'さんを、このグループの管理者として登録したボー！マイハタボの「ご縁」で、このグループから来た人が見られるボー。' }];
-          } else if (/(ハタボ|はたぼ).{0,6}(記録|議事録)/.test(t)) {
+          } else if (new RegExp('(' + ch.call.source + ').{0,6}(記録|議事録)', 'i').test(t)) {
             const g1 = await loadCol(gidOf(src), 'groups'); messages = [{ type: 'flex', altText: '記録のボタン', contents: recCard(!!g1.rec) }];
-          } else if (/ハタボ|はたぼ|ハタボー|HATABO/i.test(t)) {        // 呼ばれたときだけ出てくる
+          } else if (ch.call.test(t)) {        // 呼ばれたときだけ出てくる
             const g = await loadCol(gidOf(src), 'groups');
-            messages = [{ type: 'flex', altText: 'ハタボだボー。自分のハタボはこちらから', contents: oaCard('HATABO', '呼んだボー？', ['グループの中では、くわしいお返事はできないんだボー。', '下のボタンから自分のハタボをもつと、話すだけで調べもの・段取り・文章づくりまで、いっしょに動くボー。'], '自分のハタボと話す', MINI + '?ref=' + (g.ref || groupRefOf(gidOf(src))), true) }];
+            messages = [{ type: 'flex', altText: 'ハタボだボー。自分のハタボはこちらから', contents: oaCard('HATABO', '呼んだボー？', ['グループの中では、くわしいお返事はできないんだボー。', '下のボタンから自分のハタボをもつと、話すだけで調べもの・段取り・文章づくりまで、いっしょに動くボー。'], '自分のハタボと話す', CH().mini + '?ref=' + (g.ref || groupRefOf(gidOf(src))), true) }];
           } else continue;
         } else if (inGroup) { continue;
         } else if (ev.type === 'follow') {
-          let name = ''; try { const pr = await fetch('https://api.line.me/v2/bot/profile/' + ev.source.userId, { headers: { Authorization: 'Bearer ' + ENV.HATABO_LINE_TOKEN } }); name = (await pr.json()).displayName || ''; } catch (e) {}
+          let name = ''; try { const pr = await fetch('https://api.line.me/v2/bot/profile/' + ev.source.userId, { headers: { Authorization: 'Bearer ' + ch.token() } }); name = (await pr.json()).displayName || ''; } catch (e) {}
           messages = [welcomeCards(name)];
         } else if (ev.type === 'message') {
-          messages = [{ type: 'flex', altText: 'ハタボとはミニアプリで話せるボー', contents: oaCard('HATABO', 'ハタボとはこちらで話せるボー', ['ここ（トーク）では返事ができないので、ミニアプリで話しかけてほしいボー。いまの続きから話せるボー。'], 'ハタボと話す', MINI) }];
+          messages = [{ type: 'flex', altText: 'ハタボとはミニアプリで話せるボー', contents: oaCard('HATABO', 'ハタボとはこちらで話せるボー', ['ここ（トーク）では返事ができないので、ミニアプリで話しかけてほしいボー。いまの続きから話せるボー。'], 'ハタボと話す', CH().mini) }];
         }
-        if (messages && ev.replyToken) await fetch('https://api.line.me/v2/bot/message/reply', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + ENV.HATABO_LINE_TOKEN }, body: JSON.stringify({ replyToken: ev.replyToken, messages }) }).then(r => { if (!r.ok) console.error('reply', r.status); });
+        if (messages && ch.id === 'komugi') messages = komugiize(messages);
+        if (messages && ev.replyToken) await fetch('https://api.line.me/v2/bot/message/reply', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + ch.token() }, body: JSON.stringify({ replyToken: ev.replyToken, messages }) }).then(r => { if (!r.ok) console.error('reply', r.status); });
       }
     } catch (e) { console.error('webhook', String(e.message).slice(0, 160)); }
-  });
+  }));
 }
 /* ===== キャラ設定（マイハタボ）：AI棒の名前・呼び方・話し方・長さ・自分のこと・指示。Claudeの「カスタム指示」と同じ考え ===== */
 const TONES = { char: 'キャラのまま', polite: 'ていねい（です・ます）', frank: 'フランク（友だちのように）', gentle: 'やさしく、ゆっくり', kansai: '関西弁' };
@@ -1722,7 +1741,7 @@ function session(ws) {
 function createServer() {
   const server = http.createServer((req, res) => {
     if (req.url.startsWith('/google/')) return googleHttp(req, res);
-    if (req.url.startsWith('/line/webhook') && req.method === 'POST') return lineWebhook(req, res);
+    if (req.url.startsWith('/line/webhook') && req.method === 'POST') return lineWebhook(req, res, /\/komugi/.test(req.url) ? 'komugi' : 'hatabo');   // /line/webhook/komugi はコムギの公式LINE
     if (req.url === '/' || req.url.startsWith('/health')) { res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' }); return res.end('バターちゃんジュニア：元気だよ'); }
     res.writeHead(404); res.end();
   });

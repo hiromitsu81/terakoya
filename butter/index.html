@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
 <script>
 /* ハタボ・コムギのミニアプリで開いたときは、つながる前の「福まねき特戦隊・バターちゃん」を一瞬も見せない */
-try { if (/20126760(32|33|35)-/.test(decodeURIComponent(location.search))) { document.documentElement.classList.add('hbapp'); document.title = 'ハタボ'; } } catch (e) {}
+try { if (/20126760(32|33|35)-|201268667[012]-/.test(decodeURIComponent(location.search))) { document.documentElement.classList.add('hbapp'); document.title = /201268667/.test(decodeURIComponent(location.search)) ? 'コムギ｜ハタボ' : 'ハタボ'; } } catch (e) {}
 </script>
 <style>
 html.hbapp body:not(.av-hatabo):not(.av-komugi) { visibility: hidden; }
@@ -1415,7 +1415,10 @@ body.av-hatabo:not(.chatview) .cvfab,body.av-komugi:not(.chatview) .cvfab{displa
   const LIFF = Q.get('liff') === '1';
   const LIFF_ID = Q.get('liffId') || store.get('liffId', '');
   // ハタボのミニアプリ（HATHA LAB）で開いたときは、つながる前からハタボの見た目にする（家族のバターちゃんは寺小屋の入口）
-  const HATABO_APP = /^20126760(32|33|35)-/.test(LIFF_ID);
+  const KOMUGI_APP = /^201268667[012]-/.test(LIFF_ID);   // コムギ専用のミニアプリ（公式LINE @858uraou）
+  const HATABO_APP = /^20126760(32|33|35)-/.test(LIFF_ID) || KOMUGI_APP;
+  const OA_ID = KOMUGI_APP ? '@858uraou' : '@024curid';
+  const MINI_URL = KOMUGI_APP ? 'https://miniapp.line.me/2012686672-PRB9tb8H' : 'https://miniapp.line.me/2012676035-yCkx6tBu';
   // ハタボ・コムギのときは、画面の文字からバターちゃん・特戦隊の言葉を消す
   const avName = () => !document.body.classList.contains('av-komugi') && !document.body.classList.contains('av-hatabo') ? '' : window.__aiName || (document.body.classList.contains('av-komugi') ? 'コムギ' : 'ハタボ');
   function avText() {
@@ -2430,7 +2433,7 @@ body.av-hatabo:not(.chatview) .cvfab,body.av-komugi:not(.chatview) .cvfab{displa
       const check = async () => { if (await isFriend()) { g.hidden = true; document.removeEventListener('visibilitychange', onVis); done(); } else $('fgNote').hidden = false; };
       const onVis = () => { if (document.visibilityState === 'visible') check(); };
       document.addEventListener('visibilitychange', onVis);
-      $('fgAdd').onclick = () => { try { liff.openWindow({ url: 'https://line.me/R/ti/p/@024curid', external: false }); } catch (e) { location.href = 'https://line.me/R/ti/p/@024curid'; } };
+      $('fgAdd').onclick = () => { try { liff.openWindow({ url: 'https://line.me/R/ti/p/' + OA_ID, external: false }); } catch (e) { location.href = 'https://line.me/R/ti/p/' + OA_ID; } };
       $('fgDone').onclick = check;
     });
   }
@@ -2468,6 +2471,7 @@ body.av-hatabo:not(.chatview) .cvfab,body.av-komugi:not(.chatview) .cvfab{displa
     // 紹介元（?ref=mac）・窓口のテスト（&test=guest）。LINEのURLから来たときは liff.state の中にあることもある
     const urlParam = n => { let v = new URLSearchParams(location.search).get(n) || Q.get(n); if (!v) { try { const st = new URLSearchParams(location.search).get('liff.state'); if (st) v = new URLSearchParams(decodeURIComponent(st).split('?')[1] || '').get(n); } catch (e) {} } return v; };
     let r0 = urlParam('ref');
+    if (!r0 && KOMUGI_APP) r0 = 'mac';   // コムギのミニアプリは、いつもコムギ（マー君の窓口）で開く
     const peek = urlParam('test') === 'peek';   // 見るだけ（&test=peek）：自分の相棒やご縁を変えずに、紹介URLのアバターを確認する
     const asGuest = urlParam('test') === 'guest' || peek;
     const agent = urlParam('agent') === 'service' ? 'service' : '';   // 公式LINEのリッチメニュー「ハタボに相談」＝サービス相談
@@ -2856,7 +2860,7 @@ body.av-hatabo:not(.chatview) .cvfab,body.av-komugi:not(.chatview) .cvfab{displa
   }
   async function shareHatabo() {
     // 紹介は、だれからでも汎用のハタボ（HATHA LABのミニアプリ）へ。紹介コードがあれば「だれの紹介か」もつける
-    const url = 'https://miniapp.line.me/2012676035-yCkx6tBu' + (J.myRef ? '?ref=' + encodeURIComponent(J.myRef) : '');
+    const url = MINI_URL + (J.myRef ? '?ref=' + encodeURIComponent(J.myRef) : '');
     const text = 'AIの愛棒「ハタボ」だよ。話すだけで、調べもの・下書き・相談までいっしょにやってくれるボー。気軽に話してみて！\n' + url;
     try {
       if (window.liff && liff.isApiAvailable && liff.isApiAvailable('shareTargetPicker')) {
@@ -3102,13 +3106,13 @@ body.av-hatabo:not(.chatview) .cvfab,body.av-komugi:not(.chatview) .cvfab{displa
     const can = window.liff && liff.isApiAvailable && liff.isApiAvailable('createShortcutOnHomeScreen');
     const fr = HBS.friend;
     return `<div class="hbc"><div class="k">SET UP</div><h3>${esc(avName() || 'ハタボ')}を、いつもの場所に</h3>
-      <div class="hbplan"><div><b>1. 公式LINEを友だち追加</b><span>トークからいつでも話せて、メニューも出ます</span></div>${fr ? '<span class="hbtag">追加ずみ</span>' : '<a class="hbtag gold" href="https://line.me/R/ti/p/@024curid" style="text-decoration:none">追加する</a>'}</div>
+      <div class="hbplan"><div><b>1. 公式LINEを友だち追加</b><span>トークからいつでも話せて、メニューも出ます</span></div>${fr ? '<span class="hbtag">追加ずみ</span>' : '<a class="hbtag gold" href="https://line.me/R/ti/p/${OA_ID}" style="text-decoration:none">追加する</a>'}</div>
       <div class="hbplan"><div><b>2. ホーム画面に置く</b><span>スマホのアプリのように、1回で開けます</span></div>${can ? '<button type="button" class="hbtag gold" id="hbpHome" style="border:0;cursor:pointer">置く</button>' : '<span class="hbtag hbmuted">準備中</span>'}</div>
       <div class="hbplan"><div><b>3. トークをいちばん上にピン留め</b><span>LINEのトーク一覧で「ハタボ」を長押し →「ピン留め」</span></div><button type="button" class="hbtag gold" id="hbpPin" style="border:0;cursor:pointer">開く</button></div>
       <p style="font-size:11.5px">ピン留めはLINEの決まりで、アプリからは代わりにできません。「開く」でハタボのトークにもどるので、トーク一覧の「ハタボ」を長押しして「ピン留め」してください。</p></div>`;
   }
   function hbpWire() {
-    const h = document.getElementById('hbpHome'); if (h) h.onclick = async () => { try { await liff.createShortcutOnHomeScreen({ url: 'https://miniapp.line.me/2012676035-yCkx6tBu' }); } catch (e) { toast('この端末ではまだ置けないみたい'); } };
+    const h = document.getElementById('hbpHome'); if (h) h.onclick = async () => { try { await liff.createShortcutOnHomeScreen({ url: MINI_URL }); } catch (e) { toast('この端末ではまだ置けないみたい'); } };
     const p = document.getElementById('hbpPin'); if (p) p.onclick = () => { try { localStorage.setItem('pinDone', '1'); } catch (e) {} goOaTalk(); };
   }
   async function hbpFriend() { try { if (window.liff && liff.getFriendship) { const r = await liff.getFriendship(); HBS.friend = !!(r && r.friendFlag); if (!$('hbPage').hidden) hbpRender(); } } catch (e) {} }
@@ -3188,10 +3192,10 @@ body.av-hatabo:not(.chatview) .cvfab,body.av-komugi:not(.chatview) .cvfab{displa
     const gu = body.querySelector('#gUnlink'); if (gu) gu.onclick = () => { if (confirmDel(gu)) jrSend({ type: 'google_unlink' }); };
   }
   // ミニアプリ ⇄ 公式LINE：トークへ行くときは、ミニアプリをとじてトークを開く
-  function goOaTalk() { const u = 'https://line.me/R/oaMessage/@024curid/'; try { if (window.liff && liff.openWindow) { liff.openWindow({ url: u, external: false }); setTimeout(() => { try { liff.closeWindow(); } catch (e) {} }, 400); return; } } catch (e) {} location.href = u; }
+  function goOaTalk() { const u = 'https://line.me/R/oaMessage/' + OA_ID + '/'; try { if (window.liff && liff.openWindow) { liff.openWindow({ url: u, external: false }); setTimeout(() => { try { liff.closeWindow(); } catch (e) {} }, 400); return; } } catch (e) {} location.href = u; }
   $('talkOaBtn').addEventListener('click', goOaTalk); window.goOaTalkW = goOaTalk;
   // PCで使うURL：LINEに登録したエンドポイント（ブラウザでLINEログインして、同じハタボにつながる）
-  window.pcLinkW = async () => { const u = 'https://app.hatha-lab.com/?liff=1&g=' + encodeURIComponent(Q.get('g') || 'AKfycbxe-O1pMup7kUMVKVkmQemYknVSyTSq1ub3bHJqPI8-0QIAYG7o2eXKI_yQIk9tHwPz') + '&liffId=2012676035-yCkx6tBu';
+  window.pcLinkW = async () => { const u = 'https://app.hatha-lab.com/?liff=1&g=' + encodeURIComponent(Q.get('g') || 'AKfycbxe-O1pMup7kUMVKVkmQemYknVSyTSq1ub3bHJqPI8-0QIAYG7o2eXKI_yQIk9tHwPz') + '&liffId=' + (KOMUGI_APP ? '2012686672-PRB9tb8H' : '2012676035-yCkx6tBu');
     try { await navigator.clipboard.writeText(u); toast('PC用のURLをコピーしたよ。PCのブラウザに貼ってね'); } catch (e) { prompt('PCのブラウザでこのURLを開いてね', u); } };
   $('pinGo').addEventListener('click', () => { try { localStorage.setItem('pinDone', '1'); } catch (e) {} $('pinBar').hidden = true; goOaTalk(); });
   $('pinX').addEventListener('click', () => { try { localStorage.setItem('pinDone', '1'); } catch (e) {} $('pinBar').hidden = true; });
