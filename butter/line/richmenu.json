@@ -94,8 +94,8 @@
       },
       "action": {
         "type": "uri",
-        "label": "ハタボタイムズ",
-        "uri": "https://miniapp.line.me/2012676035-yCkx6tBu?page=times"
+        "label": "設定",
+        "uri": "https://miniapp.line.me/2012676035-yCkx6tBu?page=settings"
       }
     }
   ]
