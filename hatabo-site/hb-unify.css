@@ -1,0 +1,13 @@
+/* キービジュアル統一（白と紺・シルバーのエンブレム）2026-11-18 */
+body{background:#FFFFFF!important;color:#141A2A}
+.washi,.sec,.phero{background-image:none!important}
+.sec:nth-of-type(even){background-color:#F6F7F9}
+.ai,section.ai,footer.ai{background:#16233F!important;background-image:none!important}
+h1,h2,h3,h4,.big,.phero h1,.card h3,.steps2 b,.eye,.atl,.h1,.h2{font-family:"Noto Sans JP",sans-serif!important}
+.big,.phero h1{font-weight:900!important}
+.eye{color:#2F6FD6!important;letter-spacing:.24em!important;font-weight:700!important;font-size:12px!important}
+.ai .eye{color:#9EC2FF!important}
+.bk,.wm{display:none!important}
+.card{border-radius:18px!important;box-shadow:none!important;border:1px solid #E4E6EB;border-top:3px solid var(--c,#2F6FD6)!important}
+.ai .card{border-color:rgba(255,255,255,.14)}
+.btn.b-talk{background:#141A2A!important}
