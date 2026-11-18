@@ -1,6 +1,6 @@
 # 外部連携サービスのロゴの置き場所と入手先
 
-各社のブランドガイドラインにしたがって入手したロゴを、下のファイル名で置くと、integrations.html に自動で表示されます（.svg か .png。横長・透明背景がおすすめ）。ロゴがないあいだは頭文字で表示されます。
+各社のブランドガイドラインにしたがって入手したロゴを、下のファイル名で置くと、integrations.html に自動で表示されます（.svg か .png。横長・透明背景がおすすめ）。ロゴがないあいだは頭文字で表示されます。文字の大きさがそろうよう、integrations.html の LH でロゴごとの高さを調整しています（新しいロゴを置いたら、そこに高さを足す）。
 
 入手のしかたは4つです。
 
@@ -22,8 +22,8 @@ URLは2026年11月19日時点。公開ページの場所は変わることがあ
 | google-pdf.svg | Googleドキュメント・PDF | 公開ページからダウンロード | [Google ブランド リソース センター](https://about.google/brand-resource-center/) |
 | google.svg | Googleビジネスプロフィール | 公開ページからダウンロード | [Google ブランド リソース センター](https://about.google/brand-resource-center/) |
 | hubspot.svg | HubSpot | 公開ページからダウンロード | [HubSpot のパートナー向けブランドガイドライン（Brandfolder）](https://www.hubspot.com/partners/app/branding-guidelines) |
-| jira.svg | Jira | 公開ページからダウンロード | [Atlassian ロゴライブラリ](https://atlassian.design/resources/logo-library) |
-| line.svg | LINE広告 | 公開ページからダウンロード | [LINEヤフー for Business ロゴガイドライン](https://www.lycbiz.com/jp/logo) |
+| atlassian.png | Jira・Confluence（Atlassian） | 公開ページからダウンロード | [Atlassian ロゴライブラリ](https://atlassian.design/resources/logo-library) |
+| line.png | LINE公式アカウント | 公開ページからダウンロード | [LINEヤフー for Business ロゴガイドライン](https://www.lycbiz.com/jp/logo) |
 | meta-instagram-facebook.svg | Meta（Instagram・Facebook） | 公開ページからダウンロード | [Meta ブランドリソース（Instagram・Facebook）](https://about.meta.com/brand/resources/) |
 | notion.svg | Notion | 公開ページからダウンロード | [Notion 公式のロゴページ](https://notion.notion.site/Logos-6331ef1fc18241f8bae8a4b923b05ce4) |
 | shopify.svg | Shopify | 公開ページからダウンロード | [Shopify ブランドアセット](https://www.shopify.com/brand-assets) |
@@ -80,6 +80,9 @@ URLは2026年11月19日時点。公開ページの場所は変わることがあ
 | power-automate.svg | Power Automate | 許諾が必要（今は文字だけで表示） | [Microsoft 商標・ブランドガイドライン（ロゴは許諾が必要）](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks) |
 | salesforce.svg | Salesforce | 許諾が必要（今は文字だけで表示） | [Salesforce パートナーコミュニティ（パートナー登録が必要）](https://partners.salesforce.com/) |
 | rms.svg | 楽天市場（RMS） | 許諾が必要（今は文字だけで表示） | [楽天市場（出店者向け）— ロゴは楽天の許諾が必要](https://www.rakuten.co.jp/ec/) |
+| threads.svg | Threads | 公開ページからダウンロード | [Meta ブランドリソース（Threads）](https://about.meta.com/brand/resources/) |
+| line-ads.svg | LINE広告 | 公開ページからダウンロード | [LINEヤフー for Business ロゴガイドライン](https://www.lycbiz.com/jp/logo) |
+| line-app.svg | LINEグループ（LINEのアプリアイコン） | 公開ページからダウンロード | [LINEヤフー for Business ロゴガイドライン](https://www.lycbiz.com/jp/logo) |
 | x9e8bf6.svg | バクラク | 広報に依頼 | [LayerX（バクラク）の広報](https://bakuraku.jp/) |
 | bill-one.svg | Bill One | 広報に依頼 | [Sansan（Bill One）の広報](https://bill-one.com/) |
 | tokium.svg | TOKIUM | 広報に依頼 | [TOKIUMの広報](https://www.keihi.com/) |
