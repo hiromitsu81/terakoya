@@ -458,6 +458,22 @@ function kmCard(kicker, title, lines, btn, uri) {
     body: { type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '16px', contents: lines.map(t => ({ type: 'text', text: t, size: 'sm', wrap: true, color: '#E9E4F5' })) },
     footer: { type: 'box', layout: 'vertical', paddingAll: '12px', contents: [{ type: 'button', style: 'primary', color: '#FF2E9A', height: 'sm', action: { type: 'uri', label: btn, uri } }] } };
 }
+/** ハタボのカード（白と紺・エンブレム）を、コムギの見た目（黒とネオン・コムギの顔）にぬりかえる。グループのカード・記録のカードなど */
+function kmSkin(obj) {
+  const C = { '#16233F': '#F4F1FA', '#5E6B85': '#A9A2BC', '#C9D0DC': '#1FD1F2' };
+  const walk = o => {
+    if (Array.isArray(o)) return o.forEach(walk);
+    if (!o || typeof o !== 'object') return;
+    if (o.type === 'bubble') { o.styles = { header: { backgroundColor: '#0A0810' }, body: { backgroundColor: '#16121F' }, footer: { backgroundColor: '#16121F' } }; }
+    if (o.type === 'image' && o.url === EMB) { o.url = KM_FACE; o.aspectMode = 'cover'; o.aspectRatio = '1:1'; }
+    if (o.backgroundColor === '#16233F' || o.backgroundColor === '#FFFFFF') o.backgroundColor = '#0A0810';
+    if (o.type === 'button') { if (o.style === 'primary') o.color = '#FF2E9A'; else { o.style = 'secondary'; o.color = '#E9E4F5'; } }
+    else if (o.color && C[o.color]) o.color = C[o.color];
+    Object.values(o).forEach(walk);
+  };
+  walk(obj);
+  return obj;
+}
 /** マー君の紹介で来た人へのあいさつ（友だち追加のとき） */
 function komugiWelcome(name) {
   const M = LINE_CH.komugi.mini;
@@ -496,6 +512,14 @@ async function lineName(src) {
 }
 function groupCards(gref) {
   const join = CH().mini + '?ref=' + gref;
+  if (CH().id === 'komugi') {      // コムギのグループ用（マー君への橋渡し役として）
+    const k1 = kmCard('HELLO', 'コムギが入りました', ['あ、あの……はじめまして。マー君の相棒AIの、コムギです。', 'このグループでは「コムギ」と呼ばれたときだけ、出てきますけん。ふだんは静かにしとります。'], 'コムギと話す', join);
+    const k2 = kmCard('FOR YOU', 'マー君へのご相談は、コムギに', ['ひとりずつ、下のボタンからコムギと話せます。困りごとややりたいことを、うちが先にお聞きして、マー君につなぎます。', 'あなた専用のAIの相棒「ハタボ」も、10日間は無料で試せますけん。'], 'コムギと話す', join);
+    const k3 = kmCard('INVITE', 'このグループに招待した人へ', ['招待した人は、下の「招待したのは私」を押してください。このグループから来た人が、あなたのご縁になります。', '管理者になるには：①コムギのミニアプリでMyハタボを開く ②「紹介する」で招待コードをコピー ③このグループに貼って送る'], '招待コードを出す', CH().mini + '?page=share');
+    k3.footer.contents.unshift({ type: 'button', style: 'primary', color: '#FF2E9A', height: 'sm', action: { type: 'postback', label: '招待したのは私', data: 'act=inviter', displayText: '招待したのは私です' } });
+    k3.footer.contents[1].style = 'secondary'; k3.footer.contents[1].color = '#E9E4F5'; k3.footer.spacing = 'sm';
+    return { type: 'flex', altText: 'コムギがグループに入りました。自己紹介とはじめ方です', contents: { type: 'carousel', contents: [k1, k2, k3, kmSkin(komugiize(recCard(false)))] } };
+  }
   const c1 = oaCard('HELLO', 'ハタボが入ったボー！', ['はじめまして、AIの愛棒「ハタボ」だボー。話すだけで、調べもの・段取り・文章づくり・予定の相談まで、いっしょに動くボー。', 'このグループでは、「ハタボ」と呼ばれたときだけ出てくるボー。うるさくしないから安心してね。'], '自分のハタボをもつ', join, true);
   const c2 = oaCard('GUIDE', 'ひとり1体、自分のハタボ', ['下のボタンから、ひとりずつ自分のハタボをもてるボー（公式LINEを友だち追加して、ミニアプリで話す）。', 'まず10日間、いちばん上のZグレードで無料。メモ・議事録・伝言・ご縁も、Myハタボにまとまるボー。'], '10日間無料ではじめる', join);
   const c3 = oaCard('INVITE', 'このグループに招待した人へ', ['招待した人は、下の「招待したのは私」を押してね。このグループから来た人が、あなたのご縁になるボー。', 'グループを管理したい人は、Myハタボ →「紹介する」にある招待コードを、このグループに投稿してね。'], '招待したのは私', join);
@@ -609,7 +633,7 @@ function lineWebhook(req, res, chId) {
         } else if (ev.type === 'message') {
           messages = [{ type: 'flex', altText: 'ハタボとはミニアプリで話せるボー', contents: oaCard('HATABO', 'ハタボとはこちらで話せるボー', ['ここ（トーク）では返事ができないので、ミニアプリで話しかけてほしいボー。いまの続きから話せるボー。'], 'ハタボと話す', CH().mini) }];
         }
-        if (messages && ch.id === 'komugi' && ev.type !== 'follow' && !(ev.type === 'message' && !inGroup)) messages = komugiize(messages);
+        if (messages && ch.id === 'komugi' && ev.type !== 'follow' && !(ev.type === 'message' && !inGroup)) messages = kmSkin(komugiize(messages));
         if (messages && ev.replyToken) await fetch('https://api.line.me/v2/bot/message/reply', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + ch.token() }, body: JSON.stringify({ replyToken: ev.replyToken, messages }) }).then(r => { if (!r.ok) console.error('reply', r.status); });
       }
     } catch (e) { console.error('webhook', String(e.message).slice(0, 160)); }
