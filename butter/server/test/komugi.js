@@ -4,9 +4,10 @@ const http = require('http');
 const assert = require('assert');
 const WebSocket = require('ws');
 const sysText = s => Array.isArray(s) ? s.map(b => b.text).join('') : String(s || '');
+const gasLeads = [];
 const gasSrv = http.createServer((req, res) => {
   let b = ''; req.on('data', c => b += c); req.on('end', () => {
-    const j = JSON.parse(b); res.setHeader('Content-Type', 'application/json');
+    const j = JSON.parse(b); res.setHeader('Content-Type', 'application/json'); if (j.action === 'lead') gasLeads.push(j.lead || {});
     if (j.action === 'brain') return res.end(JSON.stringify({ ok: true, guest: true, owner: 'g:' + (j.idToken === 'mac' ? 'Umac' : 'U' + j.idToken), me: j.idToken === 'mac' ? 'マー君' : 'アヤ', role: '汎用', slots: [] }));
     res.end(JSON.stringify({ ok: true }));
   });
@@ -19,7 +20,7 @@ const { createServer, deps } = require('../server.js');
 let lastSys = '';
 deps.claude = { messages: {
   stream: p => { lastSys = sysText(p.system); return { async *[Symbol.asyncIterator]() { yield { type: 'content_block_delta', delta: { type: 'text_delta', text: '[えがお]は、はいっ。' } }; }, finalMessage: async () => ({ usage: {}, stop_reason: 'end_turn' }), abort() {} }; },
-  create: async () => ({ content: [{ type: 'text', text: '{}' }] }) } };
+  create: async p => /事務局の受付係/.test(p.system || '') ? ({ content: [{ type: 'text', text: '{"is":true,"kind":"不具合","title":"返事が出ない","detail":"質問しても返事が出ない"}' }] }) : ({ content: [{ type: 'text', text: '{}' }] }) } };
 deps.tts = { synthesizeSpeech: async ({ input }) => [{ audioContent: Buffer.from('mp3:' + input.text) }] };
 deps.stt = { streamingRecognize: () => ({ write() {}, end() {}, on() {} }) };
 deps.db = false;
@@ -46,6 +47,10 @@ function client(port, hello) {
   for (let i = 0; i < 4; i++) { m.ws.send(JSON.stringify({ type: 'text', text: '調べて' + i })); await new Promise(r => setTimeout(r, 300)); }
   require('fs').writeFileSync('/tmp/sys_mac.txt', lastSys); assert(!m.msgs.some(x => x.type === 'limit'), 'マー君は制限なし');
   assert(/馬越 雅哉さん本人/.test(lastSys) && !/HUB役（いちばん大事）/.test(lastSys), 'マー君には相棒の決まり');
+  // 不具合・要望は、ハタボ事務局へ
+  m.ws.send(JSON.stringify({ type: 'text', text: '返事が出ない不具合があるので直してほしい' }));
+  await new Promise(r => setTimeout(r, 500));
+  assert(gasLeads.some(l => /事務局：不具合/.test(l.kind || '')), '不具合はハタボ事務局へ届く');
   // マー君が教えたことは、紹介先のコムギにも引きつぐ
   m.ws.send(JSON.stringify({ type: 'text', text: '紹介の人には、まず業種を聞くことを覚えて' }));
   await new Promise(r => setTimeout(r, 400));
