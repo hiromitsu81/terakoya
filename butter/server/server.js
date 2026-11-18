@@ -142,7 +142,8 @@ async function myPage(S) {
     today: used, limit, month: st.mon === day.slice(0, 7) ? st.monN || 0 : 0, total: tot, days: st.at ? Math.max(1, Math.ceil((Date.now() - st.at) / 86400000)) : 1,
     streak: st.last === day || st.last === new Date(Date.now() - 15 * 3600000).toISOString().slice(0, 10) ? st.streak || 0 : 0,
     lv, lvPct: Math.round((tot - base) / Math.max(1, next - base) * 100), learned: (S.learned || []).length + (S.lessons || []).length,
-    kids: (mine && mine.kids) || 0, myRef: S.myRef || '', from: S.refFrom ? await refLabel(S.refFrom) : '' };
+    kids: (mine && mine.kids) || 0, myRef: S.myRef || '', from: S.refFrom ? await refLabel(S.refFrom) : '',
+    notes: (await loadNotes(S.owner).catch(() => [])).slice(0, 50), summary: String(S.memo || '').slice(0, 3000) };
 }
 /** 紹介元の名前（「マー君さん」）。手で作ったコード（mac など）はそのまま */
 async function refLabel(code) {
@@ -380,6 +381,25 @@ function nameOnly(text) {
     .replace(/(ねえ|ねぇ|おーい|おい|あの|えっと|ヒロ(さん)?|パパ)/g, '').replace(/[、,。！!？?\s]/g, '');
   return /^(聞いてる|きいてる|聞こえてる|きこえてる|いる|いますか|起きてる|おきてる|いま話せる|今話せる|話せる)?(の|か)?$/.test(rest);
 }
+/* マイハタボの「メモ・議事録」：持ち主ごとに50件まで。本人だけが見られる（家族の議事録はドライブにも） */
+const memNotes = new Map();
+const noteKey = owner => crypto.createHash('sha256').update('notes:' + owner).digest('hex').slice(0, 32);
+async function loadNotes(owner) {
+  if (!owner) return [];
+  try { if (deps.db) { const d = await deps.db.collection('notes').doc(noteKey(owner)).get(); return d.exists ? (d.data().items || []) : []; } } catch (e) { console.error('notes load', String(e.message).slice(0, 120)); }
+  return memNotes.get(owner) || [];
+}
+async function saveNotes(owner, items) {
+  items = items.slice(0, 50);
+  try { if (deps.db) return void await deps.db.collection('notes').doc(noteKey(owner)).set({ items, at: Date.now() }); } catch (e) { console.error('notes save', String(e.message).slice(0, 120)); }
+  memNotes.set(owner, items);
+}
+async function addNote(owner, n) {
+  const items = await loadNotes(owner);
+  items.unshift({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kind: n.kind, title: String(n.title || '').slice(0, 60), text: String(n.text || '').slice(0, 12000), at: Date.now() });
+  await saveNotes(owner, items);
+}
+const MEMO_RE = /(メモ(して|しといて|しておいて|っといて|に残して|にのこして|お願い|おねがい)|メモっといて|書き留めて|かきとめて)/;
 /* 会話のつづき（持ち主ごと・家族モードだけ）：さいきんのやりとりと、まとめ。強制で切れても、次はつづきから話せる */
 const memConvo = new Map();
 async function loadConvo(key) {
@@ -655,6 +675,17 @@ function session(ws) {
     savePrefs(S.asGuest ? GUEST_COMMON : S.owner, { lessons: S.lessons });
     return speakOnly('がってんだ、覚えたぜ！', 'excited');
   }
+  /** メモ：「〇〇をメモして」。中身がなければ、さっきの返事をメモする */
+  async function memo(text) {
+    let body = String(text).replace(MEMO_RE, '').replace(/^(ハタボ|コムギ|ジュニア)[、,\s]*/, '').replace(/(を|って|と)?[、。！!\s]*$/, '').trim();
+    if (body.replace(/(いまの|今の|さっきの|それ|これ)/g, '').length < 4) { const last = [...S.history].reverse().find(m => m.role === 'assistant' && typeof m.content === 'string'); body = last ? last.content : ''; }
+    if (!body) return speakOnly('まだメモすることがないみたい。メモしたいことを言ってね。', 'shy');
+    try {
+      await addNote(S.owner, { kind: 'memo', title: body.replace(/\s+/g, ' ').slice(0, 30), text: body });
+      send({ type: 'note_saved', kind: 'memo' });
+      speakOnly(S.avatar === 'komugi' ? 'メモしときました。マイハタボの「メモ・議事録」で見れるとです。' : S.avatar === 'hatabo' ? 'メモしたボー。マイハタボの「メモ・議事録」で見られるボー。' : 'がってん、メモしといたぜ。マイハタボの「メモ・議事録」で見られるぜ。', 'smile');
+    } catch (e) { speakOnly('ごめん、メモがうまく残せなかった。', 'sad'); }
+  }
   /** 議事録：いままでの話をまとめて、GASでPDFにしてドライブへ。リンクを吹き出しに出す */
   async function minutes(pdf) {
     speakOnly(pdf ? 'がってん、議事録をまとめてPDFにするぜ。ちょいと待ってくんな。' : 'がってん、議事録をまとめとくぜ。ちょいと待ってくんな。', 'think');
@@ -670,6 +701,8 @@ function session(ws) {
       });
       const t = (r.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
       const title = (t.split('\n')[0] || '議事録').replace(/^#+\s*/, '').slice(0, 40);
+      await addNote(S.owner, { kind: 'minutes', title: day + ' ' + title, text: t }).catch(() => {});
+      if (S.guest) { send({ type: 'note_saved', kind: 'minutes' }); return speakOnly(S.avatar === 'komugi' ? '議事録、マイハタボの「メモ・議事録」に残したとです。' : '議事録をまとめて、マイハタボの「メモ・議事録」に残したボー！', 'excited'); }
       const g = await gas(Object.assign({ action: 'minutes', mode: S.mode, pdf: !!pdf, title: day + ' ' + title, text: t }, S.auth));
       if (!g || !g.ok || !g.url) throw new Error((g && (g.detail || g.error)) || 'minutes');
       send({ type: 'links', links: [{ title: (pdf ? '議事録（PDF）：' : '議事録：') + title, url: g.url }] });
@@ -712,7 +745,8 @@ function session(ws) {
     }
     if ((!S.guest || S.asGuest) && LEARN_RE.test(text)) return learn(text);
     if ((!S.guest || S.asGuest) && FORGET_RE.test(text)) { S.lessons = []; S.learned = []; savePrefs(S.asGuest ? GUEST_COMMON : S.owner, { lessons: [], learned: [] }); return speakOnly('がってんだ、教わったことはきれいさっぱり忘れたぜ。', 'smile'); }
-    if (!S.guest && MINUTES_RE.test(text)) return minutes(PDF_RE.test(text));
+    if (MINUTES_RE.test(text)) return minutes(PDF_RE.test(text) && !S.guest);
+    if (MEMO_RE.test(text)) return memo(text);
     if (calledJunior(text) && nameOnly(text)) return speakOnly(AVS[S.avatar] ? AVS[S.avatar].quick : QUICK[Math.floor(Math.random() * QUICK.length)], 'smile');
     if (KAKEGOE_RE.test(text)) return speakOnly(S.guest || S.mode === 'business' ? KAKEGOE_GUEST : KAKEGOE_FAMILY, 'excited');
     if (QUIET_RE.test(text)) { S.quiet = true; send({ type: 'quiet', on: true }); return speakOnly('おう、しずかにしてるぜ。用があったら名前を呼んでくんな。', 'smile'); }
@@ -872,10 +906,11 @@ function session(ws) {
     }
     }
     if (gen !== S.gen) return;
-    let text = capped ? spoken : clean(full).trim();
+    let text = capped && !longMode ? spoken : clean(full).trim();
     if (cut && !capped) { const k = Math.max(text.lastIndexOf('。'), text.lastIndexOf('！'), text.lastIndexOf('？'), text.lastIndexOf('!'), text.lastIndexOf('?')); if (k > 0) text = text.slice(0, k + 1); }
     if (text && !noRecord) S.history.push({ role: 'user', content: logText || '（写真を見せた）' }, { role: 'assistant', content: text });
     if (links.length && text) send({ type: 'links', gen, links: links.slice(0, 3) });
+    if (longMode && text && text.length > 200 && S.owner) addNote(S.owner, { kind: 'doc', title: (logText || '書いた文章').replace(/\s+/g, ' ').slice(0, 30), text }).then(() => send({ type: 'note_saved', kind: 'doc' })).catch(() => {});
     if (S.trio && /[？?]\s*$/.test(text)) S.followUntil = Date.now() + 12000;   // ジュニアが質問した → つぎの1回は名前なしでも   // 空の返事は記録しない（次の会話がこわれるので）
     if (S.history.length > plan.keep) S.history = S.history.slice(-plan.keep);
     const usage = plan === PLANS.std && !S.plan ? undefined : { plan: plan.label, model: use.model, in: use.inTok, out: use.outTok, cache: use.cacheTok, searches: use.searches };
@@ -1019,6 +1054,7 @@ function session(ws) {
       if (m.type === 'goen') return onGoen(m);
       if (m.type === 'ping') return send({ type: 'pong' });
       if (m.type === 'mypage') return send(await myPage(S));
+      if (m.type === 'note_del') { const items = (await loadNotes(S.owner)).filter(x => x.id !== String(m.id || '')); await saveNotes(S.owner, items); return send(await myPage(S)); }
     } catch (e) { send({ type: 'notice', why: 'server', detail: String(e.message).slice(0, 80) }); }
   });
   const life = setTimeout(() => fail('timeout', 'つなぎっぱなしの上限'), ENV.SESSION_MAX_MIN * 60000);
