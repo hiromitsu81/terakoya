@@ -2184,7 +2184,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
       case 'ready':
         document.body.classList.remove('connecting');
         J.ready = true; J.tries = 0; J.greeted = true; J.profile = m.profile || null; 
-        J.guest = !!m.guest; J.avatar = m.avatar || ''; document.body.classList.toggle('av-komugi', J.avatar === 'komugi'); document.body.classList.toggle('av-hatabo', J.avatar === 'hatabo'); { const t = document.querySelector('#butterTag text'), nm = { komugi: 'コムギ', hatabo: 'ハタボ' }[J.avatar]; if (t && nm) t.textContent = nm; } if (J.avatar) { try { document.body.classList.toggle('hb-hatched', localStorage.getItem('hatched_' + J.avatar) === '1'); } catch (e) {} } $('goenBtn').hidden = J.guest; J.myRef = m.myRef || ''; $('shareBtn').hidden = !J.myRef;
+        J.guest = !!m.guest; J.avatar = m.avatar || ''; document.body.classList.toggle('av-komugi', J.avatar === 'komugi'); if (HATABO_APP && !J.avatar) J.avatar = 'hatabo'; document.body.classList.toggle('av-hatabo', J.avatar === 'hatabo'); { const t = document.querySelector('#butterTag text'), nm = { komugi: 'コムギ', hatabo: 'ハタボ' }[J.avatar]; if (t && nm) t.textContent = nm; } if (J.avatar) { try { document.body.classList.toggle('hb-hatched', localStorage.getItem('hatched_' + J.avatar) === '1'); } catch (e) {} } $('goenBtn').hidden = J.guest; J.myRef = m.myRef || ''; $('shareBtn').hidden = !J.myRef;
         document.body.classList.toggle('familyok', !J.guest);
         document.body.classList.toggle('guestmode', J.guest);
         if (J.guest) { $('typedInput').placeholder = J.avatar === 'komugi' ? 'マー君にしてほしいこと、なんでもどうぞ' : 'ヒロさんにしてほしいこと、なんでもどうぞ'; }
