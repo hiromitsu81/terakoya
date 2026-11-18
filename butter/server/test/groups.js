@@ -1,7 +1,7 @@
 // LINEグループ：入ったら自己紹介（退出しない）、招待した人のボタン、招待コードで管理者、呼ばれたときだけ出る
 'use strict';
 const assert = require('assert'), crypto = require('crypto'), http = require('http');
-process.env.HATABO_CHANNEL_SECRET = 'sec'; process.env.HATABO_LINE_TOKEN = 'tok'; process.env.CLAUDE_FAMILY = '0';
+process.env.HATABO_CHANNEL_SECRET = 'sec'; process.env.HATABO_LINE_TOKEN = 'tok'; process.env.KOMUGI_CHANNEL_SECRET = 'sec'; process.env.KOMUGI_LINE_TOKEN = 'ktok'; process.env.CLAUDE_FAMILY = '0';
 const sent = [], realFetch = global.fetch;
 global.fetch = async (url, opt) => {
   url = String(url);
@@ -12,9 +12,9 @@ global.fetch = async (url, opt) => {
   return realFetch(url, opt);
 };
 const { createServer, deps } = require('../server.js'); deps.db = false;
-const post = (port, events) => new Promise((ok, ng) => {
+const post = (port, events, path = '/line/webhook') => new Promise((ok, ng) => {
   const raw = JSON.stringify({ events }), sig = crypto.createHmac('sha256', 'sec').update(raw).digest('base64');
-  const r = http.request({ port, path: '/line/webhook', method: 'POST', headers: { 'x-line-signature': sig, 'Content-Type': 'application/json' } }, res => { res.resume(); res.on('end', () => setTimeout(ok, 120)); });
+  const r = http.request({ port, path, method: 'POST', headers: { 'x-line-signature': sig, 'Content-Type': 'application/json' } }, res => { res.resume(); res.on('end', () => setTimeout(ok, 120)); });
   r.on('error', ng); r.end(raw);
 });
 (async () => {
@@ -37,6 +37,10 @@ const post = (port, events) => new Promise((ok, ng) => {
   await post(port, [{ type: 'message', replyToken: 'r8', source: src, message: { type: 'text', text: 'ハタボ、記録して' } }]);
   assert.ok(/act=rec_on/.test(JSON.stringify(sent.pop().body)), '記録のボタンを出す');
   assert.ok(/招待コードを出す/.test(txt) && /act=rec_on/.test(txt), '入ったときのカードに、コードの貼り方と記録のボタン');
+  await post(port, [{ type: 'join', replyToken: 'k1', source: { type: 'group', groupId: 'Ck' } }], '/line/webhook/komugi');
+  const kj = JSON.stringify(sent.pop().body); assert.ok(/コムギが入りました/.test(kj) && /2012686672/.test(kj) && !/ボー/.test(kj), 'コムギの公式LINEはコムギの言葉とミニアプリ: ' + kj.slice(0, 300));
+  await post(port, [{ type: 'message', replyToken: 'k2', source: { type: 'group', groupId: 'Ck', userId: 'U1' }, message: { type: 'text', text: 'コムギちゃんおる？' } }], '/line/webhook/komugi');
+  assert.ok(/呼びましたか/.test(JSON.stringify(sent.pop().body)), 'コムギと呼ばれたら出る');
   console.log('OK：グループに入る・退出しない・呼ばれたときだけ・招待した人・グループの紹介コード');
   server.close(); process.exit(0);
 })().catch(e => { console.error('NG', e); process.exit(1); });
