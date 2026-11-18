@@ -89,6 +89,10 @@ URLは2026年11月19日時点。公開ページの場所は変わることがあ
 | repro.svg | Repro | 広報に依頼 | [Reproの広報](https://repro.io/) |
 | ltv-lab.svg | LTV-Lab | 広報に依頼 | [LTV-Labの広報](https://ltv-lab.jp/) |
 | salesforce-marketing-cloud.svg | Salesforce Marketing Cloud | 許諾が必要（今は文字だけで表示） | [Salesforce パートナーコミュニティ](https://partners.salesforce.com/) |
+| claude.svg | Claude（Anthropic） | 公開ページからダウンロード | [Anthropic ニュースルーム（プレス素材）](https://www.anthropic.com/news) |
+| chatgpt.svg | ChatGPT（OpenAI） | 公開ページからダウンロード | [OpenAI ブランドガイドライン](https://openai.com/brand/) |
+| elevenlabs.svg | ElevenLabs | 広報に依頼 | [ElevenLabs](https://elevenlabs.io/) |
+| google-cloud-tts.svg | Google Cloud（音声） | 公開ページからダウンロード | [Google ブランド リソース センター](https://about.google/brand-resource-center/) |
 | x9e8bf6.svg | バクラク | 広報に依頼 | [LayerX（バクラク）の広報](https://bakuraku.jp/) |
 | bill-one.svg | Bill One | 広報に依頼 | [Sansan（Bill One）の広報](https://bill-one.com/) |
 | tokium.svg | TOKIUM | 広報に依頼 | [TOKIUMの広報](https://www.keihi.com/) |
