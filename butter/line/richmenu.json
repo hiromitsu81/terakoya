@@ -1,0 +1,102 @@
+{
+  "size": {
+    "width": 2500,
+    "height": 1686
+  },
+  "selected": true,
+  "name": "ハタボ メイン",
+  "chatBarText": "メニュー",
+  "areas": [
+    {
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 900,
+        "height": 1686
+      },
+      "action": {
+        "type": "uri",
+        "label": "ハタボに相談",
+        "uri": "https://miniapp.line.me/2012676035-yCkx6tBu"
+      }
+    },
+    {
+      "bounds": {
+        "x": 900,
+        "y": 0,
+        "width": 533,
+        "height": 843
+      },
+      "action": {
+        "type": "uri",
+        "label": "マイハタボ",
+        "uri": "https://miniapp.line.me/2012676035-yCkx6tBu?page=my"
+      }
+    },
+    {
+      "bounds": {
+        "x": 1433,
+        "y": 0,
+        "width": 533,
+        "height": 843
+      },
+      "action": {
+        "type": "uri",
+        "label": "育てたハタボ",
+        "uri": "https://miniapp.line.me/2012676035-yCkx6tBu?page=grow"
+      }
+    },
+    {
+      "bounds": {
+        "x": 1966,
+        "y": 0,
+        "width": 534,
+        "height": 843
+      },
+      "action": {
+        "type": "uri",
+        "label": "プラン・支払い",
+        "uri": "https://miniapp.line.me/2012676035-yCkx6tBu?page=plan"
+      }
+    },
+    {
+      "bounds": {
+        "x": 900,
+        "y": 843,
+        "width": 533,
+        "height": 843
+      },
+      "action": {
+        "type": "uri",
+        "label": "AISAI・愛祭",
+        "uri": "https://miniapp.line.me/2012676035-yCkx6tBu?page=aisai"
+      }
+    },
+    {
+      "bounds": {
+        "x": 1433,
+        "y": 843,
+        "width": 533,
+        "height": 843
+      },
+      "action": {
+        "type": "uri",
+        "label": "紹介する",
+        "uri": "https://miniapp.line.me/2012676035-yCkx6tBu?page=share"
+      }
+    },
+    {
+      "bounds": {
+        "x": 1966,
+        "y": 843,
+        "width": 534,
+        "height": 843
+      },
+      "action": {
+        "type": "uri",
+        "label": "ハタボタイムズ",
+        "uri": "https://miniapp.line.me/2012676035-yCkx6tBu?page=times"
+      }
+    }
+  ]
+}

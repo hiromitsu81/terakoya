@@ -1,0 +1,667 @@
+{
+  "type": "flex",
+  "altText": "マイハタボ：のこり{{残り}}往復・お試しあと{{残り日数}}日",
+  "contents": {
+    "type": "carousel",
+    "contents": [
+      {
+        "type": "bubble",
+        "size": "kilo",
+        "styles": {
+          "body": {
+            "backgroundColor": "#FFFFFF"
+          },
+          "footer": {
+            "backgroundColor": "#FFFFFF"
+          }
+        },
+        "body": {
+          "type": "box",
+          "layout": "vertical",
+          "spacing": "lg",
+          "paddingAll": "18px",
+          "contents": [
+            {
+              "type": "box",
+              "layout": "horizontal",
+              "spacing": "md",
+              "alignItems": "center",
+              "contents": [
+                {
+                  "type": "image",
+                  "url": "https://hiromitsu81.github.io/terakoya/butter/line/emblem.png",
+                  "size": "40px",
+                  "aspectMode": "fit",
+                  "flex": 0
+                },
+                {
+                  "type": "box",
+                  "layout": "vertical",
+                  "contents": [
+                    {
+                      "type": "text",
+                      "text": "MY HATABO",
+                      "wrap": true,
+                      "color": "#5E6B85",
+                      "size": "xxs",
+                      "weight": "bold"
+                    },
+                    {
+                      "type": "text",
+                      "text": "マイハタボ",
+                      "wrap": true,
+                      "color": "#16233F",
+                      "size": "lg",
+                      "weight": "bold"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "separator",
+              "color": "#DCE2EC"
+            },
+            {
+              "type": "text",
+              "text": "{{プラン名}}",
+              "wrap": true,
+              "color": "#5E6B85",
+              "size": "xs"
+            },
+            {
+              "type": "box",
+              "layout": "baseline",
+              "contents": [
+                {
+                  "type": "text",
+                  "text": "{{残り}}",
+                  "wrap": true,
+                  "color": "#16233F",
+                  "size": "3xl",
+                  "weight": "bold",
+                  "flex": 0
+                },
+                {
+                  "type": "text",
+                  "text": "往復 のこり",
+                  "wrap": true,
+                  "color": "#5E6B85",
+                  "size": "sm",
+                  "margin": "sm"
+                }
+              ]
+            },
+            {
+              "type": "box",
+              "layout": "vertical",
+              "height": "8px",
+              "backgroundColor": "#E8ECF3",
+              "cornerRadius": "4px",
+              "contents": [
+                {
+                  "type": "box",
+                  "layout": "vertical",
+                  "width": "8%",
+                  "height": "8px",
+                  "backgroundColor": "#16233F",
+                  "cornerRadius": "4px",
+                  "contents": [
+                    {
+                      "type": "filler"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "text": "次の更新 {{更新日}}",
+              "wrap": true,
+              "color": "#5E6B85",
+              "size": "xs"
+            }
+          ]
+        },
+        "footer": {
+          "type": "box",
+          "layout": "vertical",
+          "spacing": "sm",
+          "paddingAll": "14px",
+          "contents": [
+            {
+              "type": "button",
+              "style": "primary",
+              "color": "#16233F",
+              "height": "sm",
+              "action": {
+                "type": "uri",
+                "label": "マイハタボを開く",
+                "uri": "https://miniapp.line.me/2012676035-yCkx6tBu?page=my"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "bubble",
+        "size": "kilo",
+        "styles": {
+          "body": {
+            "backgroundColor": "#FFFFFF"
+          },
+          "footer": {
+            "backgroundColor": "#FFFFFF"
+          }
+        },
+        "body": {
+          "type": "box",
+          "layout": "vertical",
+          "spacing": "lg",
+          "paddingAll": "18px",
+          "contents": [
+            {
+              "type": "box",
+              "layout": "horizontal",
+              "spacing": "md",
+              "alignItems": "center",
+              "contents": [
+                {
+                  "type": "image",
+                  "url": "https://hiromitsu81.github.io/terakoya/butter/line/emblem.png",
+                  "size": "40px",
+                  "aspectMode": "fit",
+                  "flex": 0
+                },
+                {
+                  "type": "box",
+                  "layout": "vertical",
+                  "contents": [
+                    {
+                      "type": "text",
+                      "text": "TRIAL",
+                      "wrap": true,
+                      "color": "#5E6B85",
+                      "size": "xxs",
+                      "weight": "bold"
+                    },
+                    {
+                      "type": "text",
+                      "text": "お試し中",
+                      "wrap": true,
+                      "color": "#16233F",
+                      "size": "lg",
+                      "weight": "bold"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "separator",
+              "color": "#DCE2EC"
+            },
+            {
+              "type": "box",
+              "layout": "baseline",
+              "contents": [
+                {
+                  "type": "text",
+                  "text": "Zグレード",
+                  "wrap": true,
+                  "color": "#16233F",
+                  "size": "md",
+                  "weight": "bold",
+                  "flex": 0
+                },
+                {
+                  "type": "text",
+                  "text": "あと{{残り日数}}日",
+                  "wrap": true,
+                  "color": "#C9A24A",
+                  "size": "md",
+                  "weight": "bold",
+                  "margin": "md"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "text": "11日目から「{{次のプラン}}」月{{金額}}円になります。いつでも変えられます。",
+              "wrap": true,
+              "color": "#5E6B85",
+              "size": "sm"
+            }
+          ]
+        },
+        "footer": {
+          "type": "box",
+          "layout": "vertical",
+          "spacing": "sm",
+          "paddingAll": "14px",
+          "contents": [
+            {
+              "type": "button",
+              "style": "primary",
+              "color": "#16233F",
+              "height": "sm",
+              "action": {
+                "type": "uri",
+                "label": "プランを見る",
+                "uri": "https://miniapp.line.me/2012676035-yCkx6tBu?page=plan"
+              }
+            },
+            {
+              "type": "button",
+              "style": "secondary",
+              "color": "#EEF1F6",
+              "height": "sm",
+              "action": {
+                "type": "uri",
+                "label": "ハタボに相談",
+                "uri": "https://miniapp.line.me/2012676035-yCkx6tBu"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "bubble",
+        "size": "kilo",
+        "styles": {
+          "body": {
+            "backgroundColor": "#FFFFFF"
+          },
+          "footer": {
+            "backgroundColor": "#FFFFFF"
+          }
+        },
+        "body": {
+          "type": "box",
+          "layout": "vertical",
+          "spacing": "lg",
+          "paddingAll": "18px",
+          "contents": [
+            {
+              "type": "box",
+              "layout": "horizontal",
+              "spacing": "md",
+              "alignItems": "center",
+              "contents": [
+                {
+                  "type": "image",
+                  "url": "https://hiromitsu81.github.io/terakoya/butter/line/emblem.png",
+                  "size": "40px",
+                  "aspectMode": "fit",
+                  "flex": 0
+                },
+                {
+                  "type": "box",
+                  "layout": "vertical",
+                  "contents": [
+                    {
+                      "type": "text",
+                      "text": "AISAI ／ 育てたハタボ",
+                      "wrap": true,
+                      "color": "#5E6B85",
+                      "size": "xxs",
+                      "weight": "bold"
+                    },
+                    {
+                      "type": "text",
+                      "text": "うちのハタボ",
+                      "wrap": true,
+                      "color": "#16233F",
+                      "size": "lg",
+                      "weight": "bold"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "separator",
+              "color": "#DCE2EC"
+            },
+            {
+              "type": "box",
+              "layout": "baseline",
+              "contents": [
+                {
+                  "type": "text",
+                  "text": "Lv.{{Lv}}",
+                  "wrap": true,
+                  "color": "#16233F",
+                  "size": "3xl",
+                  "weight": "bold",
+                  "flex": 0
+                },
+                {
+                  "type": "text",
+                  "text": "いっしょに{{日数}}日目",
+                  "wrap": true,
+                  "color": "#5E6B85",
+                  "size": "xs",
+                  "margin": "md"
+                }
+              ]
+            },
+            {
+              "type": "box",
+              "layout": "vertical",
+              "height": "8px",
+              "backgroundColor": "#E8ECF3",
+              "cornerRadius": "4px",
+              "contents": [
+                {
+                  "type": "box",
+                  "layout": "vertical",
+                  "width": "64%",
+                  "height": "8px",
+                  "backgroundColor": "#16233F",
+                  "cornerRadius": "4px",
+                  "contents": [
+                    {
+                      "type": "filler"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "box",
+              "layout": "horizontal",
+              "contents": [
+                {
+                  "type": "box",
+                  "layout": "vertical",
+                  "contents": [
+                    {
+                      "type": "text",
+                      "text": "{{フォロワー}}",
+                      "wrap": true,
+                      "color": "#16233F",
+                      "size": "xl",
+                      "weight": "bold",
+                      "align": "center"
+                    },
+                    {
+                      "type": "text",
+                      "text": "フォロワー",
+                      "wrap": true,
+                      "color": "#5E6B85",
+                      "size": "xxs",
+                      "align": "center"
+                    }
+                  ]
+                },
+                {
+                  "type": "box",
+                  "layout": "vertical",
+                  "contents": [
+                    {
+                      "type": "text",
+                      "text": "{{フォロー}}",
+                      "wrap": true,
+                      "color": "#16233F",
+                      "size": "xl",
+                      "weight": "bold",
+                      "align": "center"
+                    },
+                    {
+                      "type": "text",
+                      "text": "フォロー中",
+                      "wrap": true,
+                      "color": "#5E6B85",
+                      "size": "xxs",
+                      "align": "center"
+                    }
+                  ]
+                },
+                {
+                  "type": "box",
+                  "layout": "vertical",
+                  "contents": [
+                    {
+                      "type": "text",
+                      "text": "{{ご縁}}",
+                      "wrap": true,
+                      "color": "#16233F",
+                      "size": "xl",
+                      "weight": "bold",
+                      "align": "center"
+                    },
+                    {
+                      "type": "text",
+                      "text": "ご縁",
+                      "wrap": true,
+                      "color": "#5E6B85",
+                      "size": "xxs",
+                      "align": "center"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "text": "報連相 {{連続}}日連続。エンブレムの輪が育っています。",
+              "wrap": true,
+              "color": "#5E6B85",
+              "size": "xs"
+            }
+          ]
+        },
+        "footer": {
+          "type": "box",
+          "layout": "vertical",
+          "spacing": "sm",
+          "paddingAll": "14px",
+          "contents": [
+            {
+              "type": "button",
+              "style": "primary",
+              "color": "#16233F",
+              "height": "sm",
+              "action": {
+                "type": "uri",
+                "label": "育てたハタボを見る",
+                "uri": "https://miniapp.line.me/2012676035-yCkx6tBu?page=grow"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "bubble",
+        "size": "kilo",
+        "styles": {
+          "body": {
+            "backgroundColor": "#FFFFFF"
+          },
+          "footer": {
+            "backgroundColor": "#FFFFFF"
+          }
+        },
+        "body": {
+          "type": "box",
+          "layout": "vertical",
+          "spacing": "lg",
+          "paddingAll": "18px",
+          "contents": [
+            {
+              "type": "box",
+              "layout": "horizontal",
+              "spacing": "md",
+              "alignItems": "center",
+              "contents": [
+                {
+                  "type": "image",
+                  "url": "https://hiromitsu81.github.io/terakoya/butter/line/emblem.png",
+                  "size": "40px",
+                  "aspectMode": "fit",
+                  "flex": 0
+                },
+                {
+                  "type": "box",
+                  "layout": "vertical",
+                  "contents": [
+                    {
+                      "type": "text",
+                      "text": "OWNERS CLUB",
+                      "wrap": true,
+                      "color": "#5E6B85",
+                      "size": "xxs",
+                      "weight": "bold"
+                    },
+                    {
+                      "type": "text",
+                      "text": "AISAI・愛祭",
+                      "wrap": true,
+                      "color": "#16233F",
+                      "size": "lg",
+                      "weight": "bold"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "separator",
+              "color": "#DCE2EC"
+            },
+            {
+              "type": "text",
+              "text": "オーナーズクラブは、いつものハタボの中に。",
+              "wrap": true,
+              "color": "#16233F",
+              "size": "md",
+              "weight": "bold"
+            },
+            {
+              "type": "text",
+              "text": "AI祭りへのエントリー、アワード、オーナーどうしのつながり。",
+              "wrap": true,
+              "color": "#5E6B85",
+              "size": "sm"
+            }
+          ]
+        },
+        "footer": {
+          "type": "box",
+          "layout": "vertical",
+          "spacing": "sm",
+          "paddingAll": "14px",
+          "contents": [
+            {
+              "type": "button",
+              "style": "primary",
+              "color": "#16233F",
+              "height": "sm",
+              "action": {
+                "type": "uri",
+                "label": "AISAIを開く",
+                "uri": "https://miniapp.line.me/2012676035-yCkx6tBu?page=aisai"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "bubble",
+        "size": "kilo",
+        "styles": {
+          "body": {
+            "backgroundColor": "#FFFFFF"
+          },
+          "footer": {
+            "backgroundColor": "#FFFFFF"
+          }
+        },
+        "body": {
+          "type": "box",
+          "layout": "vertical",
+          "spacing": "lg",
+          "paddingAll": "18px",
+          "contents": [
+            {
+              "type": "box",
+              "layout": "horizontal",
+              "spacing": "md",
+              "alignItems": "center",
+              "contents": [
+                {
+                  "type": "image",
+                  "url": "https://hiromitsu81.github.io/terakoya/butter/line/emblem.png",
+                  "size": "40px",
+                  "aspectMode": "fit",
+                  "flex": 0
+                },
+                {
+                  "type": "box",
+                  "layout": "vertical",
+                  "contents": [
+                    {
+                      "type": "text",
+                      "text": "SHARE",
+                      "wrap": true,
+                      "color": "#5E6B85",
+                      "size": "xxs",
+                      "weight": "bold"
+                    },
+                    {
+                      "type": "text",
+                      "text": "ハタボを紹介",
+                      "wrap": true,
+                      "color": "#16233F",
+                      "size": "lg",
+                      "weight": "bold"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "separator",
+              "color": "#DCE2EC"
+            },
+            {
+              "type": "text",
+              "text": "話すだけで、動く愛棒を友だちに。",
+              "wrap": true,
+              "color": "#16233F",
+              "size": "md",
+              "weight": "bold"
+            },
+            {
+              "type": "text",
+              "text": "紹介した人とされた人は、ご縁としてつながります。",
+              "wrap": true,
+              "color": "#5E6B85",
+              "size": "sm"
+            }
+          ]
+        },
+        "footer": {
+          "type": "box",
+          "layout": "vertical",
+          "spacing": "sm",
+          "paddingAll": "14px",
+          "contents": [
+            {
+              "type": "button",
+              "style": "primary",
+              "color": "#16233F",
+              "height": "sm",
+              "action": {
+                "type": "uri",
+                "label": "紹介する",
+                "uri": "https://miniapp.line.me/2012676035-yCkx6tBu?page=share"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
