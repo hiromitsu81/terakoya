@@ -711,6 +711,21 @@ body.tall.av-hatabo .rothint, body.tall.av-komugi .rothint { display: inline-fle
 .hblegend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: -1px; }
 .hbginfo { margin: 0 8px 8px; padding: 10px 12px; border-radius: 12px; background: #F3F5FA; font-size: 13px; line-height: 1.7; color: #16233F; }
 .hbginfo .hbtag { margin-left: 6px; }
+
+.hbstep { display: flex; align-items: center; margin: 6px 0 4px; }
+.hbstep > b { flex: 1; height: 2px; background: #DCE2EC; margin: 0 6px 16px; }
+.hbstep div { display: grid; justify-items: center; gap: 4px; font: 800 12px var(--display); color: #8A93A6; }
+.hbstep i { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-style: normal; background: #EEF1F6; color: #8A93A6; }
+.hbstep div.on i { background: #16233F; color: #fff; } .hbstep div.on { color: #16233F; }
+.hbstep div.now i { box-shadow: 0 0 0 4px rgba(201,162,74,.45); }
+.hbpick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.hbpick.g { grid-template-columns: repeat(3, 1fr); } .hbpick.g2 { grid-template-columns: 1fr 1fr; }
+.hbpick button { text-align: left; border: 1.5px solid #DCE2EC; background: #fff; border-radius: 14px; padding: 10px 12px; cursor: pointer; display: grid; gap: 2px; color: #16233F; }
+.hbpick button b { font: 800 14px var(--display); } .hbpick button span { font-size: 11px; color: #5E6B85; } .hbpick button em { font-style: normal; font: 800 12px var(--display); margin-top: 2px; }
+.hbpick button.on { border-color: #16233F; box-shadow: inset 0 0 0 1.5px #16233F; background: #F6F8FC; }
+.hbpick button:disabled { opacity: .45; cursor: default; }
+.hbsum { display: flex; justify-content: space-between; align-items: baseline; margin-top: 14px; padding: 12px 14px; border-radius: 12px; background: #16233F; color: #fff; }
+.hbsum span { font-size: 13px; color: #C9D0DC; } .hbsum b { font: 800 20px var(--display); }
 </style>
 </head>
 <body>
@@ -2715,7 +2730,7 @@ body.tall.av-hatabo .rothint, body.tall.av-komugi .rothint { display: inline-fle
       const left = Math.max(0, d.limit - d.today), pct = Math.min(100, Math.round(d.today / Math.max(1, d.limit) * 100));
       body.innerHTML = hbpSetup() + `
         <div class="hbc"><div class="k">MY HATABO</div><h3>${esc(d.name ? d.name + 'さんの' + nm : 'あなたの' + nm)}</h3>
-          <span class="hbtag">${esc(d.plan)}</span> ${d.superUntil ? '<span class="hbtag gold">' + esc(/^\d/.test(d.superUntil) ? d.superUntil + ' まで' : d.superUntil) + '</span>' : ''}
+          <span class="hbtag">${esc(d.plan)}</span> ${d.funnel && d.funnel.stage === 'trial' ? '<span class="hbtag gold">お試し あと' + d.funnel.daysLeft + '日</span>' : d.funnel && d.funnel.stage === 'contract' ? '<span class="hbtag">' + esc(d.funnel.lineupName + ' ' + d.funnel.grade) + '</span>' : '<button type="button" class="hbtag gold" data-go="plan" style="border:0;cursor:pointer">10日間無料で試す</button>'} ${d.superUntil ? '<span class="hbtag gold">' + esc(/^\d/.test(d.superUntil) ? d.superUntil + ' まで' : d.superUntil) + '</span>' : ''}
           <div style="margin-top:12px" class="big">${n(left)}<small>回 きょうの残り</small></div>
           <div class="hbbar"><i style="width:${pct}%"></i></div><p>きょう ${n(d.today)} 回 ／ 1日 ${n(d.limit)} 回まで</p></div>
         <div class="hbc"><div class="k">THIS MONTH</div><div class="hbstats"><div><b>${n(d.month)}</b><span>今月の会話</span></div><div><b>${n(d.total)}</b><span>これまで</span></div><div><b>${n(d.days)}</b><span>日目</span></div></div></div>
@@ -2739,17 +2754,18 @@ body.tall.av-hatabo .rothint, body.tall.av-komugi .rothint { display: inline-fle
     } else if (p === 'goen') {
       const g = HBP.goen;
       if (!g) { body.innerHTML = '<div class="hbc"><p>ご縁をよみこみ中だボー…</p></div>'; if (J.ready) jrSend({ type: 'goen_tree' }); return; }
-      const ST = { daily: ['毎日', '#C9A24A'], active: ['元気', '#8DC21F'], new: ['はじめた', '#2F6FD6'], quiet: ['ひと休み', '#A9B1C1'], sleep: ['おやすみ', '#D5DAE3'] };
-      const kids = g.nodes.filter(x => !x.me), d1 = kids.filter(x => x.depth === 1).length, act = kids.filter(x => x.st === 'daily' || x.st === 'active').length;
+      const ST = { ref: ['紹介', '#7FB0F0'], trial: ['お試し', '#C9A24A'], contract: ['契約', '#16233F'], cancel: ['やめた', '#D5DAE3'] }, ACT = { daily: '毎日話している', active: '元気', new: 'これから', quiet: 'ひと休み', sleep: 'おやすみ' };
+      const kids = g.nodes.filter(x => !x.me), d1 = kids.filter(x => x.depth === 1).length, act = kids.filter(x => x.stage === 'trial').length, con = kids.filter(x => x.stage === 'contract').length;
       body.innerHTML = `
         <div class="hbc"><div class="k">GOEN</div><h3>ご縁のひろがり</h3>
-          <div class="hbstats"><div><b>${kids.length}</b><span>ひろがった人</span></div><div><b>${d1}</b><span>直接の紹介</span></div><div><b>${act}</b><span>いま元気</span></div></div>
+          <div class="hbstats"><div><b>${kids.length}</b><span>ひろがった人</span></div><div><b>${act}</b><span>お試し中</span></div><div><b>${con}</b><span>契約</span></div></div>
+          <p>直接の紹介 ${d1}人</p>
           ${g.up ? '<p>あなたは ' + esc(g.up) + ' のご縁から来ました。</p>' : ''}</div>
         <div class="hbc hbgoen"><svg id="goenSvg" role="img" aria-label="ご縁のひろがり"></svg>
-          <div class="hblegend">${Object.entries(ST).map(([k, [l, c]]) => `<span><i style="background:${c}"></i>${l}</span>`).join('')}</div>
+          <div class="hblegend">${Object.entries(ST).map(([k, [l, c]]) => `<span><i style="background:${c}"></i>${l}</span>`).join('')}<span><i style="background:#8DC21F;width:8px;height:8px"></i>いま元気</span></div>
           <div id="goenInfo" class="hbginfo">まるをタップすると、その人のようすが出ます。</div></div>
         ${kids.length ? '' : '<div class="hbc"><p>まだご縁はありません。「紹介する」からハタボのカードを送ると、ここにご縁がひろがっていきます。</p><button type="button" class="hbbtn" data-go="share">紹介する</button></div>'}`;
-      goenDraw(g, ST);
+      goenDraw(g, ST, ACT);
     } else if (p === 'grow') {
       const marks = [3, 7, 30, 100, 365];
       body.innerHTML = `
@@ -2764,14 +2780,38 @@ body.tall.av-hatabo .rothint, body.tall.av-komugi .rothint { display: inline-fle
         <div class="hbc"><div class="hbstats"><div><b>${n(d.learned)}</b><span>覚えたこと</span></div><div><b>${n(d.total)}</b><span>話した回数</span></div><div><b class="hbmuted">—</b><span>ありがとうpt</span></div></div>
           <button type="button" class="hbbtn w" data-ask="育てたハタボを引きつぎたい・ゆずりたい">引きつぎ・ゆずる</button></div>`;
     } else if (p === 'plan') {
-      const plans = [['標準', 'ふだんの会話と相談'], ['上位', '答えがより深く、ていねいに'], ['スーパー上位', 'いちばん賢いエンジン。長い文章もClaudeと同じように最後まで書く']];
-      body.innerHTML = `
-        <div class="hbc"><div class="k">PLAN</div><h3>いまのプラン</h3><div class="big" style="font-size:30px">${esc(d.plan)}</div>
-          ${d.superUntil ? '<p><span class="hbtag gold">おためし</span> ' + esc(/^\d/.test(d.superUntil) ? d.superUntil + ' まで' : d.superUntil) + '</p>' : ''}</div>
-        <div class="hbc"><div class="k">GRADE</div>${plans.map(([a, b]) => `<div class="hbplan${a === d.plan ? ' now' : ''}"><div><b>${a}</b><span>${b}</span></div>${a === d.plan ? '<span class="hbtag">いまのプラン</span>' : ''}</div>`).join('')}
-          <p>変えると次の更新日から新しい料金です。育てた${esc(nm)}は、そのまま引きつぎます。</p>
-          <button type="button" class="hbbtn" data-ask="プランを変えたい">プランの変更を相談する</button>
-          <p class="hbmuted" style="font-size:11.5px">お支払い（Apple Pay・Google Pay・PayPay）はこの画面で準備中です。</p></div>`;
+      const f = d.funnel || {}, LU = d.lineups || {}, st = f.stage || '';
+      const steps = [['紹介', true], ['お試し', st === 'trial' || st === 'contract' || st === 'cancel'], ['契約', st === 'contract']];
+      const stepper = `<div class="hbstep">${steps.map(([l, on], i) => `<div class="${on ? 'on' : ''}${(i === 1 && st === 'trial') || (i === 2 && st === 'contract') || (i === 0 && !st) ? ' now' : ''}"><i>${on ? '✓' : i + 1}</i><span>${l}</span></div>`).join('<b></b>')}</div>`;
+      const yen0 = v => { const m = String(v).match(/([\d,]+)円/); return m ? Number(m[1].replace(/,/g, '')) : 0; }, p0 = yen0(f.price);
+      const cur = f.lineupName ? `${esc(f.lineupName)} ${esc(f.grade)}（${f.pay === 'y' && p0 ? (p0 * 10).toLocaleString('ja-JP') + '円／年' : esc(f.price) + (p0 ? '／月' : '')}）` : '';
+      const sel = HBP.sel || (HBP.sel = { lineup: f.lineup || 'ris', grade: f.grade || 'X', pay: f.pay || 'm' });
+      const form = btnLabel => {
+        const L = LU[sel.lineup] || {}, gs = L.grades || {};
+        if (!gs[sel.grade]) sel.grade = Object.keys(gs)[0] || 'X';
+        const yen = v => { const m = String(v).match(/([\d,]+)円/); return m ? Number(m[1].replace(/,/g, '')) : 0; }, mo = yen(gs[sel.grade]);
+        return `<div class="hbc"><div class="k">1 ラインナップ</div><div class="hbpick">${Object.entries(LU).map(([k, v]) => `<button type="button" data-lu="${k}" class="${sel.lineup === k ? 'on' : ''}"><b>${esc(v.name)}</b><span>${esc(v.who)}</span></button>`).join('')}</div>
+          <div class="k" style="margin-top:14px">2 グレード</div><div class="hbpick g">${['X', 'G', 'Z'].map(g => gs[g] ? `<button type="button" data-gr="${g}" class="${sel.grade === g ? 'on' : ''}"><b>${g}</b><span>${{ X: '標準', G: '上位', Z: 'いちばん上' }[g]}</span><em>${esc(gs[g])}</em></button>` : `<button type="button" disabled><b>${g}</b><span>いまはなし</span></button>`).join('')}</div>
+          <div class="k" style="margin-top:14px">3 お支払い</div><div class="hbpick g2"><button type="button" data-pay="m" class="${sel.pay === 'm' ? 'on' : ''}"><b>月払い</b><span>いつでも見直せる</span></button><button type="button" data-pay="y" class="${sel.pay === 'y' ? 'on' : ''}"><b>年払い</b><span>2か月分おトク</span></button></div>
+          <div class="hbsum"><span>${esc(L.name || '')} ${sel.grade}</span><b>${mo ? (sel.pay === 'y' ? (mo * 10).toLocaleString('ja-JP') + '円／年' : mo.toLocaleString('ja-JP') + '円／月') : esc(gs[sel.grade] || '')}</b></div>
+          <button type="button" class="hbbtn" id="hbpGo">${btnLabel}</button>
+          <p style="font-size:11.5px">お支払いの登録（Apple Pay・Google Pay・PayPay）は準備中です。申し込みのあと、ハタラボ（HATHA LAB）からご案内します。</p></div>`;
+      };
+      let html = `<div class="hbc"><div class="k">PLAN</div><h3>紹介 → お試し → 契約</h3>${stepper}`;
+      if (!st) html += `<p>まず10日間、いちばん上の<b>Z</b>で無料で試せます（1日${d.trialDaily || 10}回まで）。先に、11日目からのプランを選んでおきます。10日以内にやめれば0円です。</p></div>` + form(`10日間無料ではじめる`);
+      else if (st === 'trial') html += `<div class="big" style="margin-top:10px">あと${f.daysLeft}<small>日 お試し中（Z）</small></div><p>11日目（${new Date(f.trialUntil).toLocaleDateString('ja-JP')}のあと）から <b>${cur}</b> に切りかわります。</p>
+          <button type="button" class="hbbtn w" id="hbpChange">プランを変える</button><button type="button" class="hbbtn w" id="hbpCancel" style="border-color:#C9CFDA;color:#5E6B85">お試しをやめる（0円）</button></div>` + (HBP.edit ? form('このプランに変える') : '');
+      else if (st === 'contract') html += `<div class="big" style="font-size:24px;margin-top:10px">${cur}</div><p>育てた${esc(nm)}は、プランやグレードを変えてもそのまま引きつぎます。変えると次の更新日から新しい料金です。</p>
+          <button type="button" class="hbbtn w" id="hbpChange">プラン・グレードを変える</button><button type="button" class="hbbtn w" data-ask="解約について相談したい" style="border-color:#C9CFDA;color:#5E6B85">解約の相談</button></div>` + (HBP.edit ? form('このプランに変える') : '');
+      else html += `<p>お試しをやめました。続けたくなったら、ここから申し込めます。</p></div>` + form('この内容で申し込む');
+      body.innerHTML = html;
+      body.querySelectorAll('[data-lu]').forEach(b => b.onclick = () => { sel.lineup = b.dataset.lu; hbpRender(); });
+      body.querySelectorAll('[data-gr]').forEach(b => b.onclick = () => { sel.grade = b.dataset.gr; hbpRender(); });
+      body.querySelectorAll('[data-pay]').forEach(b => b.onclick = () => { sel.pay = b.dataset.pay; hbpRender(); });
+      const go = document.getElementById('hbpGo');
+      if (go) go.onclick = () => { const act = !st ? 'trial' : st === 'cancel' ? 'contract' : 'change'; HBP.edit = false; jrSend(Object.assign({ type: 'funnel', act }, sel)); go.disabled = true; go.textContent = '送っています…'; };
+      const ch = document.getElementById('hbpChange'); if (ch) ch.onclick = () => { HBP.edit = !HBP.edit; hbpRender(); };
+      const cn = document.getElementById('hbpCancel'); if (cn) cn.onclick = () => { if (confirmDel(cn)) jrSend({ type: 'funnel', act: 'cancel' }); };
     } else if (p === 'aisai') {
       body.innerHTML = `
         <div class="hbc"><div class="k">OWNERS CLUB ／ AISAI・愛祭</div><h3>オーナーズクラブは、いつもの${esc(nm)}の中に。</h3>
@@ -2809,7 +2849,7 @@ body.tall.av-hatabo .rothint, body.tall.av-komugi .rothint { display: inline-fle
   // 消すのは2回押し（1回目で「もう一度で消す」）
   function confirmDel(b) { if (b.dataset.sure) return true; b.dataset.sure = '1'; b.textContent = 'もう一度で消す'; b.classList.remove('hbmuted'); setTimeout(() => { delete b.dataset.sure; b.textContent = '消す'; b.classList.add('hbmuted'); }, 3000); return false; }
   // ご縁の木を、アメーバのようにやわらかくつながった形で描く（まん中が自分、外へ1代・2代・3代）
-  function goenDraw(g, ST) {
+  function goenDraw(g, ST, ACT) {
     const svg = document.getElementById('goenSvg'); if (!svg) return;
     const NS = 'http://www.w3.org/2000/svg', by = {}, kids = {};
     g.nodes.forEach(n => { by[n.id] = n; kids[n.id] = []; });
@@ -2837,18 +2877,20 @@ body.tall.av-hatabo .rothint, body.tall.av-komugi .rothint { display: inline-fle
     html += g.links.map(l => { const a = by[l.from], b = by[l.to]; if (!a || !b) return ''; const mx = (a.x + b.x) / 2 + (b.y - a.y) * .12, my = (a.y + b.y) / 2 - (b.x - a.x) * .12; return `<path d="M${a.x},${a.y} Q${mx},${my} ${b.x},${b.y}" fill="none" stroke="${b.hue}" stroke-opacity=".55" stroke-width="2"/>`; }).join('');
     // 人（まる）：ふちの色＝ようす、大きさ＝Lv
     html += g.nodes.map(n => {
-      const c = (ST[n.st] || ST.new)[1], r = rad(n);
+      const c = (ST[n.stage] || ST.ref)[1], r = rad(n), on = n.st === 'daily' || n.st === 'active';
       return `<g class="gnode" data-id="${esc(n.id)}" style="cursor:pointer">` + (n.me
         ? `<circle cx="${n.x}" cy="${n.y}" r="${r + 5}" fill="#16233F"/><circle cx="${n.x}" cy="${n.y}" r="${r}" fill="#fff"/><image href="award_mark.svg" x="${n.x - r * .8}" y="${n.y - r * .8}" width="${r * 1.6}" height="${r * 1.6}"/>`
         : `<circle cx="${n.x}" cy="${n.y}" r="${r}" fill="#fff" stroke="${c}" stroke-width="4"/><text x="${n.x}" y="${n.y + 5}" text-anchor="middle" font-size="${Math.round(r * .8)}" font-weight="800" fill="#16233F">${esc(n.name.slice(0, 1))}</text>`
+           + (n.grade && n.stage === 'contract' ? `<rect x="${n.x - 9}" y="${n.y + r - 7}" width="18" height="13" rx="4" fill="#16233F"/><text x="${n.x}" y="${n.y + r + 3}" text-anchor="middle" font-size="10" font-weight="800" fill="#fff">${esc(n.grade)}</text>` : '')
+          + (on ? `<circle cx="${n.x - r * .75}" cy="${n.y - r * .75}" r="5" fill="#8DC21F" stroke="#fff" stroke-width="2"/>` : '')
           + (n.kids ? `<circle cx="${n.x + r * .75}" cy="${n.y - r * .75}" r="8" fill="#16233F"/><text x="${n.x + r * .75}" y="${n.y - r * .75 + 3.5}" text-anchor="middle" font-size="10" font-weight="800" fill="#fff">${n.kids}</text>` : ''))
         + `<text x="${n.x}" y="${n.y + r + 14}" text-anchor="middle" font-size="14" font-weight="800" fill="#16233F">${esc(n.me ? 'あなた' : n.name)}</text></g>`;
     }).join('');
     svg.innerHTML = html;
     svg.querySelectorAll('.gnode').forEach(el => el.addEventListener('click', () => {
-      const n = by[el.dataset.id], s = ST[n.st] || ST.new, info = document.getElementById('goenInfo');
+      const n = by[el.dataset.id], s = ST[n.stage] || ST.ref, info = document.getElementById('goenInfo');
       info.innerHTML = n.me ? `<b>あなた</b> Lv.${n.lv}・紹介した人 ${n.kids}人${n.streak ? '・' + n.streak + '日連続' : ''}`
-        : `<b>${esc(n.name)}さん</b><span class="hbtag" style="background:${s[1]};color:#fff">${s[0]}</span><br>${n.depth}代目のご縁・Lv.${n.lv}${n.streak ? '・' + n.streak + '日連続' : ''}・紹介した人 ${n.kids}人${n.since ? '・' + new Date(n.since).toLocaleDateString('ja-JP') + 'から' : ''}`;
+        : `<b>${esc(n.name)}さん</b><span class="hbtag" style="background:${s[1]};color:#fff">${s[0]}</span><br>${n.lineupName ? esc(n.lineupName + ' ' + n.grade) + '・' : ''}${ACT[n.st] || ''}・${n.depth}代目のご縁・Lv.${n.lv}${n.streak ? '・' + n.streak + '日連続' : ''}・紹介した人 ${n.kids}人${n.since ? '・' + new Date(n.since).toLocaleDateString('ja-JP') + 'から' : ''}`;
     }));
   }
   function hbpOpen(p) {

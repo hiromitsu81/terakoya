@@ -71,7 +71,27 @@ const PLANS = {
 /** 長い文章を頼まれたか（スーパー上位だけ、Claudeと同じように最後まで書く） */
 const LONG_RE = /(書いて|かいて|まとめて|下書き|文章|長文|長く|くわしく|詳しく|メール|企画書|提案書|レポート|報告書|議事録|手紙|原稿|説明して|一覧|リスト|比べて|くらべて)/;
 const LONG_RULE = '\n\n【長い文章】いまは長い文章を頼まれている。ふだんの「1〜2文」の決まりは使わず、Claudeと同じように、頼まれた中身を最後まで、見出しや箇条書きも使ってしっかり書く（声で読むのは最初の数文だけで、続きは画面の吹き出しに出る）。最初の1〜2文は、声で聞いてわかる短い前おき（例：「書いたよ。画面を見てね」）にする。';
-const planOf = S => S && S.guest && S.ref && ENV.SUPER_REFS.includes(String(S.ref).toLowerCase()) ? PLANS.super : S && superUntil(S.owner) ? (PLANS[S.plan] || PLANS.super) : PLANS[S && !S.guest && !S.asGuest && S.mode === 'family' && PLANS[S.plan] ? S.plan : 'std'];
+/* ===== 紹介 → お試し → 契約（ラインナップとグレード）。サイトのプラン・料金と同じ ===== */
+const LINEUP = {
+  ietna: { name: 'ハタイエンタ', who: '家族の愛棒', grades: { X: '5,980円', G: '12,800円' } },
+  ris:   { name: 'ハタリス',     who: 'ひとりの愛棒', grades: { X: '2,980円', G: '4,980円', Z: '9,800円' } },
+  box:   { name: 'ハタボックス', who: '個人事業の愛棒', grades: { X: '5,000円', G: '担当がご案内' } },
+  ace:   { name: 'ハタエース',   who: 'お店・宿の愛棒', grades: { X: '10,000円〜', G: '担当がご案内' } },
+  bora:  { name: 'ハタボーラ',   who: '会社の愛棒', grades: { X: '1席 2,980円', G: '1席 9,800円' } },
+};
+const GRADE_PLAN = { X: 'std', G: 'high', Z: 'super' };
+const TRIAL_DAYS = 10, TRIAL_DAILY = 10;
+/** いまの段階：お試しの10日が過ぎたら、選んだプランの契約に切りかわる */
+function funnelOf(r) {
+  r = r || {};
+  let stage = r.stage || '';
+  if (stage === 'trial' && Date.now() > (r.trialUntil || 0)) stage = 'contract';
+  const L = LINEUP[r.lineup] || null;
+  return { stage, lineup: r.lineup || '', lineupName: L ? L.name : '', grade: r.grade || '', price: L && L.grades[r.grade] || '', pay: r.pay || 'm',
+    trialUntil: r.trialUntil || 0, daysLeft: stage === 'trial' ? Math.max(1, Math.ceil(((r.trialUntil || 0) - Date.now()) / 86400000)) : 0 };
+}
+const planOf = S => S && S.funnel && S.funnel.stage === 'trial' ? PLANS.super : S && S.funnel && S.funnel.stage === 'contract' && GRADE_PLAN[S.funnel.grade] && S.guest ? PLANS[GRADE_PLAN[S.funnel.grade]] : _planOf(S);
+const _planOf = S => S && S.guest && S.ref && ENV.SUPER_REFS.includes(String(S.ref).toLowerCase()) ? PLANS.super : S && superUntil(S.owner) ? (PLANS[S.plan] || PLANS.super) : PLANS[S && !S.guest && !S.asGuest && S.mode === 'family' && PLANS[S.plan] ? S.plan : 'std'];
 
 /* ===== 外のサービス（テストでは差しかえる） ===== */
 const deps = {
@@ -143,6 +163,7 @@ async function myPage(S) {
     streak: st.last === day || st.last === new Date(Date.now() - 15 * 3600000).toISOString().slice(0, 10) ? st.streak || 0 : 0,
     lv, lvPct: Math.round((tot - base) / Math.max(1, next - base) * 100), learned: (S.learned || []).length + (S.lessons || []).length,
     kids: (mine && mine.kids) || 0, myRef: S.myRef || '', from: S.refFrom ? await refLabel(S.refFrom) : '',
+    funnel: S.funnel || funnelOf(mine), lineups: LINEUP, trialDays: TRIAL_DAYS, trialDaily: TRIAL_DAILY,
     notes: (await loadNotes(S.owner).catch(() => [])).slice(0, 50), summary: String(S.memo || '').slice(0, 3000) };
 }
 /** ご縁の木：自分が紹介した人、その人が紹介した人…（3代まで・合わせて150人まで）。名前は呼び名だけ */
@@ -155,7 +176,8 @@ function refStatus(r) {
   const today = new Date(Date.now() + 9 * 3600000), day = n => new Date(today.getTime() - n * 86400000).toISOString().slice(0, 10);
   const tot = r.tot || 0, lv = Math.floor(Math.sqrt(tot / 4)) + 1, last = r.last || '';
   const st = !last ? 'new' : last >= day(1) && (r.streak || 0) >= 3 ? 'daily' : last >= day(7) ? 'active' : last >= day(30) ? 'quiet' : 'sleep';
-  return { lv, st, streak: last >= day(1) ? r.streak || 0 : 0, kids: r.kids || 0, since: r.at || 0 };
+  const f = funnelOf(r);
+  return { lv, st, streak: last >= day(1) ? r.streak || 0 : 0, kids: r.kids || 0, since: r.at || 0, stage: f.stage || 'ref', grade: f.grade, lineupName: f.lineupName };
 }
 async function goenTree(S) {
   if (!S.myRef) return { type: 'goen', nodes: [], links: [] };
@@ -705,6 +727,28 @@ function session(ws) {
     savePrefs(S.asGuest ? GUEST_COMMON : S.owner, { lessons: S.lessons });
     return speakOnly('がってんだ、覚えたぜ！', 'excited');
   }
+  /** お試しの申し込み・プランの変更・お試しをやめる・契約。ヒロさんに案件メモで知らせる */
+  async function onFunnel(m) {
+    if (!S.myRef) return send({ type: 'notice', why: 'funnel', detail: 'no ref' });
+    const act = String(m.act || ''), L = LINEUP[m.lineup], g = String(m.grade || ''), pay = m.pay === 'y' ? 'y' : 'm';
+    const r = await getRef(S.myRef).catch(() => null) || {}, cur = funnelOf(r), now = Date.now();
+    let patch = null, kind = '';
+    if ((act === 'trial' || act === 'change' || act === 'contract') && !(L && L.grades[g])) return send({ type: 'notice', why: 'funnel', detail: 'plan' });
+    if (act === 'trial' && !cur.stage) { patch = { stage: 'trial', lineup: m.lineup, grade: g, pay, trialAt: now, trialUntil: now + TRIAL_DAYS * 86400000 }; kind = 'お試しの申し込み'; }
+    else if (act === 'change' && (cur.stage === 'trial' || cur.stage === 'contract')) { patch = { lineup: m.lineup, grade: g, pay }; kind = 'プランの変更'; }
+    else if (act === 'cancel' && cur.stage === 'trial') { patch = { stage: 'cancel', cancelAt: now }; kind = 'お試しをやめる'; }
+    else if (act === 'contract' && (cur.stage === 'cancel' || !cur.stage)) { patch = { stage: 'contract', lineup: m.lineup, grade: g, pay, contractAt: now }; kind = '契約の申し込み'; }
+    if (!patch) return send(await myPage(S));
+    if (cur.stage === 'trial' && Date.now() > (r.trialUntil || 0)) patch.stage = patch.stage || 'contract';
+    await putRef(S.myRef, patch);
+    S.funnel = funnelOf(Object.assign({}, r, patch));
+    const f = S.funnel, title = kind + '：' + (f.lineupName || '') + ' ' + (f.grade || '') + (f.price ? '（' + f.price + (f.pay === 'y' ? '・年払い' : '・月払い') + '）' : '');
+    console.log('funnel', JSON.stringify({ owner: S.owner, name: S.me, act, lineup: f.lineup, grade: f.grade, pay: f.pay }));
+    gas(Object.assign({ action: 'lead', lead: { who: S.me, ref: await refLabel(S.refFrom || S.ref || ''), kind: '契約', title, need: kind, when: f.stage === 'trial' ? new Date(f.trialUntil).toLocaleDateString('ja-JP') + 'までお試し' : '', budget: f.price || '', next: act === 'cancel' ? 'お試しをやめた理由を聞く' : 'お支払いの登録を案内する', memo: '' } }, S.auth)).catch(() => {});
+    send(await myPage(S));
+    const say = { trial: '10日間のお試しがはじまったボー！いちばん上のZで動くから、なんでも頼んでほしいボー。', change: 'プランを変えたボー。', cancel: 'お試しをやめたボー。また話したくなったら、いつでも呼んでほしいボー。', contract: 'お申し込みありがとうだボー！お支払いの案内は、ハタラボから届くボー。' }[act];
+    if (say) speakOnly(S.avatar === 'komugi' ? say.replace(/だボー/g, 'です').replace(/ボー/g, 'です') : S.avatar === 'hatabo' ? say : say.replace(/だボー/g, 'だぜ').replace(/ボー/g, 'ぜ'), act === 'cancel' ? 'shy' : 'excited');
+  }
   /** メモ：「〇〇をメモして」。中身がなければ、さっきの返事をメモする */
   async function memo(text) {
     let body = String(text).replace(MEMO_RE, '').replace(/^(ハタボ|コムギ|ジュニア)[、,\s]*/, '').replace(/(を|って|と)?[、。！!\s]*$/, '').trim();
@@ -823,6 +867,8 @@ function session(ws) {
     const voice = jam ? JAM_VOICE : S.voice;
     if (!S.asGuest && !quotaOk(S.owner || 'anon', S.guest, !!S.refFrom)) return speakOnly(S.guest ? 'すまねぇ、きょうここで話せる回数がいっぱいになっちまった。続きはヒロさんに伝えとくから、また明日話そうぜ！' : 'きょうの回数がいっぱいになっちまった。また明日話そうぜ！', 'shy');
     bumpStats(S);
+    if (!S.asGuest && S.funnel && S.funnel.stage === 'trial' && (counts.get((S.owner || 'anon') + ':' + new Date().toISOString().slice(0, 10)) || 0) > TRIAL_DAILY)
+      return speakOnly(S.avatar === 'komugi' ? 'お試しは1日' + TRIAL_DAILY + '回までなんです。また明日、話しましょう。' : 'お試しのZは1日' + TRIAL_DAILY + '回までだボー。また明日話そうボー。', 'shy');
     if (Date.now() - (S.brainAt || 0) > 10 * 60 * 1000) { try { await loadBrain(true); } catch (e) {} }   // 記録は10分ごとに読みなおす
     let noRecord = false;
     if (MAIL_RE.test(logText || '')) {
@@ -1014,6 +1060,7 @@ function session(ws) {
           await putRef(S.myRef, { owner: S.owner, name: S.me || (mine && mine.name) || '', parent, at: (mine && mine.at) || Date.now() });
           // 初めて来た人なら、紹介した人の「ご縁」を1つふやす
           if (!mine && parent) { const up = await getRef(parent).catch(() => null); await putRef(parent, { kids: ((up && up.kids) || 0) + 1 }).catch(() => {}); }
+          S.funnel = funnelOf(mine);
           S.stats = { at: (mine && mine.at) || Date.now(), tot: (mine && mine.tot) || 0, mon: (mine && mine.mon) || '', monN: (mine && mine.monN) || 0, last: (mine && mine.last) || '', streak: (mine && mine.streak) || 0, kids: (mine && mine.kids) || 0 };
         }
         // コムギ経由か：コムギの窓口、またはコムギの紹介コードから（2つ上までたどる）
@@ -1085,6 +1132,7 @@ function session(ws) {
       if (m.type === 'ping') return send({ type: 'pong' });
       if (m.type === 'mypage') return send(await myPage(S));
       if (m.type === 'goen_tree') return send(await goenTree(S));
+      if (m.type === 'funnel') return onFunnel(m);
       if (m.type === 'note_del') { const items = (await loadNotes(S.owner)).filter(x => x.id !== String(m.id || '')); await saveNotes(S.owner, items); return send(await myPage(S)); }
     } catch (e) { send({ type: 'notice', why: 'server', detail: String(e.message).slice(0, 80) }); }
   });
