@@ -8,7 +8,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<script>
+/* ハタボ・コムギのミニアプリで開いたときは、つながる前の「福まねき特戦隊・バターちゃん」を一瞬も見せない */
+try { if (/20126760(32|33|35)-/.test(decodeURIComponent(location.search))) { document.documentElement.classList.add('hbapp'); document.title = 'ハタボ'; } } catch (e) {}
+</script>
 <style>
+html.hbapp body:not(.av-hatabo):not(.av-komugi) { visibility: hidden; }
+html.hbapp { background: #F6F8FC; }
 /* 台所のタイル壁の前に、バターちゃんと柴犬の子犬チーちゃん。話しかけないとバターちゃんは溶けていく */
 :root {
   --bg: #fff3e6; --tile: #dbe8ec; --ink: #23303b; --soft: #5b6b78; --card: #ffffff; --line: #c9d8de;
@@ -3001,6 +3007,7 @@ body.wideshow.av-hatabo .stage svg, body.wideshow.av-komugi .stage svg { aspect-
   layoutTall();
   { let lastAv = null; new MutationObserver(() => { const av = /\bav-(hatabo|komugi)\b/.test(document.body.className); if (av !== lastAv) { lastAv = av; layoutTall(); } avText(); }).observe(document.body, { attributes: true, attributeFilter: ['class'] }); }
   avText();
+  setTimeout(() => document.documentElement.classList.remove('hbapp'), 4000);   // 念のため：4秒たっても見えなければ出す
 
   // ===== ネコちゃん（招き猫） =====
   const neko = $('neko');
