@@ -45,6 +45,10 @@ const ENV = {
   KOMUGI_RATE: Number(process.env.KOMUGI_RATE || 1.0),   // コムギはひかえめに、少しゆっくり
   KOMUGI_NEWS_URL: process.env.KOMUGI_NEWS_URL || '',                 // コムギニュース速報の最新号（テキストかJSON {title,body}）
   CLAUDE_FAMILY: process.env.CLAUDE_FAMILY !== '0',   // 家族のジュニアは、いつもClaudeと同じ（クロードのバターちゃんと同じ）
+  // Googleアカウント連携（作った資料を、本人のGoogleドライブの「ハタボ」フォルダへ）。OAuthクライアントを作って入れる
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
+  GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || '',
+  PUBLIC_URL: (process.env.PUBLIC_URL || 'https://butter-junior-722073142596.asia-northeast1.run.app').replace(/\/$/, ''),
   HATABO_LINE_TOKEN: process.env.HATABO_LINE_TOKEN || '',   // ハタボ公式LINE（Messaging API）。あれば、伝言をLINEにも届ける
   // 一時的にスーパー上位：LINEのユーザーID:期限（例 Uxxxx:2026-12-31）。期限を過ぎたら自動で標準にもどる
   // サイトから来た人（?ref=site など）は、汎用のハタボをスーパー上位で（長文もClaudeと同じように）
@@ -297,6 +301,60 @@ function cardOf(code, r) {
   r = r || {};
   return { code, name: String(r.name || 'ゲスト').slice(0, 20), avatar: AVS[r.avatar] ? r.avatar : 'hatabo', grade: funnelOf(r).grade || '', lineupName: funnelOf(r).lineupName || '',
     lineId: r.showLine && r.lineId ? String(r.lineId).slice(0, 40) : '', insta: r.showInsta && r.insta ? String(r.insta).replace(/^@/, '').slice(0, 40) : '' };
+}
+/* ===== Googleアカウント連携：drive.file（ハタボが作ったファイルだけをさわれる）。リフレッシュトークンは暗号化して保存 ===== */
+const gNonce = new Map();
+const gKey = () => crypto.createHash('sha256').update('g-token:' + ENV.GOOGLE_CLIENT_SECRET).digest();
+function gEnc(t) { const iv = crypto.randomBytes(12), c = crypto.createCipheriv('aes-256-gcm', gKey(), iv), d = Buffer.concat([c.update(t, 'utf8'), c.final()]); return [iv, c.getAuthTag(), d].map(b => b.toString('base64')).join('.'); }
+function gDec(s) { const [iv, tag, d] = String(s).split('.').map(b => Buffer.from(b, 'base64')); const c = crypto.createDecipheriv('aes-256-gcm', gKey(), iv); c.setAuthTag(tag); return Buffer.concat([c.update(d), c.final()]).toString('utf8'); }
+const gDocKey = owner => crypto.createHash('sha256').update('google:' + owner).digest('hex').slice(0, 32);
+async function gGet(owner) { return owner ? loadCol(gDocKey(owner), 'google') : {}; }
+async function gAccess(owner) {
+  const g = await gGet(owner); if (!g.refresh) return null;
+  const r = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ client_id: ENV.GOOGLE_CLIENT_ID, client_secret: ENV.GOOGLE_CLIENT_SECRET, refresh_token: gDec(g.refresh), grant_type: 'refresh_token' }) });
+  const j = await r.json().catch(() => ({})); if (!j.access_token) { console.error('google token', r.status, JSON.stringify(j).slice(0, 120)); return null; }
+  return { token: j.access_token, g };
+}
+/** 本人のドライブの「ハタボ」フォルダに、Googleドキュメントとして保存して、リンクを返す */
+async function driveSave(owner, title, text) {
+  const a = await gAccess(owner); if (!a) return null;
+  const H = { Authorization: 'Bearer ' + a.token };
+  let folder = a.g.folder;
+  if (folder) { const c = await fetch('https://www.googleapis.com/drive/v3/files/' + folder + '?fields=id,trashed', { headers: H }); const cj = await c.json().catch(() => ({})); if (!c.ok || cj.trashed) folder = ''; }
+  if (!folder) {
+    const f = await fetch('https://www.googleapis.com/drive/v3/files?fields=id', { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, H), body: JSON.stringify({ name: 'ハタボ', mimeType: 'application/vnd.google-apps.folder' }) });
+    folder = (await f.json().catch(() => ({}))).id || ''; if (folder) await saveCol(gDocKey(owner), 'google', { folder });
+  }
+  const b = 'hb' + crypto.randomBytes(8).toString('hex');
+  const body = '--' + b + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify({ name: String(title || 'ハタボのメモ').slice(0, 100), mimeType: 'application/vnd.google-apps.document', parents: folder ? [folder] : undefined })
+    + '\r\n--' + b + '\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n' + String(text || '') + '\r\n--' + b + '--';
+  const u = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink', { method: 'POST', headers: Object.assign({ 'Content-Type': 'multipart/related; boundary=' + b }, H), body });
+  const uj = await u.json().catch(() => ({})); if (!uj.webViewLink) { console.error('drive save', u.status, JSON.stringify(uj).slice(0, 160)); return null; }
+  return uj.webViewLink;
+}
+function googleHttp(req, res) {
+  const u = new URL(req.url, ENV.PUBLIC_URL), page = (t, b) => { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); res.end('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font-family:sans-serif;background:#F6F8FC;color:#16233F;display:grid;place-items:center;min-height:90vh;text-align:center;padding:20px"><div><h2>' + t + '</h2><p>' + b + '</p></div>'); };
+  if (!ENV.GOOGLE_CLIENT_ID) return page('準備中です', 'Googleアカウント連携は、まだ設定されていません。');
+  if (u.pathname === '/google/start') {
+    const n = u.searchParams.get('n') || ''; if (!gNonce.has(n)) return page('もう一度おねがいします', 'リンクの期限が切れました。ハタボのマイページから、もう一度「Googleと連携する」を押してください。');
+    res.writeHead(302, { Location: 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({ client_id: ENV.GOOGLE_CLIENT_ID, redirect_uri: ENV.PUBLIC_URL + '/google/callback', response_type: 'code', scope: 'openid email https://www.googleapis.com/auth/drive.file', access_type: 'offline', prompt: 'consent', state: n }) });
+    return res.end();
+  }
+  if (u.pathname === '/google/callback') {
+    const n = u.searchParams.get('state') || '', x = gNonce.get(n), code = u.searchParams.get('code');
+    if (!x || Date.now() - x.at > 15 * 60000 || !code) return page('連携できませんでした', 'もう一度、ハタボのマイページからやりなおしてください。');
+    gNonce.delete(n);
+    fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ code, client_id: ENV.GOOGLE_CLIENT_ID, client_secret: ENV.GOOGLE_CLIENT_SECRET, redirect_uri: ENV.PUBLIC_URL + '/google/callback', grant_type: 'authorization_code' }) })
+      .then(r => r.json()).then(async j => {
+        if (!j.refresh_token) throw new Error(JSON.stringify(j).slice(0, 120));
+        let email = ''; try { email = JSON.parse(Buffer.from(String(j.id_token || '').split('.')[1], 'base64url').toString()).email || ''; } catch (e) {}
+        await saveCol(gDocKey(x.owner), 'google', { refresh: gEnc(j.refresh_token), email, at: Date.now(), auto: true });
+        page('Googleと連携しました', (email ? email + ' の' : '') + 'Googleドライブの「ハタボ」フォルダに、議事録やメモ、書いた文章が保存されます。<br>LINEにもどってください。');
+      }).catch(e => { console.error('google cb', String(e.message).slice(0, 160)); page('連携できませんでした', 'もう一度、ハタボのマイページからやりなおしてください。'); });
+    return;
+  }
+  res.writeHead(404); res.end();
 }
 /* ===== キャラ設定（マイハタボ）：AI棒の名前・呼び方・話し方・長さ・自分のこと・指示。Claudeの「カスタム指示」と同じ考え ===== */
 const TONES = { char: 'キャラのまま', polite: 'ていねい（です・ます）', frank: 'フランク（友だちのように）', gentle: 'やさしく、ゆっくり', kansai: '関西弁' };
@@ -569,8 +627,12 @@ async function saveNotes(owner, items) {
 }
 async function addNote(owner, n) {
   const items = await loadNotes(owner);
-  items.unshift({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kind: n.kind, title: String(n.title || '').slice(0, 60), text: String(n.text || '').slice(0, 12000), at: Date.now() });
+  const it = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kind: n.kind, title: String(n.title || '').slice(0, 60), text: String(n.text || '').slice(0, 12000), at: Date.now() };
+  // Googleと連携していて「自動で保存」がオンなら、本人のドライブにも
+  try { const g = ENV.GOOGLE_CLIENT_ID ? await gGet(owner) : {}; if (g.refresh && g.auto !== false) it.url = await driveSave(owner, it.title, it.text) || ''; } catch (e) { console.error('drive auto', String(e.message).slice(0, 120)); }
+  items.unshift(it);
   await saveNotes(owner, items);
+  return it;
 }
 const DENGON_RE = /(さん|くん|ちゃん|様|さま)?(に|へ).{1,200}(って|と)?(伝えて|つたえて|伝言して|でんごんして|言っといて|いっといて|送っといて|おくっといて)/;
 const MEMO_RE = /(メモ(して|しといて|しておいて|っといて|に残して|にのこして|お願い|おねがい)|メモっといて|書き留めて|かきとめて)/;
@@ -1405,6 +1467,11 @@ function session(ws) {
       if (m.type === 'goen_tree') return send(await goenTree(S));
       if (m.type === 'funnel') return onFunnel(m);
       if (m.type === 'gacha') return onGacha(m);
+      if (m.type === 'google_status') { const g = await gGet(S.owner); return send({ type: 'google', ready: !!ENV.GOOGLE_CLIENT_ID, linked: !!g.refresh, email: g.email || '', auto: g.auto !== false }); }
+      if (m.type === 'google_link') { if (!S.owner || !ENV.GOOGLE_CLIENT_ID) return send({ type: 'google', ready: !!ENV.GOOGLE_CLIENT_ID, linked: false }); const n = crypto.randomBytes(16).toString('hex'); gNonce.set(n, { owner: S.owner, at: Date.now() }); if (gNonce.size > 500) gNonce.clear(); return send({ type: 'google_url', url: ENV.PUBLIC_URL + '/google/start?n=' + n }); }
+      if (m.type === 'google_auto') { await saveCol(gDocKey(S.owner), 'google', { auto: !!m.on }); const g = await gGet(S.owner); return send({ type: 'google', ready: true, linked: !!g.refresh, email: g.email || '', auto: g.auto !== false }); }
+      if (m.type === 'google_unlink') { const g = await gGet(S.owner); if (g.refresh) { try { await fetch('https://oauth2.googleapis.com/revoke?token=' + encodeURIComponent(gDec(g.refresh)), { method: 'POST' }); } catch (e) {} } await saveCol(gDocKey(S.owner), 'google', { refresh: '', email: '', folder: '' }); return send({ type: 'google', ready: !!ENV.GOOGLE_CLIENT_ID, linked: false }); }
+      if (m.type === 'note_drive') { const items = await loadNotes(S.owner), it = items.find(x => x.id === String(m.id || '')); if (it) { it.url = await driveSave(S.owner, it.title, it.text).catch(() => null) || it.url || ''; await saveNotes(S.owner, items); } return send(Object.assign(await myPage(S), { driveMsg: it && it.url ? 'Googleドライブに保存しました' : 'Googleドライブに保存できませんでした' })); }
       if (m.type === 'custom_get') return send({ type: 'custom', c: S.custom || cleanCustom({}), tones: TONES, lens: LENS, named: !!(S.custom && S.custom.aiName) });
       if (m.type === 'custom_set') {
         if (!S.owner || S.visit) return;
@@ -1437,6 +1504,7 @@ function session(ws) {
 /* ===== HTTP と WebSocket ===== */
 function createServer() {
   const server = http.createServer((req, res) => {
+    if (req.url.startsWith('/google/')) return googleHttp(req, res);
     if (req.url === '/' || req.url.startsWith('/health')) { res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' }); return res.end('バターちゃんジュニア：元気だよ'); }
     res.writeHead(404); res.end();
   });
