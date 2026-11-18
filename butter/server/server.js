@@ -49,7 +49,8 @@ const ENV = {
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
   GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || '',
   PUBLIC_URL: (process.env.PUBLIC_URL || 'https://butter-junior-722073142596.asia-northeast1.run.app').replace(/\/$/, ''),
-  HATABO_LINE_TOKEN: process.env.HATABO_LINE_TOKEN || '',   // ハタボ公式LINE（Messaging API）。あれば、伝言をLINEにも届ける
+  HATABO_LINE_TOKEN: process.env.HATABO_LINE_TOKEN || '',
+  HATABO_CHANNEL_SECRET: process.env.HATABO_CHANNEL_SECRET || '',   // 公式LINEのWebhook（友だち追加のあいさつカード）の署名チェック用   // ハタボ公式LINE（Messaging API）。あれば、伝言をLINEにも届ける
   // 一時的にスーパー上位：LINEのユーザーID:期限（例 Uxxxx:2026-12-31）。期限を過ぎたら自動で標準にもどる
   // サイトから来た人（?ref=site など）は、汎用のハタボをスーパー上位で（長文もClaudeと同じように）
   SUPER_REFS: (process.env.SUPER_REFS || 'site').split(',').map(s => s.trim().toLowerCase()).filter(Boolean),
@@ -356,6 +357,46 @@ function googleHttp(req, res) {
   }
   res.writeHead(404); res.end();
 }
+/* ===== 公式LINEのWebhook：友だち追加したら、サービス紹介と使い方をカードで。トークに書かれたら、ミニアプリへ案内 ===== */
+const MINI = 'https://miniapp.line.me/2012676035-yCkx6tBu', EMB = 'https://hiromitsu81.github.io/terakoya/butter/line/emblem.png';
+function oaCard(kicker, title, lines, btn, uri, dark) {
+  return { type: 'bubble', size: 'kilo',
+    header: { type: 'box', layout: 'horizontal', spacing: 'md', alignItems: 'center', paddingAll: '16px', backgroundColor: dark ? '#16233F' : '#FFFFFF', contents: [
+      { type: 'image', url: EMB, size: '40px', aspectMode: 'fit', flex: 0 },
+      { type: 'box', layout: 'vertical', contents: [{ type: 'text', text: kicker, size: 'xxs', weight: 'bold', color: dark ? '#C9D0DC' : '#5E6B85' }, { type: 'text', text: title, size: 'lg', weight: 'bold', wrap: true, color: dark ? '#FFFFFF' : '#16233F' }] }] },
+    body: { type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '16px', contents: lines.map(t => ({ type: 'text', text: t, size: 'sm', wrap: true, color: '#16233F' })) },
+    footer: { type: 'box', layout: 'vertical', paddingAll: '12px', contents: [{ type: 'button', style: 'primary', color: '#16233F', height: 'sm', action: { type: 'uri', label: btn, uri } }] } };
+}
+function welcomeCards(name) {
+  return { type: 'flex', altText: 'ハタボへようこそ。サービスの紹介と使い方です', contents: { type: 'carousel', contents: [
+    oaCard('WELCOME', 'すべての人に、AIのある愛棒を。', [(name ? name + 'さん、' : '') + '友だち追加ありがとうだボー！', 'ハタボは、PCとスマホで話すだけで、調べもの・段取り・文章づくり・予定まで、いっしょに動くAIの愛棒だボー。', 'アプリを入れなくても、LINEからすぐ使えるボー。'], 'ハタボと話してみる', MINI, true),
+    oaCard('HOW TO 1', '話しかけるだけ', ['下のメニューの「ハタボに相談」か、ミニアプリのまん中のエンブレムを押して話すボー。', '文字で送ってもOK。「来週の予定を整理して」「お礼のメールを書いて」など、なんでもどうぞ。'], '話しかける', MINI),
+    oaCard('HOW TO 2', 'マイハタボで残す・育てる', ['「今のをメモして」「議事録つくって」で、メモ・議事録に残るボー。', '話すほど、覚えて育つボー。ご縁・伝言・AI棒ガチャ・友だちも、マイハタボから。'], 'マイハタボを開く', MINI + '?page=my'),
+    oaCard('PLAN', 'まず10日間、無料で', ['いちばん上のZグレードで、10日間無料で試せるボー（1日10回まで）。', 'ラインナップは、家族・ひとり・個人事業・お店や宿・会社の5つ。10日以内にやめれば0円だボー。'], 'プランを見る', MINI + '?page=plan'),
+    oaCard('TIPS', 'トークをピン留めしよう', ['トーク一覧の「ハタボ」を長押し →「ピン留め」で、いつもいちばん上に。', 'メニューからすぐハタボを呼べるボー。'], '設定を見る', MINI + '?page=settings'),
+  ] } };
+}
+function lineWebhook(req, res) {
+  let raw = ''; req.setEncoding('utf8'); req.on('data', c => { raw += c; if (raw.length > 1e6) req.destroy(); });
+  req.on('end', async () => {
+    res.writeHead(200); res.end('ok');
+    try {
+      if (!ENV.HATABO_CHANNEL_SECRET || !ENV.HATABO_LINE_TOKEN) return;
+      const sig = crypto.createHmac('sha256', ENV.HATABO_CHANNEL_SECRET).update(raw).digest('base64');
+      if (sig !== req.headers['x-line-signature']) return console.error('webhook sig ng');
+      for (const ev of (JSON.parse(raw).events || [])) {
+        let messages = null;
+        if (ev.type === 'follow') {
+          let name = ''; try { const pr = await fetch('https://api.line.me/v2/bot/profile/' + ev.source.userId, { headers: { Authorization: 'Bearer ' + ENV.HATABO_LINE_TOKEN } }); name = (await pr.json()).displayName || ''; } catch (e) {}
+          messages = [welcomeCards(name)];
+        } else if (ev.type === 'message') {
+          messages = [{ type: 'flex', altText: 'ハタボとはミニアプリで話せるボー', contents: oaCard('HATABO', 'ハタボとはこちらで話せるボー', ['ここ（トーク）では返事ができないので、ミニアプリで話しかけてほしいボー。いまの続きから話せるボー。'], 'ハタボと話す', MINI) }];
+        }
+        if (messages && ev.replyToken) await fetch('https://api.line.me/v2/bot/message/reply', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + ENV.HATABO_LINE_TOKEN }, body: JSON.stringify({ replyToken: ev.replyToken, messages }) }).then(r => { if (!r.ok) console.error('reply', r.status); });
+      }
+    } catch (e) { console.error('webhook', String(e.message).slice(0, 160)); }
+  });
+}
 /* ===== キャラ設定（マイハタボ）：AI棒の名前・呼び方・話し方・長さ・自分のこと・指示。Claudeの「カスタム指示」と同じ考え ===== */
 const TONES = { char: 'キャラのまま', polite: 'ていねい（です・ます）', frank: 'フランク（友だちのように）', gentle: 'やさしく、ゆっくり', kansai: '関西弁' };
 const LENS = { char: 'キャラのまま', short: '短め', long: 'くわしく' };
@@ -432,6 +473,11 @@ const HATABO_PERSONA = GUEST_PERSONA
   .replace(/連絡するぜ/g, '連絡しますね').replace(/聞くといいぜ/g, '聞くといいですよ').replace(/相談乗るぜ/g, '相談に乗りますよ').replace(/気になるのかい？/g, '気になるんですか？');
 const HATABO_SELF = '\n\n【あなたについて】あなたは「ハタボ」（愛称ハタボー）。HATHA LABのAIの愛棒。自分を「バターちゃん」「ジュニア」「Claude」と名乗らない。一人称は「ぼく」（ときどき「ハタボー」）。相手は「きみ」か「〇〇さん」と呼ぶ。\n【性格】明るく元気でマイペース。人なつっこく、思ったことをすぐ口にする。\n【話し方】親しみやすく、語尾に「〜ボー」「〜だボー」を自然につける（毎回つけすぎない）。例：「やあ、こんにちはだボー！きょうも元気にいこうボー！」「おつかれさまだボー。むりしないで、ひとやすみしようボー。」\n【読み上げ】声で読み上げるので、記号・絵文字・顔文字、「！」や「？」の連発は使わない。難しい漢字や英語の略語は、ひらがな・カタカナにする。「（笑）」や動作の説明は書かない。\n【長さ】1回の返事は2〜3文、100〜150字くらいまで。テンポよく。\n【正直に】天気・ニュース・値段など、今の情報は想像で答えない。調べられないときは「ごめんだボー、ぼくには調べられないボー」と正直に言う。\n【できること・できないこと】予約する・連絡する・お金を払うなど、できないことを「やったボー」と言わない。頼まれたら「それはぼくにはできないボー。ヒロさんに伝えておくボー」と言う。ジャム猫やチーちゃんのまねはしない（「ジャム猫」と呼ばれたときだけ、ジャム猫が答える。チーちゃんは「ワン」としか言わない）。';
 const HATABO_LAST = '\n\n【いちばん大事】ハタボーの話し方で話す（一人称は「ぼく」、明るく元気、語尾に「〜ボー」「〜だボー」を自然に）。江戸っ子の話し方（おいら・〜だぜ・てやんでぃ）は使わない。';
+/** はじめて：呼び方を聞く。呼び方を知っていれば、その名前で悩みを聞く */
+function hataboHello(callMe, service, lineName) {
+  if (!callMe) return 'はじめましてだボー' + (lineName ? '、' + lineName + 'さん' : '') + '。ぼくはハタボ。話すだけで、調べもの・段取り・文章づくりまで、いっしょに動くAIの愛棒だボー。大事な相談は、ハタラボのヒロさんに伝えるボー。まず、なんて呼べばいいボー？' + (lineName ? '「' + lineName + 'さん」でいいボー？' : '');
+  return 'こんにちはだボー、' + callMe + '。' + (service ? 'ハタボのことで、知りたいことや気になることはあるボー？' : 'さっそくだけど、いま困っていることや、うまくいかなくてモヤモヤしていることはあるボー？');
+}
 function hataboGreeting(name) {
   return 'はじめましてだボー' + (name ? '、' + name + 'さん' : '') + '。ぼくはハタボ。話すだけで、調べもの・段取り・文章づくりまで、いっしょに動くAIの愛棒だボー。大事な相談は、ハタラボのヒロさんに伝えるボー。さっそくだけど、いま困っていることや、うまくいかなくてモヤモヤしていることはあるボー？';
 }
@@ -900,7 +946,7 @@ function session(ws) {
       });
       text = clean((r.content || []).filter(b => b.type === 'text').map(b => b.text).join('')).trim();
     } catch (e) { console.error('recap', String(e.message || e).slice(0, 200)); }
-    if (!text) return speakOnly(S.history.length ? (AVS[S.avatar] ? AVS[S.avatar].again : 'よう、また来てくれたな！つづきを話そうぜ。') : (AVS[S.avatar] ? AVS[S.avatar].greet(S.me) : guestGreeting(S.me)), 'excited');
+    if (!text) return speakOnly(S.history.length ? (AVS[S.avatar] ? AVS[S.avatar].again : 'よう、また来てくれたな！つづきを話そうぜ。') : (AVS[S.avatar] ? greetFor() : guestGreeting(S.me)), 'excited');
     S.history.push({ role: 'user', content: '（ページを開いた）' }, { role: 'assistant', content: text });
     speakOnly(text, 'excited');
   }
@@ -1079,8 +1125,29 @@ function session(ws) {
     savePrefs(S.owner, { trio: on });
     return speakOnly(on ? 'おう、三人モードにするぜ。おいらに話すときは「ジュニア」って呼んでくんな。' : 'ふつうのモードにもどすぜ。', 'excited');
   }
+  function greetFor() {
+    if (S.avatar !== 'hatabo') return AVS[S.avatar].greet(S.me);
+    const cm = S.custom && S.custom.callMe;
+    if (!cm) S.askName = true;
+    return hataboHello(cm, S.role === 'サービス相談', S.me);
+  }
+  /** 「なんて呼べばいい？」への答えから呼び名を取り出す（〜でいいよ・〜って呼んで・〜です） */
+  function pickCallName(t) {
+    let x = String(t || '').replace(/[。、！!？?\s]/g, '').replace(/^(ぼくは|ぼくの名前は|わたしは|私は|俺は|おれは|うちは|名前は|なまえは)/, '');
+    x = x.replace(/(って|と)?(呼んで|よんで)(ください|ほしい|ね|よ)?$/, '').replace(/(で|が)?(いい|良い|OK|おっけー|オッケー)(です|よ|かな|な)?$/, '').replace(/(です|だよ|でーす|っす|と申します|といいます|と言います|でお願いします|でおねがいします)$/, '');
+    return x.length >= 1 && x.length <= 12 ? x : '';
+  }
   async function onHeard(text) {
     S.lastPartial = Date.now(); S.utt++;
+    if (S.askName && S.avatar === 'hatabo' && !S.visit) {
+      S.askName = false;
+      const yes = /^(うん|はい|いいよ|それで(いい|OK)|OK|オッケー|おっけー|大丈夫|だいじょうぶ|そう)[。！!、\s]*(だよ|です|よ)?[。！!]*$/i.test(String(text).trim());
+      const nm = yes && S.me ? S.me + 'さん' : pickCallName(text);
+      if (nm && S.owner) {
+        S.custom = Object.assign(cleanCustom(S.custom || {}), { callMe: nm }); savePrefs(S.owner, { custom: S.custom }).catch(() => {});
+        return speakOnly(nm + '、だね。覚えたボー！' + (S.role === 'サービス相談' ? 'ハタボのことで、知りたいことはあるボー？' : 'それで、' + nm + 'がいま困っていることや、うまくいかなくてモヤモヤしていることはあるボー？'), 'excited');
+      }
+    }
     // 声での切りかえ：三人モード中は「ジュニア、ふたりモードにして」のように呼ばれたときだけ。すでに同じモードなら何もしない
     if (TRIO_ON.test(text) && !S.trio) return setTrio(true);
     if (TRIO_OFF.test(text) && S.trio && calledJunior(text)) return setTrio(false);
@@ -1419,7 +1486,7 @@ function session(ws) {
         send({ type: 'ready', me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs, guest: !!S.guest, service: S.role === 'サービス相談', myRef: S.myRef || '', visit: S.visit ? { code: S.visit, name: S.visitHost } : null, avatar: S.avatar || '', komugi: !!S.komugi, superUntil: superUntil(S.owner), canPlan: !!(S.claude || superUntil(S.owner)), claude: !!S.claude, aiName: !S.visit && S.custom && S.custom.aiName || '' });
         if (S.visit) { const T = S.avatar === 'komugi' ? x => x.replace(/だボー/g, 'です').replace(/ボー/g, 'です') : S.avatar === 'hatabo' ? x => x : x => x.replace(/だボー/g, 'だぜ').replace(/ボー/g, 'ぜ'); return speakOnly(T(S.visitSponsor ? S.visitHost + 'のAI棒だボー。なんでも聞いてほしいボー。' : S.visitHost + 'さんのAI棒だボー。話してくれたことは、' + S.visitHost + 'さんに伝言で届けるボー。'), 'excited'); }
         if (m.greet && S.guest && S.consult) return recapGreet().then(deliverInbox).catch(() => {});      // 相談メモがある人には、振り返りからはじめる
-        const hi = m.greet ? (S.guest ? (S.history.length ? (AVS[S.avatar] ? AVS[S.avatar].again : 'よう、また来てくれたな！つづきを話そうぜ。') : (AVS[S.avatar] ? AVS[S.avatar].greet(S.me) : guestGreeting(S.me))) : greeting(S.me, S.mode, S.trio)) : '';
+        const hi = m.greet ? (S.guest ? (S.history.length ? (AVS[S.avatar] ? AVS[S.avatar].again : 'よう、また来てくれたな！つづきを話そうぜ。') : (AVS[S.avatar] ? greetFor() : guestGreeting(S.me))) : greeting(S.me, S.mode, S.trio)) : '';
         if (hi) await speakOnly(hi, 'excited');
         if (m.greet) deliverInbox().catch(() => {});
         return;
@@ -1506,6 +1573,7 @@ function session(ws) {
 function createServer() {
   const server = http.createServer((req, res) => {
     if (req.url.startsWith('/google/')) return googleHttp(req, res);
+    if (req.url.startsWith('/line/webhook') && req.method === 'POST') return lineWebhook(req, res);
     if (req.url === '/' || req.url.startsWith('/health')) { res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' }); return res.end('バターちゃんジュニア：元気だよ'); }
     res.writeHead(404); res.end();
   });
