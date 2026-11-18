@@ -32,6 +32,11 @@ const post = (port, events) => new Promise((ok, ng) => {
   assert.ok(/招待した人として覚えた/.test(JSON.stringify(sent.pop().body)), '招待した人を覚える');
   await post(port, [{ type: 'postback', replyToken: 'r5', source: Object.assign({}, src, { userId: 'Uother' }), postback: { data: 'act=inviter' } }]);
   assert.ok(/別の人で登録ずみ/.test(JSON.stringify(sent.pop().body)), '2人目は登録しない');
+  await post(port, [{ type: 'postback', replyToken: 'r7', source: src, postback: { data: 'act=rec_on' } }]);
+  assert.ok(/管理者だけ/.test(JSON.stringify(sent.pop().body)), '記録は管理者だけ');
+  await post(port, [{ type: 'message', replyToken: 'r8', source: src, message: { type: 'text', text: 'ハタボ、記録して' } }]);
+  assert.ok(/act=rec_on/.test(JSON.stringify(sent.pop().body)), '記録のボタンを出す');
+  assert.ok(/招待コードを出す/.test(txt) && /act=rec_on/.test(txt), '入ったときのカードに、コードの貼り方と記録のボタン');
   console.log('OK：グループに入る・退出しない・呼ばれたときだけ・招待した人・グループの紹介コード');
   server.close(); process.exit(0);
 })().catch(e => { console.error('NG', e); process.exit(1); });
