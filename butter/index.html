@@ -2119,7 +2119,7 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
         break;
       case 'emotion': if (m.gen === J.gen) setEmo(m.emotion); break;
       case 'reply_text': if (m.gen === J.gen && J.out) { J.outText += m.text; J.out.textContent = J.outText; } break;
-      case 'searching': if (m.gen === J.gen) { hint.textContent = 'ちょいと調べてるぜ…'; J.thinkAt = Date.now() + 15000; setEmo('think'); } break;
+      case 'searching': if (m.gen === J.gen) { hint.textContent = J.avatar === 'komugi' ? 'ちょっと調べよります…' : 'ちょいと調べてるぜ…'; J.thinkAt = Date.now() + 15000; setEmo('think'); } break;
       case 'waiting': if (m.gen === J.gen) hint.textContent = 'まわりの話がおわるのを待ってから話すよ…'; break;
       case 'audio':
         if (m.gen === J.gen) { J.queue.push(m); jrPump(); }
