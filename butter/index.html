@@ -1517,7 +1517,7 @@ html.kmapp body.liffmode .talkbtn, body.av-komugi.liffmode .talkbtn { background
   const isKm = () => document.documentElement.classList.contains('kmapp') || document.body.classList.contains('av-komugi');
   const kmSay = t => t.replace(/ハタボと話す/g, 'コムギと話す').replace(/ハタボを友だち追加してね/g, 'コムギを友だち追加してね')
     .replace(/自分のハタボと話すには、まず公式LINE「ハタボ」を/g, 'コムギと話すには、まず公式LINE「コムギ」を')
-    .replace(/(?<!ハタ)だボー/g, 'ばい').replace(/(?<!ハタ)するボー/g, 'するけん').replace(/(?<!ハタ)ボー/g, '');
+    .replace(/(?<!ハタ)だボー/g, 'です').replace(/(?<!ハタ)するボー/g, 'しますけん').replace(/(?<!ハタ)ボー/g, '');
   const kmFix = root => { if (!root || !isKm()) return; const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT); let n; while ((n = w.nextNode())) { const v = kmSay(n.nodeValue); if (v !== n.nodeValue) n.nodeValue = v; } };
   ['hbPage', 'friendGate', 'chatV', 'hint'].forEach(id => { const el = document.getElementById(id); if (el) { new MutationObserver(() => kmFix(el)).observe(el, { childList: true, subtree: true, characterData: true }); kmFix(el); } });
   const avName = () => !document.body.classList.contains('av-komugi') && !document.body.classList.contains('av-hatabo') ? '' : window.__aiName || (document.body.classList.contains('av-komugi') ? 'コムギ' : 'ハタボ');
@@ -2612,7 +2612,7 @@ html.kmapp body.liffmode .talkbtn, body.av-komugi.liffmode .talkbtn { background
         J.guest = !!m.guest; J.avatar = m.avatar || ''; document.body.classList.toggle('av-komugi', J.avatar === 'komugi'); if (HATABO_APP && !J.avatar) J.avatar = 'hatabo'; document.body.classList.toggle('av-hatabo', J.avatar === 'hatabo'); { const t = document.querySelector('#butterTag text'), nm = { komugi: 'コムギ', hatabo: 'ハタボ' }[J.avatar]; if (t && nm) t.textContent = nm; } if (J.avatar === 'komugi') { const ib = document.getElementById('introBubble'); if (ib) ib.remove(); } if (J.avatar) { try { document.body.classList.toggle('hb-hatched', localStorage.getItem('hatched_' + J.avatar) === '1'); } catch (e) {} } $('goenBtn').hidden = J.guest; J.myRef = m.myRef || ''; J.me = String(m.me || '').replace(/（テスト）$/, ''); $('shareBtn').hidden = false;
         document.body.classList.toggle('familyok', !J.guest);
         document.body.classList.toggle('guestmode', J.guest);
-        if (J.guest) { $('typedInput').placeholder = J.avatar === 'komugi' ? 'マー君にしてほしいこと、なんでも書いてね' : 'ヒロさんにしてほしいこと、なんでもどうぞ'; }
+        if (J.guest) { $('typedInput').placeholder = J.avatar === 'komugi' ? 'マー君にしてほしいこと、なんでもどうぞ' : 'ヒロさんにしてほしいこと、なんでもどうぞ'; }
         $('trioBtn').hidden = false; J.trio = !!m.trio; store.set('jrTrio', J.trio); store.set('jrOK', true); trioShow();
         J.canPlan = !!m.canPlan;
         if (J.canPlan) jrSend({ type: 'plan', plan: store.get('jrPlan2', 'super') });
@@ -2622,7 +2622,7 @@ html.kmapp body.liffmode .talkbtn, body.av-komugi.liffmode .talkbtn { background
         if (awake.until !== 0) keepAwake(true, 0);
         jrMicStart().catch(() => { hint.textContent = 'マイクが使えません。LINEの設定でマイクを許可してください。'; });
         jrBtn(); if (!J.playing) setState('listening');
-        hint.textContent = J.guest ? (J.avatar === 'komugi' ? 'マー君の相棒、コムギばい。気軽に話しかけてね！' : J.avatar === 'hatabo' ? 'ハタボーだボー。そのまま話しかけてほしいボー。' : 'ヒロさんの相棒、ジュニアだぜ。そのまま話しかけてくんな。') : J.trio ? '三人モード：「ジュニア」と呼んだときだけ答えるよ。' : 'そのまま話しかけてね。話している途中でも、声をかけたら止まって聞くよ。';
+        hint.textContent = J.guest ? (J.avatar === 'komugi' ? 'マー君の相棒の、コムギです……。気軽に、話しかけてもらえたら。' : J.avatar === 'hatabo' ? 'ハタボーだボー。そのまま話しかけてほしいボー。' : 'ヒロさんの相棒、ジュニアだぜ。そのまま話しかけてくんな。') : J.trio ? '三人モード：「ジュニア」と呼んだときだけ答えるよ。' : 'そのまま話しかけてね。話している途中でも、声をかけたら止まって聞くよ。';
         break;
       case 'partial':
         if (pickRes && nameIn(m.text)) break;
@@ -2644,7 +2644,7 @@ html.kmapp body.liffmode .talkbtn, body.av-komugi.liffmode .talkbtn { background
         break;
       case 'emotion': if (m.gen === J.gen) setEmo(m.emotion); break;
       case 'reply_text': if (m.gen === J.gen && J.out) { J.outText += m.text; J.out.textContent = J.outText; } break;
-      case 'searching': if (m.gen === J.gen) { hint.textContent = J.avatar === 'komugi' ? 'ちょっと調べよるけん、待っとって…' : J.avatar === 'hatabo' ? '調べてるボー…' : 'ちょいと調べてるぜ…'; J.thinkAt = Date.now() + 15000; setEmo('think'); } break;
+      case 'searching': if (m.gen === J.gen) { hint.textContent = J.avatar === 'komugi' ? 'ちょっと、調べよります……' : J.avatar === 'hatabo' ? '調べてるボー…' : 'ちょいと調べてるぜ…'; J.thinkAt = Date.now() + 15000; setEmo('think'); } break;
       case 'waiting': if (m.gen === J.gen) hint.textContent = 'まわりの話がおわるのを待ってから話すよ…'; break;
       case 'audio':
         if (m.gen === J.gen) { J.queue.push(m); jrPump(); }
