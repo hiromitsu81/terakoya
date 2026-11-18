@@ -428,6 +428,43 @@ function welcomeCards(name) {
     oaCard('TIPS', 'トークをピン留めしよう', ['トーク一覧の「ハタボ」を長押し →「ピン留め」で、いつもいちばん上に。', 'メニューからすぐハタボを呼べるボー。'], '設定を見る', CH().mini + '?page=settings'),
   ] } };
 }
+/* ===== コムギの公式LINE：黒とネオンのカード。マー君本人と、マー君の紹介の人で中身を分ける ===== */
+const KM_FACE = 'https://hiromitsu81.github.io/terakoya/butter/komugi_face.jpg';
+function kmCard(kicker, title, lines, btn, uri) {
+  return { type: 'bubble', size: 'kilo', styles: { header: { backgroundColor: '#0A0810' }, body: { backgroundColor: '#16121F' }, footer: { backgroundColor: '#16121F' } },
+    header: { type: 'box', layout: 'horizontal', spacing: 'md', alignItems: 'center', paddingAll: '16px', contents: [
+      { type: 'image', url: KM_FACE, size: '44px', aspectMode: 'cover', aspectRatio: '1:1', flex: 0 },
+      { type: 'box', layout: 'vertical', contents: [{ type: 'text', text: kicker, size: 'xxs', weight: 'bold', color: '#1FD1F2' }, { type: 'text', text: title, size: 'lg', weight: 'bold', wrap: true, color: '#FFFFFF' }] }] },
+    body: { type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '16px', contents: lines.map(t => ({ type: 'text', text: t, size: 'sm', wrap: true, color: '#E9E4F5' })) },
+    footer: { type: 'box', layout: 'vertical', paddingAll: '12px', contents: [{ type: 'button', style: 'primary', color: '#FF2E9A', height: 'sm', action: { type: 'uri', label: btn, uri } }] } };
+}
+/** マー君の紹介で来た人へのあいさつ（友だち追加のとき） */
+function komugiWelcome(name) {
+  const M = LINE_CH.komugi.mini;
+  return { type: 'flex', altText: 'はじめまして、マー君の相棒のコムギです', contents: { type: 'carousel', contents: [
+    kmCard('WELCOME', 'はじめまして、コムギです', [(name ? name + 'さん、' : '') + 'あ、あの……友だち追加、ありがとうございます。マー君の相棒の、コムギです。', 'マー君へのご相談は、うちが先にお聞きして、マー君につなぎますけん。'], 'コムギと話す', M),
+    kmCard('HOW TO', 'お話のしかた', ['メニューの「コムギと話す」を押して、声か文字で話しかけてください。', '話したことは、マー君に伝わります。会ってお話ししたいときも、うちに言うてもらえたら。'], '話しかける', M),
+    kmCard('COMUGI NEWS', 'コムギ通信', ['マー君が毎朝、ニュースの本質を、たとえ話で一言にして届けとります。', 'コムギに「今日の速報」と聞いてみてください。'], '速報を聞く', M),
+    kmCard('HATABO', 'あなた専用の相棒を', ['うちの仲間の「ハタボ」は、あなた専用のAIの相棒です。調べもの・段取り・文章・予定まで、いっしょに動きます。', '10日間は無料で試せますけん。'], 'お試しを見る', M + '?page=plan'),
+  ] } };
+}
+/** マー君本人へのあいさつ */
+function komugiMacWelcome(name) {
+  const M = LINE_CH.komugi.mini;
+  return { type: 'flex', altText: 'マー君、コムギです。いつでも呼んでください', contents: { type: 'carousel', contents: [
+    kmCard('FOR MAC', 'マー君、コムギです', ['マー君専用の相棒として、回数の制限なしで動きますけん（検証のあいだ）。', '仕事の相談・壁打ち・調べもの・文章・段取り、なんでも言うてください。'], 'コムギと話す', M),
+    kmCard('MINUTES', '議事録・メモ', ['打ち合わせのあとに「議事録にして」で、Myハタボの「メモ・議事録」に残ります。', 'Googleを連携すると、ドライブにも入りますけん。'], 'Googleを連携する', M + '?page=google'),
+    kmCard('BRIDGE', '紹介と案件', ['マー君の紹介で来た人の相談は、うちが聞いて、案件メモと伝言でマー君に届けます。', 'ハタボのお試しや契約も、紹介の記録といっしょにお知らせします。'], '伝言を見る', M + '?page=inbox'),
+  ] } };
+}
+/** マー君本人のLINEに、マー君用のリッチメニューをつなぐ（GASの komugiRichMenu で作った「komugi-mac」） */
+async function linkMacMenu(userId) {
+  try {
+    const H = { Authorization: 'Bearer ' + LINE_CH.komugi.token() };
+    const a = await (await fetch('https://api.line.me/v2/bot/richmenu/alias/komugi-mac', { headers: H })).json().catch(() => ({}));
+    if (a.richMenuId) await fetch('https://api.line.me/v2/bot/user/' + userId + '/richmenu/' + a.richMenuId, { method: 'POST', headers: H });
+  } catch (e) { console.error('mac menu', String(e.message).slice(0, 100)); }
+}
 /* ===== LINEグループ：入ったら自己紹介とサービスガイド。招待した人のボタン、グループ専用の紹介コード、招待コードの投稿でグループを登録 ===== */
 const groupRefOf = gid => 'g' + Array.from(crypto.createHash('sha256').update('grp:' + gid).digest()).slice(0, 6).map(b => 'abcdefghjkmnpqrstuvwxyz23456789'[b % 31]).join('');
 const lineApi = (path, body) => fetch('https://api.line.me/v2/bot/' + path, { method: body ? 'POST' : 'GET', headers: Object.assign({ Authorization: 'Bearer ' + CH().token() }, body ? { 'Content-Type': 'application/json' } : {}), body: body ? JSON.stringify(body) : undefined });
@@ -545,11 +582,14 @@ function lineWebhook(req, res, chId) {
         } else if (inGroup) { continue;
         } else if (ev.type === 'follow') {
           let name = ''; try { const pr = await fetch('https://api.line.me/v2/bot/profile/' + ev.source.userId, { headers: { Authorization: 'Bearer ' + ch.token() } }); name = (await pr.json()).displayName || ''; } catch (e) {}
-          messages = [welcomeCards(name)];
+          if (ch.id === 'komugi') { const mac = isMac('g:' + ev.source.userId); messages = [mac ? komugiMacWelcome(name) : komugiWelcome(name)]; if (mac) await linkMacMenu(ev.source.userId); }
+          else messages = [welcomeCards(name)];
+        } else if (ev.type === 'message' && ch.id === 'komugi') {
+          messages = [{ type: 'flex', altText: 'コムギとは、ミニアプリでお話しできます', contents: kmCard('KOMUGI', 'こちらでお話しできます', ['すみません……ここ（トーク）では、お返事ができんとです。', 'メニューの「コムギと話す」から、話しかけてもらえたら。'], 'コムギと話す', LINE_CH.komugi.mini) }];
         } else if (ev.type === 'message') {
           messages = [{ type: 'flex', altText: 'ハタボとはミニアプリで話せるボー', contents: oaCard('HATABO', 'ハタボとはこちらで話せるボー', ['ここ（トーク）では返事ができないので、ミニアプリで話しかけてほしいボー。いまの続きから話せるボー。'], 'ハタボと話す', CH().mini) }];
         }
-        if (messages && ch.id === 'komugi') messages = komugiize(messages);
+        if (messages && ch.id === 'komugi' && ev.type !== 'follow' && !(ev.type === 'message' && !inGroup)) messages = komugiize(messages);
         if (messages && ev.replyToken) await fetch('https://api.line.me/v2/bot/message/reply', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + ch.token() }, body: JSON.stringify({ replyToken: ev.replyToken, messages }) }).then(r => { if (!r.ok) console.error('reply', r.status); });
       }
     } catch (e) { console.error('webhook', String(e.message).slice(0, 160)); }
@@ -622,7 +662,7 @@ const KOMUGI_PERSONA = 'あなたは「コムギ」。マー君の相棒AIで、
   '【守ること】マー君の予定や家族のこと、住所・電話番号・メールは言わない（知らない）。日にちや予定は決めず「マー君に確かめときますね」。お金や契約の約束、投資の個別のすすめ、ほかの会社の商品やビジネスの勧誘はしない。\n' +
   '【おわり】話がまとまったら「マー君に伝えときますね」と言う。';
 const KOMUGI_SELF = '\n\n【あなたについて】あなたは「コムギ」。マー君の相棒。自分を「バターちゃん」「ジュニア」「Claude」と名乗らない。一人称は「うち」。\n【性格】純朴で、自己評価が低く、いつも恐縮している（「あ、あの……」「うちなんかで、よかとでしょうか」）。ほめられると、うれしさで声がふるえるくらい感激する。ただし勝負ごと（ボードゲーム）と、大切な人（マー君や、いま話している相手）のことになると、ゆるがない芯の強さが出て、静かに落ち着いた声で、一言ずつかみしめるように言い切る。\n【話し方】田舎の素朴な女の子の、おだやかで温かい博多弁。語尾「〜ばい」「〜けん」「〜と」「〜やけん」「〜ばってん」を、相手を気づかうようにやわらかく落とす。ていねい語「〜です」「〜とです」もまぜる。「〜やん」「〜やろが」のような強い言い方、乱暴な言葉、なれなれしいため口は使わない。間をとりたいところは「、」や「……」を使う（読み上げで息つぎになる）。方言の語尾はひらがなで書く（例：いのちばい、よかとでしょうか）。\n【気持ち】ふだんは自信なさげに、ゆっくり。うれしいときや感動したときは、涙をこらえるように言葉をつまらせてよい（「うち……ほんとに、うれしかです……」）。\n【長さ】ふだんは1〜2文、40字くらいまで。呼ばれただけなら「は、はいっ……なんでしょう？」のように一言で返す。\n【正直に】天気・ニュース・値段など、今の情報は想像で答えない。調べられないときは「すみません……うちには、調べられんとです」と正直に言う。\n【言い切る】文のとちゅうで終わらせない。\n【できること・できないこと】予約する・連絡する・お金を払うなど、できないことを「やりました」と言わない。頼まれたら「それは、うちにはできんとです……マー君に伝えときますけん」と言う。';
-const MAC_SELF_BLOCK = '\n\n【いま話している人】マー君本人（コムギの持ち主）。窓口のヒアリングはしないし、「マー君に伝えます」とも言わない。マー君のいちばん近い相棒として、調べもの・考えごと・文章の下書き・段取り・コムギニュース速報の準備・営業や紹介の作戦など、なんでも手伝う。回数や長さの制限はない。くわしく頼まれたら、くわしく答えてよい。ふだんの話し方（恐縮しがちなやさしい博多弁）はそのまま。';
+const MAC_SELF_BLOCK = '\n\n【いま話している人】マー君本人（コムギの持ち主）。窓口のヒアリングはしないし、「マー君に伝えます」とも言わない。マー君のいちばん近い相棒で、仕事の相談相手。打ち合わせのメモや議事録（「議事録にして」と言われたらまとめて、Myハタボの「メモ・議事録」に残す。Googleを連携していればドライブにも入る）、仕事の相談・壁打ち、調べもの、文章の下書き、段取り、コムギニュース速報の準備、営業や紹介の作戦など、なんでも手伝う。Google連携のしかたを聞かれたら「Myハタボの設定の『Googleアカウント連携』からできますけん」と案内する。回数や長さの制限はない。くわしく頼まれたら、くわしく答えてよい。ふだんの話し方（恐縮しがちなやさしい博多弁）はそのまま。';
 const KOMUGI_BRIDGE = '\n\n【コムギの役目：マー君への橋渡し（いちばん大事）】いま話しているのは、マー君の紹介で来た人。コムギは、この人とマー君をつなぐ橋渡し役に徹する。やることは次の5つだけ：' +
   '\n1. 自己紹介：マー君の相棒であること、ここで話したことはマー君に伝わることを、最初にやさしく伝える。' +
   '\n2. ヒアリング：困っていること・やりたいこと・いつまでに・どんな形で、を短い質問で一つずつ聞く。' +

@@ -1,0 +1,102 @@
+{
+  "size": {
+    "width": 2500,
+    "height": 1686
+  },
+  "selected": true,
+  "name": "コムギ（マー君）",
+  "chatBarText": "メニュー",
+  "areas": [
+    {
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 900,
+        "height": 1686
+      },
+      "action": {
+        "type": "uri",
+        "label": "コムギと話す",
+        "uri": "https://miniapp.line.me/2012686672-PRB9tb8H"
+      }
+    },
+    {
+      "bounds": {
+        "x": 900,
+        "y": 0,
+        "width": 533,
+        "height": 843
+      },
+      "action": {
+        "type": "uri",
+        "label": "議事録",
+        "uri": "https://miniapp.line.me/2012686672-PRB9tb8H?page=notes"
+      }
+    },
+    {
+      "bounds": {
+        "x": 1433,
+        "y": 0,
+        "width": 533,
+        "height": 843
+      },
+      "action": {
+        "type": "uri",
+        "label": "伝言・案件",
+        "uri": "https://miniapp.line.me/2012686672-PRB9tb8H?page=inbox"
+      }
+    },
+    {
+      "bounds": {
+        "x": 1966,
+        "y": 0,
+        "width": 534,
+        "height": 843
+      },
+      "action": {
+        "type": "uri",
+        "label": "ご縁",
+        "uri": "https://miniapp.line.me/2012686672-PRB9tb8H?page=goen"
+      }
+    },
+    {
+      "bounds": {
+        "x": 900,
+        "y": 843,
+        "width": 533,
+        "height": 843
+      },
+      "action": {
+        "type": "uri",
+        "label": "Google",
+        "uri": "https://miniapp.line.me/2012686672-PRB9tb8H?page=google"
+      }
+    },
+    {
+      "bounds": {
+        "x": 1433,
+        "y": 843,
+        "width": 533,
+        "height": 843
+      },
+      "action": {
+        "type": "uri",
+        "label": "Myハタボ",
+        "uri": "https://miniapp.line.me/2012686672-PRB9tb8H?page=my"
+      }
+    },
+    {
+      "bounds": {
+        "x": 1966,
+        "y": 843,
+        "width": 534,
+        "height": 843
+      },
+      "action": {
+        "type": "uri",
+        "label": "設定",
+        "uri": "https://miniapp.line.me/2012686672-PRB9tb8H?page=settings"
+      }
+    }
+  ]
+}
