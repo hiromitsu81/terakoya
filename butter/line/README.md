@@ -15,7 +15,7 @@
 | 右上3 | プラン・支払い | ?page=plan |
 | 右下1 | AISAI・愛祭 | ?page=aisai |
 | 右下2 | 紹介する | ?page=share |
-| 右下3 | 設定 | ?page=settings（キャラ設定・Google連携・公開設定・プラン・チケット・タイムズ） |
+| 右下3 | サービスサイト | https://www.hatha-lab.com/（料金・使い方・よくある質問。設定はMyハタボの中から） |
 
 左が大きい「1＋6」の形は、LINE Official Account Managerのテンプレートにないので、Messaging APIで登録します（下のGAS）。
 

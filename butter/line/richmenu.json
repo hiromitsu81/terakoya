@@ -94,8 +94,8 @@
       },
       "action": {
         "type": "uri",
-        "label": "設定",
-        "uri": "https://miniapp.line.me/2012676035-yCkx6tBu?page=settings"
+        "label": "サービスサイト",
+        "uri": "https://www.hatha-lab.com/?utm_source=line&utm_medium=richmenu"
       }
     }
   ]
