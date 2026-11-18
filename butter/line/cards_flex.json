@@ -1,6 +1,6 @@
 {
   "type": "flex",
-  "altText": "マイハタボ：のこり{{残り}}往復・お試しあと{{残り日数}}日",
+  "altText": "Myハタボ：のこり{{残り}}往復・お試しあと{{残り日数}}日",
   "contents": {
     "type": "carousel",
     "contents": [
@@ -48,7 +48,7 @@
                     },
                     {
                       "type": "text",
-                      "text": "マイハタボ",
+                      "text": "Myハタボ",
                       "wrap": true,
                       "color": "#16233F",
                       "size": "lg",
@@ -136,7 +136,7 @@
               "height": "sm",
               "action": {
                 "type": "uri",
-                "label": "マイハタボを開く",
+                "label": "Myハタボを開く",
                 "uri": "https://miniapp.line.me/2012676035-yCkx6tBu?page=my"
               }
             }
