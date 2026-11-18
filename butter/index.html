@@ -10,11 +10,12 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
 <script>
 /* ハタボ・コムギのミニアプリで開いたときは、つながる前の「福まねき特戦隊・バターちゃん」を一瞬も見せない */
-try { if (/20126760(32|33|35)-|201268667[012]-/.test(decodeURIComponent(location.search))) { document.documentElement.classList.add('hbapp'); document.title = /201268667/.test(decodeURIComponent(location.search)) ? 'コムギ｜ハタボ' : 'ハタボ'; } } catch (e) {}
+try { if (/20126760(32|33|35)-|201268667[012]-/.test(decodeURIComponent(location.search))) { document.documentElement.classList.add('hbapp'); if (/201268667/.test(decodeURIComponent(location.search))) document.documentElement.classList.add('kmapp'); document.title = /201268667/.test(decodeURIComponent(location.search)) ? 'コムギ｜ハタボ' : 'ハタボ'; } } catch (e) {}
 </script>
 <style>
 html.hbapp body:not(.av-hatabo):not(.av-komugi) { visibility: hidden; }
 html.hbapp { background: #F6F8FC; }
+html.kmapp { background: #0A0810; }
 /* 台所のタイル壁の前に、バターちゃんと柴犬の子犬チーちゃん。話しかけないとバターちゃんは溶けていく */
 :root {
   --bg: #fff3e6; --tile: #dbe8ec; --ink: #23303b; --soft: #5b6b78; --card: #ffffff; --line: #c9d8de;
@@ -239,15 +240,15 @@ body.wideshow .sato-banner small { font-size: 12px; }
 @keyframes hbFlap { 50% { transform: rotate(-12deg); } }
 /* コムギ（マー君の窓口）の見た目 */
 #komugiAv { display: none; }
-.av-komugi #butter > :not(#hataboAv):not(.ring) { display: none; }
-.av-komugi #hataboAv { display: inline; }
+.av-komugi #butter > :not(#komugiAv) { display: none; }
+.av-komugi #komugiAv { display: inline; }
 .av-komugi .hbBody { fill: #E9C27D; }
 .av-komugi .hbBelly { fill: #FBEBC8; }
 .av-komugi .hbWing { fill: #D9A95B; }
 .av-komugi .hbEgg { transform-origin: 250px 350px; transform-box: view-box; animation: hbRock 3s ease-in-out infinite; }
 .av-komugi .hbChick { transform-origin: 250px 350px; transform-box: view-box; animation: hbBob 2.4s ease-in-out infinite; }
-.av-komugi .talking #komugiAv { animation: komugiTalk .28s ease-in-out infinite alternate; }
-@keyframes komugiTalk { from { transform: translateY(0) scale(1); } to { transform: translateY(-4px) scale(1.02); } }
+.av-komugi .talking .kmBody { animation: komugiTalk .28s ease-in-out infinite alternate; }
+@keyframes komugiTalk { from { transform: translateY(0) scale(1); } to { transform: translateY(-5px) scale(1.015); } }
 .guestnote { display: none; }
 .guestmode .guestnote { display: block; margin: 0; text-align: center; font-size: 11px; color: var(--soft); line-height: 1.5; }
 /* まるいボタンの左右に小さいボタン（縦に長くならないように） */
@@ -832,6 +833,92 @@ body.av-hatabo:not(.chatview) .cvfab,body.av-komugi:not(.chatview) .cvfab{displa
 .fg-add,.fg-done{display:block;width:100%;border-radius:999px;padding:13px;font:800 16px inherit;margin-top:10px}
 .fg-add{background:#06C755;color:#fff;border:0}.fg-done{background:#fff;color:#16233F;border:1px solid #DCE2EC}
 .fg-note{font-size:12.5px!important;color:#B4232A!important;margin-top:10px!important}
+
+/* ===== コムギの世界：黒地に、ピンク・紫・水色のペンキが飛び散るストリート（ハタボの白と紺とは別） ===== */
+html.kmapp body, body.av-komugi {
+  --bg: #0A0810; --card: #16121F; --ink: #F4F1FA; --soft: #A9A2BC; --line: #332B45; --tile: #221C30;
+  --km-pink: #FF2E9A; --km-cyan: #1FD1F2; --km-violet: #8B5CF6; --km-grad: linear-gradient(100deg, #FF2E9A 0%, #8B5CF6 55%, #1FD1F2 100%);
+  --butter-deep: #FF2E9A; --butter: #FF2E9A; color-scheme: dark; color: var(--ink);
+  background: #0A0810 url(https://hiromitsu81.github.io/terakoya/butter/komugi_bg.jpg) center 38% / cover fixed no-repeat;
+}
+:is(html.kmapp, body.av-komugi) .stage::before { background: radial-gradient(circle, rgba(10,8,16,.75) 0 26%, rgba(10,8,16,0) 52%); -webkit-mask: none; mask: none; }
+:is(html.kmapp, body.av-komugi) .stage::after { background: conic-gradient(from 0deg, #1FD1F2, #8B5CF6, #FF2E9A, rgba(255,46,154,0) 60%, rgba(31,209,242,0) 100%); opacity: .9; animation-duration: 9s; }
+:is(html.kmapp, body.av-komugi) #floor { fill: #FF2E9A; opacity: .12; }
+:is(html.kmapp, body.av-komugi) #nekoWrap, :is(html.kmapp, body.av-komugi) #chiWrap, :is(html.kmapp, body.av-komugi) #hbFlags, :is(html.kmapp, body.av-komugi) #decor, :is(html.kmapp, body.av-komugi) #butterTag { display: none; }
+:is(html.kmapp, body.av-komugi) h1 { color: #fff; font-style: italic; font-weight: 900; letter-spacing: .08em; text-shadow: 3px 3px 0 #FF2E9A, -2px -2px 0 #1FD1F2; }
+:is(html.kmapp, body.av-komugi) h1 .badge { background: var(--km-grad); }
+:is(html.kmapp, body.av-komugi) .sato-banner { background: var(--km-grad); border: 0; box-shadow: 0 10px 26px -14px rgba(255,46,154,.8); }
+:is(html.kmapp, body.av-komugi) .sato-banner small { color: #fff; }
+:is(html.kmapp, body.av-komugi) .bubble, :is(html.kmapp, body.av-komugi) .chip, :is(html.kmapp, body.av-komugi) .icon-btn { background: rgba(22,18,31,.88); color: var(--ink); border-color: #332B45; box-shadow: 0 8px 22px -14px rgba(0,0,0,.9); }
+:is(html.kmapp, body.av-komugi) .bubble.her { border-color: #FF2E9A; backdrop-filter: blur(6px); }
+:is(html.kmapp, body.av-komugi) .bubble.me { background: var(--km-grad); color: #fff; border-color: transparent; }
+:is(html.kmapp, body.av-komugi) .bubble.me .who { color: #FFE3F2; }
+:is(html.kmapp, body.av-komugi) .btn.primary { background: var(--km-grad); border-color: transparent; color: #fff; }
+html.kmapp body.liffmode .modebtn, :is(html.kmapp, body.av-komugi) .modebtn { border: 1.5px solid #FF2E9A; color: #fff; background: rgba(22,18,31,.85); }
+:is(html.kmapp, body.av-komugi) .talkbtn b { color: #fff !important; }
+:is(html.kmapp, body.av-komugi) .mybtn { background: rgba(22,18,31,.85); border-color: #FF2E9A; color: #fff; }
+:is(html.kmapp, body.av-komugi) .mybtn img, :is(html.kmapp, body.av-komugi) .hbp-top img, :is(html.kmapp, body.av-komugi) .chatv .cv-who img, :is(html.kmapp, body.av-komugi) .chatv .cv-mic img, :is(html.kmapp, body.av-komugi) .fg-card img { content: url(https://hiromitsu81.github.io/terakoya/butter/komugi_face.jpg); object-fit: cover; background: #16121F; }
+:is(html.kmapp, body.av-komugi) .rothint { background: rgba(22,18,31,.85); color: var(--ink); border-color: #332B45; }
+.kmSfx text { font: 900 italic 46px 'Noto Sans JP', 'Hiragino Sans', sans-serif; fill: #fff; stroke: #1FD1F2; stroke-width: 7px; paint-order: stroke; stroke-linejoin: round; letter-spacing: -2px; opacity: .92; }
+.kmSfx .k2, .kmSfx .k4 { stroke: #FF2E9A; }
+.kmSfx .k3, .kmSfx .k4 { opacity: 0; font-size: 38px; }
+.kmSfx text { transform-box: fill-box; transform-origin: center; }
+.talking .kmSfx text { animation: kmPop .5s ease-out infinite alternate; }
+.talking .kmSfx .k2 { animation-delay: .12s; } .talking .kmSfx .k3 { animation-delay: .25s; } .talking .kmSfx .k4 { animation-delay: .37s; }
+@keyframes kmPop { from { opacity: .35; transform: scale(.88) rotate(-4deg); } to { opacity: 1; transform: scale(1.08) rotate(3deg); } }
+.kmRing { transform-box: fill-box; transform-origin: center; animation: kmSpin 7s linear infinite; }
+@keyframes kmSpin { to { transform: rotate(360deg); } }
+.kmBody { transform-box: fill-box; transform-origin: 50% 100%; }
+@media (prefers-reduced-motion: reduce) { .kmRing, .talking .kmSfx text, .av-komugi .talking .kmBody { animation: none; } }
+/* マイハタボ・チャット・友だち追加も、黒とネオンに */
+:is(html.kmapp, body.av-komugi) .hbpage { background: #0A0810; color: var(--ink); }
+:is(html.kmapp, body.av-komugi) .hbp-top { background: #120E1A; border-bottom: 2px solid transparent; border-image: var(--km-grad) 1; }
+:is(html.kmapp, body.av-komugi) .hbp-top img { box-shadow: 0 0 0 2px #FF2E9A, 0 0 0 4px #1FD1F2; }
+:is(html.kmapp, body.av-komugi) .hbp-tabs { background: #120E1A; border-bottom-color: #332B45; }
+:is(html.kmapp, body.av-komugi) .hbp-tabs button { color: var(--soft); }
+:is(html.kmapp, body.av-komugi) .hbp-tabs button.on, :is(html.kmapp, body.av-komugi) .hbring i.on, :is(html.kmapp, body.av-komugi) .hbfil button.on, :is(html.kmapp, body.av-komugi) .hbgrb.on { background: var(--km-grad); color: #fff; border-color: transparent; }
+:is(html.kmapp, body.av-komugi) .hbc { background: #16121F; border-color: #332B45; box-shadow: 0 10px 26px -18px rgba(255,46,154,.45); color: var(--ink); }
+:is(html.kmapp, body.av-komugi) .hbc .k { color: #1FD1F2; }
+:is(html.kmapp, body.av-komugi) .hbc p, :is(html.kmapp, body.av-komugi) .hbc .big small, :is(html.kmapp, body.av-komugi) .hbstats span, :is(html.kmapp, body.av-komugi) .hbplan span, :is(html.kmapp, body.av-komugi) .hbnews time, :is(html.kmapp, body.av-komugi) .hbgrb span, :is(html.kmapp, body.av-komugi) .hbgrb.on span { color: var(--soft); }
+:is(html.kmapp, body.av-komugi) .hbbar, :is(html.kmapp, body.av-komugi) .hbring i { background: #221C30; color: var(--soft); }
+:is(html.kmapp, body.av-komugi) .hbbar i { background: var(--km-grad); }
+:is(html.kmapp, body.av-komugi) .hbtag { background: #221C30; color: #fff; }
+:is(html.kmapp, body.av-komugi) .hbbtn { background: var(--km-grad); color: #fff; }
+:is(html.kmapp, body.av-komugi) .hbbtn.w { background: transparent; color: #fff; border-color: #FF2E9A; }
+:is(html.kmapp, body.av-komugi) .hbplan, :is(html.kmapp, body.av-komugi) .hbnews, :is(html.kmapp, body.av-komugi) .hbntext { border-top-color: #2A2338; }
+:is(html.kmapp, body.av-komugi) .hbplan.now { outline-color: #FF2E9A; }
+:is(html.kmapp, body.av-komugi) .hbntext { color: var(--ink); }
+:is(html.kmapp, body.av-komugi) .hbfil button, :is(html.kmapp, body.av-komugi) .hbgrb { background: #16121F; border-color: #332B45; color: var(--ink); }
+:is(html.kmapp, body.av-komugi) input, :is(html.kmapp, body.av-komugi) textarea, :is(html.kmapp, body.av-komugi) select { background: #120E1A; color: var(--ink); border-color: #332B45; }
+:is(html.kmapp, body.av-komugi) .chatv { background: #0A0810; color: var(--ink); }
+:is(html.kmapp, body.av-komugi) .chatv .cv-m.her .cv-who { color: var(--soft); }
+:is(html.kmapp, body.av-komugi) .chatv .cv-m.her .cv-who img { box-shadow: 0 0 0 1.5px #FF2E9A; }
+:is(html.kmapp, body.av-komugi) .chatv .cv-m a { color: #1FD1F2; }
+:is(html.kmapp, body.av-komugi) .chatv .cv-bot { background: #120E1A; border-top-color: #2A2338; }
+:is(html.kmapp, body.av-komugi) .chatv .cv-in { border-color: #332B45; background: #16121F; }
+:is(html.kmapp, body.av-komugi) .chatv .cv-in input { color: var(--ink); }
+:is(html.kmapp, body.av-komugi) .chatv .cv-in button, :is(html.kmapp, body.av-komugi) .chatv .cv-pill[aria-pressed="true"] { background: var(--km-grad); color: #fff; border-color: transparent; }
+:is(html.kmapp, body.av-komugi) .chatv .cv-pill { background: #16121F; color: var(--ink); border-color: #332B45; }
+:is(html.kmapp, body.av-komugi) .chatv .cv-mic { background: var(--km-grad); box-shadow: 0 10px 26px -10px rgba(255,46,154,.75); }
+:is(html.kmapp, body.av-komugi) .chatv .cv-mic::before { background: conic-gradient(from 0deg, rgba(31,209,242,0) 0 40%, #1FD1F2 70%, rgba(31,209,242,0) 71% 100%); }
+:is(html.kmapp, body.av-komugi) .chatv .cv-cap { color: var(--soft); }
+:is(html.kmapp, body.av-komugi) .chatv mark.cvk { background: linear-gradient(transparent 55%, rgba(255,46,154,.55) 55%); }
+:is(html.kmapp, body.av-komugi) .cvfab { background: var(--km-grad); box-shadow: 0 6px 16px -8px rgba(255,46,154,.7); }
+:is(html.kmapp, body.av-komugi) .fgate { background: #0A0810 url(https://hiromitsu81.github.io/terakoya/butter/komugi_bg.jpg) center / cover; }
+:is(html.kmapp, body.av-komugi) .fg-card { background: rgba(22,18,31,.94); border-color: #332B45; color: var(--ink); }
+:is(html.kmapp, body.av-komugi) .fg-card img { box-shadow: 0 0 0 3px #FF2E9A; }
+:is(html.kmapp, body.av-komugi) .fg-card p { color: var(--soft); }
+:is(html.kmapp, body.av-komugi) .fg-done { background: transparent; color: #fff; border-color: #FF2E9A; }
+:is(html.kmapp, body.av-komugi) .chatv .cv-top { border-bottom: 2px solid transparent; border-image: var(--km-grad) 1; background: #120E1A; }
+:is(html.kmapp, body.av-komugi) .chatv .cv-top img { content: url(https://hiromitsu81.github.io/terakoya/butter/komugi_face.jpg); object-fit: cover; background: #16121F; box-shadow: 0 0 0 2px #FF2E9A; padding: 0; }
+:is(html.kmapp, body.av-komugi) .chatv .cv-top b { font-style: italic; font-weight: 900; text-shadow: 2px 2px 0 #FF2E9A; }
+:is(html.kmapp, body.av-komugi) .chatv .cv-top button { background: transparent; color: #fff; border-color: #FF2E9A; }
+:is(html.kmapp, body.av-komugi) .chatv .cv-m.me { background: var(--km-grad); color: #fff; }
+:is(html.kmapp, body.av-komugi) .chatv .cv-empty { color: var(--soft); }
+:is(html.kmapp, body.av-komugi) .stage::after { display: none; }
+html.kmapp body.liffmode .talkbtn, body.av-komugi.liffmode .talkbtn { background: var(--km-grad) !important; border: 0; box-shadow: 0 0 0 4px #0A0810, 0 0 0 6px #FF2E9A, 0 12px 30px -10px rgba(255,46,154,.8); }
+:is(html.kmapp, body.av-komugi) .talkbtn .temb { content: url(https://hiromitsu81.github.io/terakoya/butter/komugi_face.jpg); object-fit: cover; border-radius: 50%; inset: 9%; width: 82%; height: 82%; }
+:is(html.kmapp, body.av-komugi) .talkbtn b { text-shadow: 0 1px 6px #0A0810, 0 0 2px #0A0810; }
 </style>
 </head>
 <body>
@@ -851,6 +938,7 @@ body.av-hatabo:not(.chatview) .cvfab,body.av-komugi:not(.chatview) .cvfab{displa
     </button>
     <svg id="scene" viewBox="-160 0 880 420" role="img" aria-label="まんなかにバターちゃん、左に招き猫のジャム猫、右にチーズ色の柴犬チーちゃん">
       <defs>
+        <linearGradient id="kmRingGrad" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#1FD1F2"/><stop offset=".5" stop-color="#8B5CF6"/><stop offset="1" stop-color="#FF2E9A"/></linearGradient>
         <linearGradient id="hRingGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2F6FD6"/><stop offset=".7" stop-color="#E0607A"/><stop offset="1" stop-color="#F2B84B"/></linearGradient>
         <linearGradient id="goldGrad" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" stop-color="#fff0a0"/><stop offset=".5" stop-color="#f7c843"/><stop offset="1" stop-color="#e0a412"/>
@@ -893,7 +981,12 @@ body.av-hatabo:not(.chatview) .cvfab,body.av-komugi:not(.chatview) .cvfab{displa
           </g>
           </g>
         </g>
-        <g id="komugiAv"><clipPath id="komugiClip"><circle cx="250" cy="225" r="140"/></clipPath><circle cx="250" cy="225" r="146" fill="#fff"/><image href="komugi.jpg" x="110" y="85" width="280" height="280" clip-path="url(#komugiClip)" preserveAspectRatio="xMidYMid slice"/></g>
+        <g id="komugiAv">
+          <circle class="kmRing" cx="250" cy="200" r="168" fill="none" stroke="url(#kmRingGrad)" stroke-width="7" stroke-linecap="round" stroke-dasharray="700 300"/>
+          <g class="kmSfx" aria-hidden="true"><text class="k1" x="70" y="140">ダン</text><text class="k2" x="338" y="105">ダン</text><text class="k3" x="62" y="290">ゴゴ</text><text class="k4" x="350" y="275">ドン</text></g>
+          <ellipse cx="250" cy="360" rx="110" ry="12" fill="#FF2E9A" opacity=".35"/>
+          <g class="kmBody"><image href="https://hiromitsu81.github.io/terakoya/butter/komugi_char.png" x="138" y="10" width="224" height="350" preserveAspectRatio="xMidYMax meet"/></g>
+        </g>
         <circle class="ring" cx="250" cy="225" r="150" fill="none" stroke="var(--mic-live)" stroke-width="6"/>
         <ellipse cx="250" cy="352" rx="150" ry="22" fill="var(--line)"/>
         <ellipse id="plate" cx="250" cy="334" rx="165" ry="30" fill="var(--card)" stroke="var(--line)" stroke-width="4"/>
@@ -1420,6 +1513,13 @@ body.av-hatabo:not(.chatview) .cvfab,body.av-komugi:not(.chatview) .cvfab{displa
   const OA_ID = KOMUGI_APP ? '@858uraou' : '@024curid';
   const MINI_URL = KOMUGI_APP ? 'https://miniapp.line.me/2012686672-PRB9tb8H' : 'https://miniapp.line.me/2012676035-yCkx6tBu';
   // ハタボ・コムギのときは、画面の文字からバターちゃん・特戦隊の言葉を消す
+  // コムギの世界：マイハタボ・友だち追加・チャットの「ハタボ口調（〜ボー）」をコムギの博多弁に（「ハタボー」などの名前はそのまま）
+  const isKm = () => document.documentElement.classList.contains('kmapp') || document.body.classList.contains('av-komugi');
+  const kmSay = t => t.replace(/ハタボと話す/g, 'コムギと話す').replace(/ハタボを友だち追加してね/g, 'コムギを友だち追加してね')
+    .replace(/自分のハタボと話すには、まず公式LINE「ハタボ」を/g, 'コムギと話すには、まず公式LINE「コムギ」を')
+    .replace(/(?<!ハタ)だボー/g, 'ばい').replace(/(?<!ハタ)するボー/g, 'するけん').replace(/(?<!ハタ)ボー/g, '');
+  const kmFix = root => { if (!root || !isKm()) return; const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT); let n; while ((n = w.nextNode())) { const v = kmSay(n.nodeValue); if (v !== n.nodeValue) n.nodeValue = v; } };
+  ['hbPage', 'friendGate', 'chatV', 'hint'].forEach(id => { const el = document.getElementById(id); if (el) { new MutationObserver(() => kmFix(el)).observe(el, { childList: true, subtree: true, characterData: true }); kmFix(el); } });
   const avName = () => !document.body.classList.contains('av-komugi') && !document.body.classList.contains('av-hatabo') ? '' : window.__aiName || (document.body.classList.contains('av-komugi') ? 'コムギ' : 'ハタボ');
   function avText() {
     const nm = avName(); if (!nm) return;
@@ -2512,7 +2612,7 @@ body.av-hatabo:not(.chatview) .cvfab,body.av-komugi:not(.chatview) .cvfab{displa
         J.guest = !!m.guest; J.avatar = m.avatar || ''; document.body.classList.toggle('av-komugi', J.avatar === 'komugi'); if (HATABO_APP && !J.avatar) J.avatar = 'hatabo'; document.body.classList.toggle('av-hatabo', J.avatar === 'hatabo'); { const t = document.querySelector('#butterTag text'), nm = { komugi: 'コムギ', hatabo: 'ハタボ' }[J.avatar]; if (t && nm) t.textContent = nm; } if (J.avatar === 'komugi') { const ib = document.getElementById('introBubble'); if (ib) ib.remove(); } if (J.avatar) { try { document.body.classList.toggle('hb-hatched', localStorage.getItem('hatched_' + J.avatar) === '1'); } catch (e) {} } $('goenBtn').hidden = J.guest; J.myRef = m.myRef || ''; J.me = String(m.me || '').replace(/（テスト）$/, ''); $('shareBtn').hidden = false;
         document.body.classList.toggle('familyok', !J.guest);
         document.body.classList.toggle('guestmode', J.guest);
-        if (J.guest) { $('typedInput').placeholder = J.avatar === 'komugi' ? 'マー君にしてほしいこと、なんでもどうぞ' : 'ヒロさんにしてほしいこと、なんでもどうぞ'; }
+        if (J.guest) { $('typedInput').placeholder = J.avatar === 'komugi' ? 'マー君にしてほしいこと、なんでも書いてね' : 'ヒロさんにしてほしいこと、なんでもどうぞ'; }
         $('trioBtn').hidden = false; J.trio = !!m.trio; store.set('jrTrio', J.trio); store.set('jrOK', true); trioShow();
         J.canPlan = !!m.canPlan;
         if (J.canPlan) jrSend({ type: 'plan', plan: store.get('jrPlan2', 'super') });
@@ -2522,7 +2622,7 @@ body.av-hatabo:not(.chatview) .cvfab,body.av-komugi:not(.chatview) .cvfab{displa
         if (awake.until !== 0) keepAwake(true, 0);
         jrMicStart().catch(() => { hint.textContent = 'マイクが使えません。LINEの設定でマイクを許可してください。'; });
         jrBtn(); if (!J.playing) setState('listening');
-        hint.textContent = J.guest ? (J.avatar === 'komugi' ? 'マー君の相棒の、コムギです。お気軽に話しかけてください。' : J.avatar === 'hatabo' ? 'ハタボーだボー。そのまま話しかけてほしいボー。' : 'ヒロさんの相棒、ジュニアだぜ。そのまま話しかけてくんな。') : J.trio ? '三人モード：「ジュニア」と呼んだときだけ答えるよ。' : 'そのまま話しかけてね。話している途中でも、声をかけたら止まって聞くよ。';
+        hint.textContent = J.guest ? (J.avatar === 'komugi' ? 'マー君の相棒、コムギばい。気軽に話しかけてね！' : J.avatar === 'hatabo' ? 'ハタボーだボー。そのまま話しかけてほしいボー。' : 'ヒロさんの相棒、ジュニアだぜ。そのまま話しかけてくんな。') : J.trio ? '三人モード：「ジュニア」と呼んだときだけ答えるよ。' : 'そのまま話しかけてね。話している途中でも、声をかけたら止まって聞くよ。';
         break;
       case 'partial':
         if (pickRes && nameIn(m.text)) break;
@@ -2536,7 +2636,7 @@ body.av-hatabo:not(.chatview) .cvfab,body.av-komugi:not(.chatview) .cvfab{displa
         if ((J.playing || Date.now() - (J.lastPlayEnd || 0) < 700) && !JR_CALL(m.text)) break;
         jrHeard(m.text); break;
       case 'reply_start':
-        if ((document.body.classList.contains('av-hatabo') || document.body.classList.contains('av-komugi')) && !document.body.classList.contains('hb-hatched')) hbHatch();
+        if (document.body.classList.contains('av-komugi')) document.body.classList.add('hb-hatched'); else if (document.body.classList.contains('av-hatabo') && !document.body.classList.contains('hb-hatched')) hbHatch();
         J.gen = m.gen; J.queue = []; J.endEmo = null; jrStopAudio();
         J.out = m.nobubble ? null : addBubble(m.as || 'ジュニア', '…', 'her'); J.outText = ''; J.thinkAt = Date.now();
         if (m.emotion) setEmo(m.emotion);
@@ -2544,7 +2644,7 @@ body.av-hatabo:not(.chatview) .cvfab,body.av-komugi:not(.chatview) .cvfab{displa
         break;
       case 'emotion': if (m.gen === J.gen) setEmo(m.emotion); break;
       case 'reply_text': if (m.gen === J.gen && J.out) { J.outText += m.text; J.out.textContent = J.outText; } break;
-      case 'searching': if (m.gen === J.gen) { hint.textContent = J.avatar === 'komugi' ? 'ちょっと調べよります…' : J.avatar === 'hatabo' ? '調べてるボー…' : 'ちょいと調べてるぜ…'; J.thinkAt = Date.now() + 15000; setEmo('think'); } break;
+      case 'searching': if (m.gen === J.gen) { hint.textContent = J.avatar === 'komugi' ? 'ちょっと調べよるけん、待っとって…' : J.avatar === 'hatabo' ? '調べてるボー…' : 'ちょいと調べてるぜ…'; J.thinkAt = Date.now() + 15000; setEmo('think'); } break;
       case 'waiting': if (m.gen === J.gen) hint.textContent = 'まわりの話がおわるのを待ってから話すよ…'; break;
       case 'audio':
         if (m.gen === J.gen) { J.queue.push(m); jrPump(); }
@@ -3171,6 +3271,7 @@ body.av-hatabo:not(.chatview) .cvfab,body.av-komugi:not(.chatview) .cvfab{displa
   function avSvg(av, size, sponsor) {
     if (sponsor) return `<svg width="${size}" height="${size}" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#16233F"/><circle cx="50" cy="50" r="36" fill="#fff"/><image href="award_mark.svg" x="20" y="20" width="60" height="60"/></svg>`;
     if (av === 'jam' || av === 'chi') { const c = av === 'jam' ? ['#5B3A7A', '#7D5AA0'] : ['#F5B941', '#FFE19A']; return `<svg width="${size}" height="${size}" viewBox="0 0 100 100"><path d="M24 34 L30 12 L44 28 Z M76 34 L70 12 L56 28 Z" fill="${c[0]}"/><circle cx="50" cy="55" r="34" fill="${c[0]}"/><ellipse cx="50" cy="66" rx="18" ry="13" fill="${c[1]}"/><circle cx="38" cy="50" r="4" fill="#1C2233"/><circle cx="62" cy="50" r="4" fill="#1C2233"/><path d="M45 62 Q50 66 55 62" stroke="#1C2233" stroke-width="2.5" fill="none"/></svg>`; }
+    if (av === 'komugi') return `<svg width="${size}" height="${size}" viewBox="0 0 100 100"><defs><clipPath id="kmc${size}"><circle cx="50" cy="50" r="44"/></clipPath></defs><circle cx="50" cy="50" r="48" fill="none" stroke="url(#kmRingGrad)" stroke-width="4"/><image href="https://hiromitsu81.github.io/terakoya/butter/komugi_face.jpg" x="6" y="6" width="88" height="88" clip-path="url(#kmc${size})"/></svg>`;
     const col = av === 'komugi' ? ['#E9C27D', '#FBEBC8'] : av === 'gold' ? ['#D9AE45', '#FFF0B8'] : ['#FFE27A', '#FFF3C4'];
     return `<svg width="${size}" height="${size}" viewBox="0 0 100 100"><path d="M44 16 Q46 6 52 10 Q54 4 60 9" fill="none" stroke="#F2B84B" stroke-width="3" stroke-linecap="round"/><circle cx="50" cy="48" r="34" fill="${col[0]}"/><ellipse cx="50" cy="60" rx="21" ry="17" fill="${col[1]}"/><circle cx="39" cy="42" r="4" fill="#1C2233"/><circle cx="61" cy="42" r="4" fill="#1C2233"/><path d="M45 50 L55 50 L50 56 Z" fill="#F2994A"/><circle cx="50" cy="64" r="7" fill="#fff"/><image href="award_mark.svg" x="44.5" y="58.5" width="11" height="11"/><path d="M16 74 L24 68 L31 76 L39 68 L46 76 L54 68 L61 76 L69 68 L76 76 L84 74 Q84 94 50 95 Q16 94 16 74 Z" fill="#FFFDF7" stroke="#E6E1D3" stroke-width="1.5"/></svg>`;
   }
@@ -3504,6 +3605,7 @@ body.av-hatabo:not(.chatview) .cvfab,body.av-komugi:not(.chatview) .cvfab{displa
     scene.setAttribute('viewBox', av ? (liffTall ? '-10 10 520 633' : on ? '-40 10 580 660' : wide ? '-175 -70 900 482' : '-160 -100 880 520')
       : liffTall ? '-10 108 520 535' : on ? '-40 110 580 560' : wide ? '-175 112 900 300' : '-160 0 880 420');
     // 下の段は少し大きく（1.2倍）。足もとを (95,600) と (405,600) に
+    $('komugiAv').setAttribute('transform', on ? 'translate(250 ' + (liffTall ? 615 : 640) + ') scale(1.45) translate(-250 -360)' : '');   // コムギは横に仲間がいないので、縦では大きく
     $('nekoWrap').setAttribute('transform', on ? 'translate(95 600) scale(1.2) translate(65 -345)' : '');
     $('chiWrap').setAttribute('transform', on ? 'translate(405 600) scale(1.2) translate(-565 -345)' : '');
   }
