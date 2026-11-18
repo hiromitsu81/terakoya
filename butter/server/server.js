@@ -145,6 +145,36 @@ async function myPage(S) {
     kids: (mine && mine.kids) || 0, myRef: S.myRef || '', from: S.refFrom ? await refLabel(S.refFrom) : '',
     notes: (await loadNotes(S.owner).catch(() => [])).slice(0, 50), summary: String(S.memo || '').slice(0, 3000) };
 }
+/** ご縁の木：自分が紹介した人、その人が紹介した人…（3代まで・合わせて150人まで）。名前は呼び名だけ */
+async function refKids(code) {
+  if (!code) return [];
+  try { if (deps.db) { const q = await deps.db.collection('refs').where('parent', '==', code).limit(60).get(); return q.docs.map(d => Object.assign({ code: d.id }, d.data())); } } catch (e) { console.error('ref kids', String(e.message).slice(0, 120)); }
+  return [...memRefs.entries()].filter(([, v]) => v.parent === code).slice(0, 60).map(([k, v]) => Object.assign({ code: k }, v));
+}
+function refStatus(r) {
+  const today = new Date(Date.now() + 9 * 3600000), day = n => new Date(today.getTime() - n * 86400000).toISOString().slice(0, 10);
+  const tot = r.tot || 0, lv = Math.floor(Math.sqrt(tot / 4)) + 1, last = r.last || '';
+  const st = !last ? 'new' : last >= day(1) && (r.streak || 0) >= 3 ? 'daily' : last >= day(7) ? 'active' : last >= day(30) ? 'quiet' : 'sleep';
+  return { lv, st, streak: last >= day(1) ? r.streak || 0 : 0, kids: r.kids || 0, since: r.at || 0 };
+}
+async function goenTree(S) {
+  if (!S.myRef) return { type: 'goen', nodes: [], links: [] };
+  const me = await getRef(S.myRef).catch(() => null) || {};
+  const nodes = [Object.assign({ id: S.myRef, name: S.me || 'わたし', depth: 0, me: true }, refStatus(me))], links = [];
+  let wave = [S.myRef];
+  for (let d = 1; d <= 3 && wave.length && nodes.length < 150; d++) {
+    const next = [];
+    for (const c of wave) {
+      for (const k of await refKids(c)) {
+        if (nodes.length >= 150 || nodes.some(n => n.id === k.code)) continue;
+        nodes.push(Object.assign({ id: k.code, name: String(k.name || 'ゲスト').slice(0, 12), depth: d }, refStatus(k)));
+        links.push({ from: c, to: k.code }); next.push(k.code);
+      }
+    }
+    wave = next;
+  }
+  return { type: 'goen', nodes, links, up: S.refFrom ? await refLabel(S.refFrom) : '' };
+}
 /** 紹介元の名前（「マー君さん」）。手で作ったコード（mac など）はそのまま */
 async function refLabel(code) {
   if (!code) return '';
@@ -1054,6 +1084,7 @@ function session(ws) {
       if (m.type === 'goen') return onGoen(m);
       if (m.type === 'ping') return send({ type: 'pong' });
       if (m.type === 'mypage') return send(await myPage(S));
+      if (m.type === 'goen_tree') return send(await goenTree(S));
       if (m.type === 'note_del') { const items = (await loadNotes(S.owner)).filter(x => x.id !== String(m.id || '')); await saveNotes(S.owner, items); return send(await myPage(S)); }
     } catch (e) { send({ type: 'notice', why: 'server', detail: String(e.message).slice(0, 80) }); }
   });

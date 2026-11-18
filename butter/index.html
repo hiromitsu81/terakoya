@@ -704,6 +704,13 @@ body.tall.av-hatabo .rothint, body.tall.av-komugi .rothint { display: inline-fle
 .rothint svg { width: 18px; height: 18px; stroke: #fff; fill: none; stroke-width: 2; animation: rotHint 2.4s ease-in-out infinite; }
 @keyframes rotHint { 0%, 30% { transform: rotate(0); } 55%, 100% { transform: rotate(-90deg); } }
 .rothint.gone { display: none !important; }
+
+.hbgoen { padding: 8px; }
+.hbgoen svg { width: 100%; height: auto; max-height: 62dvh; display: block; touch-action: manipulation; }
+.hblegend { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; font-size: 11px; color: #5E6B85; padding: 4px 0 8px; }
+.hblegend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: -1px; }
+.hbginfo { margin: 0 8px 8px; padding: 10px 12px; border-radius: 12px; background: #F3F5FA; font-size: 13px; line-height: 1.7; color: #16233F; }
+.hbginfo .hbtag { margin-left: 6px; }
 </style>
 </head>
 <body>
@@ -1129,7 +1136,7 @@ body.tall.av-hatabo .rothint, body.tall.av-komugi .rothint { display: inline-fle
 <div class="hbpage" id="hbPage" hidden>
   <div class="hbp-top"><img src="award_mark.svg" alt=""><b id="hbpTitle">マイハタボ</b><button type="button" id="hbpClose">ハタボと話す</button></div>
   <nav class="hbp-tabs" id="hbpTabs" aria-label="マイハタボのメニュー">
-    <button type="button" data-p="my">マイハタボ</button><button type="button" data-p="notes">メモ・議事録</button><button type="button" data-p="grow">育てたハタボ</button><button type="button" data-p="plan">プラン・支払い</button><button type="button" data-p="aisai">AISAI・愛祭</button><button type="button" data-p="times">ハタボタイムズ</button><button type="button" data-p="share">紹介する</button>
+    <button type="button" data-p="my">マイハタボ</button><button type="button" data-p="notes">メモ・議事録</button><button type="button" data-p="grow">育てたハタボ</button><button type="button" data-p="goen">ご縁</button><button type="button" data-p="plan">プラン・支払い</button><button type="button" data-p="aisai">AISAI・愛祭</button><button type="button" data-p="times">ハタボタイムズ</button><button type="button" data-p="share">紹介する</button>
   </nav>
   <div class="hbp-body" id="hbpBody"></div>
 </div>
@@ -2328,6 +2335,7 @@ body.tall.av-hatabo .rothint, body.tall.av-komugi .rothint { display: inline-fle
   const diag = $('diag');
   function jrOn(m) {
     switch (m.type) {
+      case 'goen': HBP.goen = m; if (!$('hbPage').hidden && HBP.page === 'goen') hbpRender(); break;
       case 'mypage': HBP.data = m; if (!$('hbPage').hidden) hbpRender(); break;
       case 'note_saved': toast({ minutes: '議事録を残したよ', memo: 'メモしたよ', doc: '書いた文章を残したよ' }[m.kind] || '残したよ'); if (!$('hbPage').hidden) jrSend({ type: 'mypage' }); break;
       case 'ready':
@@ -2698,10 +2706,10 @@ body.tall.av-hatabo .rothint, body.tall.av-komugi .rothint { display: inline-fle
   ];
   function hbpRender() {
     const p = HBP.page, d = HBP.data, nm = avName() || 'ハタボ';
-    $('hbpTitle').textContent = { my: 'マイハタボ', notes: 'メモ・議事録', grow: '育てた' + nm, plan: 'プラン・支払い', aisai: 'AISAI・愛祭', times: 'ハタボタイムズ', share: '紹介する' }[p] || 'マイハタボ';
+    $('hbpTitle').textContent = { my: 'マイハタボ', notes: 'メモ・議事録', grow: '育てた' + nm, goen: 'ご縁のひろがり', plan: 'プラン・支払い', aisai: 'AISAI・愛祭', times: 'ハタボタイムズ', share: '紹介する' }[p] || 'マイハタボ';
     document.querySelectorAll('#hbpTabs button').forEach(b => b.classList.toggle('on', b.dataset.p === p));
     const body = $('hbpBody');
-    if (!d && p !== 'times' && p !== 'share' && p !== 'aisai') { body.innerHTML = '<div class="hbc"><p>よみこみ中だボー…</p></div>'; return; }
+    if (!d && p !== 'times' && p !== 'share' && p !== 'aisai' && p !== 'goen') { body.innerHTML = '<div class="hbc"><p>よみこみ中だボー…</p></div>'; return; }
     const n = x => Number(x || 0).toLocaleString('ja-JP');
     if (p === 'my') {
       const left = Math.max(0, d.limit - d.today), pct = Math.min(100, Math.round(d.today / Math.max(1, d.limit) * 100));
@@ -2728,6 +2736,20 @@ body.tall.av-hatabo .rothint, body.tall.av-komugi .rothint { display: inline-fle
       body.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { HBP.filter = b.dataset.f; hbpRender(); });
       body.querySelectorAll('[data-copy]').forEach(b => b.onclick = async () => { const n = list.find(x => x.id === b.dataset.copy); try { await navigator.clipboard.writeText(n.title + '\n\n' + n.text); toast('コピーしたよ'); } catch (e) { toast('コピーできなかった'); } });
       body.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { if (confirmDel(b)) jrSend({ type: 'note_del', id: b.dataset.del }); });
+    } else if (p === 'goen') {
+      const g = HBP.goen;
+      if (!g) { body.innerHTML = '<div class="hbc"><p>ご縁をよみこみ中だボー…</p></div>'; if (J.ready) jrSend({ type: 'goen_tree' }); return; }
+      const ST = { daily: ['毎日', '#C9A24A'], active: ['元気', '#8DC21F'], new: ['はじめた', '#2F6FD6'], quiet: ['ひと休み', '#A9B1C1'], sleep: ['おやすみ', '#D5DAE3'] };
+      const kids = g.nodes.filter(x => !x.me), d1 = kids.filter(x => x.depth === 1).length, act = kids.filter(x => x.st === 'daily' || x.st === 'active').length;
+      body.innerHTML = `
+        <div class="hbc"><div class="k">GOEN</div><h3>ご縁のひろがり</h3>
+          <div class="hbstats"><div><b>${kids.length}</b><span>ひろがった人</span></div><div><b>${d1}</b><span>直接の紹介</span></div><div><b>${act}</b><span>いま元気</span></div></div>
+          ${g.up ? '<p>あなたは ' + esc(g.up) + ' のご縁から来ました。</p>' : ''}</div>
+        <div class="hbc hbgoen"><svg id="goenSvg" role="img" aria-label="ご縁のひろがり"></svg>
+          <div class="hblegend">${Object.entries(ST).map(([k, [l, c]]) => `<span><i style="background:${c}"></i>${l}</span>`).join('')}</div>
+          <div id="goenInfo" class="hbginfo">まるをタップすると、その人のようすが出ます。</div></div>
+        ${kids.length ? '' : '<div class="hbc"><p>まだご縁はありません。「紹介する」からハタボのカードを送ると、ここにご縁がひろがっていきます。</p><button type="button" class="hbbtn" data-go="share">紹介する</button></div>'}`;
+      goenDraw(g, ST);
     } else if (p === 'grow') {
       const marks = [3, 7, 30, 100, 365];
       body.innerHTML = `
@@ -2735,6 +2757,7 @@ body.tall.av-hatabo .rothint, body.tall.av-komugi .rothint { display: inline-fle
           <div class="big">Lv.${d.lv}<small>いっしょに ${n(d.days)} 日目</small></div>
           <div class="hbbar"><i style="width:${d.lvPct}%"></i></div><p>次のLvまで ${d.lvPct}%。話すほど、手伝うほど育つボー。</p>
           <div class="hbstats"><div><b class="hbmuted">—</b><span>フォロワー</span></div><div><b class="hbmuted">—</b><span>フォロー中</span></div><div><b>${n(d.kids)}</b><span>ご縁（紹介）</span></div></div>
+          <button type="button" class="hbbtn w" data-go="goen">ご縁のひろがりを見る</button>
           <p class="hbmuted" style="font-size:11.5px">フォロー・フォロワーは、オーナーどうしのつながりができたら出ます。</p></div>
         <div class="hbc"><div class="k">STREAK</div><h3>毎日の報連相</h3><div class="big">${n(d.streak)}<small>日連続</small></div>
           <div class="hbring">${marks.map(x => `<i class="${d.streak >= x ? 'on' : ''}">${x === 365 ? '1年' : x + '日'}</i>`).join('')}</div><p>つづけるほど、エンブレムの輪が育ちます。</p></div>
@@ -2785,17 +2808,60 @@ body.tall.av-hatabo .rothint, body.tall.av-komugi .rothint { display: inline-fle
   async function hbpFriend() { try { if (window.liff && liff.getFriendship) { const r = await liff.getFriendship(); HBS.friend = !!(r && r.friendFlag); if (!$('hbPage').hidden) hbpRender(); } } catch (e) {} }
   // 消すのは2回押し（1回目で「もう一度で消す」）
   function confirmDel(b) { if (b.dataset.sure) return true; b.dataset.sure = '1'; b.textContent = 'もう一度で消す'; b.classList.remove('hbmuted'); setTimeout(() => { delete b.dataset.sure; b.textContent = '消す'; b.classList.add('hbmuted'); }, 3000); return false; }
+  // ご縁の木を、アメーバのようにやわらかくつながった形で描く（まん中が自分、外へ1代・2代・3代）
+  function goenDraw(g, ST) {
+    const svg = document.getElementById('goenSvg'); if (!svg) return;
+    const NS = 'http://www.w3.org/2000/svg', by = {}, kids = {};
+    g.nodes.forEach(n => { by[n.id] = n; kids[n.id] = []; });
+    g.links.forEach(l => { if (kids[l.from]) kids[l.from].push(l.to); });
+    const root = g.nodes.find(n => n.me) || g.nodes[0]; if (!root) return;
+    const leaves = id => kids[id].length ? kids[id].reduce((a, k) => a + leaves(k), 0) : 1;
+    const R = [0, 118, 205, 280], HUE = ['#2F6FD6', '#E0607A', '#8DC21F', '#F2B84B', '#7B61D1', '#2BB5A8'];
+    const place = (id, a0, a1, depth, hue) => {
+      const n = by[id], a = (a0 + a1) / 2, r = R[Math.min(depth, 3)] + (depth ? (id.charCodeAt(0) % 5) * 6 - 12 : 0);
+      n.x = Math.cos(a) * r; n.y = Math.sin(a) * r; n.hue = hue;
+      let s = a0; const tot = kids[id].reduce((t, k) => t + leaves(k), 0) || 1;
+      kids[id].forEach((k, i) => { const w = (a1 - a0) * leaves(k) / tot; place(k, s, s + w, depth + 1, depth === 0 ? HUE[i % HUE.length] : hue); s += w; });
+    };
+    place(root.id, -Math.PI / 2, Math.PI * 1.5, 0, '#16233F');
+    const xs = g.nodes.map(n => n.x), ys = g.nodes.map(n => n.y), pad = 60;
+    const minX = Math.min(...xs) - pad, maxX = Math.max(...xs) + pad, minY = Math.min(...ys) - pad, maxY = Math.max(...ys) + pad;
+    const w = Math.max(320, maxX - minX), h = Math.max(300, maxY - minY);
+    svg.setAttribute('viewBox', `${(minX + maxX) / 2 - w / 2} ${(minY + maxY) / 2 - h / 2} ${w} ${h}`);
+    const rad = n => n.me ? 30 : Math.min(24, 13 + n.lv * 1.3);
+    let html = `<defs><filter id="goo" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="9"/><feColorMatrix values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -9"/></filter></defs>`;
+    // アメーバ（枝ごとに色のついた、やわらかいかたまり）
+    html += '<g filter="url(#goo)" opacity=".22">' + g.links.map(l => { const a = by[l.from], b = by[l.to]; return a && b ? `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${b.hue}" stroke-width="30" stroke-linecap="round"/>` : ''; }).join('')
+      + g.nodes.map(n => `<circle cx="${n.x}" cy="${n.y}" r="${rad(n) + 16}" fill="${n.hue}"/>`).join('') + '</g>';
+    // 細い糸
+    html += g.links.map(l => { const a = by[l.from], b = by[l.to]; if (!a || !b) return ''; const mx = (a.x + b.x) / 2 + (b.y - a.y) * .12, my = (a.y + b.y) / 2 - (b.x - a.x) * .12; return `<path d="M${a.x},${a.y} Q${mx},${my} ${b.x},${b.y}" fill="none" stroke="${b.hue}" stroke-opacity=".55" stroke-width="2"/>`; }).join('');
+    // 人（まる）：ふちの色＝ようす、大きさ＝Lv
+    html += g.nodes.map(n => {
+      const c = (ST[n.st] || ST.new)[1], r = rad(n);
+      return `<g class="gnode" data-id="${esc(n.id)}" style="cursor:pointer">` + (n.me
+        ? `<circle cx="${n.x}" cy="${n.y}" r="${r + 5}" fill="#16233F"/><circle cx="${n.x}" cy="${n.y}" r="${r}" fill="#fff"/><image href="award_mark.svg" x="${n.x - r * .8}" y="${n.y - r * .8}" width="${r * 1.6}" height="${r * 1.6}"/>`
+        : `<circle cx="${n.x}" cy="${n.y}" r="${r}" fill="#fff" stroke="${c}" stroke-width="4"/><text x="${n.x}" y="${n.y + 5}" text-anchor="middle" font-size="${Math.round(r * .8)}" font-weight="800" fill="#16233F">${esc(n.name.slice(0, 1))}</text>`
+          + (n.kids ? `<circle cx="${n.x + r * .75}" cy="${n.y - r * .75}" r="8" fill="#16233F"/><text x="${n.x + r * .75}" y="${n.y - r * .75 + 3.5}" text-anchor="middle" font-size="10" font-weight="800" fill="#fff">${n.kids}</text>` : ''))
+        + `<text x="${n.x}" y="${n.y + r + 14}" text-anchor="middle" font-size="14" font-weight="800" fill="#16233F">${esc(n.me ? 'あなた' : n.name)}</text></g>`;
+    }).join('');
+    svg.innerHTML = html;
+    svg.querySelectorAll('.gnode').forEach(el => el.addEventListener('click', () => {
+      const n = by[el.dataset.id], s = ST[n.st] || ST.new, info = document.getElementById('goenInfo');
+      info.innerHTML = n.me ? `<b>あなた</b> Lv.${n.lv}・紹介した人 ${n.kids}人${n.streak ? '・' + n.streak + '日連続' : ''}`
+        : `<b>${esc(n.name)}さん</b><span class="hbtag" style="background:${s[1]};color:#fff">${s[0]}</span><br>${n.depth}代目のご縁・Lv.${n.lv}${n.streak ? '・' + n.streak + '日連続' : ''}・紹介した人 ${n.kids}人${n.since ? '・' + new Date(n.since).toLocaleDateString('ja-JP') + 'から' : ''}`;
+    }));
+  }
   function hbpOpen(p) {
     HBP.page = p || 'my'; $('hbPage').hidden = false; hbpRender(); if (HBS.friend === null) hbpFriend();
     if (J.ready) jrSend({ type: 'mypage' });
   }
   function hbpClose() { $('hbPage').hidden = true; }
   $('hbpClose').addEventListener('click', hbpClose);
-  $('hbpTabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; HBP.page = b.dataset.p; hbpRender(); if (J.ready) jrSend({ type: 'mypage' }); });
+  $('hbpTabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; HBP.page = b.dataset.p; if (HBP.page === 'goen') HBP.goen = HBP.goen || null; hbpRender(); if (J.ready) jrSend({ type: HBP.page === 'goen' ? 'goen_tree' : 'mypage' }); });
   $('myBtn').addEventListener('click', () => hbpOpen('my'));
   const HBP_START = (() => { const g = n => { let v = new URLSearchParams(location.search).get(n) || Q.get(n); if (!v) { try { const st = new URLSearchParams(location.search).get('liff.state'); if (st) v = new URLSearchParams(decodeURIComponent(st).split('?')[1] || '').get(n); } catch (e) {} } return v; }; return String(g('page') || '').replace(/[^a-z]/g, ''); })();
   if (HBP_START && HBP_START !== 'talk') hbpOpen(HBP_START);
-  window.hbpPreview = (d, pg) => { HBP.data = d; hbpOpen(pg); };   // 画面の確認用
+  window.hbpPreview = (d, pg, gn) => { HBP.data = d; if (gn) HBP.goen = gn; hbpOpen(pg); };   // 画面の確認用
   $('trioBtn').addEventListener('click', () => jrSend({ type: 'trio', on: !J.trio }));
   $('planBtn').addEventListener('click', () => { const p = store.get('jrPlan', J.canPlan ? 'super' : 'std'); jrSend({ type: 'plan', plan: PLAN_ORDER[(PLAN_ORDER.indexOf(p) + 1) % PLAN_ORDER.length] }); });
   $('gClose').addEventListener('click', () => { $('goenBox').hidden = true; });
