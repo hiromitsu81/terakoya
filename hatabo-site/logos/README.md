@@ -83,6 +83,12 @@ URLは2026年11月19日時点。公開ページの場所は変わることがあ
 | threads.svg | Threads | 公開ページからダウンロード | [Meta ブランドリソース（Threads）](https://about.meta.com/brand/resources/) |
 | line-ads.svg | LINE広告 | 公開ページからダウンロード | [LINEヤフー for Business ロゴガイドライン](https://www.lycbiz.com/jp/logo) |
 | line-app.svg | LINEグループ（LINEのアプリアイコン） | 公開ページからダウンロード | [LINEヤフー for Business ロゴガイドライン](https://www.lycbiz.com/jp/logo) |
+| ec-cube.svg | EC-CUBE | 広報に依頼 | [イーシーキューブの広報](https://www.ec-cube.net/) |
+| ecbeing.svg | ecbeing | 広報に依頼 | [ecbeingの広報](https://www.ecbeing.net/) |
+| synergy.svg | Synergy! | 広報に依頼 | [シナジーマーケティングの広報](https://www.synergy-marketing.co.jp/) |
+| repro.svg | Repro | 広報に依頼 | [Reproの広報](https://repro.io/) |
+| ltv-lab.svg | LTV-Lab | 広報に依頼 | [LTV-Labの広報](https://ltv-lab.jp/) |
+| salesforce-marketing-cloud.svg | Salesforce Marketing Cloud | 許諾が必要（今は文字だけで表示） | [Salesforce パートナーコミュニティ](https://partners.salesforce.com/) |
 | x9e8bf6.svg | バクラク | 広報に依頼 | [LayerX（バクラク）の広報](https://bakuraku.jp/) |
 | bill-one.svg | Bill One | 広報に依頼 | [Sansan（Bill One）の広報](https://bill-one.com/) |
 | tokium.svg | TOKIUM | 広報に依頼 | [TOKIUMの広報](https://www.keihi.com/) |
