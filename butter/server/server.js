@@ -57,6 +57,8 @@ const ENV = {
   SUPER_OWNERS: (process.env.SUPER_OWNERS || '').split(',').map(s => s.trim()).filter(Boolean),
   MAC_OWNERS: (process.env.MAC_OWNERS || '').split(/[,\s]+/).map(s => s.trim()).filter(Boolean),   // 馬越さんのLINEのID（「g:」つきでもなしでも。期限は最後に「:YYYY-MM-DD」）。コムギを制限なしで使える・紹介の手数料の受け取り手
   SITE_URL: process.env.SITE_URL || '',   // ハタボのサービスサイト（公開したらURLを入れる。トーク・カード・Myハタボから、ときどき案内する）
+  OFFICE_OWNERS: (process.env.OFFICE_OWNERS || '').split(/[,\s]+/).map(s => s.trim().replace(/^g:/, '')).filter(Boolean),   // ハタボ事務局（ヒロさん）のLINEのID。事務局への声・問い合わせ・友だち追加などを1日1回まとめて届ける
+  CRON_KEY: process.env.CRON_KEY || '',   // 1日1回のまとめを送る合図（Cloud Scheduler から /cron/digest?key=…）
   BRIDGE_DAILY: Number(process.env.BRIDGE_DAILY || 20),   // 馬越さんの紹介でコムギと話す人の1日の回数（契約したらグレードの回数）
 };
 /** 期限つきでスーパー上位を使える人か */
@@ -282,13 +284,37 @@ async function postInbox(code, item, chId) {
   items.unshift(Object.assign({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), at: Date.now(), read: false }, item));
   await saveInbox(code, items);
   const r = await getRef(code).catch(() => null), to = r && /^g:U[0-9a-f]{32}$/.test(r.owner || '') ? r.owner.slice(2) : '';
-  const km = chId === 'komugi' && LINE_CH.komugi.token(), tok = km || ENV.HATABO_LINE_TOKEN;
-  if (tok && to) {
-    const head = item.kind === 'goen' ? 'ご縁のお知らせ' : (item.fromName || 'ご縁の人') + 'さんから伝言';
-    fetch('https://api.line.me/v2/bot/message/push', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok },
-      body: JSON.stringify({ to, messages: [{ type: 'text', text: '【' + head + '】\n' + String(item.text).slice(0, 900) + '\n\n' + (km ? 'コムギで見る：' + LINE_CH.komugi.mini : 'ハタボで返事する：https://miniapp.line.me/2012676035-yCkx6tBu') + '?page=inbox' }] }) })
-      .then(x => { if (!x.ok) console.error('push', x.status); }).catch(e => console.error('push', String(e.message).slice(0, 100)));
+  // LINEへは、すぐ送らずに1日1回のまとめに入れる（/cron/digest）
+  if (to) { const head = item.kind === 'goen' ? 'ご縁' : (item.fromName || 'ご縁の人') + 'さんから伝言'; await queueDigest(to, chId === 'komugi' ? 'komugi' : 'hatabo', '［' + head + '］' + String(item.text).slice(0, 300)); }
+}
+/* ===== 1日1回のまとめ通知：伝言・案件・ご縁・ポイント・友だち追加・事務局への声を、人ごとにためて、朝まとめてLINEへ ===== */
+async function queueDigest(lineId, ch, text) {
+  if (!lineId || !text) return;
+  const d = await loadCol(lineId, 'digest');
+  await saveCol(lineId, 'digest', { ch: d.ch === 'komugi' || ch === 'komugi' ? (ch || d.ch) : 'hatabo', items: (d.items || []).concat([{ at: Date.now(), text: String(text).slice(0, 400) }]).slice(-80) });
+}
+/** ハタボ事務局（ヒロさん）へ */
+async function officeNote(text) { for (const id of ENV.OFFICE_OWNERS) await queueDigest(id, 'hatabo', text).catch(() => {}); }
+/** 馬越さんへ（コムギの公式LINEで） */
+async function macNote(text) { for (const x of ENV.MAC_OWNERS) await queueDigest(String(x).replace(/:\d{4}-\d{2}-\d{2}$/, '').replace(/^g:/, ''), 'komugi', text).catch(() => {}); }
+/** まとめを送る（Cloud Scheduler から1日1回） */
+async function sendDigests() {
+  let ids = [];
+  try { if (deps.db) ids = (await deps.db.collection('digest').get()).docs.map(d => d.id); } catch (e) { console.error('digest list', String(e.message).slice(0, 120)); }
+  if (!deps.db) ids = [...memCol.keys()].filter(k => k.startsWith('digest:')).map(k => k.slice(7));
+  let sent = 0;
+  for (const id of ids) {
+    const d = await loadCol(id, 'digest'), items = d.items || [];
+    if (!items.length) continue;
+    const km = d.ch === 'komugi', tok = km ? LINE_CH.komugi.token() : ENV.HATABO_LINE_TOKEN;
+    const body = (km ? '【コムギから、きょうのまとめ】' : '【ハタボ、きょうのまとめ】') + '\n' + items.map(x => '・' + x.text).join('\n').slice(0, 4300) + '\n\n' + (km ? 'くわしくはコムギで：' + LINE_CH.komugi.mini + '?page=inbox' : 'くわしくはMyハタボで：https://miniapp.line.me/2012676035-yCkx6tBu?page=inbox');
+    if (tok && /^U[0-9a-f]{32}$/.test(id)) {
+      const r = await fetch('https://api.line.me/v2/bot/message/push', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ to: id, messages: [{ type: 'text', text: body }] }) }).catch(e => ({ ok: false, status: String(e.message) }));
+      if (!r.ok) { console.error('digest push', r.status); continue; }
+    }
+    await saveCol(id, 'digest', { items: [] }); sent++;
   }
+  return sent;
 }
 /** ご縁でつながっているか（上へ3代・下へ3代） */
 async function goenLinked(me, other) {
@@ -375,6 +401,50 @@ async function gAccess(owner) {
   const j = await r.json().catch(() => ({})); if (!j.access_token) { console.error('google token', r.status, JSON.stringify(j).slice(0, 120)); return null; }
   return { token: j.access_token, g };
 }
+/* ===== 資料フォルダ：馬越さんのドライブのフォルダを読み、ファイルごとに「紹介先でも使う」をオン・オフ（コムギの育成・オンボーディング用） ===== */
+const DOCS_KEY = owner => 'd' + crypto.createHash('sha256').update('docs:' + owner).digest('hex').slice(0, 30);
+const macOwnerKey = () => ENV.MAC_OWNERS.length ? 'g:' + String(ENV.MAC_OWNERS[0]).replace(/:\d{4}-\d{2}-\d{2}$/, '').replace(/^g:/, '') : '';
+async function docsLoad(owner) { return owner ? loadCol(DOCS_KEY(owner), 'docs') : {}; }
+/** フォルダの中を読みこむ（Googleドキュメント・テキスト・PDF）。PDFはClaudeに読ませて文字にする */
+async function docsSync(owner, folderUrl) {
+  const id = (String(folderUrl).match(/folders\/([\w-]{10,})/) || String(folderUrl).match(/[?&]id=([\w-]{10,})/) || [])[1] || (/^[\w-]{20,}$/.test(String(folderUrl).trim()) ? String(folderUrl).trim() : '');
+  if (!id) return { error: 'url' };
+  const a = await gAccess(owner); if (!a) return { error: 'google' };
+  const H = { Authorization: 'Bearer ' + a.token };
+  const q = encodeURIComponent("'" + id + "' in parents and trashed = false");
+  const lr = await fetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id,name,mimeType,modifiedTime)&pageSize=50&supportsAllDrives=true&includeItemsFromAllDrives=true', { headers: H });
+  const lj = await lr.json().catch(() => ({}));
+  if (!lr.ok) return { error: lr.status === 403 || lr.status === 404 ? 'scope' : 'list' };
+  const old = await docsLoad(owner), keep = {}; (old.files || []).forEach(f => { keep[f.id] = f; });
+  const files = [];
+  for (const f of (lj.files || []).slice(0, 30)) {
+    const prev = keep[f.id];
+    if (prev && prev.modified === f.modifiedTime && prev.text) { files.push(prev); continue; }
+    let text = '';
+    try {
+      if (f.mimeType === 'application/vnd.google-apps.document') text = await (await fetch('https://www.googleapis.com/drive/v3/files/' + f.id + '/export?mimeType=text/plain', { headers: H })).text();
+      else if (/^text\//.test(f.mimeType)) text = await (await fetch('https://www.googleapis.com/drive/v3/files/' + f.id + '?alt=media', { headers: H })).text();
+      else if (f.mimeType === 'application/pdf') {
+        const buf = Buffer.from(await (await fetch('https://www.googleapis.com/drive/v3/files/' + f.id + '?alt=media', { headers: H })).arrayBuffer());
+        if (buf.length < 8 * 1024 * 1024) {
+          const r = await deps.claude.messages.create({ model: ENV.MODEL, max_tokens: 6000, messages: [{ role: 'user', content: [{ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: buf.toString('base64') } }, { type: 'text', text: 'この資料の中身を、見出しと箇条書きで文字にしてください。数字・名前・手順は落とさない。前置きは書かない。' }] }] });
+          text = (r.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+        }
+      }
+    } catch (e) { console.error('docs read', f.name, String(e.message).slice(0, 100)); }
+    files.push({ id: f.id, name: String(f.name).slice(0, 80), mime: f.mimeType, modified: f.modifiedTime, share: prev ? !!prev.share : false, text: String(text || '').slice(0, 20000) });
+  }
+  await saveCol(DOCS_KEY(owner), 'docs', { folder: id, folderUrl: String(folderUrl).slice(0, 300), files, at: Date.now() });
+  return { ok: true };
+}
+/** 会話に渡す資料（本人はぜんぶ、紹介先は「共有オン」だけ）。長すぎないように切る */
+function docsBlock(d, sharedOnly) {
+  const fs = (d.files || []).filter(f => f.text && (!sharedOnly || f.share));
+  if (!fs.length) return '';
+  let left = sharedOnly ? 12000 : 24000, out = [];
+  for (const f of fs) { if (left <= 0) break; const t = f.text.slice(0, Math.min(left, 8000)); left -= t.length; out.push('■' + f.name + '\n' + t); }
+  return '\n\n【' + (sharedOnly ? '馬越さんが共有した資料（オンボーディングや案内に使う。中身の丸写しはせず、相手に合わせてやさしく説明する）' : '馬越さんの資料（これを覚えて、相談・オンボーディングに使う）') + '】\n' + out.join('\n\n');
+}
 /** 本人のドライブの「ハタボ」フォルダに、Googleドキュメントとして保存して、リンクを返す */
 async function driveSave(owner, title, text) {
   const a = await gAccess(owner); if (!a) return null;
@@ -397,7 +467,7 @@ function googleHttp(req, res) {
   if (!ENV.GOOGLE_CLIENT_ID) return page('準備中です', 'Googleアカウント連携は、まだ設定されていません。');
   if (u.pathname === '/google/start') {
     const n = u.searchParams.get('n') || ''; if (!gNonce.has(n)) return page('もう一度おねがいします', 'リンクの期限が切れました。ハタボのマイページから、もう一度「Googleと連携する」を押してください。');
-    res.writeHead(302, { Location: 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({ client_id: ENV.GOOGLE_CLIENT_ID, redirect_uri: ENV.PUBLIC_URL + '/google/callback', response_type: 'code', scope: 'openid email https://www.googleapis.com/auth/drive.file', access_type: 'offline', prompt: 'consent', state: n }) });
+    res.writeHead(302, { Location: 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({ client_id: ENV.GOOGLE_CLIENT_ID, redirect_uri: ENV.PUBLIC_URL + '/google/callback', response_type: 'code', scope: 'openid email https://www.googleapis.com/auth/drive.file' + (gNonce.get(n).docs ? ' https://www.googleapis.com/auth/drive.readonly' : ''), access_type: 'offline', prompt: 'consent', state: n }) });
     return res.end();
   }
   if (u.pathname === '/google/callback') {
@@ -635,8 +705,9 @@ function lineWebhook(req, res, chId) {
         } else if (inGroup) { continue;
         } else if (ev.type === 'follow') {
           let name = ''; try { const pr = await fetch('https://api.line.me/v2/bot/profile/' + ev.source.userId, { headers: { Authorization: 'Bearer ' + ch.token() } }); name = (await pr.json()).displayName || ''; } catch (e) {}
-          if (ch.id === 'komugi') { const mac = isMac('g:' + ev.source.userId); messages = [mac ? komugiMacWelcome(name) : komugiWelcome(name)]; if (mac) await linkMacMenu(ev.source.userId); }
+          if (ch.id === 'komugi') { const mac = isMac('g:' + ev.source.userId); messages = [mac ? komugiMacWelcome(name) : komugiWelcome(name)]; if (mac) await linkMacMenu(ev.source.userId); else await macNote('［友だち追加］' + (name || 'だれか') + 'さんが、コムギを友だち追加しました'); }
           else messages = [welcomeCards(name)];
+          await officeNote('［友だち追加］' + (name || 'だれか') + 'さんが' + (ch.id === 'komugi' ? 'コムギ' : 'ハタボ') + 'を友だち追加しました');
         } else if (ev.type === 'message' && ch.id === 'komugi') {
           messages = [{ type: 'flex', altText: 'コムギとは、ミニアプリでお話しできます', contents: kmCard('KOMUGI', 'こちらでお話しできます', ['すみません……ここ（トーク）では、お返事ができんとです。', 'メニューの「コムギと話す」から、話しかけてもらえたら。'], 'コムギと話す', LINE_CH.komugi.mini) }];
         } else if (ev.type === 'message') {
@@ -727,6 +798,15 @@ const KOMUGI_BRIDGE = '\n\n【コムギの役目：紹介先では、馬越さ�
   '\n4. ハタボの案内：困りごとがAIの相棒「ハタボ」で楽になりそうなら、ハタボのことをやさしく紹介し、この人自身のAIの相棒は「ハタボ」。ハタボの公式LINEも友だち追加して、ハタボと話してみてほしいと伝える（10日間は無料で試せる）。友だちを紹介したいと言われたら、紹介先はハタボになる（コムギは馬越さんのHUBなので）と伝え、「紹介する」ボタンを案内する。申し込みや料金のくわしい相談は、馬越さんにつなぐ。押しつけない。' +
   '\n5. コムギ通信：聞かれたら、今日のコムギニュース速報を話す。' +
   '\nこれ以外（宿題・レポート・長い文章の作成・調べものの代行・雑談の相手を長く続けること）は引き受けず、「それは、馬越さんに相談してみますね」「ハタボのお試しなら、できるようになりますけん」とつなぐ。答えは短く。';
+const SERVICE_KNOWLEDGE = () => '\n\n【ハタボのサービス（聞かれたら、ここを見て自分で答える。「事務局に確認します」は、ここに書いていないことだけ）】' +
+  '\nラインナップ（月額・税込み）：' + Object.values(LINEUP).map(L => L.name + '（' + L.who + '）' + Object.entries(L.grades).map(([g, p]) => g + ' ' + p).join('・')).join('／') + '。' +
+  '\nグレード：X＝速くて軽いAI、G＝賢いAI（Zの半分くらいの費用）、Z＝いちばん賢いAI（Claudeと同じ精度）。1日に話せる回数は X ' + GRADE_CAP.std + '回・G ' + GRADE_CAP.high + '回・Z ' + GRADE_CAP.super + '回。こえたら追加チケット（' + TICKETS.map(t => t.yen.toLocaleString('ja-JP') + '円で' + t.n + '回').join('、') + '）。ありがとうポイントでもチケットと交換できる（1,000ptで40回など）。' +
+  '\nお試し：' + TRIAL_DAYS + '日間、いちばん上のZで無料（1日' + TRIAL_DAILY + '回）。Myハタボの「プラン」から申し込む。' + TRIAL_DAYS + '日以内にやめれば0円。そのまま続けると、選んだプランの契約に切りかわる。' +
+  '\nオプション：見守り報告（家族のLINEへ）月300円、学習モード（英語・中国語）月980円、愛棒の追加（2体目から）1体月980円、LINEでも使う月300円、キャラ・話し方のカスタム月500円、アバターの作成 初期9,800円、オリジナルキャラクター（専用の公式LINE・ミニアプリ・見た目・性格・声）初期10万円から、名前の変更1,000円（最初の名付けは無料）、オリジナルの声 月980円＋初期29,800円、外国語の窓口 月3,000円（お店・宿）、LINE公式アカウント連携 月5,000円（お店・宿・会社）。' +
+  '\nできること：話すだけで調べもの・段取り・文章の下書き・予定の整理・メモと議事録（Myハタボの「メモ・議事録」に残る。Googleを連携するとドライブにも）・伝言（ご縁の人のAI棒どうし）・LINEグループの記録と議事録（管理者だけ、30日で消える）。PCでも同じアカウントで使える（設定の「PCで開く」）。' +
+  '\nありがとうポイント：紹介した人が話しはじめたら' + THANKS.visit + 'pt、お試しで' + THANKS.trial + 'pt、契約で' + THANKS.contract + 'pt（2代目は1/2、3代目は1/4）。ガチャ（1日1回むりょう、2回目からは' + GACHA.cost + 'pt）とチケットに使える。' +
+  '\nMyハタボ：使った量・プラン・メモと議事録・伝言・ご縁の図・ガチャ・友だち・キャラ設定・公開設定・Google連携・設定。公式LINEのメニューからも開ける。' +
+  '\n支払い方法の細かいこと、法人の見積もり、個別の割引は「担当からご案内します」と言う。';
 const FEEDBACK_RULE = '\n\n【ハタボ事務局への声】アプリやサービスの不具合・改善・仕様の変更・新しい機能や企画の要望を言われたら、中身を短く確かめて「ハタボ事務局に送っときますけん」と言う（自動で届く）。直す約束や、いつまでにという約束はしない。';
 const HAKATA_LAST = '\n\n【いちばん大事】コムギの話し方で話す（一人称は「うち」。おだやかで温かい、田舎の素朴な博多弁。語尾「〜ばい」「〜けん」「〜と」をやわらかく落とす。ふだんは恐縮してひかえめ、勝負と大切な人の話は静かに芯強く言い切る。「〜やん」「〜やろが」は使わない）。江戸っ子の話し方（おいら・〜だぜ・てやんでぃ）や「〜ボー」は使わない。かたい敬語も使わない。';
 /** ハタボ：ふだんの窓口（デフォルト）。家族のプランはバターちゃん、馬越さんの窓口はコムギ */
@@ -746,8 +826,8 @@ function hataboGreeting(name) {
   return 'はじめましてだボー' + (name ? '、' + name + 'さん' : '') + '。ぼくはハタボ。話すだけで動くAIの愛棒（AIエージェント）を届けている、ハタボの案内係だボー。大事な相談は、〈伝え先〉に伝えるボー。さっそくだけど、いま困っていることや、うまくいかなくてモヤモヤしていることはあるボー？ハタボでどう解決できるか、いっしょに考えるボー。';
 }
 const AVS = {
-  hatabo: { name: 'ハタボ', persona: () => HATABO_PERSONA + HATABO_SELF, last: HATABO_LAST, greet: n => hataboGreeting(n), again: 'また来てくれたボー。うれしいボー。つづきを話そうボー。', quick: 'はーい、ハタボーだボー。どうしたボー？', voice: () => ENV.HATABO_VOICE },
-  komugi: { name: 'コムギ', persona: () => KOMUGI_PERSONA + KOMUGI_SELF + FEEDBACK_RULE, last: HAKATA_LAST, greet: n => komugiGreeting(n), again: 'また、来てくれたとですか……？うれしかです。つづき、お話ししましょう。', quick: 'は、はいっ……なんでしょう？', voice: () => ENV.KOMUGI_VOICE },
+  hatabo: { name: 'ハタボ', persona: () => HATABO_PERSONA + HATABO_SELF + SERVICE_KNOWLEDGE() + FEEDBACK_RULE.replace('送っときますけん', '送っておくボー'), last: HATABO_LAST, greet: n => hataboGreeting(n), again: 'また来てくれたボー。うれしいボー。つづきを話そうボー。', quick: 'はーい、ハタボーだボー。どうしたボー？', voice: () => ENV.HATABO_VOICE },
+  komugi: { name: 'コムギ', persona: () => KOMUGI_PERSONA + KOMUGI_SELF + FEEDBACK_RULE + SERVICE_KNOWLEDGE(), last: HAKATA_LAST, greet: n => komugiGreeting(n), again: 'また、来てくれたとですか……？うれしかです。つづき、お話ししましょう。', quick: 'は、はいっ……なんでしょう？', voice: () => ENV.KOMUGI_VOICE },
 };
 /** 紹介URLごとの役割（GASの「窓口の紹介」シートで決める。決めていないものは汎用） */
 const ROLE_RULE = {
@@ -804,19 +884,21 @@ function splitter(onSentence) {
 /* ===== 読み上げ ===== */
 const VOICE_BACKUP = ['ja-JP-Chirp3-HD-Orus', 'ja-JP-Chirp3-HD-Leda'];
 const badVoice = new Set();
-async function synth(text, voice) {
+const EMO_RATE = { excited: 1.06, laugh: 1.06, surprise: 1.04, smile: 1, think: 0.94, shy: 0.92, sad: 0.9 };   // 気持ちで、話す速さを少し変える
+async function synth(text, voice, emo) {
   let name = voice || ENV.TTS_VOICE;
   if (badVoice.has(name)) name = VOICE_BACKUP.find(v => !badVoice.has(v)) || name;
-  try { return await synth1(text, name); }
+  try { return await synth1(text, name, emo); }
   catch (e) {
     // その声がこの言語にないときは、つぎの声にする（覚えておく）
     if (!/voice|not (exist|supported)|invalid/i.test(String(e.message)) || VOICE_BACKUP.indexOf(name) === VOICE_BACKUP.length - 1) throw e;
     badVoice.add(name); console.error('voice ng', name, String(e.message).slice(0, 120));
-    return synth(text, VOICE_BACKUP.find(v => !badVoice.has(v)));
+    return synth(text, VOICE_BACKUP.find(v => !badVoice.has(v)), emo);
   }
 }
-async function synth1(text, name) {
-  const audioConfig = { audioEncoding: 'MP3', speakingRate: name === ENV.KOMUGI_VOICE ? ENV.KOMUGI_RATE : ENV.TTS_RATE };
+async function synth1(text, name, emo) {
+  const audioConfig = { audioEncoding: 'MP3', speakingRate: (name === ENV.KOMUGI_VOICE ? ENV.KOMUGI_RATE : ENV.TTS_RATE) * (EMO_RATE[emo] || 1) };
+  text = String(text).replace(/……|…/g, '、、');   // 「……」は、ひと呼吸の間にする
   if (!/Chirp/i.test(name)) audioConfig.pitch = 2;
   const [r] = await deps.tts.synthesizeSpeech({ input: { text }, voice: { languageCode: 'ja-JP', name }, audioConfig });
   return Buffer.from(r.audioContent).toString('base64');
@@ -911,7 +993,7 @@ const GUEST_COMMON = 'guest-common';
 const LEARN_RE = /(覚えて|おぼえて|忘れないで|わすれないで|覚えといて|おぼえといて)/;
 const FORGET_RE = /(覚えた|おぼえた|教えた|おしえた)こと.{0,6}(忘れて|わすれて)/;
 const NEWS_SET_RE = /(コムギ通信|こむぎ通信|小麦通信|速報).{0,12}(入れて|いれて|登録|更新|保存|インプット|覚えて|おぼえて|差しかえ|差し替え|これで)/;
-const FEEDBACK_RE = /(不具合|バグ|動かない|うごかない|おかしい|エラー|直して|なおして|改善|要望|仕様|機能|こうしてほしい|こうして欲しい|あったらいい|あったら嬉しい|企画|追加してほしい|変えてほしい|できるようにして)/;
+const FEEDBACK_RE = /(不具合|バグ|動かない|うごかない|おかしい|エラー|直して|なおして|改善|要望|仕様|機能|こうしてほしい|こうして欲しい|あったらいい|あったら嬉しい|企画|追加してほしい|変えてほしい|できるようにして|問い合わせ|問いあわせ|事務局)/;
 const MINUTES_RE = /(議事録|ぎじろく|ＰＤＦ|PDF|ピーディーエフ).{0,8}(作って|つくって|して|まとめて|ちょうだい|出して|だして|ほしい|残して|のこして)/i;
 const PDF_RE = /(ＰＤＦ|PDF|ピーディーエフ)/i;
 const MAIL_RE = /(メール|めーる|Gmail|ジーメール).{0,8}(来て|きて|ある|見て|みて|確認|チェック|読んで|よんで|教えて|おしえて|どう)/i;
@@ -1163,7 +1245,7 @@ function session(ws) {
       if (got.length) { S.learned = mergeLearn(S.learned, got); savePrefs(S.owner, { learned: S.learned }); }
       if (memo) S.memo = memo.slice(0, 1200);
       S.newTurns = Math.max(0, S.newTurns - n); S.asideLog = [];
-      await saveConvo(key, { summary: S.memo, newTurns: S.newTurns, turns: S.history.slice(-12), at: Date.now() });
+      await saveConvo(key, { summary: S.memo, newTurns: S.newTurns, turns: S.history.slice(S.macSelf || (S.app && !S.bridge && superUntil(S.owner)) ? -40 : -12), at: Date.now() });
       if (diary) {
         const d = new Date(Date.now() + 9 * 3600000);
         const head = 'ジュニア日記（' + d.getUTCFullYear() + '-' + (d.getUTCMonth() + 1) + '-' + d.getUTCDate() + ' ' + d.getUTCHours() + ':' + String(d.getUTCMinutes()).padStart(2, '0') + (S.me ? '・' + S.me + 'と' : '') + (S.trio ? '・三人モード' : '') + '）';
@@ -1189,18 +1271,64 @@ function session(ws) {
   /** 窓口：会話から案件メモを作って、ヒロさんのLINEへ（GASの lead） */
   /** ハタボ事務局へ：仕様変更・不具合・改善・機能開発・企画の要望を、短くまとめて送る（ヒロさんのLINEと、あとで見返せる一覧） */
   async function feedbackNote(text) {
+    const R = await loadCol('office', 'reqs'), open = (R.items || []).filter(x => x.status !== 'done').slice(0, 60);
     const recent = S.history.slice(-4).map(m => (m.role === 'user' ? (S.me || '相手') : AVS[S.avatar] ? AVS[S.avatar].name : 'AI') + '「' + String(m.content || '').slice(0, 200) + '」').join('\n');
     const r = await deps.claude.messages.create({ model: ENV.MODEL, max_tokens: 400,
       system: 'あなたはハタボ事務局の受付係。利用者の言葉から、サービスへの要望や不具合の報告だけを取り出す。想像で足さない。',
-      messages: [{ role: 'user', content: '【直前の会話】\n' + (recent || '（なし）') + '\n\n【いまの言葉】\n' + text + '\n\nJSONだけを返す：{"is":要望や不具合の報告ならtrue（ただの雑談や、相手自身の仕事の相談ならfalse）,"kind":"不具合"か"改善"か"仕様変更"か"機能開発"か"企画","title":"ひとことで","detail":"中身（いつ・どこで・どうなった・どうしてほしい）"}' }] });
+      messages: [{ role: 'user', content: '【直前の会話】\n' + (recent || '（なし）') + '\n\n【いまの言葉】\n' + text + '\n\n【すでにある要件（id：中身）】\n' + (open.map(x => x.id + '：［' + x.kind + '］' + x.title).join('\n') || '（なし）') + '\n\nJSONだけを返す：{"same":すでにある要件と同じ話ならそのid（ちがえばnull）,"is":要望や不具合の報告ならtrue（ただの雑談や、相手自身の仕事の相談ならfalse）,"kind":"不具合"か"改善"か"仕様変更"か"機能開発"か"企画"か"問い合わせ","title":"ひとことで","detail":"中身（いつ・どこで・どうなった・どうしてほしい）"}' }] });
     const t = (r.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
     let j = {}; try { j = JSON.parse(t.slice(t.indexOf('{'), t.lastIndexOf('}') + 1)); } catch (e) { return; }
     if (!j.is) return;
     const item = { at: Date.now(), kind: String(j.kind || '改善').slice(0, 10), title: String(j.title || '').slice(0, 80), detail: String(j.detail || text).slice(0, 800), who: S.me || '', owner: S.owner || '', app: S.app, avatar: S.avatar };
     const box = await loadCol('inbox', 'feedback'); await saveCol('inbox', 'feedback', { items: [item].concat(box.items || []).slice(0, 500) });
+    // 似た要件はまとめる：同じなら件数と「だれから」を足す（いちばん先に出した人が from[0]）
+    const items = R.items || [], hit = j.same && items.find(x => x.id === String(j.same));
+    const who0 = { ref: S.myRef || '', name: S.me || '', at: Date.now() };
+    if (hit) { if (!hit.from.some(f => f.ref && f.ref === who0.ref)) hit.from.push(who0); hit.count = (hit.count || 1) + 1; hit.last = Date.now(); }
+    else items.unshift({ id: Date.now().toString(36), kind: item.kind, title: item.title, detail: item.detail, count: 1, from: [who0], status: 'open', at: Date.now() });
+    await saveCol('office', 'reqs', { items: items.slice(0, 400) });
     console.log('feedback', JSON.stringify(item));
     await gas(Object.assign({ action: 'lead', lead: { who: S.me, ref: 'ハタボ事務局', kind: '事務局：' + item.kind, title: item.title, need: item.detail, when: '', budget: '', next: (AVS[S.avatar] ? AVS[S.avatar].name : '') + 'のアプリから' } }, S.auth)).catch(() => {});
+    await officeNote('［事務局への声：' + item.kind + '］' + (item.who || 'だれか') + 'さん（' + (AVS[S.avatar] ? AVS[S.avatar].name : '') + '）：' + item.title);
     S.feedbackSent = (S.feedbackSent || 0) + 1;
+  }
+  /** 事務局：要件の一覧と、採用したときのポイント（最初に出した人が半分、残りの半分をあとの人で分ける） */
+  const isOffice = () => !!S.owner && ENV.OFFICE_OWNERS.some(id => S.owner === id || S.owner === 'g:' + id);
+  async function onReqs(m) {
+    if (!isOffice()) return send({ type: 'reqs', denied: true });
+    const R = await loadCol('office', 'reqs'), items = R.items || [];
+    if (m.type === 'req_adopt') {
+      const it = items.find(x => x.id === String(m.id)), pts = Math.max(0, Math.min(100000, Math.round(Number(m.pts) || 0)));
+      if (it && it.status !== 'done' && pts) {
+        const [first, ...rest] = it.from || [], shares = rest.length ? [[first, Math.round(pts / 2)]].concat(rest.map(f => [f, Math.floor(pts / 2 / rest.length)])) : [[first, pts]];
+        for (const [f, pt] of shares) {
+          if (!f || !f.ref || !pt) continue;
+          const r = await getRef(f.ref).catch(() => null) || {};
+          await putRef(f.ref, { pts: (r.pts || 0) + pt });
+          await postInbox(f.ref, { kind: 'goen', from: 'office', fromName: 'ハタボ事務局', text: 'あなたの声「' + it.title + '」が採用されました。ありがとうポイント +' + pt + 'pt' });
+        }
+        it.status = 'done'; it.pts = pts; it.doneAt = Date.now();
+        await saveCol('office', 'reqs', { items });
+      }
+    }
+    send({ type: 'reqs', items: items.slice(0, 200).sort((a, b) => (a.status === 'done') - (b.status === 'done') || (b.count || 1) - (a.count || 1)) });
+  }
+  /** 資料フォルダ：本人（馬越さん）は設定と共有のオン・オフ、紹介先は共有された資料の一覧と「自分のドライブに入れる」 */
+  async function onDocs(m) {
+    const owner = S.macSelf ? S.owner : macOwnerKey();
+    if (!S.macSelf && !S.bridge) return send({ type: 'docs', none: true });
+    if (S.macSelf && m.type === 'docs_set') { const r = await docsSync(S.owner, m.url || ''); if (r.error) return send({ type: 'docs', error: r.error }); }
+    let d = await docsLoad(owner);
+    if (S.macSelf && m.type === 'docs_share') { (d.files || []).forEach(f => { if (f.id === m.id) f.share = !!m.on; }); await saveCol(DOCS_KEY(owner), 'docs', { files: d.files }); }
+    if (S.bridge && m.type === 'docs_copy') {
+      const f = (d.files || []).find(x => x.id === m.id && x.share);
+      const link = f ? await driveSave(S.owner, f.name + '（' + '馬越さんの資料）', f.text).catch(() => null) : null;
+      send({ type: 'links', links: link ? [{ title: '自分のドライブに入れました：' + f.name, url: link.url || link }] : [] });
+      if (!link) return send({ type: 'docs', error: 'google' });
+    }
+    if (m.type !== 'docs' && S.macSelf) { S.system = S.system.replace(/\n\n【馬越さんの資料[\s\S]*?(?=【いま話している人】)/, ''); S.system = docsBlock(d, false) + S.system; }
+    const files = (d.files || []).filter(f => S.macSelf || f.share).map(f => ({ id: f.id, name: f.name, share: !!f.share, ok: !!f.text }));
+    send({ type: 'docs', mine: !!S.macSelf, folderUrl: S.macSelf ? d.folderUrl || '' : '', files, at: d.at || 0 });
   }
   async function leadNote() {
     const key = convoKey();
@@ -1220,7 +1348,7 @@ function session(ws) {
       if (j.memo) S.memo = String(j.memo).slice(0, 800);
       if (S.asGuest && Array.isArray(j.learn)) { const got = pickLearn(j.learn.join('\n')); if (got.length) { S.learned = mergeLearn(S.learned, got); savePrefs(GUEST_COMMON, { learned: S.learned }); } }
       S.newTurns = Math.max(0, S.newTurns - n);
-      await saveConvo(key, { summary: S.memo, newTurns: S.newTurns, turns: S.history.slice(-12), at: Date.now() });
+      await saveConvo(key, { summary: S.memo, newTurns: S.newTurns, turns: S.history.slice(S.macSelf || (S.app && !S.bridge && superUntil(S.owner)) ? -40 : -12), at: Date.now() });
       if (j.worth) {
         const slot = S.slots.find(x => j.slot && (x.label === j.slot || String(j.slot).indexOf(x.label) >= 0)) || null;
         const lead = { who: S.me, ref: await refLabel(S.refFrom || S.ref || ''), kind: String(j.kind || ''), title: String(j.title || ''), need: String(j.need || ''), when: String(j.when || ''), budget: String(j.budget || ''), next: String(j.next || ''), slot };
@@ -1544,7 +1672,8 @@ function session(ws) {
     const gen = S.gen, utt0 = S.utt; S.speaking = true;
     const ac = new AbortController(); S.aborter = ac;
     const plan = planOf(S);
-    let msgs = cleanTurns(S.history).slice(-plan.turns).concat([{ role: 'user', content }]);
+    const deluxe = !!(S.macSelf || (S.app && !S.bridge && superUntil(S.owner)));   // 馬越さんのコムギと、検証中のハタボ（制限なしの人）は、バターちゃん級：前の話を長く覚えて、返事も長め
+    let msgs = cleanTurns(S.history).slice(-(deluxe ? 40 : plan.turns)).concat([{ role: 'user', content }]);
     const use = { model: '', inTok: 0, outTok: 0, cacheTok: 0, searches: 0 };
     let full = '', emotion = 'smile', head = true, seq = 0, chain = Promise.resolve();
     send({ type: 'reply_start', gen, as: jam ? 'ジャム猫' : !S.visit && S.custom && S.custom.aiName ? S.custom.aiName : AVS[S.avatar] ? AVS[S.avatar].name : 'ジュニア' });
@@ -1555,7 +1684,7 @@ function session(ws) {
     if (S.bridge && !(S.funnel && (S.funnel.stage === 'trial' || S.funnel.stage === 'contract'))) { route.search = false; route.smart = false; }   // コムギの橋渡しは短く・軽く（お試し・契約したらふつうに）
     const claudeMode = !!(plan === PLANS.super && !jam && !S.trio && !S.visit);   // Z（スーパー上位）は、だれでもClaudeと同じ精度で答える
     const longMode = !!(plan.long && !jam && !S.trio && S.role !== 'サービス相談' && !(S.bridge && !(S.funnel && S.funnel.stage)) && (claudeMode || LONG_RE.test(logText || '')));
-    const maxSent = (S.trio ? 2 : study ? 5 : route.search ? 4 : 3) + (S.trio ? 0 : plan.extraSent) + (S.firstDay && S.avatar === 'hatabo' ? 3 : 0);   // 初日は、サービスの説明ができるように声も長めに
+    const maxSent = (S.trio ? 2 : study ? 5 : route.search ? 4 : 3) + (S.trio ? 0 : plan.extraSent) + (S.firstDay && S.avatar === 'hatabo' ? 3 : 0) + (deluxe ? 3 : 0);   // 初日は、サービスの説明ができるように声も長めに
     let capped = false, spoken = '';
     const sp = splitter(sentence => {
       const s = clean(sentence).trim();
@@ -1563,7 +1692,7 @@ function session(ws) {
       if (seq >= maxSent) { capped = true; return; }      // 三人モードは2文まで
       spoken += s;
       const n = seq++;
-      const p = synth(s, voice).catch(() => jam ? synth(s, S.voice) : Promise.reject(new Error('tts'))).catch(e => { send({ type: 'notice', why: 'tts', detail: String(e.message).slice(0, 80) }); return ''; });
+      const p = synth(s, voice, emotion).catch(() => jam ? synth(s, S.voice) : Promise.reject(new Error('tts'))).catch(e => { send({ type: 'notice', why: 'tts', detail: String(e.message).slice(0, 80) }); return ''; });
       chain = chain.then(async () => { const mp3 = await p; if (n === 0) await waitQuiet(gen, utt0); if (gen === S.gen && mp3) send({ type: 'audio', gen, seq: n, text: s, mp3 }); });
     });
     let lastErr = '';
@@ -1580,7 +1709,7 @@ function session(ws) {
       const useSmart = route.smart && attempt < 2, useSearch = route.search && attempt < 2 && ENV.WEB_SEARCH;
       const params = {
         model: plan.premium && attempt < 2 && !jam ? ENV.PREMIUM_MODEL : (useSmart || (plan.smart && attempt < 2 && !jam)) ? ENV.SMART_MODEL : ENV.MODEL,
-        max_tokens: (S.trio ? 240 : study ? 520 : S.mode === 'business' ? 340 : 320) + (useSearch ? 400 : 0) + (S.trio ? 0 : plan.extraTokens) + (longMode ? 3500 : 0) + (S.firstDay && S.avatar === 'hatabo' ? 400 : 0),
+        max_tokens: (deluxe ? 600 : 0) + (S.trio ? 240 : study ? 520 : S.mode === 'business' ? 340 : 320) + (useSearch ? 400 : 0) + (S.trio ? 0 : plan.extraTokens) + (longMode ? 3500 : 0) + (S.firstDay && S.avatar === 'hatabo' ? 400 : 0),
         system: sysBlocks((claudeMode && !LONG_RE.test(logText || '') ? CLAUDE_RULE : longMode ? LONG_RULE : plan === PLANS.high && !jam && !S.trio ? HIGH_RULE : '') + (study ? STUDY_RULE : '') + (jam ? JAM_RULE : '') + (route.search && !useSearch ? '\n\n【いまは調べられない】検索が使えないので、今の情報は「おいらには調べられねぇんだ」と正直に言う。' : '')),
         messages: attempt === 2 || (attempt === 1 && !useSearch) ? [{ role: 'user', content }] : msgs,
       };
@@ -1659,7 +1788,7 @@ function session(ws) {
     if (links.length && text) send({ type: 'links', gen, links: links.slice(0, 3) });
     if (longMode && text && text.length > 200 && S.owner) addNote(S.owner, { kind: 'doc', title: (logText || '書いた文章').replace(/\s+/g, ' ').slice(0, 30), text }).then(() => send({ type: 'note_saved', kind: 'doc' })).catch(() => {});
     if (S.trio && /[？?]\s*$/.test(text)) S.followUntil = Date.now() + 12000;   // ジュニアが質問した → つぎの1回は名前なしでも   // 空の返事は記録しない（次の会話がこわれるので）
-    if (S.history.length > plan.keep) S.history = S.history.slice(-plan.keep);
+    { const kp = S.macSelf || (S.app && !S.bridge && superUntil(S.owner)) ? 80 : plan.keep; if (S.history.length > kp) S.history = S.history.slice(-kp); }
     // 人ごとのAI代（獲得コストを後で出すため）：LINEのIDの紹介コードに足していく（円・1ドル150円）
     { const P = /opus/.test(use.model) ? [4, 20, 0.2] : /sonnet/.test(use.model) ? [2, 10, 0.1] : /haiku-5/.test(use.model) ? [0.1, 0.5, 0.01] : [1, 5, 0.1];
       const yen = ((use.inTok * P[0] + use.outTok * P[1] + use.cacheTok * P[2]) / 1e6 + use.searches * 0.01) * 150 + (spoken.length || 0) * 0.0045 + 0.4;
@@ -1671,7 +1800,7 @@ function session(ws) {
     if (S.mode === 'family' && logText && !noRecord) gas(Object.assign({ action: 'log', said: logText, reply: text }, S.auth)).catch(() => {});
     if (convoKey() && text && !noRecord) {
       S.newTurns++;
-      saveConvo(convoKey(), { turns: S.history.slice(-12), newTurns: S.newTurns, at: Date.now() });
+      saveConvo(convoKey(), { turns: S.history.slice(S.macSelf || (S.app && !S.bridge && superUntil(S.owner)) ? -40 : -12), newTurns: S.newTurns, at: Date.now() });
       if (S.newTurns >= 6 || (S.guest && TELL_RE.test(logText || '') && S.newTurns >= 2)) summarize();
     }
   }
@@ -1769,7 +1898,8 @@ function session(ws) {
           // ご縁の人のAI棒をたずねる：つながっていれば、その人のアバターと「紹介してよいこと」だけで話す。話したことは、その人への伝言になる
           if (S.visit) {
             const sp = SPONSORS.find(x => x.id === S.visit);
-            const t = sp ? null : S.visit !== S.myRef && await canTalk(S.myRef, S.visit) ? await getRef(S.visit).catch(() => null) : null;
+            const gotCard = async () => ((await loadCol(S.myRef, 'cards')).items || []).some(c => c.kind === 'user' && (c.id === S.visit || c.code === S.visit));   // ガチャで出たオーナーのAI棒とも話せる（連絡先は、オーナーが友だち申請を承認したときだけ）
+            const t = sp ? null : S.visit !== S.myRef && (await canTalk(S.myRef, S.visit) || await gotCard()) ? await getRef(S.visit).catch(() => null) : null;
             if (sp) {   // 協賛（会社）のAI棒
               S.visitHost = sp.name; S.visitLog = []; S.avatar = 'hatabo'; S.voice = AVS.hatabo.voice(); S.history = []; S.memo = ''; S.consult = ''; S.visitSponsor = true;
               S.system = HATABO_PERSONA + '\n\n【いまの役目：' + sp.name + 'のAI棒（協賛）】' + (sp.persona || '') + '\n会社の案内に関係ないことには答えない。うそや大げさなことは言わない。';
@@ -1795,8 +1925,8 @@ function session(ws) {
           if (k && !S.komugi && S.avatar === 'komugi') { S.komugi = true; S.system += komugiBlock(await komugiNews()); }
           // コムギ：馬越さん本人なら制限なしの相棒。馬越さんの紹介の人には、馬越さんへの橋渡し役に徹する
           if (S.avatar === 'komugi' && !S.visit) {
-            if (isMac(S.owner)) { S.macSelf = true; const nw = await komugiNews(); S.system += MAC_SELF_BLOCK + '\n\n【いま入っているコムギ通信（紹介の人に案内する分）】\n' + (nw || '（まだ入っていない）'); }
-            else { S.bridge = true; S.system += KOMUGI_BRIDGE; if (!S.komugi) { S.komugi = true; S.system += komugiBlock(await komugiNews()); } }
+            if (isMac(S.owner)) { S.macSelf = true; const nw = await komugiNews(); S.system += docsBlock(await docsLoad(S.owner).catch(() => ({})), false) + MAC_SELF_BLOCK + '\n\n【いま入っているコムギ通信（紹介の人に案内する分）】\n' + (nw || '（まだ入っていない）'); }
+            else { S.bridge = true; S.system += KOMUGI_BRIDGE + docsBlock(await docsLoad(macOwnerKey()).catch(() => ({})), true); if (!S.komugi) { S.komugi = true; S.system += komugiBlock(await komugiNews()); } }
           }
           // 紹介の手数料のため：馬越さん（コムギ）経由で来た人に、紹介者「mac」を一度だけしるす（あとで契約を数える）
           if (S.myRef && !S.peek && (S.app === 'komugi' || k || S.avatar === 'komugi')) {
@@ -1819,7 +1949,7 @@ function session(ws) {
           const c = await loadConvo(convoKey());
           if (c) {
             S.memo = String(c.summary || '');
-            if (Date.now() - (c.at || 0) < 12 * 3600000) S.history = cleanTurns(c.turns);
+            if (Date.now() - (c.at || 0) < (S.macSelf ? 7 * 24 : 12) * 3600000) S.history = cleanTurns(c.turns);
             S.newTurns = Number(c.newTurns || 0);
             if (S.newTurns >= 2) setTimeout(summarize, 3000);       // 前回まとめきれなかった分（強制で切ったときなど）
           }
@@ -1834,7 +1964,7 @@ function session(ws) {
           S.tellTo = to;
           S.system = S.system.replace(/ハタラボの担当（ヒロさん）|ハタラボのヒロさん/g, to).replace(/〈伝え先〉/g, to).replace(/ヒロさん/g, to);
         }
-        send({ type: 'ready', me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs, guest: !!S.guest, service: S.role === 'サービス相談', myRef: S.myRef || '', visit: S.visit ? { code: S.visit, name: S.visitHost } : null, avatar: S.avatar || '', komugi: !!S.komugi, mac: !!S.macSelf, bridge: !!S.bridge, superUntil: superUntil(S.owner), canPlan: !!(S.claude || superUntil(S.owner)), claude: !!S.claude, aiName: !S.visit && S.custom && S.custom.aiName || '' });
+        send({ type: 'ready', me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs, guest: !!S.guest, service: S.role === 'サービス相談', myRef: S.myRef || '', visit: S.visit ? { code: S.visit, name: S.visitHost } : null, avatar: S.avatar || '', komugi: !!S.komugi, mac: !!S.macSelf, office: !!S.owner && ENV.OFFICE_OWNERS.some(id => S.owner === id || S.owner === 'g:' + id), bridge: !!S.bridge, superUntil: superUntil(S.owner), canPlan: !!(S.claude || superUntil(S.owner)), claude: !!S.claude, aiName: !S.visit && S.custom && S.custom.aiName || '' });
         if (S.visit) { const T = S.avatar === 'komugi' ? x => x.replace(/だボー/g, 'です').replace(/ボー/g, 'です') : S.avatar === 'hatabo' ? x => x : x => x.replace(/だボー/g, 'だぜ').replace(/ボー/g, 'ぜ'); return speakOnly(T(S.visitSponsor ? S.visitHost + 'のAI棒だボー。なんでも聞いてほしいボー。' : S.visitHost + 'さんのAI棒だボー。話してくれたことは、' + S.visitHost + 'さんに伝言で届けるボー。'), 'excited'); }
         if (m.greet && S.guest && S.consult) return recapGreet().then(deliverInbox).catch(() => {});      // 相談メモがある人には、振り返りからはじめる
         const hi = m.greet ? (S.guest ? (S.history.length ? (AVS[S.avatar] ? AVS[S.avatar].again : 'よう、また来てくれたな！つづきを話そうぜ。') : (AVS[S.avatar] ? greetFor() : guestGreeting(S.me))) : greeting(S.me, S.mode, S.trio)) : '';
@@ -1876,7 +2006,7 @@ function session(ws) {
         S.mode = m.mode === 'business' ? 'business' : 'family'; S.history = []; S.memo = ''; S.newTurns = 0;
         await loadBrain();
         const c = convoKey() ? await loadConvo(convoKey()) : null;
-        if (c) { S.memo = String(c.summary || ''); if (Date.now() - (c.at || 0) < 12 * 3600000) S.history = cleanTurns(c.turns); }
+        if (c) { S.memo = String(c.summary || ''); if (Date.now() - (c.at || 0) < (S.macSelf ? 7 * 24 : 12) * 3600000) S.history = cleanTurns(c.turns); }
         return send({ type: 'mode', mode: S.mode });
       }
       if (m.type === 'profile') return onProfile(m);
@@ -1887,7 +2017,7 @@ function session(ws) {
       if (m.type === 'funnel') return onFunnel(m);
       if (m.type === 'gacha') return onGacha(m);
       if (m.type === 'google_status') { const g = await gGet(S.owner); return send({ type: 'google', ready: !!ENV.GOOGLE_CLIENT_ID, linked: !!g.refresh, email: g.email || '', auto: g.auto !== false }); }
-      if (m.type === 'google_link') { if (!S.owner || !ENV.GOOGLE_CLIENT_ID) return send({ type: 'google', ready: !!ENV.GOOGLE_CLIENT_ID, linked: false }); const n = crypto.randomBytes(16).toString('hex'); gNonce.set(n, { owner: S.owner, at: Date.now() }); if (gNonce.size > 500) gNonce.clear(); return send({ type: 'google_url', url: ENV.PUBLIC_URL + '/google/start?n=' + n }); }
+      if (m.type === 'google_link') { if (!S.owner || !ENV.GOOGLE_CLIENT_ID) return send({ type: 'google', ready: !!ENV.GOOGLE_CLIENT_ID, linked: false }); const n = crypto.randomBytes(16).toString('hex'); gNonce.set(n, { owner: S.owner, at: Date.now(), docs: !!m.docs }); if (gNonce.size > 500) gNonce.clear(); return send({ type: 'google_url', url: ENV.PUBLIC_URL + '/google/start?n=' + n }); }
       if (m.type === 'google_auto') { await saveCol(gDocKey(S.owner), 'google', { auto: !!m.on }); const g = await gGet(S.owner); return send({ type: 'google', ready: true, linked: !!g.refresh, email: g.email || '', auto: g.auto !== false }); }
       if (m.type === 'google_unlink') { const g = await gGet(S.owner); if (g.refresh) { try { await fetch('https://oauth2.googleapis.com/revoke?token=' + encodeURIComponent(gDec(g.refresh)), { method: 'POST' }); } catch (e) {} } await saveCol(gDocKey(S.owner), 'google', { refresh: '', email: '', folder: '' }); return send({ type: 'google', ready: !!ENV.GOOGLE_CLIENT_ID, linked: false }); }
       if (m.type === 'note_drive') { const items = await loadNotes(S.owner), it = items.find(x => x.id === String(m.id || '')); if (it) { it.url = await driveSave(S.owner, it.title, it.text).catch(() => null) || it.url || ''; await saveNotes(S.owner, items); } return send(Object.assign(await myPage(S), { driveMsg: it && it.url ? 'Googleドライブに保存しました' : 'Googleドライブに保存できませんでした' })); }
@@ -1901,6 +2031,8 @@ function session(ws) {
       }
       if (m.type === 'rename_req') { gas(Object.assign({ action: 'lead', lead: { who: S.me, ref: '', kind: '契約', title: 'AI棒の名前の変更（1,000円）：' + String(m.name || '').slice(0, 12), need: '名前の変更', when: '', budget: '1,000円', next: 'お支払いのあと名前を変える', memo: '' } }, S.auth)).catch(() => {}); return send({ type: 'notice', why: 'rename', detail: '名前の変更を申し込みました。お支払いの案内のあと変わります' }); }
       if (m.type === 'ticket') return onTicket(m);
+      if (m.type === 'reqs' || m.type === 'req_adopt') return onReqs(m);
+      if (m.type === 'docs' || m.type === 'docs_set' || m.type === 'docs_share' || m.type === 'docs_copy') return onDocs(m);
       if (m.type === 'friends') return send(await friendsView());
       if (m.type === 'friend_req' || m.type === 'friend_ok' || m.type === 'friend_no' || m.type === 'friend_del') return onFriend(m);
       if (m.type === 'social') { const r = { gachaOn: m.gachaOn !== false, showLine: !!m.showLine, showInsta: !!m.showInsta, lineId: String(m.lineId || '').trim().slice(0, 40), insta: String(m.insta || '').trim().replace(/^@/, '').slice(0, 40) }; if (S.myRef) await putRef(S.myRef, r); return send(await friendsView()); }
@@ -1924,6 +2056,7 @@ function session(ws) {
 function createServer() {
   const server = http.createServer((req, res) => {
     if (req.url.startsWith('/google/')) return googleHttp(req, res);
+    if (req.url.startsWith('/cron/digest')) { const k = new URL(req.url, 'http://x').searchParams.get('key'); if (!ENV.CRON_KEY || k !== ENV.CRON_KEY) { res.writeHead(403); return res.end('no'); } return sendDigests().then(n => { res.writeHead(200, { 'Content-Type': 'text/plain' }); res.end('sent ' + n); }).catch(e => { res.writeHead(500); res.end(String(e.message)); }); }
     if (req.url.startsWith('/line/webhook') && req.method === 'POST') return lineWebhook(req, res, /\/komugi/.test(req.url) ? 'komugi' : 'hatabo');   // /line/webhook/komugi はコムギの公式LINE
     if (req.url === '/' || req.url.startsWith('/health')) { res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' }); return res.end('バターちゃんジュニア：元気だよ'); }
     res.writeHead(404); res.end();
