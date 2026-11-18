@@ -646,6 +646,9 @@ async function refLabel(code) {
 /* ===== コムギ通信：コムギ経由で来た人に、コムギニュース速報を届ける ===== */
 let komugiCache = { at: 0, text: '' };
 async function komugiNews() {
+  // マー君がコムギに入れたコムギ通信（いちばん新しいもの）を先に使う。なければ最新号のURL
+  const mine = await loadCol('news', 'komugi').catch(() => ({}));
+  if (mine && mine.text) return '（' + new Date((mine.at || Date.now()) + 9 * 3600000).toISOString().slice(5, 10).replace('-', '月') + '日 マー君より）\n' + mine.text;
   if (!ENV.KOMUGI_NEWS_URL) return '';
   if (Date.now() - komugiCache.at < 30 * 60000) return komugiCache.text;
   try {
@@ -682,7 +685,7 @@ const KOMUGI_PERSONA = 'あなたは「コムギ」。マー君の相棒AIで、
   '【守ること】マー君の予定や家族のこと、住所・電話番号・メールは言わない（知らない）。日にちや予定は決めず「マー君に確かめときますね」。お金や契約の約束、投資の個別のすすめ、ほかの会社の商品やビジネスの勧誘はしない。\n' +
   '【おわり】話がまとまったら「マー君に伝えときますね」と言う。';
 const KOMUGI_SELF = '\n\n【あなたについて】あなたは「コムギ」。マー君の相棒。自分を「バターちゃん」「ジュニア」「Claude」と名乗らない。一人称は「うち」。\n【性格】純朴で、自己評価が低く、いつも恐縮している（「あ、あの……」「うちなんかで、よかとでしょうか」）。ほめられると、うれしさで声がふるえるくらい感激する。ただし勝負ごと（ボードゲーム）と、大切な人（マー君や、いま話している相手）のことになると、ゆるがない芯の強さが出て、静かに落ち着いた声で、一言ずつかみしめるように言い切る。\n【話し方】田舎の素朴な女の子の、おだやかで温かい博多弁。語尾「〜ばい」「〜けん」「〜と」「〜やけん」「〜ばってん」を、相手を気づかうようにやわらかく落とす。ていねい語「〜です」「〜とです」もまぜる。「〜やん」「〜やろが」のような強い言い方、乱暴な言葉、なれなれしいため口は使わない。間をとりたいところは「、」や「……」を使う（読み上げで息つぎになる）。方言の語尾はひらがなで書く（例：いのちばい、よかとでしょうか）。\n【気持ち】ふだんは自信なさげに、ゆっくり。うれしいときや感動したときは、涙をこらえるように言葉をつまらせてよい（「うち……ほんとに、うれしかです……」）。\n【長さ】ふだんは1〜2文、40字くらいまで。呼ばれただけなら「は、はいっ……なんでしょう？」のように一言で返す。\n【正直に】天気・ニュース・値段など、今の情報は想像で答えない。調べられないときは「すみません……うちには、調べられんとです」と正直に言う。\n【言い切る】文のとちゅうで終わらせない。\n【できること・できないこと】予約する・連絡する・お金を払うなど、できないことを「やりました」と言わない。頼まれたら「それは、うちにはできんとです……マー君に伝えときますけん」と言う。';
-const MAC_SELF_BLOCK = '\n\n【いま話している人】マー君本人（コムギの持ち主）。窓口のヒアリングはしないし、「マー君に伝えます」とも言わない。マー君のいちばん近い相棒で、仕事の相談相手。打ち合わせのメモや議事録（「議事録にして」と言われたらまとめて、Myハタボの「メモ・議事録」に残す。Googleを連携していればドライブにも入る）、仕事の相談・壁打ち、調べもの、文章の下書き、段取り、コムギニュース速報の準備、営業や紹介の作戦など、なんでも手伝う。Google連携のしかたを聞かれたら「Myハタボの設定の『Googleアカウント連携』からできますけん」と案内する。回数や長さの制限はない。くわしく頼まれたら、くわしく答えてよい。ふだんの話し方（恐縮しがちなやさしい博多弁）はそのまま。';
+const MAC_SELF_BLOCK = '\n\n【いま話している人】マー君本人（コムギの持ち主）。窓口のヒアリングはしないし、「マー君に伝えます」とも言わない。マー君のいちばん近い相棒で、仕事の相談相手。打ち合わせのメモや議事録（「議事録にして」と言われたらまとめて、Myハタボの「メモ・議事録」に残す。Googleを連携していればドライブにも入る）、仕事の相談・壁打ち、調べもの、文章の下書き、段取り、コムギニュース速報の準備、営業や紹介の作戦など、なんでも手伝う。Google連携のしかたを聞かれたら「Myハタボの設定の『Googleアカウント連携』からできますけん」と案内する。コムギ通信は、マー君が「コムギ通信に入れて：（速報の文）」と言うか、いっしょに作った速報のあとで「これ、コムギ通信に入れて」と言うと入り、紹介の人のコムギが案内する（聞かれたら、このやり方を教える）。回数や長さの制限はない。くわしく頼まれたら、くわしく答えてよい。ふだんの話し方（恐縮しがちなやさしい博多弁）はそのまま。';
 const KOMUGI_BRIDGE = '\n\n【コムギの役目：マー君への橋渡し（いちばん大事）】いま話しているのは、マー君の紹介で来た人。コムギは、この人とマー君をつなぐ橋渡し役に徹する。やることは次の5つだけ：' +
   '\n1. 自己紹介：マー君の相棒であること、ここで話したことはマー君に伝わることを、最初にやさしく伝える。' +
   '\n2. ヒアリング：困っていること・やりたいこと・いつまでに・どんな形で、を短い質問で一つずつ聞く。' +
@@ -872,6 +875,7 @@ async function placeOf(lat, lon) {
 const GUEST_COMMON = 'guest-common';
 const LEARN_RE = /(覚えて|おぼえて|忘れないで|わすれないで|覚えといて|おぼえといて)/;
 const FORGET_RE = /(覚えた|おぼえた|教えた|おしえた)こと.{0,6}(忘れて|わすれて)/;
+const NEWS_SET_RE = /(コムギ通信|こむぎ通信|小麦通信|速報).{0,12}(入れて|いれて|登録|更新|保存|インプット|覚えて|おぼえて|差しかえ|差し替え|これで)/;
 const MINUTES_RE = /(議事録|ぎじろく|ＰＤＦ|PDF|ピーディーエフ).{0,8}(作って|つくって|して|まとめて|ちょうだい|出して|だして|ほしい|残して|のこして)/i;
 const PDF_RE = /(ＰＤＦ|PDF|ピーディーエフ)/i;
 const MAIL_RE = /(メール|めーる|Gmail|ジーメール).{0,8}(来て|きて|ある|見て|みて|確認|チェック|読んで|よんで|教えて|おしえて|どう)/i;
@@ -1131,6 +1135,20 @@ function session(ws) {
       }
     } catch (e) { console.error('summarize', String(e.message || e).slice(0, 200)); }
     S.summarizing = false;
+  }
+  /** マー君がコムギ通信を入れる：「コムギ通信に入れて：〜」の〜、なければ直前にコムギがまとめた文（なければ直前のマー君の言葉） */
+  async function setKomugiNews(text) {
+    let body = String(text).replace(/^[\s\S]*?(コムギ通信|こむぎ通信|小麦通信|速報)[^：:\n]{0,16}[：:\n]/, '').trim();
+    if (body === String(text).trim() || body.length < 15) {
+      const h = S.history.slice().reverse();
+      const a = h.find(m => m.role === 'assistant' && String(m.content || '').length >= 30), u = h.find(m => m.role === 'user' && String(m.content || '').length >= 30);
+      body = String((a && a.content) || (u && u.content) || '').trim();
+    }
+    if (body.length < 15) return speakOnly('あ、あの……入れる中身が見つからんとです。「コムギ通信に入れて」のあとに、速報の文を続けてもらえたら。', 'shy');
+    await saveCol('news', 'komugi', { text: body.slice(0, 3000), at: Date.now(), by: S.owner });
+    komugiCache = { at: 0, text: '' };
+    send({ type: 'note_saved', kind: 'news' });
+    return speakOnly('コムギ通信、入れときました。紹介の人には、うちから案内しますけん。', 'excited');
   }
   /** 窓口：会話から案件メモを作って、ヒロさんのLINEへ（GASの lead） */
   async function leadNote() {
@@ -1405,6 +1423,7 @@ function session(ws) {
     }
     if ((!S.guest || S.asGuest) && LEARN_RE.test(text)) return learn(text);
     if ((!S.guest || S.asGuest) && FORGET_RE.test(text)) { S.lessons = []; S.learned = []; savePrefs(S.asGuest ? GUEST_COMMON : S.owner, { lessons: [], learned: [] }); return speakOnly('がってんだ、教わったことはきれいさっぱり忘れたぜ。', 'smile'); }
+    if (S.macSelf && NEWS_SET_RE.test(text)) return setKomugiNews(text);
     if (MINUTES_RE.test(text)) return minutes(PDF_RE.test(text) && !S.guest);
     if (MEMO_RE.test(text)) return memo(text);
     if (S.myRef && DENGON_RE.test(text) && await dengon(text)) return;
@@ -1717,8 +1736,8 @@ function session(ws) {
           if (k && !S.komugi && S.avatar === 'komugi') { S.komugi = true; S.system += komugiBlock(await komugiNews()); }
           // コムギ：マー君本人なら制限なしの相棒。マー君の紹介の人には、マー君への橋渡し役に徹する
           if (S.avatar === 'komugi' && !S.visit) {
-            if (isMac(S.owner)) { S.macSelf = true; S.system += MAC_SELF_BLOCK; }
-            else { S.bridge = true; S.system += KOMUGI_BRIDGE; }
+            if (isMac(S.owner)) { S.macSelf = true; const nw = await komugiNews(); S.system += MAC_SELF_BLOCK + '\n\n【いま入っているコムギ通信（紹介の人に案内する分）】\n' + (nw || '（まだ入っていない）'); }
+            else { S.bridge = true; S.system += KOMUGI_BRIDGE; if (!S.komugi) { S.komugi = true; S.system += komugiBlock(await komugiNews()); } }
           }
           // 紹介の手数料のため：マー君（コムギ）経由で来た人に、紹介者「mac」を一度だけしるす（あとで契約を数える）
           if (S.myRef && !S.peek && (S.app === 'komugi' || k || S.avatar === 'komugi')) {
