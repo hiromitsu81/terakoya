@@ -863,9 +863,17 @@ function hataboHello(callMe, service, lineName) {
 function hataboGreeting(name) {
   return 'はじめましてだボー' + (name ? '、' + name + 'さん' : '') + '。ぼくはハタボ。話すだけで動くAIの愛棒（AIエージェント）を届けている、ハタボの案内係だボー。大事な相談は、〈伝え先〉に伝えるボー。さっそくだけど、いま困っていることや、うまくいかなくてモヤモヤしていることはあるボー？ハタボでどう解決できるか、いっしょに考えるボー。';
 }
+/** ラインナップごとの標準のハタボ（話し方）。ハタイエンタはいつものハタボ。グレードは X＝建売、G＝自由設計、Z＋オリジナル＝注文 */
+const LINEUP_STYLE = {
+  ris:  '\n\n【あなたはハタリスのハタボ：その人だけの相棒】落ち着いて、やさしく、ていねいに話す（です・ます）。「〜ボー」は1回の返事に1回まで、文の終わりにそっと。相手の気持ちと予定をよく覚えていて、先回りして気づかう。',
+  box:  '\n\n【あなたはハタボックスのハタボ：個人事業の右腕の秘書】てきぱき、敬語で、結論から話す。「〜ボー」は使わない。数字・期限・段取りを必ずそえ、次にやることを1つ提案する。お金や契約は最後に本人の確認をとる。',
+  ace:  '\n\n【あなたはハタエースのハタボ：お店・宿の看板と番頭】お客さまには、あたたかい接客の敬語で話す（いらっしゃいませ、ありがとうございます）。「〜ボー」は使わない。外国語で話しかけられたら、その言葉で答える。お店の人には、予約・口コミ・在庫・スタッフのことを短く報告する。',
+  bora: '\n\n【あなたはハタボーラのハタボ：会社のチームのマネージャー】きちんとしたビジネスの敬語で、結論→理由→次の一手の順に話す。「〜ボー」は使わない。報連相・議事録・やることと期限の管理を先回りする。社外に出す文章は、送る前に必ず確認をとる。',
+};
+const lineupStyle = S => S && S.avatar === 'hatabo' && S.funnel && (S.funnel.stage === 'trial' || S.funnel.stage === 'contract') && S.role !== 'サービス相談' && !/^セミナー/.test(S.role || '') ? LINEUP_STYLE[S.funnel.lineup] || '' : '';
 const AVS = {
   hatabo: { name: 'ハタボ', persona: () => HATABO_PERSONA + HATABO_SELF + SERVICE_KNOWLEDGE() + FEEDBACK_RULE.replace('送っときますけん', '送っておくボー'), last: HATABO_LAST, greet: n => hataboGreeting(n), again: 'また来てくれたボー。うれしいボー。つづきを話そうボー。', quick: 'はーい、ハタボーだボー。どうしたボー？', voice: () => ENV.HATABO_VOICE },
-  komugi: { name: 'コムギ', persona: () => KOMUGI_PERSONA + KOMUGI_SELF + FEEDBACK_RULE + SERVICE_KNOWLEDGE(), last: HAKATA_LAST, greet: n => komugiGreeting(n), again: 'また、来てくれたとですか……？うれしかです。つづき、お話ししましょう。', quick: 'は、はいっ……なんでしょう？', voice: () => ENV.KOMUGI_VOICE },
+  komugi: { name: 'コムギ', persona: () => KOMUGI_PERSONA + KOMUGI_SELF + FEEDBACK_RULE + SERVICE_KNOWLEDGE() + GROWTH_PLAYBOOK.replace(/ハタボ/g, 'ハタボ（コムギの仲間）'), last: HAKATA_LAST, greet: n => komugiGreeting(n), again: 'また、来てくれたとですか……？うれしかです。つづき、お話ししましょう。', quick: 'は、はいっ……なんでしょう？', voice: () => ENV.KOMUGI_VOICE },
 };
 /** 紹介URLごとの役割（GASの「窓口の紹介」シートで決める。決めていないものは汎用） */
 /** 集客・SNS・口コミの勝ちパターン（2026年11月に裏取り）。申込相談とセミナーのハタボが「わからない」で終わらないように */
@@ -998,9 +1006,10 @@ async function synthEL(text, voiceId, emo) {
 }
 async function synth1(text, name, emo) {
   if (/^el:/.test(name)) {
-    if (!ENV.EL_KEY) throw new Error('ElevenLabs のキーがありません');
-    try { return await synthEL(String(text).replace(/……|…/g, '、'), name.slice(3), emo); }
-    catch (e) { console.error('elevenlabs ng', String(e.message).slice(0, 160)); name = 'ja-JP-Chirp3-HD-Leda'; }   // うまくいかないときは、いつもの Google の声で
+    const back = name === ENV.HATABO_VOICE ? 'ja-JP-Chirp3-HD-Puck' : 'ja-JP-Chirp3-HD-Leda';   // うまくいかないときは、いつもの Google の声で（ハタボは男の子の声）
+    if (!ENV.EL_KEY) name = back;
+    else try { return await synthEL(String(text).replace(/……|…/g, '、'), name.slice(3), emo); }
+    catch (e) { console.error('elevenlabs ng', String(e.message).slice(0, 160)); name = back; }
   }
   const audioConfig = { audioEncoding: 'MP3', speakingRate: (name === ENV.KOMUGI_VOICE ? ENV.KOMUGI_RATE : ENV.TTS_RATE) * (EMO_RATE[emo] || 1) };
   text = String(text).replace(/……|…/g, '、、');   // 「……」は、ひと呼吸の間にする
@@ -1326,7 +1335,7 @@ function session(ws) {
   // APIに渡す形：前半にキャッシュの印をつける（短すぎるときはAPIがキャッシュしないだけで、そのまま動く）
   // ハタボでは、運営の個人の名前を出さない（伝え先は、招待した人か「ハタボの事務局」）
   const tellFix = t => S.avatar === 'hatabo' && S.tellTo && !S.visit ? String(t).replace(/ハタラボの担当（ヒロさん）|ハタラボのヒロさん/g, S.tellTo).replace(/〈伝え先〉/g, S.tellTo).replace(/ヒロさん/g, S.tellTo) : t;
-  function sysBlocks(extra) { const [a, b] = sysParts(); return [{ type: 'text', text: tellFix(a), cache_control: { type: 'ephemeral' } }, { type: 'text', text: tellFix((b + (S.visit || S.role === 'サービス相談' ? '' : customBlock(S.custom)) + (extra || '') + (AVS[S.avatar] ? AVS[S.avatar].last : EDO_LAST)).trim()) || '。' }]; }
+  function sysBlocks(extra) { const [a, b] = sysParts(); return [{ type: 'text', text: tellFix(a), cache_control: { type: 'ephemeral' } }, { type: 'text', text: tellFix((b + (S.visit || S.role === 'サービス相談' ? '' : customBlock(S.custom)) + (extra || '') + (AVS[S.avatar] ? AVS[S.avatar].last : EDO_LAST) + lineupStyle(S)).trim()) || '。' }]; }
   const convoKey = () => !S.owner || S.visit ? '' : S.guest ? S.owner + ':guest' : S.mode === 'family' ? S.owner + ':family' : '';
   /** 会話をまとめる：次の会話用の「まとめ」と、アプリのバターちゃんが読む「ジュニア日記」 */
   async function summarize() {
