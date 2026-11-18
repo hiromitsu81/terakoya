@@ -120,21 +120,21 @@
   }
   requestAnimationFrame(tick);
 
-  /* ---------- ブランドの3色：ハタボ＝緑（どこでも）、AI＝青・愛棒＝赤（見出しとキャッチ） ---------- */
-  (function(){
+})();
+  /* ---------- ブランドの色（サイト全体）：ハタボ・話す＝緑、AI＝青、愛棒＝赤、聞く・読む・書く＝それぞれの色 ---------- */
+(function(){
     var skip={SCRIPT:1,STYLE:1,TEXTAREA:1,INPUT:1,OPTION:1,TITLE:1,svg:1};
     function walk(root,re,heads){
       var w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:function(n){
-        for(var p=n.parentNode;p&&p!==root.parentNode;p=p.parentNode){if(skip[p.nodeName]||(p.classList&&(p.classList.contains('k-hb')||p.classList.contains('k-ai')||p.classList.contains('k-love'))))return NodeFilter.FILTER_REJECT;if(p.closest&&p.closest('svg'))return NodeFilter.FILTER_REJECT}
+        for(var p=n.parentNode;p&&p!==root.parentNode;p=p.parentNode){if(skip[p.nodeName]||(p.classList&&/\b(k-hb|k-ai|k-love|v-talk|v-listen|v-read|v-write)\b/.test(p.className||'')))return NodeFilter.FILTER_REJECT;if(p.closest&&p.closest('svg'))return NodeFilter.FILTER_REJECT}
         return re.test(n.nodeValue)?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT}});
       var list=[];while(w.nextNode())list.push(w.currentNode);
       list.forEach(function(n){
         var f=document.createDocumentFragment(),t=n.nodeValue,last=0;re.lastIndex=0;var m;
-        while((m=re.exec(t))){f.appendChild(document.createTextNode(t.slice(last,m.index)));var sp=document.createElement('span');sp.className=m[0]==='ハタボ'?'k-hb':m[0]==='AI'?'k-ai':'k-love';sp.textContent=m[0];f.appendChild(sp);last=m.index+m[0].length}
+        while((m=re.exec(t))){f.appendChild(document.createTextNode(t.slice(last,m.index)));var sp=document.createElement('span');sp.className=({'ハタボ':'k-hb','AI':'k-ai','愛棒':'k-love','話す':'v-talk','聞く':'v-listen','読む':'v-read','書く':'v-write'})[m[0]];sp.textContent=m[0];f.appendChild(sp);last=m.index+m[0].length}
         f.appendChild(document.createTextNode(t.slice(last)));n.parentNode.replaceChild(f,n)})}
     function run(){
-      walk(document.body,/ハタボ(?!ー)/g);
-      document.querySelectorAll('h1,h2,h3,.lead2,.kicker,.tag').forEach(function(h){walk(h,/AI(?![A-Za-z])|愛棒/g)})}
+      walk(document.body,/ハタボ(?!ー)|(?<![A-Za-z])AI(?![A-Za-z])|愛棒|話す|聞く|読む|書く/g)}
     if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
   })();
-})();
+

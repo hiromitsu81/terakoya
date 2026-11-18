@@ -292,3 +292,5 @@ details.q summary::after{content:"+";font-weight:900}details.q[open] summary::af
 :root{--c-hatabo:#62AD7F;--c-ai:#379BD7;--c-love:#EC7D8F}
 .k-hb{color:var(--c-hatabo)!important;font-weight:800}.k-ai{color:var(--c-ai)!important}.k-love{color:var(--c-love)!important}
 .hbh .my{gap:0}.hbh .my svg,.hbh .my img{margin-right:6px}
+:root{--v-talk:#62AD7F;--v-listen:#4FB6C9;--v-read:#E2B23C;--v-write:#F2804A}.v-talk{color:var(--v-talk)!important;font-weight:800}.v-listen{color:var(--v-listen)!important;font-weight:800}.v-read{color:var(--v-read)!important;font-weight:800}.v-write{color:var(--v-write)!important;font-weight:800}
+.shiftband{padding:46px 0;background:#0E1526;text-align:center}.shiftband p{margin:0;font:900 clamp(22px,3.6vw,40px)/1.5 "Noto Sans JP";color:#fff}.shiftband small{display:block;margin-top:8px;font:700 14px "Noto Sans JP";color:#C6CBDB}
