@@ -225,12 +225,12 @@ function client(port, hello) {
   gst.ws.send(JSON.stringify({ type: 'plan', plan: 'super' }));
   await new Promise(r => setTimeout(r, 300));
   assert.ok(!gst.msgs.some(m => m.type === 'plan'), '窓口からはプランを切りかえられない');
-  assert.ok(/マー君さん/.test(gg.text) && /ヒロさんに伝える/.test(gg.text), 'はじめに伝わることを知らせる: ' + gg.text);
+  assert.ok(/マー君さん/.test(gg.text) && /(ハタボの事務局|さん)に伝える/.test(gg.text) && !/ヒロさん/.test(gg.text), 'はじめに伝わることを知らせる: ' + gg.text);
   const os4 = deps.claude.messages.stream; let gsys = '';
   deps.claude.messages.stream = p => { gsys = sysText(p.system); return os4(p); };
   gst.ws.send(JSON.stringify({ type: 'text', text: '宿の予約の仕組みを相談したい' }));
   await gst.until(m => m.type === 'reply_end' && m.gen > gg.gen);
-  assert.ok(/ヒロさんの窓口/.test(gsys) && /11\/20/.test(gsys) && !/家族OSの記録/.test(gsys), '窓口の人格・空き時間・家族の記録なし');
+  assert.ok(/(ヒロさん|ハタボの事務局)の窓口/.test(gsys) && !/ヒロさん/.test(gsys) && /11\/20/.test(gsys) && !/家族OSの記録/.test(gsys), '窓口の人格・空き時間・家族の記録なし');
   gst.ws.send(JSON.stringify({ type: 'text', text: 'ヒロさんに伝えて' }));
   await new Promise(r => setTimeout(r, 600));
   const ld = gasCalls.find(c => c.action === 'lead');
