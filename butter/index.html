@@ -210,9 +210,13 @@ body.wideshow .sato-banner small { font-size: 12px; }
 #hataboAv { display: none; }
 .av-hatabo #butter > :not(#hataboAv):not(.ring) { display: none; }
 .av-hatabo #hataboAv { display: inline; }
-.av-hatabo #hataboAv .hring { transform-origin: 250px 225px; transform-box: view-box; animation: jrspin 2.4s linear infinite; }
-.av-hatabo .talking #hataboAv .hring { animation-duration: .8s; }
-.av-hatabo .talking #hataboAv image { animation: komugiTalk .28s ease-in-out infinite alternate; transform-origin: 250px 225px; transform-box: view-box; }
+.hbMouthOpen { opacity: 0; }
+.talking .hbMouthOpen { opacity: 1; }
+.talking .hbMouth { opacity: 0; }
+.av-hatabo #hataboAv { transform-origin: 250px 350px; transform-box: view-box; animation: hbBob 2.4s ease-in-out infinite; }
+@keyframes hbBob { 50% { transform: translateY(-4px); } }
+.hbArmR { transform-origin: 334px 296px; transform-box: view-box; animation: hbWaveArm 1.6s ease-in-out infinite; }
+@keyframes hbWaveArm { 50% { transform: rotate(14deg); } }
 /* コムギ（マー君の窓口）の見た目 */
 #komugiAv { display: none; }
 .av-komugi #butter > :not(#komugiAv):not(.ring) { display: none; }
@@ -584,7 +588,28 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
 
       <!-- ===== バターちゃん ===== -->
       <g id="butter" class="butter" data-melt="0" data-emo="smile">
-        <g id="hataboAv"><circle cx="250" cy="225" r="146" fill="#fff"/><circle class="hring" cx="250" cy="225" r="140" fill="none" stroke="url(#hRingGrad)" stroke-width="7" stroke-linecap="round" stroke-dasharray="560 320"/><image href="award_mark.svg" x="140" y="115" width="220" height="220"/></g>
+        <g id="hataboAv">
+          <ellipse cx="250" cy="352" rx="92" ry="14" fill="#16233F" opacity=".12"/>
+          <!-- からだ：エンブレムのTシャツ -->
+          <path d="M178,262 Q250,236 322,262 L340,300 L312,312 L306,350 L194,350 L188,312 L160,300 Z" fill="#16233F"/>
+          <path d="M226,250 Q250,266 274,250" fill="none" stroke="#2F6FD6" stroke-width="5" stroke-linecap="round"/>
+          <circle cx="250" cy="305" r="30" fill="#fff"/>
+          <image href="award_mark.svg" x="224" y="279" width="52" height="52"/>
+          <!-- うで（手をふる） -->
+          <path class="hbArmL" d="M166,296 Q140,272 146,240" fill="none" stroke="#FFDCC2" stroke-width="16" stroke-linecap="round"/>
+          <path class="hbArmR" d="M334,296 Q360,272 354,240" fill="none" stroke="#FFDCC2" stroke-width="16" stroke-linecap="round"/>
+          <!-- あし -->
+          <rect x="212" y="346" width="26" height="16" rx="8" fill="#2F3A52"/><rect x="262" y="346" width="26" height="16" rx="8" fill="#2F3A52"/>
+          <!-- あたま -->
+          <circle cx="250" cy="170" r="82" fill="#FFE9D6"/>
+          <path d="M172,150 Q190,86 250,84 Q312,86 328,150 Q300,118 250,122 Q204,118 172,150 Z" fill="#2B3550"/>
+          <path d="M250,84 L246,62 M246,62 L268,70 L248,76" fill="#E0607A" stroke="#2B3550" stroke-width="4" stroke-linejoin="round"/>
+          <circle cx="214" cy="178" r="11" fill="#1C2233"/><circle cx="286" cy="178" r="11" fill="#1C2233"/>
+          <circle cx="218" cy="174" r="4" fill="#fff"/><circle cx="290" cy="174" r="4" fill="#fff"/>
+          <ellipse cx="196" cy="204" rx="13" ry="8" fill="#F7A8B4" opacity=".7"/><ellipse cx="304" cy="204" rx="13" ry="8" fill="#F7A8B4" opacity=".7"/>
+          <path class="hbMouth" d="M232,206 Q250,222 268,206" fill="none" stroke="#7A3B3B" stroke-width="5" stroke-linecap="round"/>
+          <path class="hbMouthOpen" d="M232,204 Q250,236 268,204 Z" fill="#B5474F"/>
+        </g>
         <g id="komugiAv"><clipPath id="komugiClip"><circle cx="250" cy="225" r="140"/></clipPath><circle cx="250" cy="225" r="146" fill="#fff"/><image href="komugi.jpg" x="110" y="85" width="280" height="280" clip-path="url(#komugiClip)" preserveAspectRatio="xMidYMid slice"/></g>
         <circle class="ring" cx="250" cy="225" r="150" fill="none" stroke="var(--mic-live)" stroke-width="6"/>
         <ellipse cx="250" cy="352" rx="150" ry="22" fill="var(--line)"/>
