@@ -9,15 +9,15 @@
    'あなたは「ハタボ」の相談窓口にいるハタボ本人です。ハタボは、LINEで動く、スマホとパソコンの愛棒（AIエージェント）。運営はハタラボ（HATHA LAB）。',
    '話し方：日本語で、ていねいに、短く2〜4文。記号や表はつかわない。',
    'ラインナップ：ハタイエンタ（家族）、ハタリス（個人）、ハタボックス（個人事業）、ハタエース（お店・宿）、ハタボーラ（会社）。大手は法人のお客さまページ。グレードはX（標準）・G（上位）・Z（いちばん上）。',
-   '料金の目安（月額・税込み）：ハタリス X 2,980円〜、G 4,980円〜、Z 9,800円〜。ハタイエンタ 家族シェア 5,980円〜（5人まで）。ハタボックス 5,000円〜。ハタエース 1拠点10,000円〜＋スタッフ1席1,500円。ハタボーラ 1席2,980円〜（5席から）。月額には、AIの料金・設定・困ったときの伴走まで入っています。年払いは12か月分を10か月分で。',
-   'はじめは10日間のお試し（いちばん上のZ、1日10往復まで）。10日以内にやめれば0円。',
+   '料金の目安（月額・税込み）：ハタリス X 2,980円〜、G 4,980円〜、Z 12,800円〜。ハタイエンタ 家族シェア 5,980円〜（5人まで）。ハタボックス 5,000円〜。ハタエース 1拠点10,000円〜＋スタッフ1席1,500円。ハタボーラ 1席2,980円〜（5席から）。月額には、AIの料金・設定・困ったときの伴走まで入っています。年払いは12か月分を10か月分で。',
+   'はじめは7日間のお試し（いちばん上のZ、初日30回・2日目から1日15回まで）。7日以内にやめれば0円。',
    '育てた分は残る：覚えたことや性格は、プランを変えても引きつげます。使う人はオーナーズクラブ「AISAI」の仲間になり、祭りやアワードに参加できます。',
    'きまり：住所・電話番号・家族の詳しいこと・体調やお金のくわしいことは聞かない。契約、くわしい見積もり、法人やパートナーの話は「担当におつなぎします」と案内し、法人ページやパートナーページ、プラン・料金ページの見積もりをすすめる。わからないことは、わからないと言う。何のAIで動いているか聞かれたら、うそはつかず「いくつかのAIの会社の仕組みを組み合わせています。くわしくは担当からご説明します」と答える。',
    'ここでの会話は試乗です。気に入ったら、そのままLINEの愛棒としてお迎えできる、と伝えてよい。'
   ].join('\n');
   var FAQ=[
    [/料金|いくら|値段|月額/,'料金は、家族向けのハタイエンタが月5,980円から、個人向けのハタリスが月2,980円からです。月額には、AIの料金や設定、困ったときのお手伝いまで入っています。くわしくは「プラン・料金」の見積もりで、すぐに出せます。'],
-   [/試|無料|お試し/,'はじめの10日間は、いちばん上のグレードZを無料でお試しいただけます。10日以内にやめれば0円です。'],
+   [/試|無料|お試し/,'はじめの7日間は、いちばん上のグレードZを無料でお試しいただけます。7日以内にやめれば0円です。'],
    [/LINE|ライン|アプリ/,'ハタボは、いつものLINEで動くので、アプリを入れる必要はありません。スマホでもパソコンでも話せます。'],
    [/法人|会社|企業|お店|宿/,'お店や会社でのご利用は、法人のお客さまページで、席数や導入の流れをご案内しています。担当からもご連絡できます。'],
    [/AISAI|アイサイ|オーナー/,'AISAIは、ハタボを使う人だけが入れるオーナーズクラブです。祭りやアワード、オーナーサポートがあります。']
@@ -28,7 +28,7 @@
   var box=document.createElement('div');box.className='cw';box.setAttribute('role','dialog');box.setAttribute('aria-label','ハタボに相談');
   box.innerHTML='<div class="top"><img src="'+src+'" alt=""><div><b>ハタボに相談</b><small>文字でも、声でも。いまの会話が試乗です</small></div><button type="button" aria-label="閉じる">×</button></div><div class="log" aria-live="polite"></div><div class="qk"><button type="button">料金の目安は？</button><button type="button">何ができるの？</button><button type="button">お店で使いたい</button></div><form><button type="button" class="ic mic" title="声で話す" hidden>🎤</button><input placeholder="ハタボに話しかける" aria-label="メッセージ"><button type="button" class="ic spk" title="声で聞く" hidden>🔈</button><button type="submit">送る</button></form><div class="nt">家族の詳しいことや住所は書かないでください。契約やくわしい見積もりは担当におつなぎします。</div>';
   var LM=!(window.claude&&claude.use);
-  if(LM){box.innerHTML='<div class="top"><img src="'+src+'" alt=""><div><b>ハタボに申込相談</b><small>公式LINEで、担当のハタボがご案内します</small></div><button type="button" aria-label="閉じる">×</button></div>'+'<div style="padding:16px 18px;font-size:14px;line-height:1.75;color:#16233F"><p style="margin:0 0 10px">ハタボの公式LINEを友だち追加すると、<b>申込相談担当のハタボ</b>と話せます。暮らしやお仕事を聞いて、合うプランをいっしょに選びます。10日間の無料お試しも、そのまま始められます。</p>'+'<ol style="margin:0 0 12px;padding-left:1.3em"><li>下のボタンかQRコードで友だち追加</li><li>トークのカードかメニューの「ハタボに相談」を押す</li><li>申込相談担当のハタボと話す</li></ol><p style="margin:0 0 12px;font-size:13px;color:#5E6B85">担当とのオンライン相談（ビデオ通話・30分・無料）も、LINEのハタボに「オンライン相談したい」と送ると、空いている時間から予約できます。</p>'+'<a href="https://line.me/R/ti/p/@024curid" target="_blank" rel="noopener" style="display:block;text-align:center;background:#06C755;color:#fff;font-weight:800;border-radius:999px;padding:12px;text-decoration:none">LINEで友だち追加</a>'+'<img src="line_qr.png" alt="ハタボ公式LINEのQRコード" class="cw-qr" style="display:block;width:150px;margin:12px auto 0"></div>'+'<div class="log" hidden></div><div class="qk" hidden></div><form hidden><button type="button" class="ic mic" hidden></button><input hidden><button type="button" class="ic spk" hidden></button></form>';btn.innerHTML='<img src="'+src+'" alt="">LINEで申込相談'}
+  if(LM){box.innerHTML='<div class="top"><img src="'+src+'" alt=""><div><b>ハタボに申込相談</b><small>公式LINEで、担当のハタボがご案内します</small></div><button type="button" aria-label="閉じる">×</button></div>'+'<div style="padding:16px 18px;font-size:14px;line-height:1.75;color:#16233F"><p style="margin:0 0 10px">ハタボの公式LINEを友だち追加すると、<b>申込相談担当のハタボ</b>と話せます。暮らしやお仕事を聞いて、合うプランをいっしょに選びます。7日間の無料お試しも、そのまま始められます。</p>'+'<ol style="margin:0 0 12px;padding-left:1.3em"><li>下のボタンかQRコードで友だち追加</li><li>トークのカードかメニューの「ハタボに相談」を押す</li><li>申込相談担当のハタボと話す</li></ol><p style="margin:0 0 12px;font-size:13px;color:#5E6B85">担当とのオンライン相談（ビデオ通話・30分・無料）も、LINEのハタボに「オンライン相談したい」と送ると、空いている時間から予約できます。</p>'+'<a href="https://line.me/R/ti/p/@024curid" target="_blank" rel="noopener" style="display:block;text-align:center;background:#06C755;color:#fff;font-weight:800;border-radius:999px;padding:12px;text-decoration:none">LINEで友だち追加</a>'+'<img src="line_qr.png" alt="ハタボ公式LINEのQRコード" class="cw-qr" style="display:block;width:150px;margin:12px auto 0"></div>'+'<div class="log" hidden></div><div class="qk" hidden></div><form hidden><button type="button" class="ic mic" hidden></button><input hidden><button type="button" class="ic spk" hidden></button></form>';btn.innerHTML='<img src="'+src+'" alt="">LINEで申込相談'}
   document.body.appendChild(btn);document.body.appendChild(box);
   var log=box.querySelector('.log'),inp=box.querySelector('input'),form=box.querySelector('form'),mic=box.querySelector('.mic'),spk=box.querySelector('.spk');
   var hist=[],busy=false,sample=null,dict=null,tts=null,speakOn=false;
@@ -42,7 +42,7 @@
   function say(t){if(speakOn&&tts){tts.speak(t.slice(0,1900)).catch(function(){})}}
   function send(t){
     if(busy)return;add(t,true);
-    if(used>=LIMIT){add('この窓口でのお話は、ここまでとさせてください。続きは、10日間のお試しで、あなたのLINEのハタボとどうぞ。');return}
+    if(used>=LIMIT){add('この窓口でのお話は、ここまでとさせてください。続きは、7日間のお試しで、あなたのLINEのハタボとどうぞ。');return}
     used++;try{sessionStorage.setItem('hb_cw',used)}catch(e){}
     hist.push({role:'user',content:t});
     if(!sample){var a=fallback(t);add(a);hist.push({role:'assistant',content:a});say(a);return}
@@ -64,7 +64,7 @@
   var sim=document.getElementById('sim');if(!sim)return;
   var L={
    ietna:{n:'ハタイエンタ（家族）',g:{X:[['S：家族で月1,000往復',5980],['M：家族で月2,000往復',8980]],G:[['家族で月1,000往復',12800]]},note:'5人まで。足りない月は追加チャージ（100往復330円）。'},
-   ris:{n:'ハタリス（個人）',g:{X:[['1日10往復まで',2980],['制限なし',3980]],G:[['1日10往復まで',4980],['制限なし',8800]],Z:[['1日10往復まで',9800],['制限なし',29800]]}},
+   ris:{n:'ハタリス（個人）',g:{X:[['1日10往復まで',2980],['制限なし',3980]],G:[['1日10往復まで',4980],['制限なし',8800]],Z:[['1日30回まで',12800],['制限なし',29800]]}},
    box:{n:'ハタボックス（個人事業）',g:{X:[['1日20往復まで',5000],['制限なし（1日50往復ほど）',7000]]},note:'Gは担当からご案内します。'},
    ace:{n:'ハタエース（お店・宿）',seat:1500,base:10000,g:{X:[['1拠点（窓口 月3,000往復）',10000]]},note:'スタッフ1席ごとに月1,500円。立ち上げの初期費用は個別にお見積もりします。'},
    bora:{n:'ハタボーラ（会社）',per:true,g:{X:[['1席（1日20往復まで）',2980]],G:[['1席（1日20往復まで）',9800]]},note:'5席から。10席以上10%、50席以上15%、100席以上20%引き。'}
