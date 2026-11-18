@@ -296,6 +296,31 @@ async function queueDigest(lineId, ch, text) {
   await saveCol(lineId, 'digest', { ch: d.ch === 'komugi' || ch === 'komugi' ? (ch || d.ch) : 'hatabo', items: (d.items || []).concat([{ at: Date.now(), text: String(text).slice(0, 400) }]).slice(-80) });
 }
 /** ハタボ事務局（ヒロさん）へ */
+/** よくある質問の種：申込相談・セミナーのハタボが受けた質問をためる（名前・連絡先・番号は消して残す） */
+const FAQ_ROLES = ['サービス相談', 'セミナー法人', 'セミナーパートナー'];
+function faqClean(s) { return String(s || '').replace(/[\w.+-]+@[\w-]+\.[\w.]+/g, '（メール）').replace(/0\d{1,4}[-\s]?\d{1,4}[-\s]?\d{3,4}/g, '（電話）').replace(/\d{5,}/g, '（番号）').slice(0, 400); }
+async function faqLog(role, q, a) {
+  if (!FAQ_ROLES.includes(role) || !q || q.length < 4 || /^（/.test(q)) return;
+  const row = { role, q: faqClean(q), a: faqClean(a).slice(0, 300), at: Date.now() };
+  try { if (deps.db) return void await deps.db.collection('faqlog').add(row); } catch (e) { console.error('faqlog', String(e.message).slice(0, 120)); }
+  const k = 'faqlog:mem'; memCol.set(k, (memCol.get(k) || []).concat([row]).slice(-500));
+}
+/** 1週間ぶんの質問を、よくある質問の候補にまとめて事務局に届ける（/cron/faq?key=） */
+async function faqDigest(days) {
+  const since = Date.now() - (days || 7) * 86400000;
+  let rows = [];
+  try { if (deps.db) rows = (await deps.db.collection('faqlog').where('at', '>=', since).limit(800).get()).docs.map(d => d.data()); } catch (e) { console.error('faq read', String(e.message).slice(0, 120)); }
+  if (!deps.db) rows = (memCol.get('faqlog:mem') || []).filter(r => r.at >= since);
+  if (!rows.length) return { n: 0, items: [] };
+  const list = rows.map(r => '［' + r.role + '］Q：' + r.q + '\nA：' + r.a).join('\n---\n').slice(0, 60000);
+  const r = await deps.claude.messages.create({ model: ENV.SMART_MODEL, max_tokens: 2500, system: 'ハタボのサービスサイトの「よくある質問」の編集係。お客さまが実際にした質問をまとめる。個人を特定できることは書かない。料金や約束は、答えに書いてあることだけを使い、想像で足さない。', messages: [{ role: 'user', content: '次は、この' + (days || 7) + '日間に申込相談・セミナーのハタボが受けた質問と答え。似た質問をまとめて、多い順に最大15個、JSONだけを返す：{"items":[{"q":"よくある質問の形の問い","a":"2〜3文の答え（答えにない約束はしない）","count":件数,"role":"サービス相談かセミナー","new":サイトのよくある質問に足すべきならtrue,"check":"事務局が確かめるべきことがあれば短く"}]}\n\n' + list }] });
+  const tx = (r.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+  const j = JSON.parse(tx.slice(tx.indexOf('{'), tx.lastIndexOf('}') + 1));
+  const items = (j.items || []).slice(0, 15);
+  try { if (deps.db) await deps.db.collection('faq').doc('latest').set({ at: Date.now(), days: days || 7, n: rows.length, items }); } catch (e) {}
+  await officeNote('［よくある質問の候補］この' + (days || 7) + '日で' + rows.length + '件の質問。多い順：' + items.slice(0, 5).map((x, i) => (i + 1) + '. ' + x.q + '（' + (x.count || 1) + '件）').join(' ／ '));
+  return { n: rows.length, items };
+}
 async function officeNote(text) { for (const id of ENV.OFFICE_OWNERS) await queueDigest(id, 'hatabo', text).catch(() => {}); }
 /** 馬越さんへ（コムギの公式LINEで） */
 async function macNote(text) { for (const x of ENV.MAC_OWNERS) await queueDigest(String(x).replace(/:\d{4}-\d{2}-\d{2}$/, '').replace(/^g:/, ''), 'komugi', text).catch(() => {}); }
@@ -1796,6 +1821,7 @@ function session(ws) {
     let text = capped && !longMode ? spoken : clean(full).trim();
     if (cut && !capped) { const k = Math.max(text.lastIndexOf('。'), text.lastIndexOf('！'), text.lastIndexOf('？'), text.lastIndexOf('!'), text.lastIndexOf('?')); if (k > 0) text = text.slice(0, k + 1); }
     if (text && !noRecord) S.history.push({ role: 'user', content: logText || '（写真を見せた）' }, { role: 'assistant', content: text });
+    if (text && !noRecord && logText) faqLog(S.role, logText, text).catch(() => {});
     if (S.visit && logText) S.visitLog.push(String(logText).slice(0, 200));
     // ハタボの話が出たら、ときどき（8回に1回まで）サービスサイトへの道をそえる（声では読まない）
     S.replyN = (S.replyN || 0) + 1;
@@ -2075,6 +2101,7 @@ function session(ws) {
 function createServer() {
   const server = http.createServer((req, res) => {
     if (req.url.startsWith('/google/')) return googleHttp(req, res);
+    if (req.url.startsWith('/cron/faq')) { const u0 = new URL(req.url, 'http://x'), k = u0.searchParams.get('key'); if (!ENV.CRON_KEY || k !== ENV.CRON_KEY) { res.writeHead(403); return res.end('no'); } return faqDigest(Number(u0.searchParams.get('days')) || 7).then(o => { res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(o)); }).catch(e => { res.writeHead(500); res.end(String(e.message)); }); }
     if (req.url.startsWith('/cron/digest')) { const k = new URL(req.url, 'http://x').searchParams.get('key'); if (!ENV.CRON_KEY || k !== ENV.CRON_KEY) { res.writeHead(403); return res.end('no'); } return sendDigests().then(n => { res.writeHead(200, { 'Content-Type': 'text/plain' }); res.end('sent ' + n); }).catch(e => { res.writeHead(500); res.end(String(e.message)); }); }
     if (req.url.startsWith('/line/webhook') && req.method === 'POST') return lineWebhook(req, res, /\/komugi/.test(req.url) ? 'komugi' : 'hatabo');   // /line/webhook/komugi はコムギの公式LINE
     if (req.url === '/' || req.url.startsWith('/health')) { res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' }); return res.end('バターちゃんジュニア：元気だよ'); }
