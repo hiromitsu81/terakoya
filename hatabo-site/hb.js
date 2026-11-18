@@ -126,15 +126,15 @@
     var skip={SCRIPT:1,STYLE:1,TEXTAREA:1,INPUT:1,OPTION:1,TITLE:1,svg:1};
     function walk(root,re,heads){
       var w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:function(n){
-        for(var p=n.parentNode;p&&p!==root.parentNode;p=p.parentNode){if(skip[p.nodeName]||(p.classList&&/\b(k-hb|k-ai|k-love|v-talk|v-listen|v-read|v-write)\b/.test(p.className||'')))return NodeFilter.FILTER_REJECT;if(p.closest&&p.closest('svg'))return NodeFilter.FILTER_REJECT}
+        for(var p=n.parentNode;p&&p!==root.parentNode;p=p.parentNode){if(skip[p.nodeName]||(p.classList&&/\b(k-hb|k-ai|k-love|v-talk|v-listen|v-read|v-write|v-see)\b/.test(p.className||'')))return NodeFilter.FILTER_REJECT;if(p.closest&&p.closest('svg'))return NodeFilter.FILTER_REJECT}
         return re.test(n.nodeValue)?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT}});
       var list=[];while(w.nextNode())list.push(w.currentNode);
       list.forEach(function(n){
         var f=document.createDocumentFragment(),t=n.nodeValue,last=0;re.lastIndex=0;var m;
-        while((m=re.exec(t))){f.appendChild(document.createTextNode(t.slice(last,m.index)));var sp=document.createElement('span');sp.className=({'ハタボ':'k-hb','AI':'k-ai','愛棒':'k-love','話す':'v-talk','聞く':'v-listen','読む':'v-read','書く':'v-write'})[m[0]];sp.textContent=m[0];f.appendChild(sp);last=m.index+m[0].length}
+        while((m=re.exec(t))){f.appendChild(document.createTextNode(t.slice(last,m.index)));var sp=document.createElement('span');sp.className=({'ハタボ':'k-hb','AI':'k-ai','愛棒':'k-love','話す':'v-talk','聞く':'v-listen','読む':'v-read','書く':'v-write','見る':'v-see'})[m[0]];sp.textContent=m[0];f.appendChild(sp);last=m.index+m[0].length}
         f.appendChild(document.createTextNode(t.slice(last)));n.parentNode.replaceChild(f,n)})}
     function run(){
-      walk(document.body,/ハタボ(?!ー)|(?<![A-Za-z])AI(?![A-Za-z])|愛棒|話す|聞く|読む|書く/g)}
+      walk(document.body,/ハタボ(?!ー)|(?<![A-Za-z])AI(?![A-Za-z])|愛棒|話す|聞く|読む|書く|見る/g)}
     if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
   })();
 
