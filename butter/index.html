@@ -238,7 +238,7 @@ body.wideshow .sato-banner small { font-size: 12px; }
 .talking .hbWingL, .talking .hbWingR { animation: hbFlap .4s ease-in-out infinite; }
 .hbWingL { transform-origin: 164px 206px; transform-box: view-box; }
 @keyframes hbFlap { 50% { transform: rotate(-12deg); } }
-/* コムギ（マー君の窓口）の見た目 */
+/* コムギ（馬越さんの窓口）の見た目 */
 #komugiAv { display: none; }
 .av-komugi #butter > :not(#komugiAv) { display: none; }
 .av-komugi #komugiAv { display: inline; }
@@ -2599,7 +2599,7 @@ body.liffTall.av-komugi #hataboAv { transform: translateY(255px) scale(1.45); }
     // 紹介元（?ref=mac）・窓口のテスト（&test=guest）。LINEのURLから来たときは liff.state の中にあることもある
     const urlParam = n => { let v = new URLSearchParams(location.search).get(n) || Q.get(n); if (!v) { try { const st = new URLSearchParams(location.search).get('liff.state'); if (st) v = new URLSearchParams(decodeURIComponent(st).split('?')[1] || '').get(n); } catch (e) {} } return v; };
     let r0 = urlParam('ref');
-    if (!r0 && KOMUGI_APP) r0 = 'mac';   // コムギのミニアプリは、いつもコムギ（マー君の窓口）で開く
+    if (!r0 && KOMUGI_APP) r0 = 'mac';   // コムギのミニアプリは、いつもコムギ（馬越さんの窓口）で開く
     const peek = urlParam('test') === 'peek';   // 見るだけ（&test=peek）：自分の相棒やご縁を変えずに、紹介URLのアバターを確認する
     const asGuest = urlParam('test') === 'guest' || peek;
     const agent = urlParam('agent') === 'service' ? 'service' : '';   // 公式LINEのリッチメニュー「ハタボに相談」＝サービス相談
@@ -2640,7 +2640,7 @@ body.liffTall.av-komugi #hataboAv { transform: translateY(255px) scale(1.45); }
         J.guest = !!m.guest; J.avatar = m.avatar || ''; document.body.classList.toggle('av-komugi', J.avatar === 'komugi'); if (HATABO_APP && !J.avatar) J.avatar = 'hatabo'; document.body.classList.toggle('av-hatabo', J.avatar === 'hatabo'); { const t = document.querySelector('#butterTag text'), nm = { komugi: 'コムギ', hatabo: 'ハタボ' }[J.avatar]; if (t && nm) t.textContent = nm; } if (J.avatar === 'komugi') { const ib = document.getElementById('introBubble'); if (ib) ib.remove(); } if (J.avatar) { try { document.body.classList.toggle('hb-hatched', localStorage.getItem('hatched_' + J.avatar) === '1'); } catch (e) {} } $('goenBtn').hidden = J.guest; J.myRef = m.myRef || ''; J.me = String(m.me || '').replace(/（テスト）$/, ''); $('shareBtn').hidden = false;
         document.body.classList.toggle('familyok', !J.guest);
         document.body.classList.toggle('guestmode', J.guest);
-        if (J.guest) { $('typedInput').placeholder = J.avatar === 'komugi' ? 'マー君にしてほしいこと、なんでもどうぞ' : 'ヒロさんにしてほしいこと、なんでもどうぞ'; }
+        if (J.guest) { $('typedInput').placeholder = J.avatar === 'komugi' ? '馬越さんにしてほしいこと、なんでもどうぞ' : 'ヒロさんにしてほしいこと、なんでもどうぞ'; }
         $('trioBtn').hidden = false; J.trio = !!m.trio; store.set('jrTrio', J.trio); store.set('jrOK', true); trioShow();
         J.canPlan = !!m.canPlan;
         if (J.canPlan) jrSend({ type: 'plan', plan: store.get('jrPlan2', 'super') });
@@ -2650,7 +2650,7 @@ body.liffTall.av-komugi #hataboAv { transform: translateY(255px) scale(1.45); }
         if (awake.until !== 0) keepAwake(true, 0);
         jrMicStart().catch(() => { hint.textContent = 'マイクが使えません。LINEの設定でマイクを許可してください。'; });
         jrBtn(); if (!J.playing) setState('listening');
-        hint.textContent = J.guest ? (J.avatar === 'komugi' ? 'マー君の相棒の、コムギです……。気軽に、話しかけてもらえたら。' : J.avatar === 'hatabo' ? 'ハタボーだボー。そのまま話しかけてほしいボー。' : 'ヒロさんの相棒、ジュニアだぜ。そのまま話しかけてくんな。') : J.trio ? '三人モード：「ジュニア」と呼んだときだけ答えるよ。' : 'そのまま話しかけてね。話している途中でも、声をかけたら止まって聞くよ。';
+        hint.textContent = J.guest ? (J.avatar === 'komugi' ? '馬越 雅哉さんのAI棒の、コムギです……。気軽に、話しかけてもらえたら。' : J.avatar === 'hatabo' ? 'ハタボーだボー。そのまま話しかけてほしいボー。' : 'ヒロさんの相棒、ジュニアだぜ。そのまま話しかけてくんな。') : J.trio ? '三人モード：「ジュニア」と呼んだときだけ答えるよ。' : 'そのまま話しかけてね。話している途中でも、声をかけたら止まって聞くよ。';
         break;
       case 'partial':
         if (pickRes && nameIn(m.text)) break;
@@ -2680,7 +2680,7 @@ body.liffTall.av-komugi #hataboAv { transform: translateY(255px) scale(1.45); }
         break;
       case 'reply_end':
         if (m.gen !== J.gen) break;
-        if (J.out) J.out.textContent = m.text || J.outText || '（うまく答えられなかったよ。もう一回呼んでね）' + (m.why && J.canPlan ? '［原因：' + m.why + '］' : '');   // 制限なしの人（ヒロさん・マー君）には原因も出す
+        if (J.out) J.out.textContent = m.text || J.outText || '（うまく答えられなかったよ。もう一回呼んでね）' + (m.why && J.canPlan ? '［原因：' + m.why + '］' : '');   // 制限なしの人（ヒロさん・馬越さん）には原因も出す
         if (m.text && history.length && history[history.length - 1].role === 'user') { history.push({ role: 'assistant', content: m.text }); if (history.length > 12) history = history.slice(-12); }
         J.endEmo = m.emotion || 'smile';
         if (m.usage && J.out && J.out.parentElement && !HATABO_APP) { /* ハタボのアプリでは、グレード名・モデル名などを返事の下に出さない */ const u = m.usage, d = document.createElement('div'); d.className = 'usage'; d.textContent = u.plan + '・' + String(u.model || '').replace(/^claude-/, '') + '・入力' + u.in + (u.cache ? '（キャッシュ' + u.cache + '）' : '') + '／出力' + u.out + (u.searches ? '・検索' + u.searches : ''); J.out.parentElement.appendChild(d); }
@@ -2969,17 +2969,17 @@ body.liffTall.av-komugi #hataboAv { transform: translateY(255px) scale(1.45); }
   $('goenBtn').addEventListener('click', goenOpen);
   // 友だちに紹介する：送るURLには、押した人の紹介コードがつく（だれの紹介で来たかがわかる）
   // 紹介：カードタイプ（紺と白、エンブレム）で送る。送れないときは文字だけで
-  // コムギのアプリからの紹介：コムギの公式LINE・ミニアプリへ（紹介コードつき＝マー君の紹介として記録される）
+  // コムギのアプリからの紹介：コムギの公式LINE・ミニアプリへ（紹介コードつき＝馬越さんの紹介として記録される）
   function komugiShareCard(url) {
     const FACE = 'https://hiromitsu81.github.io/terakoya/butter/komugi_face.jpg';
-    return { type: 'flex', altText: 'マー君の相棒「コムギ」の紹介です', contents: { type: 'bubble', size: 'kilo',
+    return { type: 'flex', altText: '馬越 雅哉さんのAI棒「コムギ」の紹介です', contents: { type: 'bubble', size: 'kilo',
       styles: { header: { backgroundColor: '#0A0810' }, body: { backgroundColor: '#16121F' }, footer: { backgroundColor: '#16121F' } },
       header: { type: 'box', layout: 'horizontal', spacing: 'md', alignItems: 'center', paddingAll: '16px', contents: [
         { type: 'image', url: FACE, size: '52px', aspectMode: 'cover', aspectRatio: '1:1', flex: 0 },
-        { type: 'box', layout: 'vertical', contents: [{ type: 'text', text: 'コムギ', color: '#FFFFFF', weight: 'bold', size: 'xl' }, { type: 'text', text: 'マー君の相棒AI', color: '#1FD1F2', size: 'xxs', weight: 'bold' }] }] },
+        { type: 'box', layout: 'vertical', contents: [{ type: 'text', text: 'コムギ', color: '#FFFFFF', weight: 'bold', size: 'xl' }, { type: 'text', text: '馬越 雅哉さんのAI棒', color: '#1FD1F2', size: 'xxs', weight: 'bold' }] }] },
       body: { type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '16px', contents: [
-        { type: 'text', text: 'マー君へのご相談は、相棒のコムギが先にお聞きします。', wrap: true, size: 'sm', color: '#E9E4F5' },
-        { type: 'text', text: '話すだけで、マー君につながります。毎朝のコムギ通信も聞けます。', wrap: true, size: 'sm', color: '#A9A2BC' }] },
+        { type: 'text', text: '馬越さんへのご相談は、相棒のコムギが先にお聞きします。', wrap: true, size: 'sm', color: '#E9E4F5' },
+        { type: 'text', text: '話すだけで、馬越さんにつながります。毎朝のコムギ通信も聞けます。', wrap: true, size: 'sm', color: '#A9A2BC' }] },
       footer: { type: 'box', layout: 'vertical', paddingAll: '12px', contents: [{ type: 'button', style: 'primary', color: '#FF2E9A', height: 'sm', action: { type: 'uri', label: 'コムギと話す', uri: url } }] } } };
   }
   function shareCard(url) {
@@ -3003,7 +3003,7 @@ body.liffTall.av-komugi #hataboAv { transform: translateY(255px) scale(1.45); }
   async function shareHatabo() {
     // 紹介は、だれからでも汎用のハタボ（HATHA LABのミニアプリ）へ。紹介コードがあれば「だれの紹介か」もつける
     const url = MINI_URL + (J.myRef ? '?ref=' + encodeURIComponent(J.myRef) : '');
-    const text = KOMUGI_APP ? 'マー君の相棒AI「コムギ」です。マー君へのご相談は、コムギが先にお聞きしてつなぎます。話しかけてみてください。\n' + url : 'AIの愛棒「ハタボ」だよ。話すだけで、調べもの・下書き・相談までいっしょにやってくれるボー。気軽に話してみて！\n' + url;
+    const text = KOMUGI_APP ? '馬越 雅哉さんのAI棒「コムギ」です。馬越さんへのご相談は、コムギが先にお聞きしてつなぎます。話しかけてみてください。\n' + url : 'AIの愛棒「ハタボ」だよ。話すだけで、調べもの・下書き・相談までいっしょにやってくれるボー。気軽に話してみて！\n' + url;
     try {
       if (window.liff && liff.isApiAvailable && liff.isApiAvailable('shareTargetPicker')) {
         let r; try { r = await liff.shareTargetPicker([shareCard(url)]); } catch (e) { r = await liff.shareTargetPicker([{ type: 'text', text }]); }

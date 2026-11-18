@@ -45,14 +45,14 @@ function client(port, hello) {
   assert.strictEqual(rm.avatar, 'komugi');
   for (let i = 0; i < 4; i++) { m.ws.send(JSON.stringify({ type: 'text', text: '調べて' + i })); await new Promise(r => setTimeout(r, 300)); }
   assert(!m.msgs.some(x => x.type === 'limit'), 'マー君は制限なし');
-  assert(/マー君本人/.test(lastSys) && !/橋渡し（いちばん大事）/.test(lastSys), 'マー君には相棒の決まり');
+  assert(/馬越 雅哉さん本人/.test(lastSys) && !/橋渡し（いちばん大事）/.test(lastSys), 'マー君には相棒の決まり');
   // マー君がコムギ通信を入れる → 紹介の人のコムギが案内できる
   m.ws.send(JSON.stringify({ type: 'text', text: 'コムギ通信に入れて：今日の速報は円安。たとえるなら、海外旅行のお小遣いが目減りする話。' }));
   await m.until(x => x.type === 'note_saved' && x.kind === 'news');
   const b = await client(port, { type: 'hello', idToken: 'bob', app: 'komugi', ref: 'mac' });
   await b.until(x => x.type === 'ready');
   b.ws.send(JSON.stringify({ type: 'text', text: '今日の速報は？' })); await new Promise(r => setTimeout(r, 300));
-  assert(/円安/.test(lastSys) && /マー君より/.test(lastSys), '紹介の人のコムギが、マー君の入れたコムギ通信を持っている');
+  assert(/円安/.test(lastSys) && /馬越さんより/.test(lastSys), '紹介の人のコムギが、マー君の入れたコムギ通信を持っている');
   b.ws.close();
   a.ws.close(); m.ws.close(); srv.close(); gasSrv.close();
   console.log('OK：コムギ（マー君は制限なし・紹介の人は橋渡しで制限つき・マー君の入れたコムギ通信を紹介の人に案内）');
