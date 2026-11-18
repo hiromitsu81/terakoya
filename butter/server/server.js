@@ -40,6 +40,8 @@ const ENV = {
   SESSION_MAX_MIN: Number(process.env.SESSION_MAX_MIN || 60), // 1回のつなぎっぱなしの上限
   // コムギ（馬越さん）：窓口の役割に「コムギ」と書いた窓口は、見た目がコムギになる
   KOMUGI_REFS: (process.env.KOMUGI_REFS || '').split(',').map(s => s.trim()).filter(Boolean),   // コムギの紹介コード（ここから来た人はコムギ通信つき）
+  EL_KEY: process.env.ELEVENLABS_API_KEY || '',   // ElevenLabs のAPIキー。声の名前を「el:声のID」にすると ElevenLabs で話す
+  EL_MODEL: process.env.ELEVENLABS_MODEL || 'eleven_flash_v2_5',   // 速さ重視 eleven_flash_v2_5／表現重視 eleven_v3 など
   HATABO_VOICE: process.env.HATABO_VOICE || 'ja-JP-Chirp3-HD-Puck',   // ハタボの声：明るく元気な、ひよこの男の子（ジュニアのガラガラ声とは別）
   KOMUGI_VOICE: process.env.KOMUGI_VOICE || 'ja-JP-Chirp3-HD-Leda',   // コムギの声：やわらかい少女の声
   KOMUGI_RATE: Number(process.env.KOMUGI_RATE || 0.95),   // コムギは自信なさげに、ゆっくり
@@ -896,7 +898,21 @@ async function synth(text, voice, emo) {
     return synth(text, VOICE_BACKUP.find(v => !badVoice.has(v)), emo);
   }
 }
+/** ElevenLabs で声を作る（name が「el:声のID」のとき） */
+async function synthEL(text, voiceId, emo) {
+  const st = { excited: 0.35, laugh: 0.35, surprise: 0.4, sad: 0.6, shy: 0.55, think: 0.55 }[emo] || 0.5;   // 気持ちが大きいときは、安定度を下げて表情を出す
+  const r = await fetch('https://api.elevenlabs.io/v1/text-to-speech/' + encodeURIComponent(voiceId) + '?output_format=mp3_44100_64', { method: 'POST',
+    headers: { 'xi-api-key': ENV.EL_KEY, 'Content-Type': 'application/json', Accept: 'audio/mpeg' },
+    body: JSON.stringify({ text, model_id: ENV.EL_MODEL, language_code: /flash|turbo/.test(ENV.EL_MODEL) ? 'ja' : undefined, voice_settings: { stability: st, similarity_boost: 0.8, style: 0.3, speed: Math.max(0.8, Math.min(1.2, EMO_RATE[emo] || 1)) } }) });
+  if (!r.ok) throw new Error('elevenlabs ' + r.status + ' ' + (await r.text().catch(() => '')).slice(0, 120));
+  return Buffer.from(await r.arrayBuffer()).toString('base64');
+}
 async function synth1(text, name, emo) {
+  if (/^el:/.test(name)) {
+    if (!ENV.EL_KEY) throw new Error('ElevenLabs のキーがありません');
+    try { return await synthEL(String(text).replace(/……|…/g, '、'), name.slice(3), emo); }
+    catch (e) { console.error('elevenlabs ng', String(e.message).slice(0, 160)); name = 'ja-JP-Chirp3-HD-Leda'; }   // うまくいかないときは、いつもの Google の声で
+  }
   const audioConfig = { audioEncoding: 'MP3', speakingRate: (name === ENV.KOMUGI_VOICE ? ENV.KOMUGI_RATE : ENV.TTS_RATE) * (EMO_RATE[emo] || 1) };
   text = String(text).replace(/……|…/g, '、、');   // 「……」は、ひと呼吸の間にする
   if (!/Chirp/i.test(name)) audioConfig.pitch = 2;
