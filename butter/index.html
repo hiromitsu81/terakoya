@@ -628,6 +628,50 @@ body.tall.av-hatabo .stage svg, body.tall.av-komugi .stage svg { aspect-ratio: 5
 body.liffTall.av-hatabo .stage, body.liffTall.av-komugi .stage { min-height: calc(84px + 100vw * 633 / 520); }
 body.liffTall.av-hatabo .stage svg, body.liffTall.av-komugi .stage svg { aspect-ratio: 520 / 633; }
 body.wideshow.av-hatabo .stage svg, body.wideshow.av-komugi .stage svg { aspect-ratio: 900 / 392; }
+/* ===== マイハタボ（リッチメニューから ?page=my など）：白と紺 ===== */
+.mybtn { display: none; }
+.av-hatabo .mybtn, .av-komugi .mybtn { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 999px; border: 1.5px solid #16233F; background: #fff; color: #16233F; font: 800 13px var(--display); cursor: pointer; }
+.mybtn img { width: 20px; height: 20px; }
+.hbpage { position: fixed; inset: 0; z-index: 60; display: grid; grid-template-rows: auto auto 1fr; background: #F6F8FC; color: #16233F; font-family: var(--body);
+  padding-top: env(safe-area-inset-top); animation: hbpIn .25s ease; }
+@keyframes hbpIn { from { transform: translateY(16px); opacity: 0; } }
+.hbpage[hidden] { display: none; }
+.hbp-top { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: #16233F; color: #fff; }
+.hbp-top img { width: 34px; height: 34px; border-radius: 50%; background: #fff; }
+.hbp-top b { font: 800 17px var(--display); letter-spacing: .04em; flex: 1; }
+.hbp-top button { background: transparent; border: 1.5px solid rgba(255,255,255,.6); color: #fff; border-radius: 999px; padding: 6px 14px; font: 700 13px var(--display); cursor: pointer; }
+.hbp-tabs { display: flex; gap: 4px; overflow-x: auto; padding: 8px 10px; background: #fff; border-bottom: 1px solid #DCE2EC; scrollbar-width: none; }
+.hbp-tabs button { flex: 0 0 auto; border: 0; background: transparent; color: #5E6B85; font: 800 13px var(--display); padding: 8px 12px; border-radius: 999px; cursor: pointer; }
+.hbp-tabs button.on { background: #16233F; color: #fff; }
+.hbp-body { overflow-y: auto; padding: 16px 16px calc(24px + env(safe-area-inset-bottom)); display: grid; gap: 12px; align-content: start; max-width: 560px; width: 100%; margin: 0 auto; }
+.hbc { background: #fff; border: 1px solid #DCE2EC; border-radius: 18px; padding: 16px; box-shadow: 0 8px 22px -16px rgba(22,35,63,.35); }
+.hbc .k { font: 800 11px var(--display); letter-spacing: .12em; color: #5E6B85; }
+.hbc h3 { margin: 2px 0 10px; font: 800 19px var(--display); }
+.hbc .big { font: 800 40px var(--display); line-height: 1.1; }
+.hbc .big small { font-size: 14px; color: #5E6B85; margin-left: 6px; }
+.hbc p { margin: 6px 0 0; font-size: 13.5px; line-height: 1.6; color: #5E6B85; }
+.hbbar { height: 8px; border-radius: 4px; background: #E8ECF3; overflow: hidden; margin: 10px 0 4px; }
+.hbbar i { display: block; height: 100%; background: #16233F; border-radius: 4px; }
+.hbstats { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; gap: 6px; margin-top: 10px; }
+.hbstats b { display: block; font: 800 24px var(--display); }
+.hbstats span { font-size: 11px; color: #5E6B85; }
+.hbtag { display: inline-block; white-space: nowrap; flex-shrink: 0; padding: 3px 10px; border-radius: 999px; font: 800 12px var(--display); background: #EEF1F6; color: #16233F; }
+.hbtag.gold { background: #C9A24A; color: #fff; }
+.hbbtn { display: block; width: 100%; margin-top: 12px; padding: 12px; border-radius: 999px; border: 0; background: #16233F; color: #fff; font: 800 14px var(--display); cursor: pointer; text-align: center; text-decoration: none; }
+.hbbtn.w { background: #fff; color: #16233F; border: 1.5px solid #16233F; }
+.hbring { display: flex; gap: 6px; margin-top: 10px; }
+.hbring i { flex: 1; height: 30px; border-radius: 8px; background: #E8ECF3; display: grid; place-items: center; font: 800 10.5px var(--display); font-style: normal; color: #5E6B85; }
+.hbring i.on { background: #16233F; color: #fff; }
+.hbplan { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 0; border-top: 1px solid #EEF1F6; }
+.hbplan:first-of-type { border-top: 0; }
+.hbplan b { font: 800 15px var(--display); }
+.hbplan span { font-size: 12px; color: #5E6B85; display: block; }
+.hbplan.now { outline: 2px solid #16233F; outline-offset: 4px; border-radius: 10px; }
+.hbnews { padding: 12px 0; border-top: 1px solid #EEF1F6; }
+.hbnews:first-of-type { border-top: 0; }
+.hbnews time { font-size: 11px; color: #5E6B85; }
+.hbnews b { display: block; font: 800 14.5px var(--display); margin: 2px 0; }
+.hbmuted { color: #8A93A6 !important; }
 </style>
 </head>
 <body>
@@ -635,7 +679,7 @@ body.wideshow.av-hatabo .stage svg, body.wideshow.av-komugi .stage svg { aspect-
   <header>
     <h1>福まねき特戦隊</h1>
     <div class="row">
-      <span class="chip" id="chip" data-s="idle" role="status" aria-live="polite">まってるよ</span>
+      <button type="button" class="mybtn" id="myBtn"><img src="award_mark.svg" alt="">マイハタボ</button><span class="chip" id="chip" data-s="idle" role="status" aria-live="polite">まってるよ</span>
       <button class="icon-btn" id="bigBtn" aria-label="プロジェクター表示" title="プロジェクター表示">⛶</button>
       <button class="icon-btn" id="openSettings" aria-label="設定" title="設定">⚙</button>
     </div>
@@ -1047,6 +1091,14 @@ body.wideshow.av-hatabo .stage svg, body.wideshow.av-komugi .stage svg { aspect-
       <button class="btn" id="stageExit" type="button">ふつうの画面へ</button>
     </div>
   </section>
+</div>
+
+<div class="hbpage" id="hbPage" hidden>
+  <div class="hbp-top"><img src="award_mark.svg" alt=""><b id="hbpTitle">マイハタボ</b><button type="button" id="hbpClose">ハタボと話す</button></div>
+  <nav class="hbp-tabs" id="hbpTabs" aria-label="マイハタボのメニュー">
+    <button type="button" data-p="my">マイハタボ</button><button type="button" data-p="grow">育てたハタボ</button><button type="button" data-p="plan">プラン・支払い</button><button type="button" data-p="aisai">AISAI・愛祭</button><button type="button" data-p="times">ハタボタイムズ</button><button type="button" data-p="share">紹介する</button>
+  </nav>
+  <div class="hbp-body" id="hbpBody"></div>
 </div>
 
 <div class="overlay" id="startOverlay">
@@ -2243,9 +2295,10 @@ body.wideshow.av-hatabo .stage svg, body.wideshow.av-komugi .stage svg { aspect-
   const diag = $('diag');
   function jrOn(m) {
     switch (m.type) {
+      case 'mypage': HBP.data = m; if (!$('hbPage').hidden) hbpRender(); break;
       case 'ready':
         document.body.classList.remove('connecting');
-        J.ready = true; J.tries = 0; J.greeted = true; J.profile = m.profile || null; 
+        J.ready = true; J.tries = 0; J.greeted = true; J.profile = m.profile || null; if (!$('hbPage').hidden) jrSend({ type: 'mypage' }); 
         J.guest = !!m.guest; J.avatar = m.avatar || ''; document.body.classList.toggle('av-komugi', J.avatar === 'komugi'); if (HATABO_APP && !J.avatar) J.avatar = 'hatabo'; document.body.classList.toggle('av-hatabo', J.avatar === 'hatabo'); { const t = document.querySelector('#butterTag text'), nm = { komugi: 'コムギ', hatabo: 'ハタボ' }[J.avatar]; if (t && nm) t.textContent = nm; } if (J.avatar === 'komugi') { const ib = document.getElementById('introBubble'); if (ib) ib.remove(); } if (J.avatar) { try { document.body.classList.toggle('hb-hatched', localStorage.getItem('hatched_' + J.avatar) === '1'); } catch (e) {} } $('goenBtn').hidden = J.guest; J.myRef = m.myRef || ''; J.me = String(m.me || '').replace(/（テスト）$/, ''); $('shareBtn').hidden = false;
         document.body.classList.toggle('familyok', !J.guest);
         document.body.classList.toggle('guestmode', J.guest);
@@ -2572,22 +2625,21 @@ body.wideshow.av-hatabo .stage svg, body.wideshow.av-komugi .stage svg { aspect-
   // 友だちに紹介する：送るURLには、押した人の紹介コードがつく（だれの紹介で来たかがわかる）
   // 紹介：カードタイプ（紺と白、エンブレム）で送る。送れないときは文字だけで
   function shareCard(url) {
-    const who = J.me ? J.me + 'さんから、' : '';
     const EMB = 'https://hiromitsu81.github.io/terakoya/butter/line/emblem.png';
-    return { type: 'flex', altText: who + 'AIの愛棒「ハタボ」の紹介です', contents: { type: 'bubble', size: 'kilo',
+    return { type: 'flex', altText: 'AIの愛棒「ハタボ」の紹介です', contents: { type: 'bubble', size: 'kilo',
       header: { type: 'box', layout: 'horizontal', spacing: 'md', alignItems: 'center', paddingAll: '16px', backgroundColor: '#16233F', contents: [
         { type: 'image', url: EMB, size: '48px', aspectMode: 'fit', flex: 0 },
         { type: 'box', layout: 'vertical', contents: [
           { type: 'text', text: 'ハタボ', color: '#FFFFFF', weight: 'bold', size: 'xl' },
           { type: 'text', text: 'すべての人に、AIのある愛棒を。', color: '#C9D0DC', size: 'xxs' }] }] },
       body: { type: 'box', layout: 'vertical', spacing: 'md', paddingAll: '18px', contents: [
-        { type: 'text', text: who + 'ハタボの紹介です', weight: 'bold', size: 'md', color: '#16233F', wrap: true },
+        { type: 'text', text: '話すだけで、動く愛棒。', weight: 'bold', size: 'md', color: '#16233F', wrap: true },
         { type: 'text', text: 'PCとスマホで話すだけ。調べもの・下書き・相談まで、いっしょに動くAIの愛棒だボー。', size: 'sm', color: '#5E6B85', wrap: true },
         { type: 'separator', color: '#DCE2EC' },
-        { type: 'text', text: 'アプリを入れずに、LINEからすぐ話せます', size: 'xs', color: '#5E6B85', wrap: true }] },
+        { type: 'text', text: '友だち追加すると、いつものLINEのトークからすぐ話せます', size: 'xs', color: '#5E6B85', wrap: true }] },
       footer: { type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '14px', contents: [
-        { type: 'button', style: 'primary', color: '#16233F', height: 'sm', action: { type: 'uri', label: 'ハタボと話してみる', uri: url } },
-        { type: 'button', style: 'secondary', color: '#EEF1F6', height: 'sm', action: { type: 'uri', label: '友だち追加', uri: 'https://line.me/R/ti/p/@024curid' } }] } } };
+        { type: 'button', style: 'primary', color: '#16233F', height: 'sm', action: { type: 'uri', label: '友だち追加してはじめる', uri: 'https://line.me/R/ti/p/@024curid' } },
+        { type: 'button', style: 'secondary', color: '#EEF1F6', height: 'sm', action: { type: 'uri', label: 'まず話してみる', uri: url } }] } } };
   }
   async function shareHatabo() {
     // 紹介は、だれからでも汎用のハタボ（HATHA LABのミニアプリ）へ。紹介コードがあれば「だれの紹介か」もつける
@@ -2602,6 +2654,95 @@ body.wideshow.av-hatabo .stage svg, body.wideshow.av-komugi .stage svg { aspect-
     location.href = 'https://line.me/R/share?text=' + encodeURIComponent(text);
   }
   $('shareBtn').addEventListener('click', shareHatabo);
+  // ===== マイハタボ（リッチメニューの ?page=my / grow / plan / aisai / times / share） =====
+  const HBP = { data: null, page: 'my' };
+  const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const NEWS = [
+    { d: '2026-11-18', t: '紹介がカードで送れるようになりました', b: '「紹介する」から、ハタボのカードを友だちに送れます。' },
+    { d: '2026-11-18', t: 'ハタボの公式LINEができました', b: 'トークの下のメニューから、マイハタボ・育てたハタボ・プランが見られます。' },
+    { d: '2026-11-18', t: 'たまごから、ハタボが生まれます', b: 'はじめて話しかけると、エンブレムのたまごが割れて、ハタボが出てきます。' },
+  ];
+  function hbpRender() {
+    const p = HBP.page, d = HBP.data, nm = avName() || 'ハタボ';
+    $('hbpTitle').textContent = { my: 'マイハタボ', grow: '育てた' + nm, plan: 'プラン・支払い', aisai: 'AISAI・愛祭', times: 'ハタボタイムズ', share: '紹介する' }[p] || 'マイハタボ';
+    document.querySelectorAll('#hbpTabs button').forEach(b => b.classList.toggle('on', b.dataset.p === p));
+    const body = $('hbpBody');
+    if (!d && p !== 'times' && p !== 'share' && p !== 'aisai') { body.innerHTML = '<div class="hbc"><p>よみこみ中だボー…</p></div>'; return; }
+    const n = x => Number(x || 0).toLocaleString('ja-JP');
+    if (p === 'my') {
+      const left = Math.max(0, d.limit - d.today), pct = Math.min(100, Math.round(d.today / Math.max(1, d.limit) * 100));
+      body.innerHTML = hbpSetup() + `
+        <div class="hbc"><div class="k">MY HATABO</div><h3>${esc(d.name ? d.name + 'さんの' + nm : 'あなたの' + nm)}</h3>
+          <span class="hbtag">${esc(d.plan)}</span> ${d.superUntil ? '<span class="hbtag gold">' + esc(/^\d/.test(d.superUntil) ? d.superUntil + ' まで' : d.superUntil) + '</span>' : ''}
+          <div style="margin-top:12px" class="big">${n(left)}<small>回 きょうの残り</small></div>
+          <div class="hbbar"><i style="width:${pct}%"></i></div><p>きょう ${n(d.today)} 回 ／ 1日 ${n(d.limit)} 回まで</p></div>
+        <div class="hbc"><div class="k">THIS MONTH</div><div class="hbstats"><div><b>${n(d.month)}</b><span>今月の会話</span></div><div><b>${n(d.total)}</b><span>これまで</span></div><div><b>${n(d.days)}</b><span>日目</span></div></div></div>
+        <div class="hbc"><div class="k">MEMORY</div><h3>覚えていること</h3><div class="big">${n(d.learned)}<small>こ</small></div><p>話した中で、${esc(nm)}が覚えたこと。消したいときは「〇〇を忘れて」と話しかけてください。</p></div>`;
+    } else if (p === 'grow') {
+      const marks = [3, 7, 30, 100, 365];
+      body.innerHTML = `
+        <div class="hbc"><div class="k">AISAI ／ 育てた${esc(nm)}</div><h3>うちの${esc(nm)}</h3>
+          <div class="big">Lv.${d.lv}<small>いっしょに ${n(d.days)} 日目</small></div>
+          <div class="hbbar"><i style="width:${d.lvPct}%"></i></div><p>次のLvまで ${d.lvPct}%。話すほど、手伝うほど育つボー。</p>
+          <div class="hbstats"><div><b class="hbmuted">—</b><span>フォロワー</span></div><div><b class="hbmuted">—</b><span>フォロー中</span></div><div><b>${n(d.kids)}</b><span>ご縁（紹介）</span></div></div>
+          <p class="hbmuted" style="font-size:11.5px">フォロー・フォロワーは、オーナーどうしのつながりができたら出ます。</p></div>
+        <div class="hbc"><div class="k">STREAK</div><h3>毎日の報連相</h3><div class="big">${n(d.streak)}<small>日連続</small></div>
+          <div class="hbring">${marks.map(x => `<i class="${d.streak >= x ? 'on' : ''}">${x === 365 ? '1年' : x + '日'}</i>`).join('')}</div><p>つづけるほど、エンブレムの輪が育ちます。</p></div>
+        <div class="hbc"><div class="hbstats"><div><b>${n(d.learned)}</b><span>覚えたこと</span></div><div><b>${n(d.total)}</b><span>話した回数</span></div><div><b class="hbmuted">—</b><span>ありがとうpt</span></div></div>
+          <button type="button" class="hbbtn w" data-ask="育てたハタボを引きつぎたい・ゆずりたい">引きつぎ・ゆずる</button></div>`;
+    } else if (p === 'plan') {
+      const plans = [['標準', 'ふだんの会話と相談'], ['上位', '答えがより深く、ていねいに'], ['スーパー上位', 'いちばん賢いエンジン。長い文章もClaudeと同じように最後まで書く']];
+      body.innerHTML = `
+        <div class="hbc"><div class="k">PLAN</div><h3>いまのプラン</h3><div class="big" style="font-size:30px">${esc(d.plan)}</div>
+          ${d.superUntil ? '<p><span class="hbtag gold">おためし</span> ' + esc(/^\d/.test(d.superUntil) ? d.superUntil + ' まで' : d.superUntil) + '</p>' : ''}</div>
+        <div class="hbc"><div class="k">GRADE</div>${plans.map(([a, b]) => `<div class="hbplan${a === d.plan ? ' now' : ''}"><div><b>${a}</b><span>${b}</span></div>${a === d.plan ? '<span class="hbtag">いまのプラン</span>' : ''}</div>`).join('')}
+          <p>変えると次の更新日から新しい料金です。育てた${esc(nm)}は、そのまま引きつぎます。</p>
+          <button type="button" class="hbbtn" data-ask="プランを変えたい">プランの変更を相談する</button>
+          <p class="hbmuted" style="font-size:11.5px">お支払い（Apple Pay・Google Pay・PayPay）はこの画面で準備中です。</p></div>`;
+    } else if (p === 'aisai') {
+      body.innerHTML = `
+        <div class="hbc"><div class="k">OWNERS CLUB ／ AISAI・愛祭</div><h3>オーナーズクラブは、いつもの${esc(nm)}の中に。</h3>
+          <p>ハタボと働くオーナーの集まりです。AI祭り（愛祭）、アワード、オーナーどうしのつながり。</p>
+          <button type="button" class="hbbtn" data-ask="AI祭りにエントリーしたい">AI祭りにエントリーする</button>
+          <button type="button" class="hbbtn w" data-ask="アワードについて知りたい">アワードについて聞く</button></div>
+        <div class="hbc"><div class="k">EMBLEM</div><h3>エンブレム</h3><p>アワードのしるしと同じマーク。オーナーみんなの胸に。賞は賞状とトロフィーでたたえます。</p></div>`;
+    } else if (p === 'times') {
+      body.innerHTML = `<div class="hbc"><div class="k">HATABO TIMES</div><h3>お知らせ</h3>${NEWS.map(x => `<div class="hbnews"><time>${x.d.replace(/-/g, '.')}</time><b>${esc(x.t)}</b><p>${esc(x.b)}</p></div>`).join('')}</div>`;
+    } else if (p === 'share') {
+      body.innerHTML = `<div class="hbc"><div class="k">SHARE</div><h3>${esc(nm)}を紹介する</h3><p>話すだけで、動く愛棒を友だちに。紹介した人とされた人は、ご縁としてつながります。</p>
+        ${d ? '<p>これまでのご縁：<b style="color:#16233F">' + n(d.kids) + '人</b></p>' : ''}<button type="button" class="hbbtn" id="hbpShare">カードで送る</button></div>`;
+      $('hbpShare').onclick = shareHatabo;
+    }
+    hbpWire();
+    body.querySelectorAll('[data-ask]').forEach(b => b.onclick = () => { hbpClose(); const t = b.dataset.ask; addBubble('あなた', t, 'me'); jrSend({ type: 'text', text: t }); });
+  }
+  // ハタボをいつもの場所に：友だち追加・ホーム画面に追加・トークをピン留め（ピン留めはLINEの決まりで本人の操作だけ）
+  const HBS = { friend: null };
+  function hbpSetup() {
+    const can = window.liff && liff.isApiAvailable && liff.isApiAvailable('createShortcutOnHomeScreen');
+    const fr = HBS.friend;
+    return `<div class="hbc"><div class="k">SET UP</div><h3>${esc(avName() || 'ハタボ')}を、いつもの場所に</h3>
+      <div class="hbplan"><div><b>1. 公式LINEを友だち追加</b><span>トークからいつでも話せて、メニューも出ます</span></div>${fr ? '<span class="hbtag">追加ずみ</span>' : '<a class="hbtag gold" href="https://line.me/R/ti/p/@024curid" style="text-decoration:none">追加する</a>'}</div>
+      <div class="hbplan"><div><b>2. ホーム画面に置く</b><span>スマホのアプリのように、1回で開けます</span></div>${can ? '<button type="button" class="hbtag gold" id="hbpHome" style="border:0;cursor:pointer">置く</button>' : '<span class="hbtag hbmuted">準備中</span>'}</div>
+      <div class="hbplan"><div><b>3. トークをいちばん上にピン留め</b><span>LINEのトーク一覧で「ハタボ」を長押し →「ピン留め」</span></div><button type="button" class="hbtag gold" id="hbpPin" style="border:0;cursor:pointer">開く</button></div>
+      <p style="font-size:11.5px">ピン留めはLINEの決まりで、アプリからは代わりにできません。「開く」でトーク一覧にもどるので、そこで長押ししてください。</p></div>`;
+  }
+  function hbpWire() {
+    const h = document.getElementById('hbpHome'); if (h) h.onclick = async () => { try { await liff.createShortcutOnHomeScreen({ url: 'https://miniapp.line.me/2012676035-yCkx6tBu' }); } catch (e) { toast('この端末ではまだ置けないみたい'); } };
+    const p = document.getElementById('hbpPin'); if (p) p.onclick = () => { location.href = 'https://line.me/R/nv/chat'; };
+  }
+  async function hbpFriend() { try { if (window.liff && liff.getFriendship) { const r = await liff.getFriendship(); HBS.friend = !!(r && r.friendFlag); if (!$('hbPage').hidden) hbpRender(); } } catch (e) {} }
+  function hbpOpen(p) {
+    HBP.page = p || 'my'; $('hbPage').hidden = false; hbpRender(); if (HBS.friend === null) hbpFriend();
+    if (J.ready) jrSend({ type: 'mypage' });
+  }
+  function hbpClose() { $('hbPage').hidden = true; }
+  $('hbpClose').addEventListener('click', hbpClose);
+  $('hbpTabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; HBP.page = b.dataset.p; hbpRender(); if (J.ready) jrSend({ type: 'mypage' }); });
+  $('myBtn').addEventListener('click', () => hbpOpen('my'));
+  const HBP_START = (() => { const g = n => { let v = new URLSearchParams(location.search).get(n) || Q.get(n); if (!v) { try { const st = new URLSearchParams(location.search).get('liff.state'); if (st) v = new URLSearchParams(decodeURIComponent(st).split('?')[1] || '').get(n); } catch (e) {} } return v; }; return String(g('page') || '').replace(/[^a-z]/g, ''); })();
+  if (HBP_START && HBP_START !== 'talk') hbpOpen(HBP_START);
+  window.hbpPreview = (d, pg) => { HBP.data = d; hbpOpen(pg); };   // 画面の確認用
   $('trioBtn').addEventListener('click', () => jrSend({ type: 'trio', on: !J.trio }));
   $('planBtn').addEventListener('click', () => { const p = store.get('jrPlan', J.canPlan ? 'super' : 'std'); jrSend({ type: 'plan', plan: PLAN_ORDER[(PLAN_ORDER.indexOf(p) + 1) % PLAN_ORDER.length] }); });
   $('gClose').addEventListener('click', () => { $('goenBox').hidden = true; });

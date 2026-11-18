@@ -124,6 +124,26 @@ async function putRef(code, data) {
   try { if (deps.db) return void await deps.db.collection('refs').doc(code).set(data, { merge: true }); } catch (e) {}
   memRefs.set(code, Object.assign(memRefs.get(code) || {}, data));
 }
+/** マイハタボの数字：話した回数（ぜんぶ・今月）、毎日つづけた日数。紹介コードのところに覚える */
+function bumpStats(S) {
+  if (!S || !S.myRef || !S.stats) return;
+  const st = S.stats, now = new Date(Date.now() + 9 * 3600000), day = now.toISOString().slice(0, 10), mon = day.slice(0, 7);
+  st.tot++; if (st.mon !== mon) { st.mon = mon; st.monN = 0; } st.monN++;
+  if (st.last !== day) { const y = new Date(now.getTime() - 86400000).toISOString().slice(0, 10); st.streak = st.last === y ? st.streak + 1 : 1; st.last = day; }
+  putRef(S.myRef, { tot: st.tot, mon: st.mon, monN: st.monN, last: st.last, streak: st.streak }).catch(() => {});
+}
+async function myPage(S) {
+  const plan = planOf(S), st = S.stats || {}, day = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
+  const used = counts.get((S.owner || 'anon') + ':' + new Date().toISOString().slice(0, 10)) || 0;
+  const limit = !S.guest ? ENV.DAILY_LIMIT : S.refFrom ? ENV.DAILY_LIMIT_GUEST : ENV.DAILY_LIMIT_NOREF;
+  const mine = S.myRef ? await getRef(S.myRef).catch(() => null) : null;
+  const tot = st.tot || 0, lv = Math.floor(Math.sqrt(tot / 4)) + 1, base = Math.pow(lv - 1, 2) * 4, next = Math.pow(lv, 2) * 4;
+  return { type: 'mypage', name: S.me || '', avatar: S.avatar || 'hatabo', plan: plan.label, superUntil: superUntil(S.owner) || (plan === PLANS.super && S.guest ? 'サイトからのおためし' : ''),
+    today: used, limit, month: st.mon === day.slice(0, 7) ? st.monN || 0 : 0, total: tot, days: st.at ? Math.max(1, Math.ceil((Date.now() - st.at) / 86400000)) : 1,
+    streak: st.last === day || st.last === new Date(Date.now() - 15 * 3600000).toISOString().slice(0, 10) ? st.streak || 0 : 0,
+    lv, lvPct: Math.round((tot - base) / Math.max(1, next - base) * 100), learned: (S.learned || []).length + (S.lessons || []).length,
+    kids: (mine && mine.kids) || 0, myRef: S.myRef || '', from: S.refFrom ? await refLabel(S.refFrom) : '' };
+}
 /** 紹介元の名前（「マー君さん」）。手で作ったコード（mac など）はそのまま */
 async function refLabel(code) {
   if (!code) return '';
@@ -738,6 +758,7 @@ function session(ws) {
     const jam = as === 'jam';
     const voice = jam ? JAM_VOICE : S.voice;
     if (!S.asGuest && !quotaOk(S.owner || 'anon', S.guest, !!S.refFrom)) return speakOnly(S.guest ? 'すまねぇ、きょうここで話せる回数がいっぱいになっちまった。続きはヒロさんに伝えとくから、また明日話そうぜ！' : 'きょうの回数がいっぱいになっちまった。また明日話そうぜ！', 'shy');
+    bumpStats(S);
     if (Date.now() - (S.brainAt || 0) > 10 * 60 * 1000) { try { await loadBrain(true); } catch (e) {} }   // 記録は10分ごとに読みなおす
     let noRecord = false;
     if (MAIL_RE.test(logText || '')) {
@@ -926,6 +947,9 @@ function session(ws) {
           const parent = mine && mine.parent ? mine.parent : (S.ref && S.ref !== S.myRef ? S.ref : '');
           S.refFrom = parent;
           await putRef(S.myRef, { owner: S.owner, name: S.me || (mine && mine.name) || '', parent, at: (mine && mine.at) || Date.now() });
+          // 初めて来た人なら、紹介した人の「ご縁」を1つふやす
+          if (!mine && parent) { const up = await getRef(parent).catch(() => null); await putRef(parent, { kids: ((up && up.kids) || 0) + 1 }).catch(() => {}); }
+          S.stats = { at: (mine && mine.at) || Date.now(), tot: (mine && mine.tot) || 0, mon: (mine && mine.mon) || '', monN: (mine && mine.monN) || 0, last: (mine && mine.last) || '', streak: (mine && mine.streak) || 0, kids: (mine && mine.kids) || 0 };
         }
         // コムギ経由か：コムギの窓口、またはコムギの紹介コードから（2つ上までたどる）
         if (S.guest) {
@@ -994,6 +1018,7 @@ function session(ws) {
       if (m.type === 'profile') return onProfile(m);
       if (m.type === 'goen') return onGoen(m);
       if (m.type === 'ping') return send({ type: 'pong' });
+      if (m.type === 'mypage') return send(await myPage(S));
     } catch (e) { send({ type: 'notice', why: 'server', detail: String(e.message).slice(0, 80) }); }
   });
   const life = setTimeout(() => fail('timeout', 'つなぎっぱなしの上限'), ENV.SESSION_MAX_MIN * 60000);
