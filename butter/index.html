@@ -2246,7 +2246,7 @@ body.wideshow.av-hatabo .stage svg, body.wideshow.av-komugi .stage svg { aspect-
       case 'ready':
         document.body.classList.remove('connecting');
         J.ready = true; J.tries = 0; J.greeted = true; J.profile = m.profile || null; 
-        J.guest = !!m.guest; J.avatar = m.avatar || ''; document.body.classList.toggle('av-komugi', J.avatar === 'komugi'); if (HATABO_APP && !J.avatar) J.avatar = 'hatabo'; document.body.classList.toggle('av-hatabo', J.avatar === 'hatabo'); { const t = document.querySelector('#butterTag text'), nm = { komugi: 'コムギ', hatabo: 'ハタボ' }[J.avatar]; if (t && nm) t.textContent = nm; } if (J.avatar === 'komugi') { const ib = document.getElementById('introBubble'); if (ib) ib.remove(); } if (J.avatar) { try { document.body.classList.toggle('hb-hatched', localStorage.getItem('hatched_' + J.avatar) === '1'); } catch (e) {} } $('goenBtn').hidden = J.guest; J.myRef = m.myRef || ''; $('shareBtn').hidden = !J.myRef;
+        J.guest = !!m.guest; J.avatar = m.avatar || ''; document.body.classList.toggle('av-komugi', J.avatar === 'komugi'); if (HATABO_APP && !J.avatar) J.avatar = 'hatabo'; document.body.classList.toggle('av-hatabo', J.avatar === 'hatabo'); { const t = document.querySelector('#butterTag text'), nm = { komugi: 'コムギ', hatabo: 'ハタボ' }[J.avatar]; if (t && nm) t.textContent = nm; } if (J.avatar === 'komugi') { const ib = document.getElementById('introBubble'); if (ib) ib.remove(); } if (J.avatar) { try { document.body.classList.toggle('hb-hatched', localStorage.getItem('hatched_' + J.avatar) === '1'); } catch (e) {} } $('goenBtn').hidden = J.guest; J.myRef = m.myRef || ''; $('shareBtn').hidden = false;
         document.body.classList.toggle('familyok', !J.guest);
         document.body.classList.toggle('guestmode', J.guest);
         if (J.guest) { $('typedInput').placeholder = J.avatar === 'komugi' ? 'マー君にしてほしいこと、なんでもどうぞ' : 'ヒロさんにしてほしいこと、なんでもどうぞ'; }
@@ -2571,8 +2571,9 @@ body.wideshow.av-hatabo .stage svg, body.wideshow.av-komugi .stage svg { aspect-
   $('goenBtn').addEventListener('click', goenOpen);
   // 友だちに紹介する：送るURLには、押した人の紹介コードがつく（だれの紹介で来たかがわかる）
   $('shareBtn').addEventListener('click', async () => {
-    const url = 'https://miniapp.line.me/' + LIFF_ID + '?ref=' + encodeURIComponent(J.myRef || '');
-    const text = 'ヒロさんの相棒AI「バターちゃんジュニア」だよ。ヒロさんに相談したいこと、いっしょにやりたいこと、気軽に話してみて！\n' + url;
+    // 紹介は、だれからでも汎用のハタボ（HATHA LABのミニアプリ）へ。紹介コードがあれば「だれの紹介か」もつける
+    const url = 'https://miniapp.line.me/2012676035-yCkx6tBu' + (J.myRef ? '?ref=' + encodeURIComponent(J.myRef) : '');
+    const text = 'AIの愛棒「ハタボ」だよ。話すだけで、調べもの・下書き・相談までいっしょにやってくれるボー。気軽に話してみて！\n' + url;
     try {
       if (window.liff && liff.isApiAvailable && liff.isApiAvailable('shareTargetPicker')) { const r = await liff.shareTargetPicker([{ type: 'text', text }]); if (r) toast('送ったよ！ありがとう'); return; }
     } catch (e) {}

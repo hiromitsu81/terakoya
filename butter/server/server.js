@@ -45,6 +45,8 @@ const ENV = {
   KOMUGI_RATE: Number(process.env.KOMUGI_RATE || 1.0),   // コムギはひかえめに、少しゆっくり
   KOMUGI_NEWS_URL: process.env.KOMUGI_NEWS_URL || '',                 // コムギニュース速報の最新号（テキストかJSON {title,body}）
   // 一時的にスーパー上位：LINEのユーザーID:期限（例 Uxxxx:2026-12-31）。期限を過ぎたら自動で標準にもどる
+  // サイトから来た人（?ref=site など）は、汎用のハタボをスーパー上位で（長文もClaudeと同じように）
+  SUPER_REFS: (process.env.SUPER_REFS || 'site').split(',').map(s => s.trim().toLowerCase()).filter(Boolean),
   SUPER_OWNERS: (process.env.SUPER_OWNERS || '').split(',').map(s => s.trim()).filter(Boolean),
 };
 /** 期限つきでスーパー上位を使える人か */
@@ -69,7 +71,7 @@ const PLANS = {
 /** 長い文章を頼まれたか（スーパー上位だけ、Claudeと同じように最後まで書く） */
 const LONG_RE = /(書いて|かいて|まとめて|下書き|文章|長文|長く|くわしく|詳しく|メール|企画書|提案書|レポート|報告書|議事録|手紙|原稿|説明して|一覧|リスト|比べて|くらべて)/;
 const LONG_RULE = '\n\n【長い文章】いまは長い文章を頼まれている。ふだんの「1〜2文」の決まりは使わず、Claudeと同じように、頼まれた中身を最後まで、見出しや箇条書きも使ってしっかり書く（声で読むのは最初の数文だけで、続きは画面の吹き出しに出る）。最初の1〜2文は、声で聞いてわかる短い前おき（例：「書いたよ。画面を見てね」）にする。';
-const planOf = S => S && superUntil(S.owner) ? (PLANS[S.plan] || PLANS.super) : PLANS[S && !S.guest && !S.asGuest && S.mode === 'family' && PLANS[S.plan] ? S.plan : 'std'];
+const planOf = S => S && S.guest && S.ref && ENV.SUPER_REFS.includes(String(S.ref).toLowerCase()) ? PLANS.super : S && superUntil(S.owner) ? (PLANS[S.plan] || PLANS.super) : PLANS[S && !S.guest && !S.asGuest && S.mode === 'family' && PLANS[S.plan] ? S.plan : 'std'];
 
 /* ===== 外のサービス（テストでは差しかえる） ===== */
 const deps = {
