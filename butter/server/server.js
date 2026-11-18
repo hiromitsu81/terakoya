@@ -957,7 +957,7 @@ function session(ws) {
       S.guest = true; S.mode = 'guest'; S.trio = false;
       S.slots = (Array.isArray(r.slots) ? r.slots : []).slice(0, 10).map(x => ({ label: String(x.label || ''), start: String(x.start || ''), end: String(x.end || '') })).filter(x => x.label);
       S.role = S.agent === 'service' || ENV.SUPER_REFS.includes(String(S.ref || '').toLowerCase()) ? 'サービス相談' : String(r.role || '汎用');
-      S.avatar = S.role === 'サービス相談' ? 'hatabo' : /コムギ/.test(S.role) ? 'komugi' : 'hatabo';   // 窓口はふだんハタボ。役割に「コムギ」とあればコムギ
+      S.avatar = S.app === 'komugi' ? 'komugi' : S.role === 'サービス相談' ? 'hatabo' : /コムギ/.test(S.role) ? 'komugi' : 'hatabo';   // コムギのミニアプリはいつもコムギ   // 窓口はふだんハタボ。役割に「コムギ」とあればコムギ
       S.voice = AVS[S.avatar].voice();
       S.consult = String(r.consult || '');
       S.system = (AVS[S.avatar] ? AVS[S.avatar].persona() : GUEST_PERSONA + SELF) + (who ? '\n\n【いま話している人】' + who + 'さん（LINEの名前）。' : '') +
@@ -980,7 +980,7 @@ function session(ws) {
     const st = deps.stt.streamingRecognize({
       config: {
         encoding: 'LINEAR16', sampleRateHertz: 16000, languageCode: 'ja-JP', enableAutomaticPunctuation: true,
-        speechContexts: [{ phrases: S.avatar === 'hatabo' || S.avatar === 'komugi' || S.app === 'hatabo' ? ['ハタボ', 'ハタボー', 'ハタボとは', 'マイハタボ', 'AI棒', '愛棒', 'コムギ', 'ヒロさん', 'マー君', '議事録', 'メモ', '伝言', 'ご縁', 'ガチャ', 'チケット', 'プラン', 'グレード', 'お試し', '紹介', '見守り', '予定', 'スケジュール', 'ハタラボ', '愛祭', 'AISAI', 'ハタイエンタ', 'ハタリス', 'ハタボックス', 'ハタエース', 'ハタボーラ', 'オンライン相談', '料金', '契約'] : ['バターちゃん', 'チーちゃん', 'ジャム猫', '福まねき', '千客万来', 'ガチャ', '写真撮って', '動画撮って', 'ご縁', 'ジュニア', '三人モード'] }],
+        speechContexts: [{ phrases: S.avatar === 'hatabo' || S.avatar === 'komugi' || S.app ? ['ハタボ', 'ハタボー', 'ハタボとは', 'マイハタボ', 'AI棒', '愛棒', 'コムギ', 'ヒロさん', 'マー君', '議事録', 'メモ', '伝言', 'ご縁', 'ガチャ', 'チケット', 'プラン', 'グレード', 'お試し', '紹介', '見守り', '予定', 'スケジュール', 'ハタラボ', '愛祭', 'AISAI', 'ハタイエンタ', 'ハタリス', 'ハタボックス', 'ハタエース', 'ハタボーラ', 'オンライン相談', '料金', '契約'] : ['バターちゃん', 'チーちゃん', 'ジャム猫', '福まねき', '千客万来', 'ガチャ', '写真撮って', '動画撮って', 'ご縁', 'ジュニア', '三人モード'] }],
       },
       interimResults: true, singleUtterance: true,
     });
@@ -1289,7 +1289,7 @@ function session(ws) {
     return x.length >= 1 && x.length <= 12 ? x : '';
   }
   async function onHeard(text) {
-    if (S.avatar === 'hatabo' || S.avatar === 'komugi' || S.app === 'hatabo') text = hearFix(text);
+    if (S.avatar === 'hatabo' || S.avatar === 'komugi' || S.app) text = hearFix(text);
     S.lastPartial = Date.now(); S.utt++;
     if (S.askName && S.avatar === 'hatabo' && !S.visit) {
       S.askName = false;
@@ -1555,6 +1555,7 @@ function session(ws) {
         S.agent = m.agent === 'service' ? 'service' : '';
         S.visit = String(m.visit || '').replace(/[^\w-]/g, '').slice(0, 20);   // ご縁の図から、その人のAI棒と話す   // 公式LINEのリッチメニューの「ハタボに相談」：サイトと同じサービス相談
         S.asGuest = !!m.asGuest;
+        S.app = m.app === 'komugi' ? 'komugi' : m.app === 'hatabo' ? 'hatabo' : '';   // どのミニアプリから来たか（コムギのミニアプリなら、いつもコムギ）
         S.peek = !!m.peek;               // 見るだけ（&test=peek）：紹介のつながり・アバターの記録を変えない          // 家族が「窓口の画面」を試すとき（&test=guest）
         try { await loadBrain(); } catch (e) {
           if (e.code === 'auth' || e.code === 'pass') return fail('auth', String(e.message).slice(0, 80));
@@ -1564,7 +1565,10 @@ function session(ws) {
           send({ type: 'notice', why: 'brain', detail: 'GASが読めないので、記録なしで話しています' });
         }
         // ハタボのミニアプリで家族（ヒロさん）が開いたとき：中身は家族のまま、声と話し方はハタボ
-        if (m.app === 'hatabo' && !S.guest) {
+        if (S.app === 'komugi' && !S.guest) {
+          S.avatar = 'komugi'; S.voice = AVS.komugi.voice();
+          S.system += '\n\n【いまの話し方】ここはコムギのミニアプリ。あなたの名前はコムギ。' + KOMUGI_PERSONA;
+        } else if (S.app === 'hatabo' && !S.guest) {
           S.avatar = 'hatabo'; S.voice = AVS.hatabo.voice();
           S.system += '\n\n【いまの話し方】ここはハタボのミニアプリ。あなたの名前はハタボ（愛称ハタボー）。一人称は「ぼく」、語尾に「〜ボー」をつける。江戸っ子の話し方（てやんでぃ・がってん・〜だぜ）はしない。';
         }
@@ -1585,7 +1589,7 @@ function session(ws) {
           if (S.newVisit && parent) tellUpline(S, 'ハタボと話しはじめました', 'visit').catch(() => {});
           if (mine && mine.stage === 'trial' && S.funnel.stage === 'contract' && !mine.thanked) { putRef(S.myRef, { stage: 'contract', thanked: true, contractAt: mine.trialUntil || Date.now() }).catch(() => {}); tellUpline(S, (S.funnel.lineupName || '') + ' ' + (S.funnel.grade || '') + 'を契約しました', 'contract').catch(() => {}); }
           // 紹介から来た人は、紹介した人のアバターで（コムギの紹介ならコムギ）。リッチメニューのサービス相談と、役割を決めた窓口はそのまま
-          if (S.guest && !S.agent && !S.visit) {
+          if (S.guest && !S.agent && !S.visit && S.app !== 'komugi') {   // コムギのミニアプリは、ハタボのアバターの記録に引っぱられない
             if (S.role !== '汎用' && S.role !== 'サービス相談') {
               // 役割を決めたURL（マー君の ?ref=mac など）で開いた人：そのアバターを自分のものとして覚える
               putRef(S.myRef, { avatar: S.avatar, avatarFixed: true }).catch(() => {});
@@ -1643,7 +1647,7 @@ function session(ws) {
         }
         // ヒロさんの家族のジュニアと、マー君のコムギは、いつもClaudeと同じ（スーパー上位・答えの長さの決まりなし）
         S.claude = !S.visit && ((ENV.CLAUDE_FAMILY && !S.guest && !S.asGuest) || /コムギ/.test(S.role || '') || !!superUntil(S.owner) || !!(S.myRef && S.avatar === 'komugi' && (await getRef(S.myRef).catch(() => null) || {}).avatarFixed));
-        if ((S.avatar === 'hatabo' || S.avatar === 'komugi' || S.app === 'hatabo') && !/【聞き取りのくせ】/.test(S.system)) S.system += HEAR_RULE;
+        if ((S.avatar === 'hatabo' || S.avatar === 'komugi' || S.app) && !/【聞き取りのくせ】/.test(S.system)) S.system += HEAR_RULE;
         // ハタボの伝え先：招待した人がいればその人、いなければ「ハタボの事務局」（運営の個人の名前は出さない）
         if (S.avatar === 'hatabo' && !S.visit) {
           let to = 'ハタボの事務局';
