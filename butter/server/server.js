@@ -133,11 +133,31 @@ function funnelOf(r) {
 const planOf = S => S && S.claude && !S.planChosen ? PLANS.super : S && S.funnel && S.funnel.stage === 'trial' ? PLANS.super : S && S.funnel && S.funnel.stage === 'contract' && GRADE_PLAN[S.funnel.grade] && S.guest ? PLANS[GRADE_PLAN[S.funnel.grade]] : _planOf(S);
 const _planOf = S => S && S.guest && (S.agent === 'service' || (S.ref && ENV.SUPER_REFS.includes(String(S.ref).toLowerCase()))) ? PLANS.super : S && superUntil(S.owner) ? (PLANS[S.plan] || PLANS.super) : PLANS[S && !S.guest && !S.asGuest && S.mode === 'family' && PLANS[S.plan] ? S.plan : 'std'];
 
+/* ===== 「考える（thinking）」の切りかた：モデルが受けつける形を順にためす（disabled → between_tools → つけずに枠を広げる） ===== */
+const THINK = { modes: ['disabled', 'between_tools', ''], i: 0 };
+function thinkPrep(p) {
+  const m = THINK.modes[THINK.i], q = Object.assign({}, p);
+  if (m && !q.thinking) q.thinking = { type: m };
+  if (m !== 'disabled') q.max_tokens = (q.max_tokens || 0) + 1500;   // 考える分の余白
+  return q;
+}
+function thinkNext(e) {
+  const t = String(e && e.message || e);
+  if (/thinking/i.test(t) && /400|invalid|not supported|unsupported/i.test(t) && THINK.i < THINK.modes.length - 1) { THINK.i++; console.error('thinking mode →', THINK.modes[THINK.i] || '(なし)'); return true; }
+  return false;
+}
 /* ===== 外のサービス（テストでは差しかえる） ===== */
 const deps = {
   claude: null, stt: null, tts: null, db: null,
   init() {
-    if (!this.claude) { const Anthropic = require('@anthropic-ai/sdk'); this.claude = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }); }
+    if (!this.claude) {
+      const Anthropic = require('@anthropic-ai/sdk'), c = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }), M = c.messages;
+      // 5.5の世代は、なにも言わないと「考える」がオンで、短い max_tokens を考えるだけで使いきって返事が空になる。声の会話では考えるをオフに
+      this.claude = { messages: {
+        stream: p => M.stream(thinkPrep(p)),
+        create: async p => { for (;;) { try { return await M.create(thinkPrep(p)); } catch (e) { if (thinkNext(e)) continue; throw e; } } },
+      } };
+    }
     if (!this.stt) { const speech = require('@google-cloud/speech'); this.stt = new speech.SpeechClient(); }
     if (!this.tts) { const tts = require('@google-cloud/text-to-speech'); this.tts = new tts.TextToSpeechClient(); }
     if (this.db === null) {
@@ -1533,6 +1553,7 @@ function session(ws) {
       // 返事が空っぽ：もう一度（2回目は場所なしの検索、3回目は速いモデルだけ）
       if (!clean(full).trim() && gen === S.gen && !capped) {
         console.error('empty reply', attempt, stopReason || '-');
+        if (stopReason === 'max_tokens' && THINK.i < THINK.modes.length - 1 && deps.claude && !deps.claude.fake) { THINK.i = THINK.modes.length - 1; console.error('thinking mode → (なし・枠を広げる)'); }   // 考えるだけで枠を使いきったら、次は余白つきで
         if (attempt < 2) { lastErr = 'empty ' + (stopReason || '-'); continue; }
         send({ type: 'notice', why: 'empty', detail: stopReason || '-' });
       }
@@ -1543,6 +1564,7 @@ function session(ws) {
       if (capped || gen !== S.gen) break;
       lastErr = String(e.message || e);
       console.error('ai error', attempt, lastErr.slice(0, 300));
+      thinkNext(e);
       // 賢いモデルや検索がこのキーで使えないときは、次からは使わない（毎回失敗しないように）
       if (route.search && /(not enabled|not allowed|disabled|permission)/i.test(lastErr) && /web/i.test(lastErr)) { ENV.WEB_SEARCH = false; console.error('web search off'); }
       if (attempt === 0 && route.smart && /model/i.test(lastErr) && /not_found|invalid|does not exist/i.test(lastErr)) { ENV.SMART_MODEL = ENV.MODEL; console.error('smart model off'); }
