@@ -831,7 +831,7 @@ function session(ws) {
     const st = deps.stt.streamingRecognize({
       config: {
         encoding: 'LINEAR16', sampleRateHertz: 16000, languageCode: 'ja-JP', enableAutomaticPunctuation: true,
-        speechContexts: [{ phrases: ['バターちゃん', 'チーちゃん', 'ジャム猫', '福まねき', '千客万来', 'ガチャ', '写真撮って', '動画撮って', 'ご縁', 'ジュニア', '三人モード'] }],
+        speechContexts: [{ phrases: S.avatar === 'hatabo' || S.avatar === 'komugi' || S.app === 'hatabo' ? ['ハタボ', 'ハタボー', 'AI棒', '愛棒', 'コムギ', 'ヒロさん', 'マー君', '議事録', 'メモ', '伝言', 'ご縁', 'ガチャ', 'チケット', 'プラン', '紹介', '見守り', '予定', 'スケジュール', 'ハタラボ', '愛祭'] : ['バターちゃん', 'チーちゃん', 'ジャム猫', '福まねき', '千客万来', 'ガチャ', '写真撮って', '動画撮って', 'ご縁', 'ジュニア', '三人モード'] }],
       },
       interimResults: true, singleUtterance: true,
     });

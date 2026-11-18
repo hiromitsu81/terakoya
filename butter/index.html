@@ -2606,11 +2606,16 @@ body.pcweb #talkOaBtn, body.pcweb .pinbar { display: none !important; }
       if (!J.playing) J.floor = rms < J.floor ? J.floor * 0.9 + rms * 0.1 : J.floor * 0.998 + rms * 0.002;
       else if (!J.trio && rms > Math.max(0.05, J.floor * 4)) { J.loud += ms; if (J.loud > 220) { J.loud = 0; J.queue = []; jrStopAudio(); jrSend({ type: 'barge' }); setState('listening'); } }
       else J.loud = Math.max(0, J.loud - ms / 2);
+      // 声が小さいマイク（離れて話す・小さい声）でも聞き取れるように、話しているときの音量を見て自動で大きくする（最大6倍・音割れしないようにやわらかく）
+      let pk = 0; for (let i = 0; i < d.length; i++) { const x = Math.abs(d[i]); if (x > pk) pk = x; }
+      J.gain = J.gain || 1.5;
+      if (rms > Math.max(0.004, J.floor * 2.5)) J.gain = Math.max(1, Math.min(6, J.gain * 0.9 + (0.45 / Math.max(pk, 0.02)) * 0.1));
+      const g = J.gain;
       const ratio = a.sampleRate / 16000, n = Math.floor(d.length / ratio), pcm = new Int16Array(n);
       for (let i = 0; i < n; i++) {
         const s0 = Math.floor(i * ratio), s1 = Math.min(d.length, Math.floor((i + 1) * ratio));
         let v = 0; for (let j = s0; j < s1; j++) v += d[j]; v /= Math.max(1, s1 - s0);
-        pcm[i] = Math.max(-1, Math.min(1, v)) * 0x7fff;
+        pcm[i] = Math.tanh(v * g) * 0x7fff;
       }
       jrSend(pcm.buffer);
     };
