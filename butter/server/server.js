@@ -78,6 +78,25 @@ const PLANS = {
 /** 長い文章を頼まれたか（スーパー上位だけ、Claudeと同じように最後まで書く） */
 const LONG_RE = /(書いて|かいて|まとめて|下書き|文章|長文|長く|くわしく|詳しく|メール|企画書|提案書|レポート|報告書|議事録|手紙|原稿|説明して|一覧|リスト|比べて|くらべて)/;
 const CLAUDE_RULE = '\n\n【Claudeと同じように】ふだんの「1〜2文」の決まりは使わない。Claudeと同じように、聞かれたことに合った長さと深さで、正確に、最後まで答える。短くてよいことは短く、くわしく知りたいこと・調べもの・文章・計画はしっかり。声で読むのは最初の数文だけで、続きは画面の吹き出しに出る。キャラクターの話し方（呼び方・語尾）はそのまま。';
+// 聞き間違いの辞書：声の文字起こしでよく崩れる名前を、話す前に直す（ハタボ・コムギ・ラインナップ名など）
+const HEAR_FIX = [
+  [/(?:はたらぼ|ハタラボー|畑ラボ|旗ラボ|はたラボ)/g, 'ハタラボ'],
+  [/(?:えーあいぼう|エーアイボウ|AIぼう|AIボウ|えーあい棒|エーアイ棒|AI坊|ai棒)/gi, 'AI棒'],
+  [/(?:あいぼう|アイボウ|相棒)(?=(?:を|が|は|の|と)?(?:育て|選|追加|契約|プラン))/g, '愛棒'],
+  [/(?:はたいえんた|ハタイエンター|畑井エンタ|はたいenta)/gi, 'ハタイエンタ'],
+  [/(?:はたりす|ハタリスー|畑リス)/g, 'ハタリス'],
+  [/(?:はたぼっくす|ハタボックスー|畑ボックス)/g, 'ハタボックス'],
+  [/(?:はたえーす|ハタエース|畑エース|旗エース)/g, 'ハタエース'],
+  [/(?:はたぼーら|ハタボウラ|畑ボーラ|旗ボーラ|はたボーラ)/g, 'ハタボーラ'],
+  [/(?:あいさい|アイサイ)(?=って|[、。・\sのにをはが]|$)/g, 'AISAI'],
+  [/(?:あいまつり|愛まつり|AI祭り|AIまつり)/gi, '愛祭'],
+  [/(?:あたご|アタゴ|はたご|ハタゴ|畑葉|はたば|ハタバ|はたぼう|ハタボウ|はたぼー|はたぼ|旗ボ|旗棒|畑ぼ|波多ボ|ハタホ|はたほ)(?=って|っ|[さくちゃんにのはがをとへでも、。？！!?\s]|$)/g, 'ハタボ'],
+  [/(?:こむぎ|小麦)(?=[ちゃんさにのはがをと、。？！!?\s]|$)/g, 'コムギ'],
+  [/(?:まーくん|マークン|マー君さん|まあくん)/g, 'マー君'],
+];
+const hearFix = t => HEAR_FIX.reduce((x, [re, to]) => x.replace(re, to), String(t || ''));
+// あいまいな言い方や聞き間違いを、Claudeのように話の流れからくみ取る
+const HEAR_RULE = '\n\n【聞き取りのくせ】相手の言葉は声の文字起こしなので、音の近い言葉への聞き間違い（例：ハタボ→あたご・畑葉、AI棒→相棒、コムギ→小麦）や、言いさし・言い直しがまじる。おかしな言葉は、音の近さと前後の話の流れから、いちばんありそうな意味にくみ取って、そのまま答える。くみ取った意味を言いなおして確かめることはしない。どうしても二通り以上に取れて、答えが大きく変わるときだけ、「〇〇のことですか？」と短く一度だけ確かめる。よく出る言葉：ハタボ（AI棒・愛棒）、ハタラボ（HATHA LAB）、ハタイエンタ・ハタリス・ハタボックス・ハタエース・ハタボーラ（ラインナップ）、AISAI・愛祭、マイハタボ、ご縁、伝言、ガチャ、チケット、コムギ、マー君、ヒロさん。';
 const LONG_RULE = '\n\n【長い文章】いまは長い文章を頼まれている。ふだんの「1〜2文」の決まりは使わず、Claudeと同じように、頼まれた中身を最後まで、見出しや箇条書きも使ってしっかり書く（声で読むのは最初の数文だけで、続きは画面の吹き出しに出る）。最初の1〜2文は、声で聞いてわかる短い前おき（例：「書いたよ。画面を見てね」）にする。';
 /* ===== 紹介 → お試し → 契約（ラインナップとグレード）。サイトのプラン・料金と同じ ===== */
 const LINEUP = {
@@ -831,7 +850,7 @@ function session(ws) {
     const st = deps.stt.streamingRecognize({
       config: {
         encoding: 'LINEAR16', sampleRateHertz: 16000, languageCode: 'ja-JP', enableAutomaticPunctuation: true,
-        speechContexts: [{ phrases: S.avatar === 'hatabo' || S.avatar === 'komugi' || S.app === 'hatabo' ? ['ハタボ', 'ハタボー', 'AI棒', '愛棒', 'コムギ', 'ヒロさん', 'マー君', '議事録', 'メモ', '伝言', 'ご縁', 'ガチャ', 'チケット', 'プラン', '紹介', '見守り', '予定', 'スケジュール', 'ハタラボ', '愛祭'] : ['バターちゃん', 'チーちゃん', 'ジャム猫', '福まねき', '千客万来', 'ガチャ', '写真撮って', '動画撮って', 'ご縁', 'ジュニア', '三人モード'] }],
+        speechContexts: [{ phrases: S.avatar === 'hatabo' || S.avatar === 'komugi' || S.app === 'hatabo' ? ['ハタボ', 'ハタボー', 'ハタボとは', 'マイハタボ', 'AI棒', '愛棒', 'コムギ', 'ヒロさん', 'マー君', '議事録', 'メモ', '伝言', 'ご縁', 'ガチャ', 'チケット', 'プラン', 'グレード', 'お試し', '紹介', '見守り', '予定', 'スケジュール', 'ハタラボ', '愛祭', 'AISAI', 'ハタイエンタ', 'ハタリス', 'ハタボックス', 'ハタエース', 'ハタボーラ', 'オンライン相談', '料金', '契約'] : ['バターちゃん', 'チーちゃん', 'ジャム猫', '福まねき', '千客万来', 'ガチャ', '写真撮って', '動画撮って', 'ご縁', 'ジュニア', '三人モード'] }],
       },
       interimResults: true, singleUtterance: true,
     });
@@ -852,7 +871,7 @@ function session(ws) {
     });
     st.on('error', e => { if (S.stt === st) S.stt = null; if (!/Audio Timeout|DEADLINE|exceeded maximum/i.test(String(e.message))) send({ type: 'notice', why: 'stt', detail: String(e.message).slice(0, 80) }); });
     // 聞こえた文はページへ。ページがガチャ・UFO・チーちゃんの芸などを先に見て、話す分だけ {type:'text'} で返してくる
-    st.on('end', () => { if (S.stt === st) S.stt = null; const t = finalText.trim(); if (t) send({ type: 'heard', text: t }); });
+    st.on('end', () => { if (S.stt === st) S.stt = null; let t = finalText.trim(); if (S.avatar === 'hatabo' || S.avatar === 'komugi') t = hearFix(t); if (t) send({ type: 'heard', text: t }); });
     S.stt = st;
   }
   function onAudio(buf) {
@@ -1138,6 +1157,7 @@ function session(ws) {
     return x.length >= 1 && x.length <= 12 ? x : '';
   }
   async function onHeard(text) {
+    if (S.avatar === 'hatabo' || S.avatar === 'komugi' || S.app === 'hatabo') text = hearFix(text);
     S.lastPartial = Date.now(); S.utt++;
     if (S.askName && S.avatar === 'hatabo' && !S.visit) {
       S.askName = false;
@@ -1484,6 +1504,7 @@ function session(ws) {
         }
         // ヒロさんの家族のジュニアと、マー君のコムギは、いつもClaudeと同じ（スーパー上位・答えの長さの決まりなし）
         S.claude = !S.visit && ((ENV.CLAUDE_FAMILY && !S.guest && !S.asGuest) || /コムギ/.test(S.role || '') || !!superUntil(S.owner) || !!(S.myRef && S.avatar === 'komugi' && (await getRef(S.myRef).catch(() => null) || {}).avatarFixed));
+        if ((S.avatar === 'hatabo' || S.avatar === 'komugi' || S.app === 'hatabo') && !/【聞き取りのくせ】/.test(S.system)) S.system += HEAR_RULE;
         send({ type: 'ready', me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs, guest: !!S.guest, service: S.role === 'サービス相談', myRef: S.myRef || '', visit: S.visit ? { code: S.visit, name: S.visitHost } : null, avatar: S.avatar || '', komugi: !!S.komugi, superUntil: superUntil(S.owner), canPlan: !!(S.claude || superUntil(S.owner)), claude: !!S.claude, aiName: !S.visit && S.custom && S.custom.aiName || '' });
         if (S.visit) { const T = S.avatar === 'komugi' ? x => x.replace(/だボー/g, 'です').replace(/ボー/g, 'です') : S.avatar === 'hatabo' ? x => x : x => x.replace(/だボー/g, 'だぜ').replace(/ボー/g, 'ぜ'); return speakOnly(T(S.visitSponsor ? S.visitHost + 'のAI棒だボー。なんでも聞いてほしいボー。' : S.visitHost + 'さんのAI棒だボー。話してくれたことは、' + S.visitHost + 'さんに伝言で届けるボー。'), 'excited'); }
         if (m.greet && S.guest && S.consult) return recapGreet().then(deliverInbox).catch(() => {});      // 相談メモがある人には、振り返りからはじめる
