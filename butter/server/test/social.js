@@ -110,5 +110,13 @@ function client(port, hello) {
   fam2.ws.send(JSON.stringify({ type: 'text', text: 'やあ' })); const rs = await fam2.until(m => m.type === 'reply_start');
   await fam2.until(m => m.type === 'reply_end'); deps.claude.messages.stream = o3;
   assert.ok(/キャラ設定/.test(sysText(fp2.system)) && rs.as === 'ピヨ', 'キャラ設定が会話に入る');
-  console.log('OK：ガチャ・友だち・LINE ID・伝言・協賛・キャラ設定'); process.exit(0);
+  // 呼び名を最初に聞いて覚える
+  const nn = await client(port, { type: 'hello', idToken: 'guest-y', greet: true });
+  await nn.until(m => m.type === 'reply_end' && /なんて呼べば/.test(m.text || ''));
+  nn.ws.send(JSON.stringify({ type: 'text', text: 'ユウって呼んで' }));
+  await nn.until(m => m.type === 'reply_end' && /ユウ、だね/.test(m.text || ''));
+  nn.ws.send(JSON.stringify({ type: 'custom_get' }));
+  const cg = await nn.until(m => m.type === 'custom');
+  assert.strictEqual(cg.c.callMe, 'ユウ', '呼び名を覚える');
+  console.log('OK：ガチャ・友だち・LINE ID・伝言・協賛・キャラ設定・呼び名'); process.exit(0);
 })().catch(e => { console.error('NG', e); process.exit(1); });
