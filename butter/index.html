@@ -2617,7 +2617,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
     if (!r0 && KOMUGI_APP) r0 = 'mac';   // コムギのミニアプリは、いつもコムギ（馬越さんの窓口）で開く
     const peek = urlParam('test') === 'peek';   // 見るだけ（&test=peek）：自分の相棒やご縁を変えずに、紹介URLのアバターを確認する
     const asGuest = urlParam('test') === 'guest' || peek;
-    const agent = urlParam('agent') === 'service' ? 'service' : '';   // 公式LINEのリッチメニュー「ハタボに相談」＝サービス相談
+    const agent = ['service', 'seminar-biz', 'seminar-partner'].includes(urlParam('agent')) ? urlParam('agent') : '';   // 公式LINEのリッチメニュー「ハタボに相談」＝サービス相談
     // 紹介コードは、そのとき開いたURLのものだけ送る（前に開いた紹介URLを覚えて使うと、別のアバター（コムギなど）で出てしまう）。だれの紹介かはサーバーが最初の1回で覚えている
     const ref = String(r0 || '').replace(/[^\w-]/g, '').slice(0, 20);
     if (r0) store.set('jrRef', ref);
