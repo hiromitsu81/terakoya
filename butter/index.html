@@ -790,7 +790,7 @@ body.pcweb #talkOaBtn, body.pcweb .pinbar { display: none !important; }
 .chatv{position:fixed;inset:0;z-index:40;display:none;flex-direction:column;background:#fff;color:#16233F;font-family:'Noto Sans JP','Noto Sans CJK JP',sans-serif}
 body.chatview .chatv{display:flex}
 .chatv .cv-top{display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;border-bottom:1px solid #E6EAF2}
-.chatv .cv-top img{width:30px;height:30px;border-radius:50%}
+.chatv .cv-top img{width:38px;height:38px;border-radius:50%;background:#fff;box-shadow:0 0 0 2px #16233F;padding:1px}
 .chatv .cv-top b{font-size:17px;font-weight:800;margin-right:auto}
 .chatv .cv-top button{border:1px solid #DCE2EC;background:#fff;color:#16233F;border-radius:999px;padding:6px 12px;font:700 13px inherit}
 .chatv .cv-list{flex:1;overflow-y:auto;padding:16px 16px 8px;display:flex;flex-direction:column;gap:14px;-webkit-overflow-scrolling:touch}
@@ -799,7 +799,7 @@ body.chatview .chatv{display:flex}
 .chatv .cv-m.me{align-self:flex-end;max-width:82%;background:#EEF1F7;border-radius:18px 18px 4px 18px;padding:10px 14px}
 .chatv .cv-m.me.partial{opacity:.55}
 .chatv .cv-m.her .cv-who{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:#5E6B85;margin-bottom:2px}
-.chatv .cv-m.her .cv-who img{width:18px;height:18px;border-radius:50%}
+.chatv .cv-m.her .cv-who img{width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 0 0 1.5px #16233F}
 .chatv .cv-m img:not(.cvw){max-width:100%;border-radius:12px}
 .chatv .cv-m a{color:#2B4C8C}
 .chatv .cv-bot{border-top:1px solid #E6EAF2;padding:8px 12px calc(10px + env(safe-area-inset-bottom));background:#fff}
@@ -817,8 +817,13 @@ body.chatview .chatv{display:flex}
 body.cv-listen .chatv .cv-mic::before,body.cv-speak .chatv .cv-mic::before,body.jrthinking .chatv .cv-mic::before{opacity:1;animation:cvspin 1.2s linear infinite}
 @keyframes cvspin{to{transform:rotate(360deg)}}
 .chatv .cv-cap{text-align:center;font-size:11.5px;color:#5E6B85;margin-top:4px;min-height:15px}
-.cvfab{position:fixed;right:14px;top:calc(12px + env(safe-area-inset-top));z-index:39;display:none;border:1px solid #DCE2EC;background:#fff;color:#16233F;border-radius:999px;padding:7px 14px;font:800 13px 'Noto Sans JP',sans-serif;box-shadow:0 6px 16px -8px rgba(22,35,63,.5)}
+.cvfab{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:39;display:none;border:0;background:#16233F;color:#fff;border-radius:14px 0 0 14px;padding:12px 8px;writing-mode:vertical-rl;letter-spacing:.1em;font:800 13px 'Noto Sans JP',sans-serif;box-shadow:0 6px 16px -8px rgba(22,35,63,.5)}
 body.av-hatabo:not(.chatview) .cvfab,body.av-komugi:not(.chatview) .cvfab{display:block}
+.hbgr{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.hbgrb{border:1px solid #DCE2EC;background:#fff;color:#16233F;border-radius:14px;padding:10px 6px;display:grid;gap:4px;text-align:center;font-family:inherit}
+.hbgrb b{font-size:22px;font-weight:900}.hbgrb span{font-size:11px;line-height:1.4;color:#5E6B85}
+.hbgrb.on{background:#16233F;color:#fff;border-color:#16233F}.hbgrb.on span{color:#C9D0DC}
+.chatv mark.cvk{background:linear-gradient(transparent 55%,#FFE9A8 55%);color:inherit;border-radius:2px;transition:background .2s}
 </style>
 </head>
 <body>
@@ -1256,7 +1261,7 @@ body.av-hatabo:not(.chatview) .cvfab,body.av-komugi:not(.chatview) .cvfab{displa
     </div>
   </div>
 </div>
-<button type="button" class="cvfab" id="cvFab">トーク画面</button>
+<button type="button" class="cvfab" id="cvFab">トーク ‹</button>
 <div class="hbpage" id="hbPage" hidden>
   <div class="hbp-top"><img src="award_mark.svg" alt=""><b id="hbpTitle">マイハタボ</b><button type="button" id="hbpClose">ハタボと話す</button></div>
   <nav class="hbp-tabs" id="hbpTabs" aria-label="マイハタボのメニュー">
@@ -2422,7 +2427,7 @@ body.av-hatabo:not(.chatview) .cvfab,body.av-komugi:not(.chatview) .cvfab{displa
     return t => String(t).split(/(?<=[。！？!?\n])/).some(seg => r.test(seg.trim()));   // 文のはじめで呼ばれたときだけ
   })(), JR_TRIO = /(三人モード|3人モード|みんなで話そう|三人で話そう|3人で話そう|二人モード|ふたりモード|2人モード|ふつうのモード)/;
   // 料金プランのおためし（ヒロさんの家族の画面だけ）：標準 → 上位 → スーパー上位 → 標準
-  const PLAN_ORDER = ['std', 'high', 'super'], PLAN_NAME = { std: '標準', high: '上位', super: 'スーパー上位（Claudeと同じ）' };
+  const PLAN_ORDER = ['std', 'high', 'super'], PLAN_NAME = { std: 'X', high: 'G', super: 'Z' };
   function planShow() { const b = $('planBtn'); if (!b) return; const p = store.get('jrPlan2', J.canPlan ? 'super' : 'std'); b.textContent = 'グレード：' + (PLAN_NAME[p] || '標準'); b.hidden = !J.ready || (J.guest && !J.canPlan) || (BIZ() && !J.canPlan); }
   function trioShow() { const b = $('trioBtn'); b.setAttribute('aria-pressed', String(J.trio)); b.textContent = J.trio ? '三人：オン' : '三人：オフ'; }
   const jrLive = () => !J.dead && J.ready && J.ws && J.ws.readyState === 1;
@@ -2522,7 +2527,7 @@ body.av-hatabo:not(.chatview) .cvfab,body.av-komugi:not(.chatview) .cvfab{displa
         if (J.out) J.out.textContent = m.text || J.outText || '（うまく答えられなかったよ。もう一回呼んでね）';
         if (m.text && history.length && history[history.length - 1].role === 'user') { history.push({ role: 'assistant', content: m.text }); if (history.length > 12) history = history.slice(-12); }
         J.endEmo = m.emotion || 'smile';
-        if (m.usage && J.out && J.out.parentElement) { const u = m.usage, d = document.createElement('div'); d.className = 'usage'; d.textContent = u.plan + '・' + String(u.model || '').replace(/^claude-/, '') + '・入力' + u.in + (u.cache ? '（キャッシュ' + u.cache + '）' : '') + '／出力' + u.out + (u.searches ? '・検索' + u.searches : ''); J.out.parentElement.appendChild(d); }
+        if (m.usage && J.out && J.out.parentElement && !HATABO_APP) { /* ハタボのアプリでは、グレード名・モデル名などを返事の下に出さない */ const u = m.usage, d = document.createElement('div'); d.className = 'usage'; d.textContent = u.plan + '・' + String(u.model || '').replace(/^claude-/, '') + '・入力' + u.in + (u.cache ? '（キャッシュ' + u.cache + '）' : '') + '／出力' + u.out + (u.searches ? '・検索' + u.searches : ''); J.out.parentElement.appendChild(d); }
         jrDrain();
         break;
       case 'stopped':
@@ -2612,7 +2617,8 @@ body.av-hatabo:not(.chatview) .cvfab,body.av-komugi:not(.chatview) .cvfab{displa
     J.gain.gain.value = J.vol * autoVol();
     const src = a.createBufferSource(); src.buffer = buf; src.connect(J.gain); J.src = src;
     setState('speaking'); lipLive = true;
-    src.onended = () => { if (J.src === src) J.src = null; J.playing = false; J.lastPlayEnd = Date.now(); jrPump(); jrDrain(); };
+    J.kara = m.text || ''; document.dispatchEvent(new Event('cvkara'));   // トーク画面で、いま読んでいる文を光らせる
+    src.onended = () => { if (J.src === src) J.src = null; J.playing = false; J.lastPlayEnd = Date.now(); J.kara = ''; document.dispatchEvent(new Event('cvkara')); jrPump(); jrDrain(); };
     src.start();
   }
   function jrDrain() {
@@ -2883,9 +2889,13 @@ body.av-hatabo:not(.chatview) .cvfab,body.av-komugi:not(.chatview) .cvfab{displa
       body.querySelectorAll('[data-copy]').forEach(b => b.onclick = async () => { const n = list.find(x => x.id === b.dataset.copy); try { await navigator.clipboard.writeText(n.title + '\n\n' + n.text); toast('コピーしたよ'); } catch (e) { toast('コピーできなかった'); } });
       body.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { if (confirmDel(b)) jrSend({ type: 'note_del', id: b.dataset.del }); });
     } else if (p === 'settings') {
-      const rows = [['custom', 'キャラ設定', '名前・呼び方・話し方・長さ・いつもの指示'], ['google', 'Googleアカウント連携', '議事録やメモをGoogleドライブへ'], ['social', '公開設定', 'ガチャに出る・LINE ID・Instagram'], ['plan', 'プラン・支払い', 'お試し・ラインナップ・グレード'], ['ticket', '追加チケット', '回数をこえたときのチケット'], ['share', '紹介する', 'ハタボのカードを友だちに'], ['times', 'ハタボタイムズ', 'お知らせ・使い方'], ['oa', '公式LINEのトークへ', 'トークをピン留めしておくと、いつでもすぐ開けます'], ['pc', 'PCで使う', 'PCのブラウザでも、同じハタボと話せます']];
-      body.innerHTML = `<div class="hbc"><div class="k">SETTINGS</div><h3>設定</h3><p>あなたのAI棒の設定は、ここにまとまっています。公式LINEのメニューの「設定」からも開けます。</p></div>
+      const rows = [['custom', 'キャラ設定', '名前・呼び方・話し方・長さ・いつもの指示'], ['google', 'Googleアカウント連携', '議事録やメモをGoogleドライブへ'], ['social', '公開設定', 'ガチャに出る・LINE ID・Instagram'], ['plan', 'プラン・支払い', 'お試し・お支払い'], ['ticket', '追加チケット', '回数をこえたときのチケット'], ['share', '紹介する', 'ハタボのカードを友だちに'], ['times', 'ハタボタイムズ', 'お知らせ・使い方'], ['oa', '公式LINEのトークへ', 'トークをピン留めしておくと、いつでもすぐ開けます'], ['pc', 'PCで使う', 'PCのブラウザでも、同じハタボと話せます']];
+      const curG = store.get('jrPlan2', J.canPlan ? 'super' : 'std');
+      const GR = [['std', 'X', 'ふだん使い。速くて手軽'], ['high', 'G', '賢いモデルで、少しくわしく'], ['super', 'Z', 'Claudeと同じ精度で、最後まで']];
+      const gradeCard = `<div class="hbc"><div class="k">GRADE</div><h3>グレード</h3>${J.canPlan ? `<p>いまのグレードを切りかえられます。お試しのあいだは、3つを使いくらべてみてね。</p><div class="hbgr">${GR.map(([k, n, d0]) => `<button type="button" class="hbgrb${k === curG ? ' on' : ''}" data-grade="${k}"><b>${n}</b><span>${d0}</span></button>`).join('')}</div>` : `<p>いまのグレード：<b>${PLAN_NAME[curG] || 'X'}</b>。グレードを上げるときは「プラン・支払い」からどうぞ。</p>`}</div>`;
+      body.innerHTML = `<div class="hbc"><div class="k">SETTINGS</div><h3>設定</h3><p>あなたのAI棒の設定は、ここにまとまっています。公式LINEのメニューの「設定」からも開けます。</p></div>${gradeCard}
         <div class="hbc">${rows.map(([k, t, d0]) => `<button type="button" class="hbrow" ${k === 'oa' ? 'onclick="goOaTalkW()"' : k === 'pc' ? 'onclick="pcLinkW()"' : `data-go="${k}"`}><div><b>${t}</b><span>${d0}</span></div><i>›</i></button>`).join('')}</div>`;
+      body.querySelectorAll('[data-grade]').forEach(b => b.addEventListener('click', () => { jrSend({ type: 'plan', plan: b.dataset.grade }); store.set('jrPlan2', b.dataset.grade); planShow(); hbpOpen('settings'); }));
     } else if (p === 'google') {
       body.innerHTML = `<div class="hbc"><div class="k">GOOGLE</div><h3>Googleアカウント連携</h3>${gCard() || '<p>よみこみ中だボー…</p>'}<p style="font-size:11.5px">保存したものは「メモ・議事録」から開けます。</p><button type="button" class="hbbtn w" data-go="notes">メモ・議事録を見る</button></div>`;
       hbpWireGoogle(body);
@@ -3199,12 +3209,25 @@ body.av-hatabo:not(.chatview) .cvfab,body.av-komugi:not(.chatview) .cvfab{displa
         const kids = [...b.children], who = kids.find(k => k.classList.contains('who'));
         if (her && who) row.firstChild.lastChild.textContent = who.textContent;
         const bodyHtml = kids.filter(k => k !== who).map(k => k.outerHTML.replace(/^<span[^>]*>|<\/span>$/g, '')).join('');
-        const bd = row.querySelector('.cv-b'); if (bd.innerHTML !== bodyHtml) bd.innerHTML = bodyHtml;
+        const bd = row.querySelector('.cv-b');
+        const kh = her && b === lastHer() ? karaHtml(b) : '';
+        const want = kh || bodyHtml; if (bd.innerHTML !== want) bd.innerHTML = want;
       }
       // 途中の文字（話している最中）の吹き出しが消えたら、トーク画面からも消す
       for (const row of [...L.querySelectorAll('.cv-m.partial')]) { let alive = false; for (const b of bubbles.children) if (map.get(b) === row) alive = true; if (!alive) row.remove(); }
       if (stick) L.scrollTop = L.scrollHeight;
     };
+    function lastHer() { const k = [...bubbles.children].filter(x => x.classList && x.classList.contains('bubble') && !x.classList.contains('me')); return k[k.length - 1]; }
+    // 読み上げ中の文を、カラオケのように光らせる（文字だけの部分はそのまま）
+    function karaHtml(b) {
+      const k = String(J.kara || '').trim(); if (!k) return '';
+      const sp = [...b.children].filter(x => !x.classList.contains('who')); if (sp.length !== 1 || sp[0].children.length) return '';
+      const t = sp[0].textContent; let i = t.indexOf(k), len = k.length;
+      if (i < 0) { const h = k.slice(0, 10); i = h ? t.indexOf(h) : -1; if (i >= 0) { const e = t.slice(i).search(/[。！？!?\n]/); len = e >= 0 ? e + 1 : t.length - i; } }
+      if (i < 0) return '';
+      return esc(t.slice(0, i)) + '<mark class="cvk">' + esc(t.slice(i, i + len)) + '</mark>' + esc(t.slice(i + len));
+    }
+    document.addEventListener('cvkara', () => { requestAnimationFrame(() => { sync(); const mk = L.querySelector('mark.cvk'); if (mk && stick) mk.scrollIntoView({ block: 'nearest' }); }); });
     new MutationObserver(() => requestAnimationFrame(sync)).observe(bubbles, { childList: true, subtree: true, characterData: true });
     $('cvChar').addEventListener('click', () => setView('char'));
     $('cvFab').addEventListener('click', () => setView('chat'));
