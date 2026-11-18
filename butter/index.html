@@ -733,6 +733,12 @@ body.tall.av-hatabo .rothint, body.tall.av-komugi .rothint { display: inline-fle
 .hbmsg.unread { border-color: #C9A24A; box-shadow: 0 0 0 2px rgba(201,162,74,.25); }
 .hbmh { display: flex; justify-content: space-between; align-items: center; }
 .hbmh time { font-size: 11px; color: #8A93A6; }
+
+.visitbar { position: fixed; z-index: 55; left: 50%; top: calc(8px + env(safe-area-inset-top)); transform: translateX(-50%); display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 10px; border-radius: 999px; background: #16233F; color: #fff; font: 800 13px var(--display); box-shadow: 0 10px 24px -10px rgba(22,35,63,.6); max-width: 94vw; }
+.visitbar[hidden] { display: none; }
+.visitbar img { width: 22px; height: 22px; border-radius: 50%; background: #fff; }
+.visitbar span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.visitbar button { border: 0; border-radius: 999px; background: #fff; color: #16233F; font: 800 12px var(--display); padding: 6px 12px; cursor: pointer; flex-shrink: 0; }
 </style>
 </head>
 <body>
@@ -1155,6 +1161,7 @@ body.tall.av-hatabo .rothint, body.tall.av-komugi .rothint { display: inline-fle
   </section>
 </div>
 
+<div class="visitbar" id="visitBar" hidden><img src="award_mark.svg" alt=""><span id="visitName"></span><button type="button" id="visitBack">もどる</button></div>
 <div class="hbpage" id="hbPage" hidden>
   <div class="hbp-top"><img src="award_mark.svg" alt=""><b id="hbpTitle">マイハタボ</b><button type="button" id="hbpClose">ハタボと話す</button></div>
   <nav class="hbp-tabs" id="hbpTabs" aria-label="マイハタボのメニュー">
@@ -2340,7 +2347,7 @@ body.tall.av-hatabo .rothint, body.tall.av-komugi .rothint { display: inline-fle
     const agent = urlParam('agent') === 'service' ? 'service' : '';   // 公式LINEのリッチメニュー「ハタボに相談」＝サービス相談
     const ref = String(r0 || store.get('jrRef', '')).replace(/[^\w-]/g, '').slice(0, 20);
     if (r0) store.set('jrRef', ref);
-    ws.onopen = () => jrSend(Object.assign({ type: 'hello', mode: BIZ() ? 'business' : 'family', greet: !J.greeted, ref, asGuest, agent }, typeof tr === 'boolean' ? { trio: tr } : {}, LIFF ? { idToken: idToken() } : { pass: cfg.pass }));
+    ws.onopen = () => jrSend(Object.assign({ type: 'hello', mode: BIZ() ? 'business' : 'family', greet: !J.greeted, ref, asGuest, agent, visit: J.visit || '' }, typeof tr === 'boolean' ? { trio: tr } : {}, LIFF ? { idToken: idToken() } : { pass: cfg.pass }));
     ws.onmessage = ev => { let m; try { m = JSON.parse(ev.data); } catch (e) { return; } if (m.type === 'ready') clearTimeout(giveUp); jrOn(m); };
     ws.onclose = () => {
       clearTimeout(giveUp);
@@ -2364,7 +2371,7 @@ body.tall.av-hatabo .rothint, body.tall.av-komugi .rothint { display: inline-fle
       case 'note_saved': toast({ minutes: '議事録を残したよ', memo: 'メモしたよ', doc: '書いた文章を残したよ', dengon: '伝言をとどけたよ' }[m.kind] || '残したよ'); if (!$('hbPage').hidden) jrSend({ type: 'mypage' }); break;
       case 'ready':
         document.body.classList.remove('connecting');
-        J.ready = true; J.tries = 0; J.greeted = true; J.profile = m.profile || null; if (!$('hbPage').hidden) jrSend({ type: 'mypage' }); 
+        J.ready = true; J.tries = 0; J.greeted = true; { const vb = $('visitBar'); if (m.visit) { vb.hidden = false; $('visitName').textContent = m.visit.name + 'さんのAI棒と話しています'; } else { vb.hidden = true; if (J.visit) { J.visit = ''; toast('つながっていない人のAI棒には入れませんでした'); } } } J.profile = m.profile || null; if (!$('hbPage').hidden) jrSend({ type: 'mypage' }); 
         J.guest = !!m.guest; J.avatar = m.avatar || ''; document.body.classList.toggle('av-komugi', J.avatar === 'komugi'); if (HATABO_APP && !J.avatar) J.avatar = 'hatabo'; document.body.classList.toggle('av-hatabo', J.avatar === 'hatabo'); { const t = document.querySelector('#butterTag text'), nm = { komugi: 'コムギ', hatabo: 'ハタボ' }[J.avatar]; if (t && nm) t.textContent = nm; } if (J.avatar === 'komugi') { const ib = document.getElementById('introBubble'); if (ib) ib.remove(); } if (J.avatar) { try { document.body.classList.toggle('hb-hatched', localStorage.getItem('hatched_' + J.avatar) === '1'); } catch (e) {} } $('goenBtn').hidden = J.guest; J.myRef = m.myRef || ''; J.me = String(m.me || '').replace(/（テスト）$/, ''); $('shareBtn').hidden = false;
         document.body.classList.toggle('familyok', !J.guest);
         document.body.classList.toggle('guestmode', J.guest);
@@ -2802,10 +2809,11 @@ body.tall.av-hatabo .rothint, body.tall.av-komugi .rothint { display: inline-fle
           <div class="hbbar"><i style="width:${d.lvPct}%"></i></div><p>次のLvまで ${d.lvPct}%。話すほど、手伝うほど育つボー。</p>
           <div class="hbstats"><div><b class="hbmuted">—</b><span>フォロワー</span></div><div><b class="hbmuted">—</b><span>フォロー中</span></div><div><b>${n(d.kids)}</b><span>ご縁（紹介）</span></div></div>
           <button type="button" class="hbbtn w" data-go="goen">ご縁のひろがりを見る</button>
+          <p style="font-size:11.5px">ありがとうポイント：紹介した人が話しはじめたら ${n((d.thanks || {}).visit)}pt、お試しで ${n((d.thanks || {}).trial)}pt、契約で ${n((d.thanks || {}).contract)}pt（ご縁の先の2代目は半分）。いま ${n(d.pts)}pt。</p>
           <p class="hbmuted" style="font-size:11.5px">フォロー・フォロワーは、オーナーどうしのつながりができたら出ます。</p></div>
         <div class="hbc"><div class="k">STREAK</div><h3>毎日の報連相</h3><div class="big">${n(d.streak)}<small>日連続</small></div>
           <div class="hbring">${marks.map(x => `<i class="${d.streak >= x ? 'on' : ''}">${x === 365 ? '1年' : x + '日'}</i>`).join('')}</div><p>つづけるほど、エンブレムの輪が育ちます。</p></div>
-        <div class="hbc"><div class="hbstats"><div><b>${n(d.learned)}</b><span>覚えたこと</span></div><div><b>${n(d.total)}</b><span>話した回数</span></div><div><b class="hbmuted">—</b><span>ありがとうpt</span></div></div>
+        <div class="hbc"><div class="hbstats"><div><b>${n(d.learned)}</b><span>覚えたこと</span></div><div><b>${n(d.total)}</b><span>話した回数</span></div><div><b>${n(d.pts)}</b><span>ありがとうpt</span></div></div>
           <button type="button" class="hbbtn w" data-ask="育てたハタボを引きつぎたい・ゆずりたい">引きつぎ・ゆずる</button></div>`;
     } else if (p === 'plan') {
       const f = d.funnel || {}, LU = d.lineups || {}, st = f.stage || '';
@@ -2918,9 +2926,12 @@ body.tall.av-hatabo .rothint, body.tall.av-komugi .rothint { display: inline-fle
     svg.querySelectorAll('.gnode').forEach(el => el.addEventListener('click', () => {
       const n = by[el.dataset.id], s = ST[n.stage] || ST.ref, info = document.getElementById('goenInfo');
       info.innerHTML = n.me ? `<b>あなた</b> Lv.${n.lv}・紹介した人 ${n.kids}人${n.streak ? '・' + n.streak + '日連続' : ''}`
-        : `<b>${esc(n.name)}さん</b><span class="hbtag" style="background:${s[1]};color:#fff">${s[0]}</span><button type="button" class="hbtag" style="border:0;cursor:pointer;margin-left:6px" onclick="hbpTo('${esc(n.id)}')">伝言する</button><br>${n.lineupName ? esc(n.lineupName + ' ' + n.grade) + '・' : ''}${ACT[n.st] || ''}・${n.depth}代目のご縁・Lv.${n.lv}${n.streak ? '・' + n.streak + '日連続' : ''}・紹介した人 ${n.kids}人${n.since ? '・' + new Date(n.since).toLocaleDateString('ja-JP') + 'から' : ''}`;
+        : `<b>${esc(n.name)}さん</b><span class="hbtag" style="background:${s[1]};color:#fff">${s[0]}</span><button type="button" class="hbtag" style="border:0;cursor:pointer;margin-left:6px" onclick="hbpTo('${esc(n.id)}')">伝言する</button><button type="button" class="hbtag gold" style="border:0;cursor:pointer;margin-left:6px" onclick="hbpVisit('${esc(n.id)}')">AI棒と話す</button><br>${n.lineupName ? esc(n.lineupName + ' ' + n.grade) + '・' : ''}${ACT[n.st] || ''}・${n.depth}代目のご縁・Lv.${n.lv}${n.streak ? '・' + n.streak + '日連続' : ''}・紹介した人 ${n.kids}人${n.since ? '・' + new Date(n.since).toLocaleDateString('ja-JP') + 'から' : ''}`;
     }));
   }
+  // ご縁の人のAI棒と話す：いったん切って、その人のAI棒としてつなぎなおす
+  window.hbpVisit = code => { hbpClose(); J.visit = code; $('bubbles').innerHTML = ''; toast('AI棒をよんでいます…'); try { J.ws && J.ws.close(); } catch (e) {} };
+  $('visitBack').addEventListener('click', () => { J.visit = ''; $('visitBar').hidden = true; $('bubbles').innerHTML = ''; toast('自分のAI棒にもどります'); try { J.ws && J.ws.close(); } catch (e) {} });
   window.hbpTo = code => { HBP.to = code; HBP.page = 'inbox'; HBP.inboxShown = false; hbpRender(); if (J.ready) jrSend({ type: 'inbox' }); };
   function hbpOpen(p) {
     HBP.page = p || 'my'; $('hbPage').hidden = false; hbpRender(); if (HBS.friend === null) hbpFriend();

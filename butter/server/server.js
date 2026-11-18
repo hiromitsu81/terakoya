@@ -82,6 +82,8 @@ const LINEUP = {
 };
 const GRADE_PLAN = { X: 'std', G: 'high', Z: 'super' };
 const TRIAL_DAYS = 10, TRIAL_DAILY = 10;
+/** ありがとうポイント：紹介した人に。2代目のご縁の人には半分 */
+const THANKS = { visit: 100, trial: 300, contract: 1000 };
 /** いまの段階：お試しの10日が過ぎたら、選んだプランの契約に切りかわる */
 function funnelOf(r) {
   r = r || {};
@@ -164,6 +166,7 @@ async function myPage(S) {
     streak: st.last === day || st.last === new Date(Date.now() - 15 * 3600000).toISOString().slice(0, 10) ? st.streak || 0 : 0,
     lv, lvPct: Math.round((tot - base) / Math.max(1, next - base) * 100), learned: (S.learned || []).length + (S.lessons || []).length,
     kids: (mine && mine.kids) || 0, myRef: S.myRef || '', from: S.refFrom ? await refLabel(S.refFrom) : '',
+    pts: (mine && mine.pts) || 0, thanks: THANKS,
     unread: S.myRef ? (await loadInbox(S.myRef).catch(() => [])).filter(x => !x.read).length : 0,
     funnel: S.funnel || funnelOf(mine), lineups: LINEUP, trialDays: TRIAL_DAYS, trialDaily: TRIAL_DAILY,
     notes: (await loadNotes(S.owner).catch(() => [])).slice(0, 50), summary: String(S.memo || '').slice(0, 3000) };
@@ -244,12 +247,14 @@ async function goenPeople(me) {
   return out;
 }
 /** 紹介した人（と、その上の人）に、お試し・契約を知らせる */
-async function tellUpline(S, what) {
+async function tellUpline(S, what, kind) {
   let c = S.refFrom, who = S.me || 'ご縁の人';
   for (let i = 0; i < 2 && c; i++) {
-    const text = i === 0 ? who + 'さんが、あなたの紹介で' + what + '。' : '（ご縁の先）' + who + 'さんが' + what + '。';
-    await postInbox(c, { kind: 'goen', from: S.myRef, fromName: who, text }).catch(() => {});
-    const up = await getRef(c).catch(() => null); c = up && up.parent;
+    const pt = Math.round((THANKS[kind] || 0) / (i === 0 ? 1 : 2)), up = await getRef(c).catch(() => null);
+    if (pt) await putRef(c, { pts: ((up && up.pts) || 0) + pt }).catch(() => {});
+    const text = (i === 0 ? who + 'さんが、あなたの紹介で' + what + '。' : '（ご縁の先）' + who + 'さんが' + what + '。') + (pt ? 'ありがとうポイント +' + pt + 'pt' : '');
+    await postInbox(c, { kind: 'goen', from: S.myRef, fromName: who, text, pt }).catch(() => {});
+    c = up && up.parent;
   }
 }
 /** 紹介元の名前（「マー君さん」）。手で作ったコード（mac など）はそのまま */
@@ -698,7 +703,7 @@ function session(ws) {
   function sysPrompt() { const [a, b] = sysParts(); return a + b + (AVS[S.avatar] ? AVS[S.avatar].last : EDO_LAST); }
   // APIに渡す形：前半にキャッシュの印をつける（短すぎるときはAPIがキャッシュしないだけで、そのまま動く）
   function sysBlocks(extra) { const [a, b] = sysParts(); return [{ type: 'text', text: a, cache_control: { type: 'ephemeral' } }, { type: 'text', text: (b + (extra || '') + (AVS[S.avatar] ? AVS[S.avatar].last : EDO_LAST)).trim() || '。' }]; }
-  const convoKey = () => !S.owner ? '' : S.guest ? S.owner + ':guest' : S.mode === 'family' ? S.owner + ':family' : '';
+  const convoKey = () => !S.owner || S.visit ? '' : S.guest ? S.owner + ':guest' : S.mode === 'family' ? S.owner + ':family' : '';
   /** 会話をまとめる：次の会話用の「まとめ」と、アプリのバターちゃんが読む「ジュニア日記」 */
   async function summarize() {
     const key = convoKey();
@@ -802,8 +807,8 @@ function session(ws) {
     const f = S.funnel, title = kind + '：' + (f.lineupName || '') + ' ' + (f.grade || '') + (f.price ? '（' + f.price + (f.pay === 'y' ? '・年払い' : '・月払い') + '）' : '');
     console.log('funnel', JSON.stringify({ owner: S.owner, name: S.me, act, lineup: f.lineup, grade: f.grade, pay: f.pay }));
     gas(Object.assign({ action: 'lead', lead: { who: S.me, ref: await refLabel(S.refFrom || S.ref || ''), kind: '契約', title, need: kind, when: f.stage === 'trial' ? new Date(f.trialUntil).toLocaleDateString('ja-JP') + 'までお試し' : '', budget: f.price || '', next: act === 'cancel' ? 'お試しをやめた理由を聞く' : 'お支払いの登録を案内する', memo: '' } }, S.auth)).catch(() => {});
-    if (act === 'trial') tellUpline(S, 'お試し（' + (f.lineupName || '') + '）をはじめました').catch(() => {});
-    if (act === 'contract') tellUpline(S, (f.lineupName || '') + ' ' + (f.grade || '') + 'を申し込みました').catch(() => {});
+    if (act === 'trial') tellUpline(S, 'お試し（' + (f.lineupName || '') + '）をはじめました', 'trial').catch(() => {});
+    if (act === 'contract') { tellUpline(S, (f.lineupName || '') + ' ' + (f.grade || '') + 'を契約しました', 'contract').catch(() => {}); putRef(S.myRef, { thanked: true }).catch(() => {}); }
     send(await myPage(S));
     const say = { trial: '10日間のお試しがはじまったボー！いちばん上のZで動くから、なんでも頼んでほしいボー。', change: 'プランを変えたボー。', cancel: 'お試しをやめたボー。また話したくなったら、いつでも呼んでほしいボー。', contract: 'お申し込みありがとうだボー！お支払いの案内は、ハタラボから届くボー。' }[act];
     if (say) speakOnly(S.avatar === 'komugi' ? say.replace(/だボー/g, 'です').replace(/ボー/g, 'です') : S.avatar === 'hatabo' ? say : say.replace(/だボー/g, 'だぜ').replace(/ボー/g, 'ぜ'), act === 'cancel' ? 'shy' : 'excited');
@@ -1069,6 +1074,7 @@ function session(ws) {
     let text = capped && !longMode ? spoken : clean(full).trim();
     if (cut && !capped) { const k = Math.max(text.lastIndexOf('。'), text.lastIndexOf('！'), text.lastIndexOf('？'), text.lastIndexOf('!'), text.lastIndexOf('?')); if (k > 0) text = text.slice(0, k + 1); }
     if (text && !noRecord) S.history.push({ role: 'user', content: logText || '（写真を見せた）' }, { role: 'assistant', content: text });
+    if (S.visit && logText) S.visitLog.push(String(logText).slice(0, 200));
     if (links.length && text) send({ type: 'links', gen, links: links.slice(0, 3) });
     if (longMode && text && text.length > 200 && S.owner) addNote(S.owner, { kind: 'doc', title: (logText || '書いた文章').replace(/\s+/g, ' ').slice(0, 30), text }).then(() => send({ type: 'note_saved', kind: 'doc' })).catch(() => {});
     if (S.trio && /[？?]\s*$/.test(text)) S.followUntil = Date.now() + 12000;   // ジュニアが質問した → つぎの1回は名前なしでも   // 空の返事は記録しない（次の会話がこわれるので）
@@ -1126,7 +1132,8 @@ function session(ws) {
         S.voice = /^ja-JP-[\w-]+$/.test(m.voice || '') ? m.voice : '';
         S.auth = m.idToken ? { idToken: String(m.idToken) } : { pass: String(m.pass || '') };
         S.ref = String(m.ref || '').replace(/[^\w-]/g, '').slice(0, 20);
-        S.agent = m.agent === 'service' ? 'service' : '';   // 公式LINEのリッチメニューの「ハタボに相談」：サイトと同じサービス相談
+        S.agent = m.agent === 'service' ? 'service' : '';
+        S.visit = String(m.visit || '').replace(/[^\w-]/g, '').slice(0, 20);   // ご縁の図から、その人のAI棒と話す   // 公式LINEのリッチメニューの「ハタボに相談」：サイトと同じサービス相談
         S.asGuest = !!m.asGuest;          // 家族が「窓口の画面」を試すとき（&test=guest）
         try { await loadBrain(); } catch (e) {
           if (e.code === 'auth' || e.code === 'pass') return fail('auth', String(e.message).slice(0, 80));
@@ -1145,14 +1152,30 @@ function session(ws) {
           await putRef(S.myRef, { owner: S.owner, name: S.me || (mine && mine.name) || '', parent, at: (mine && mine.at) || Date.now() });
           // 初めて来た人なら、紹介した人の「ご縁」を1つふやす
           if (!mine && parent) { const up = await getRef(parent).catch(() => null); await putRef(parent, { kids: ((up && up.kids) || 0) + 1 }).catch(() => {}); }
+          if (!mine && parent) S.newVisit = true;
           S.funnel = funnelOf(mine);
+          if (S.newVisit && parent) tellUpline(S, 'ハタボと話しはじめました', 'visit').catch(() => {});
+          if (mine && mine.stage === 'trial' && S.funnel.stage === 'contract' && !mine.thanked) { putRef(S.myRef, { stage: 'contract', thanked: true, contractAt: mine.trialUntil || Date.now() }).catch(() => {}); tellUpline(S, (S.funnel.lineupName || '') + ' ' + (S.funnel.grade || '') + 'を契約しました', 'contract').catch(() => {}); }
           // 紹介から来た人は、紹介した人のアバターで（コムギの紹介ならコムギ）。リッチメニューのサービス相談と、役割を決めた窓口はそのまま
           if (S.guest && !S.agent && S.role === '汎用' && parent) {
             let av = '', c = parent;
             for (let i = 0; i < 3 && c && !av; i++) { if (ENV.KOMUGI_REFS.includes(c)) { av = 'komugi'; break; } const u = await getRef(c).catch(() => null); if (u && AVS[u.avatar]) av = u.avatar; c = u && u.parent; }
             if (av && av !== S.avatar && AVS[av]) { S.system = S.system.replace(AVS[S.avatar].persona(), AVS[av].persona()); S.avatar = av; S.voice = AVS[av].voice(); }
           }
-          if (S.guest && S.avatar && !S.agent) putRef(S.myRef, { avatar: S.avatar }).catch(() => {});
+          if (S.guest && S.avatar && !S.agent && !S.visit) putRef(S.myRef, { avatar: S.avatar }).catch(() => {});
+          // ご縁の人のAI棒をたずねる：つながっていれば、その人のアバターと「紹介してよいこと」だけで話す。話したことは、その人への伝言になる
+          if (S.visit) {
+            const t = S.visit !== S.myRef && await goenLinked(S.myRef, S.visit) ? await getRef(S.visit).catch(() => null) : null;
+            if (!t) S.visit = '';
+            else {
+              const av = AVS[t.avatar] ? t.avatar : 'hatabo', host = String(t.name || 'ご縁の人'), pf = t.owner ? await loadProfile(t.owner).catch(() => null) : null;
+              S.visitHost = host; S.visitLog = []; S.avatar = av; S.voice = AVS[av].voice(); S.history = []; S.memo = ''; S.consult = '';
+              S.system = AVS[av].persona() + '\n\n【いまの役目：' + host + 'さんのAI棒】あなたはいま、' + host + 'さんのAI棒として、ご縁でつながった' + (S.me || 'お客さん') + 'さんと話している。' + host + 'さんの代わりに、ていねいに受け答えする。'
+                + host + 'さんについて言ってよいのは、下の「紹介してよいこと」だけ。予定・住所・連絡先・お金・家族のことは言わない。わからないことは「' + host + 'さんに伝えておく」と言う。話した中身は、あとで' + host + 'さんに伝言として届くと最初に一度だけ伝える。'
+                + (pf ? '\n【' + host + 'さんの紹介カード】得意なこと：' + (pf.skills || '—') + '\nさがしていること：' + (pf.seeking || '—') + '\n紹介してよいこと：' + (pf.shareable || '—') : '\n【' + host + 'さんの紹介カード】まだない。名前とご縁があることだけ言える。')
+                + (S.me ? '\n\n【いま話している人】' + S.me + 'さん（LINEの名前）。' : '');
+            }
+          }
           S.stats = { at: (mine && mine.at) || Date.now(), tot: (mine && mine.tot) || 0, mon: (mine && mine.mon) || '', monN: (mine && mine.monN) || 0, last: (mine && mine.last) || '', streak: (mine && mine.streak) || 0, kids: (mine && mine.kids) || 0 };
         }
         // コムギ経由か：コムギの窓口、またはコムギの紹介コードから（2つ上までたどる）
@@ -1177,11 +1200,12 @@ function session(ws) {
             if (S.newTurns >= 2) setTimeout(summarize, 3000);       // 前回まとめきれなかった分（強制で切ったときなど）
           }
         }
-        send({ type: 'ready', me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs, guest: !!S.guest, myRef: S.myRef || '', avatar: S.avatar || '', komugi: !!S.komugi, superUntil: superUntil(S.owner), canPlan: !!superUntil(S.owner) });
+        send({ type: 'ready', me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs, guest: !!S.guest, myRef: S.myRef || '', visit: S.visit ? { code: S.visit, name: S.visitHost } : null, avatar: S.avatar || '', komugi: !!S.komugi, superUntil: superUntil(S.owner), canPlan: !!superUntil(S.owner) });
+        if (S.visit) { const T = S.avatar === 'komugi' ? x => x.replace(/だボー/g, 'です').replace(/ボー/g, 'です') : S.avatar === 'hatabo' ? x => x : x => x.replace(/だボー/g, 'だぜ').replace(/ボー/g, 'ぜ'); return speakOnly(T(S.visitHost + 'さんのAI棒だボー。話してくれたことは、' + S.visitHost + 'さんに伝言で届けるボー。'), 'excited'); }
         if (m.greet && S.guest && S.consult) return recapGreet().then(deliverInbox).catch(() => {});      // 相談メモがある人には、振り返りからはじめる
         const hi = m.greet ? (S.guest ? (S.history.length ? (AVS[S.avatar] ? AVS[S.avatar].again : 'よう、また来てくれたな！つづきを話そうぜ。') : (AVS[S.avatar] ? AVS[S.avatar].greet(S.me) : guestGreeting(S.me))) : greeting(S.me, S.mode, S.trio)) : '';
         if (hi) await speakOnly(hi, 'excited');
-        deliverInbox().catch(() => {});
+        if (m.greet) deliverInbox().catch(() => {});
         return;
       }
       if (!S.ready) return;
@@ -1238,7 +1262,7 @@ function session(ws) {
     } catch (e) { send({ type: 'notice', why: 'server', detail: String(e.message).slice(0, 80) }); }
   });
   const life = setTimeout(() => fail('timeout', 'つなぎっぱなしの上限'), ENV.SESSION_MAX_MIN * 60000);
-  ws.on('close', () => { clearTimeout(life); stopReply('close'); if (S.stt) { try { S.stt.end(); } catch (e) {} } if (S.newTurns >= 2) summarize(); });
+  ws.on('close', () => { clearTimeout(life); stopReply('close'); if (S.stt) { try { S.stt.end(); } catch (e) {} } if (S.visit && S.visitLog && S.visitLog.length) postInbox(S.visit, { kind: 'msg', from: S.myRef, fromName: S.me || 'ご縁の人', text: 'あなたのAI棒と話しました：' + S.visitLog.slice(-6).map(x => '「' + x + '」').join('') }).catch(() => {}); else if (S.newTurns >= 2) summarize(); });
   return S;
 }
 
