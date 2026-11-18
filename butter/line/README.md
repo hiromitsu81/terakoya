@@ -29,7 +29,7 @@
 ```js
 function hataboRichMenu() {
   const T = PropertiesService.getScriptProperties().getProperty('HATABO_LINE_TOKEN');
-  const B = 'https://hiromitsu81.github.io/terakoya/butter/line/';
+  const B = 'https://app.hatha-lab.com/line/';
   const H = { Authorization: 'Bearer ' + T };
   const def = UrlFetchApp.fetch(B + 'richmenu.json').getContentText();
   const id = JSON.parse(UrlFetchApp.fetch('https://api.line.me/v2/bot/richmenu', { method: 'post', contentType: 'application/json', headers: H, payload: def }).getContentText()).richMenuId;
