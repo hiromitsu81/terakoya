@@ -109,7 +109,8 @@ const LINEUP = {
   bora:  { name: 'ハタボーラ',   who: '会社の愛棒', grades: { X: '1席 2,980円', G: '1席 9,800円' } },
 };
 const GRADE_PLAN = { X: 'std', G: 'high', Z: 'super' };
-const TRIAL_DAYS = 10, TRIAL_DAILY = 10;
+const TRIAL_DAYS = 10, TRIAL_DAILY = 30;
+const GRADE_CAP = { std: 60, high: 40, super: 30 };   // ハタボの1日の回数（X・G・Z）。こえたら追加チケット
 /** ありがとうポイント：紹介した人に。2代目のご縁の人には半分 */
 const THANKS = { visit: 100, trial: 300, contract: 1000 };
 /** いまの段階：お試しの10日が過ぎたら、選んだプランの契約に切りかわる */
@@ -152,7 +153,7 @@ async function gas(payload) {
 
 /* ===== 1日の回数 ===== */
 const counts = new Map();
-function quotaOk(owner, guest, hasRef) {
+function quotaOk(owner, guest, hasRef, cap) {
   const day = new Date().toISOString().slice(0, 10), k = owner + ':' + day;
   const n = (counts.get(k) || 0) + 1;
   counts.set(k, n);
@@ -160,7 +161,7 @@ function quotaOk(owner, guest, hasRef) {
   if (!guest) return n <= ENV.DAILY_LIMIT;
   const tk = '__guests:' + day, t = (counts.get(tk) || 0) + 1;      // 窓口ぜんぶの上限
   counts.set(tk, t);
-  return t <= ENV.GUEST_TOTAL_LIMIT && n <= (hasRef ? ENV.DAILY_LIMIT_GUEST : ENV.DAILY_LIMIT_NOREF);
+  return t <= ENV.GUEST_TOTAL_LIMIT && n <= (cap || (hasRef ? ENV.DAILY_LIMIT_GUEST : ENV.DAILY_LIMIT_NOREF));
 }
 
 /* ===== 紹介のつながり：一人ひとりの紹介コード（refs）。だれの紹介で来たかを、最初の1回だけ覚える ===== */
@@ -183,10 +184,12 @@ function bumpStats(S) {
   if (st.last !== day) { const y = new Date(now.getTime() - 86400000).toISOString().slice(0, 10); st.streak = st.last === y ? st.streak + 1 : 1; st.last = day; }
   putRef(S.myRef, { tot: st.tot, mon: st.mon, monN: st.monN, last: st.last, streak: st.streak }).catch(() => {});
 }
+/** ハタボ・コムギのアプリでは、グレードごとの1日の回数 */
+const gradeCap = S => (S && (S.avatar === 'hatabo' || S.avatar === 'komugi')) ? GRADE_CAP[Object.keys(PLANS).find(k => PLANS[k] === planOf(S)) || 'std'] : 0;
 async function myPage(S) {
   const plan = planOf(S), st = S.stats || {}, day = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
   const used = counts.get((S.owner || 'anon') + ':' + new Date().toISOString().slice(0, 10)) || 0;
-  const limit = !S.guest ? ENV.DAILY_LIMIT : S.refFrom ? ENV.DAILY_LIMIT_GUEST : ENV.DAILY_LIMIT_NOREF;
+  const limit = !S.guest ? ENV.DAILY_LIMIT : gradeCap(S) || (S.refFrom ? ENV.DAILY_LIMIT_GUEST : ENV.DAILY_LIMIT_NOREF);
   const mine = S.myRef ? await getRef(S.myRef).catch(() => null) : null;
   const tot = st.tot || 0, lv = Math.floor(Math.sqrt(tot / 4)) + 1, base = Math.pow(lv - 1, 2) * 4, next = Math.pow(lv, 2) * 4;
   return { type: 'mypage', name: S.me || '', avatar: S.avatar || 'hatabo', plan: plan.label, superUntil: superUntil(S.owner) || (plan === PLANS.super && S.guest ? 'サイトからのおためし' : ''),
@@ -395,7 +398,7 @@ function welcomeCards(name) {
     oaCard('WELCOME', 'すべての人に、AIのある愛棒を。', [(name ? name + 'さん、' : '') + '友だち追加ありがとうだボー！', 'ハタボは、PCとスマホで話すだけで、調べもの・段取り・文章づくり・予定まで、いっしょに動くAIの愛棒だボー。', 'アプリを入れなくても、LINEからすぐ使えるボー。'], 'ハタボと話してみる', MINI, true),
     oaCard('HOW TO 1', '話しかけるだけ', ['下のメニューの「ハタボに相談」か、ミニアプリのまん中のエンブレムを押して話すボー。', '文字で送ってもOK。「来週の予定を整理して」「お礼のメールを書いて」など、なんでもどうぞ。'], '話しかける', MINI),
     oaCard('HOW TO 2', 'マイハタボで残す・育てる', ['「今のをメモして」「議事録つくって」で、メモ・議事録に残るボー。', '話すほど、覚えて育つボー。ご縁・伝言・AI棒ガチャ・友だちも、マイハタボから。'], 'マイハタボを開く', MINI + '?page=my'),
-    oaCard('PLAN', 'まず10日間、無料で', ['いちばん上のZグレードで、10日間無料で試せるボー（1日10回まで）。', 'ラインナップは、家族・ひとり・個人事業・お店や宿・会社の5つ。10日以内にやめれば0円だボー。'], 'プランを見る', MINI + '?page=plan'),
+    oaCard('PLAN', 'まず10日間、無料で', ['いちばん上のZグレードで、10日間無料で試せるボー（1日30回まで）。', 'ラインナップは、家族・ひとり・個人事業・お店や宿・会社の5つ。10日以内にやめれば0円だボー。'], 'プランを見る', MINI + '?page=plan'),
     oaCard('TIPS', 'トークをピン留めしよう', ['トーク一覧の「ハタボ」を長押し →「ピン留め」で、いつもいちばん上に。', 'メニューからすぐハタボを呼べるボー。'], '設定を見る', MINI + '?page=settings'),
   ] } };
 }
@@ -414,7 +417,37 @@ function groupCards(gref) {
   const c2 = oaCard('GUIDE', 'ひとり1体、自分のハタボ', ['下のボタンから、ひとりずつ自分のハタボをもてるボー（公式LINEを友だち追加して、ミニアプリで話す）。', 'まず10日間、いちばん上のZグレードで無料。メモ・議事録・伝言・ご縁も、マイハタボにまとまるボー。'], '10日間無料ではじめる', join);
   const c3 = oaCard('INVITE', 'このグループに招待した人へ', ['招待した人は、下の「招待したのは私」を押してね。このグループから来た人が、あなたのご縁になるボー。', 'グループを管理したい人は、マイハタボ →「紹介する」にある招待コードを、このグループに投稿してね。'], '招待したのは私', join);
   c3.footer.contents = [{ type: 'button', style: 'primary', color: '#16233F', height: 'sm', action: { type: 'postback', label: '招待したのは私', data: 'act=inviter', displayText: '招待したのは私です' } }];
-  return { type: 'flex', altText: 'ハタボがグループに入ったボー。自己紹介とはじめ方です', contents: { type: 'carousel', contents: [c1, c2, c3] } };
+  c3.body.contents = ['招待した人は、下の「招待したのは私」を押してね。このグループから来た人が、あなたのご縁になるボー。', 'グループの管理者になるには：①ミニアプリでマイハタボを開く ②「紹介する」で招待コードをコピー ③このグループのトークに貼って送る'].map(t => ({ type: 'text', text: t, size: 'sm', wrap: true, color: '#16233F' }));
+  c3.footer.contents.push({ type: 'button', style: 'secondary', height: 'sm', action: { type: 'uri', label: '招待コードを出す', uri: MINI + '?page=share' } });
+  return { type: 'flex', altText: 'ハタボがグループに入ったボー。自己紹介とはじめ方です', contents: { type: 'carousel', contents: [c1, c2, c3, recCard(false)] } };
+}
+/** グループの記録カード：はじめる・とめる・議事録をつくる（管理者だけが押せる） */
+function recCard(on) {
+  const c = oaCard('RECORD', on ? 'いま記録中だボー' : 'このグループの記録', on ? ['このグループのやりとりと写真を、管理者のマイハタボとGoogleドライブに残しているボー。', '「議事録をつくる」で、ここまでをまとめるボー。'] : ['管理者が「記録をはじめる」を押すと、やりとりと写真を残して、あとで議事録にできるボー。', '記録中は、みんなに分かるようにお知らせするボー。押せるのは管理者だけ。'], 'x', MINI);
+  const pb = (label, data, style) => ({ type: 'button', style: style || 'secondary', height: 'sm', color: style === 'primary' ? '#16233F' : undefined, action: { type: 'postback', label, data, displayText: label } });
+  c.footer.contents = on ? [pb('議事録をつくる', 'act=minutes', 'primary'), pb('記録をとめる', 'act=rec_off')] : [pb('記録をはじめる', 'act=rec_on', 'primary')];
+  c.footer.spacing = 'sm';
+  return c;
+}
+/** 記録中のグループのやりとりを、うちのサーバーに一時的に置く（議事録にしたら消す。30日たった分も消す） */
+async function groupLog(gid, item) {
+  const L = await loadCol(gid, 'grouplog'), cut = Date.now() - 30 * 86400000;
+  const items = (L.items || []).filter(x => x.at > cut).concat([item]).slice(-1500);
+  await saveCol(gid, 'grouplog', { items });
+}
+async function groupMinutes(src, g) {
+  const gid = gidOf(src), L = await loadCol(gid, 'grouplog'), items = (L.items || []).filter(x => x.at > Date.now() - 30 * 86400000);
+  if (!items.length) return 'まだ記録がないボー。「記録をはじめる」を押してから話してね。';
+  const owner = 'g:' + g.admin, log = items.map(x => new Date(x.at + 9 * 3600000).toISOString().slice(5, 16).replace('T', ' ') + ' ' + (x.name || '?') + '：' + (x.text || (x.kind === 'image' ? '（写真）' : x.kind === 'file' ? '（ファイル ' + (x.file || '') + '）' : ''))).join('\n');
+  let text = '';
+  try {
+    const r = await deps.claude.messages.create({ model: ENV.SMART_MODEL, max_tokens: 1500, system: 'LINEグループのやりとりから、日本語の議事録をつくる。見出しは「話したこと」「決まったこと」「宿題（だれが・何を・いつまで）」「次に話すこと」。書かれていないことは足さない。', messages: [{ role: 'user', content: log.slice(-30000) }] });
+    text = (r.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
+  } catch (e) { console.error('group minutes', String(e.message).slice(0, 120)); }
+  const day = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
+  const it = await addNote(owner, { kind: 'minutes', title: 'グループの議事録 ' + day, text: (text || '（まとめに失敗したので、やりとりをそのまま残したボー）') + '\n\n――やりとり――\n' + log });
+  await saveCol(gid, 'grouplog', { items: [] });
+  return '議事録をつくったボー！管理者のマイハタボの「メモ・議事録」に入れたボー。' + (it && it.url ? '\nGoogleドライブ：' + it.url : '\nGoogleと連携すると、ドライブにも自動で入るボー（マイハタボ →「設定」→「Googleアカウント連携」）。');
 }
 const gidOf = src => src.groupId || src.roomId || '';
 async function groupJoin(src) {
@@ -457,13 +490,27 @@ function lineWebhook(req, res) {
         } else if (ev.type === 'postback' && inGroup && /act=inviter/.test((ev.postback || {}).data || '')) {
           const nm = await lineName(src), r = await groupLink(src, src.userId, 'inviter');
           messages = [{ type: 'text', text: r.ok ? (nm || 'あなた') + 'さんを、このグループに招待した人として覚えたボー！このグループから来た人は、' + (nm || 'あなた') + 'さんのご縁になるボー。' : r.already ? 'もう招待した人として覚えてるボー！' : '招待した人は、もう別の人で登録ずみだボー。' }];
+        } else if (ev.type === 'postback' && inGroup && /act=(rec_on|rec_off|minutes)/.test((ev.postback || {}).data || '')) {
+          const act = (ev.postback.data.match(/act=(\w+)/) || [])[1], g = await loadCol(gidOf(src), 'groups');
+          if (!g.admin) messages = [{ type: 'text', text: '記録は、このグループの管理者だけが使えるボー。先に招待コードを投稿して、管理者になってね（マイハタボ →「紹介する」）。' }];
+          else if (g.admin !== src.userId) messages = [{ type: 'text', text: '記録のボタンは、管理者だけが押せるボー。' }];
+          else if (act === 'rec_on') {
+            await saveCol(gidOf(src), 'groups', { rec: true, recAt: Date.now() });
+            const gl = ENV.GOOGLE_CLIENT_ID ? await gGet('g:' + src.userId).catch(() => ({})) : {};
+            messages = [{ type: 'flex', altText: 'このグループの記録をはじめたボー', contents: recCard(true) }, { type: 'text', text: '記録をはじめたボー。このグループのやりとりと写真を残すので、みんな知っておいてね。' + (gl.refresh ? '' : '\n（管理者さんへ：Googleと連携すると、議事録と写真がドライブにも入るボー。マイハタボ →「設定」→「Googleアカウント連携」）') }];
+          } else if (act === 'rec_off') { await saveCol(gidOf(src), 'groups', { rec: false }); messages = [{ type: 'text', text: '記録をとめたボー。ここまでの分は「議事録をつくる」でまとめられるボー。' }, { type: 'flex', altText: '記録のボタン', contents: recCard(false) }]; }
+          else messages = [{ type: 'text', text: await groupMinutes(src, g) }];
         } else if (inGroup && ev.type === 'message') {
+          { const g0 = await loadCol(gidOf(src), 'groups');               // 記録中なら、やりとりを残す
+            if (g0.rec) { const m0 = ev.message || {}; await groupLog(gidOf(src), { at: ev.timestamp || Date.now(), uid: src.userId, name: await lineName(src), kind: m0.type, text: m0.type === 'text' ? String(m0.text || '').slice(0, 2000) : '', file: m0.fileName || '', mid: m0.id }); } }
           const t = ev.message && ev.message.type === 'text' ? String(ev.message.text || '') : '';
           const mm = t.match(INVITE_RE), code = mm && (mm[1] || mm[2]).toLowerCase();
           const owner = code ? await getRef(code).catch(() => null) : null;
           if (owner && owner.owner && myRefOf('g:' + src.userId) === code) {   // 自分の招待コードを投稿した人が、グループの管理者になる
             const nm = await lineName(src), r = await groupLink(src, src.userId, 'admin');
             messages = [{ type: 'text', text: r.taken ? 'このグループには、もう管理者がいるボー。' : (nm || 'あなた') + 'さんを、このグループの管理者として登録したボー！マイハタボの「ご縁」で、このグループから来た人が見られるボー。' }];
+          } else if (/(ハタボ|はたぼ).{0,6}(記録|議事録)/.test(t)) {
+            const g1 = await loadCol(gidOf(src), 'groups'); messages = [{ type: 'flex', altText: '記録のボタン', contents: recCard(!!g1.rec) }];
           } else if (/ハタボ|はたぼ|ハタボー|HATABO/i.test(t)) {        // 呼ばれたときだけ出てくる
             const g = await loadCol(gidOf(src), 'groups');
             messages = [{ type: 'flex', altText: 'ハタボだボー。自分のハタボはこちらから', contents: oaCard('HATABO', '呼んだボー？', ['グループの中では、くわしいお返事はできないんだボー。', '下のボタンから自分のハタボをもつと、話すだけで調べもの・段取り・文章づくりまで、いっしょに動くボー。'], '自分のハタボと話す', MINI + '?ref=' + (g.ref || groupRefOf(gidOf(src))), true) }];
@@ -574,7 +621,7 @@ const ROLE_RULE = {
   'サポート': '【この窓口の役割：サポート】ヒロさんとの相談の続きを受ける。下の「相談メモ」を元に、細かい質問に答えたり、決まったことを確かめたりする。メモにないことや決めることは「ヒロさんに確認しとくぜ」とつなぐ。',
   'コンサル相談': '【この窓口の役割：コンサル相談】相手の困りごとをじっくり聞いて、何が問題か・何から手をつけるかを一緒に整理する。方向の案は出してよいが、言い切らず、くわしくはヒロさんにつなぐ。下の「相談メモ」があれば、その続きから話す。',
   'PMO': '【この窓口の役割：PMO（プロジェクトの進み具合を見る係）】下の「相談メモ」の宿題と進める順番をもとに、だれが・何を・いつまでにを確かめる。終わったこと・止まっていること・次の一歩を短く整理して、止まっていたら「どこで引っかかってる？」と一緒に考える。新しく決まったことや期限は「ヒロさんに伝えとくぜ」と言って残す。報酬や契約などの決めごとは、おいらが勝手に決めない。',
-  'サービス相談': '【この窓口の役割：サービス相談（サイトと公式LINEの窓口）】ハタボというサービスの案内係。相手の暮らしや仕事を短く聞いて、合うラインナップ（ハタイエンタ＝家族、ハタリス＝ひとり、ハタボックス＝個人事業、ハタエース＝お店・宿、ハタボーラ＝会社）とグレード（X標準・G上位・Zいちばん上）をすすめる。料金はサイトと同じ（ハタリスX 2,980円〜、ハタイエンタX 5,980円〜、ハタボックスX 5,000円〜、ハタエースX 10,000円〜、ハタボーラX 1席2,980円〜）。年払いは12か月分を10か月分の料金で。まず10日間、いちばん上のZで無料で試せて（1日10回まで）、10日以内にやめれば0円、と伝える。申し込みは「マイハタボのプラン・支払い」からできると案内する。わからないこと・個別の見積もりは、ハタラボの担当（ヒロさん）につなぐ。売りこみすぎない。\n【サービス以外はしない】この窓口はサービスのご案内専用。ハタボのサービス（ラインナップ・料金・グレード・お試し・使い方・申し込み・安心・会社のこと）以外の頼み（調べもの、文章の下書き、翻訳、宿題、雑談、占い、ほかの会社のことなど）には答えない。そのときは「ここはサービスのご案内の窓口だから、それはお試しをはじめたあなたのAI棒が手伝えるボー」と一言で断り、お試しを案内する。長い文章は書かない。',
+  'サービス相談': '【この窓口の役割：サービス相談（サイトと公式LINEの窓口）】ハタボというサービスの案内係。相手の暮らしや仕事を短く聞いて、合うラインナップ（ハタイエンタ＝家族、ハタリス＝ひとり、ハタボックス＝個人事業、ハタエース＝お店・宿、ハタボーラ＝会社）とグレード（X標準・G上位・Zいちばん上）をすすめる。料金はサイトと同じ（ハタリスX 2,980円〜、ハタイエンタX 5,980円〜、ハタボックスX 5,000円〜、ハタエースX 10,000円〜、ハタボーラX 1席2,980円〜）。年払いは12か月分を10か月分の料金で。まず10日間、いちばん上のZで無料で試せて（1日30回まで）、10日以内にやめれば0円、と伝える。申し込みは「マイハタボのプラン・支払い」からできると案内する。わからないこと・個別の見積もりは、ハタラボの担当（ヒロさん）につなぐ。売りこみすぎない。\n【サービス以外はしない】この窓口はサービスのご案内専用。ハタボのサービス（ラインナップ・料金・グレード・お試し・使い方・申し込み・安心・会社のこと）以外の頼み（調べもの、文章の下書き、翻訳、宿題、雑談、占い、ほかの会社のことなど）には答えない。そのときは「ここはサービスのご案内の窓口だから、それはお試しをはじめたあなたのAI棒が手伝えるボー」と一言で断り、お試しを案内する。長い文章は書かない。',
   '汎用': '【この窓口の役割：ふだんのハタボ（はじめのヒアリング）】まずは相手の悩みや課題を聞いて、いっしょに解決する。はじめての人には、自己紹介は1〜2文で短く。そのあとは質問を1回に1つだけ、相手の言葉をくり返して確かめながら、①いちばん困っていること ②いつまでに・どのくらい急ぐか ③いまどうしているか（だれが・どんな道具で） ④うまくいったらどうなっていたいか、の順に聞く。聞けたら、ハタボができること（調べもの・段取り・文章・予定・報連相・お店や会社の窓口など）で、今日すぐできる一歩を1つ具体的に出して、やってみるかたずねる。決めつけない。むずかしい話や、人の手がいる話は「ハタラボの担当（ヒロさん）につなぐ」。売りこみはしないが、続けて使いたそうなら10日間の無料お試し（マイハタボのプラン）を一言だけ案内する。',
   '友だち': '【この窓口の役割：友だち】気さくに話す。遊びや会う約束、お祭り・フェスの話が中心。仕事の話が出たら、ふつうに聞いてヒロさんにつなぐ。',
 };
@@ -1300,7 +1347,7 @@ function session(ws) {
   async function reply(content, logText, as) {
     const jam = as === 'jam';
     const voice = jam ? JAM_VOICE : S.voice;
-    if (!S.asGuest && !superUntil(S.owner) && !quotaOk(S.owner || 'anon', S.guest && !S.claude, !!S.refFrom) && !(await useTicket())) { send({ type: 'limit', why: 'plan' }); return speakOnly(S.avatar === 'hatabo' ? 'きょう話せる回数がいっぱいになったボー。チケットを足すと、このまま続けられるボー。' : S.avatar === 'komugi' ? 'きょう話せる回数がいっぱいになったとです。チケットを足すと、このまま続けられますよ。' : S.guest ? 'すまねぇ、きょうここで話せる回数がいっぱいになっちまった。続きはヒロさんに伝えとくから、また明日話そうぜ！' : 'きょうの回数がいっぱいになっちまった。また明日話そうぜ！', 'shy'); }
+    if (!S.asGuest && !superUntil(S.owner) && !quotaOk(S.owner || 'anon', S.guest && !S.claude, !!S.refFrom, gradeCap(S)) && !(await useTicket())) { send({ type: 'limit', why: 'plan' }); return speakOnly(S.avatar === 'hatabo' ? 'きょう話せる回数がいっぱいになったボー。チケットを足すと、このまま続けられるボー。' : S.avatar === 'komugi' ? 'きょう話せる回数がいっぱいになったとです。チケットを足すと、このまま続けられますよ。' : S.guest ? 'すまねぇ、きょうここで話せる回数がいっぱいになっちまった。続きはヒロさんに伝えとくから、また明日話そうぜ！' : 'きょうの回数がいっぱいになっちまった。また明日話そうぜ！', 'shy'); }
     bumpStats(S);
     if (!S.asGuest && S.funnel && S.funnel.stage === 'trial' && (counts.get((S.owner || 'anon') + ':' + new Date().toISOString().slice(0, 10)) || 0) > TRIAL_DAILY && !(await useTicket()) && (send({ type: 'limit', why: 'trial' }) || true))
       return speakOnly(S.avatar === 'komugi' ? 'お試しは1日' + TRIAL_DAILY + '回までなんです。また明日、話しましょう。' : 'お試しのZは1日' + TRIAL_DAILY + '回までだボー。また明日話そうボー。', 'shy');
