@@ -1189,7 +1189,7 @@ body.svc .svcnote { display: block; }
 <div class="hbpage" id="hbPage" hidden>
   <div class="hbp-top"><img src="award_mark.svg" alt=""><b id="hbpTitle">マイハタボ</b><button type="button" id="hbpClose">ハタボと話す</button></div>
   <nav class="hbp-tabs" id="hbpTabs" aria-label="マイハタボのメニュー">
-    <button type="button" data-p="my">マイハタボ</button><button type="button" data-p="notes">メモ・議事録</button><button type="button" data-p="grow">育てたハタボ</button><button type="button" data-p="goen">ご縁</button><button type="button" data-p="inbox">伝言</button><button type="button" data-p="gacha">ガチャ</button><button type="button" data-p="friends">友だち</button><button type="button" data-p="plan">プラン・支払い</button><button type="button" data-p="aisai">AISAI・愛祭</button><button type="button" data-p="times">ハタボタイムズ</button><button type="button" data-p="share">紹介する</button>
+    <button type="button" data-p="my">マイハタボ</button><button type="button" data-p="notes">メモ・議事録</button><button type="button" data-p="grow">育てたハタボ</button><button type="button" data-p="goen">ご縁</button><button type="button" data-p="inbox">伝言</button><button type="button" data-p="gacha">ガチャ</button><button type="button" data-p="friends">友だち</button><button type="button" data-p="plan">プラン・支払い</button><button type="button" data-p="ticket">チケット</button><button type="button" data-p="aisai">AISAI・愛祭</button><button type="button" data-p="times">ハタボタイムズ</button><button type="button" data-p="share">紹介する</button>
   </nav>
   <div class="hbp-body" id="hbpBody"></div>
 </div>
@@ -2394,7 +2394,8 @@ body.svc .svcnote { display: block; }
       case 'gacha': HBP.gacha = m; if (!$('hbPage').hidden && HBP.page === 'gacha') hbpRender(); break;
       case 'friends': HBP.friends = m; if (!$('hbPage').hidden && HBP.page === 'friends') hbpRender(); break;
       case 'goen': HBP.goen = m; if (!$('hbPage').hidden && HBP.page === 'goen') hbpRender(); break;
-      case 'mypage': HBP.data = m; if (!$('hbPage').hidden) hbpRender(); break;
+      case 'limit': HBP.limitHit = m.why || 'plan'; setTimeout(() => hbpOpen('ticket'), 1800); break;
+      case 'mypage': if (m.ticketOk || m.ticketNg) { HBP.tMsg = m.ticketOk || m.ticketNg; toast(HBP.tMsg); if (m.ticketOk) HBP.limitHit = ''; } HBP.data = m; if (!$('hbPage').hidden) hbpRender(); break;
       case 'note_saved': toast({ minutes: '議事録を残したよ', memo: 'メモしたよ', doc: '書いた文章を残したよ', dengon: '伝言をとどけたよ' }[m.kind] || '残したよ'); if (!$('hbPage').hidden) jrSend({ type: 'mypage' }); break;
       case 'ready':
         document.body.classList.remove('connecting');
@@ -2764,7 +2765,7 @@ body.svc .svcnote { display: block; }
   ];
   function hbpRender() {
     const p = HBP.page, d = HBP.data, nm = avName() || 'ハタボ';
-    $('hbpTitle').textContent = { my: 'マイハタボ', notes: 'メモ・議事録', grow: '育てた' + nm, goen: 'ご縁のひろがり', inbox: '伝言', gacha: 'AI棒ガチャ', friends: '友だち', plan: 'プラン・支払い', aisai: 'AISAI・愛祭', times: 'ハタボタイムズ', share: '紹介する' }[p] || 'マイハタボ';
+    $('hbpTitle').textContent = { ticket: '追加チケット', my: 'マイハタボ', notes: 'メモ・議事録', grow: '育てた' + nm, goen: 'ご縁のひろがり', inbox: '伝言', gacha: 'AI棒ガチャ', friends: '友だち', plan: 'プラン・支払い', aisai: 'AISAI・愛祭', times: 'ハタボタイムズ', share: '紹介する' }[p] || 'マイハタボ';
     document.querySelectorAll('#hbpTabs button').forEach(b => b.classList.toggle('on', b.dataset.p === p));
     { const on = document.querySelector('#hbpTabs .on'); if (on) try { on.scrollIntoView({ inline: 'center', block: 'nearest' }); } catch (e) {} }
     const body = $('hbpBody');
@@ -2776,7 +2777,7 @@ body.svc .svcnote { display: block; }
         <div class="hbc"><div class="k">MY HATABO</div><h3>${esc(d.name ? d.name + 'さんの' + nm : 'あなたの' + nm)}</h3>
           <span class="hbtag">${esc(d.plan)}</span> ${d.funnel && d.funnel.stage === 'trial' ? '<span class="hbtag gold">お試し あと' + d.funnel.daysLeft + '日</span>' : d.funnel && d.funnel.stage === 'contract' ? '<span class="hbtag">' + esc(d.funnel.lineupName + ' ' + d.funnel.grade) + '</span>' : '<button type="button" class="hbtag gold" data-go="plan" style="border:0;cursor:pointer">10日間無料で試す</button>'} ${d.superUntil ? '<span class="hbtag gold">' + esc(/^\d/.test(d.superUntil) ? d.superUntil + ' まで' : d.superUntil) + '</span>' : ''}
           <div style="margin-top:12px" class="big">${n(left)}<small>回 きょうの残り</small></div>
-          <div class="hbbar"><i style="width:${pct}%"></i></div><p>きょう ${n(d.today)} 回 ／ 1日 ${n(d.limit)} 回まで</p></div>
+          <div class="hbbar"><i style="width:${pct}%"></i></div><p>きょう ${n(d.today)} 回 ／ 1日 ${n(d.limit)} 回まで ・ 追加チケット ${n(d.tickets)} 枚</p><button type="button" class="hbbtn w" data-go="ticket">＋ 追加チケット</button></div>
         <div class="hbc"><div class="k">THIS MONTH</div><div class="hbstats"><div><b>${n(d.month)}</b><span>今月の会話</span></div><div><b>${n(d.total)}</b><span>これまで</span></div><div><b>${n(d.days)}</b><span>日目</span></div></div></div>
         <div class="hbc"><div class="k">NOTES</div><h3>メモ・議事録</h3><div class="big">${n((d.notes || []).length)}<small>件</small></div><button type="button" class="hbbtn w" data-go="notes">メモ・議事録を見る</button></div>
         <div class="hbc"><div class="k">MEMORY</div><h3>覚えていること</h3><div class="big">${n(d.learned)}<small>こ</small></div><p>話した中で、${esc(nm)}が覚えたこと。消したいときは「〇〇を忘れて」と話しかけてください。</p></div>`;
@@ -2795,6 +2796,18 @@ body.svc .svcnote { display: block; }
       body.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { HBP.filter = b.dataset.f; hbpRender(); });
       body.querySelectorAll('[data-copy]').forEach(b => b.onclick = async () => { const n = list.find(x => x.id === b.dataset.copy); try { await navigator.clipboard.writeText(n.title + '\n\n' + n.text); toast('コピーしたよ'); } catch (e) { toast('コピーできなかった'); } });
       body.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { if (confirmDel(b)) jrSend({ type: 'note_del', id: b.dataset.del }); });
+    } else if (p === 'ticket') {
+      const packs = d.ticketPacks || [];
+      body.innerHTML = `
+        ${HBP.limitHit ? `<div class="hbc" style="border-color:#C9A24A"><div class="k">LIMIT</div><h3>${HBP.limitHit === 'trial' ? 'お試しの今日の回数' : 'プランの今日の回数'}をこえました</h3><p>追加チケットがあれば、続けて話せます。チケット1枚で1回話せます。明日になると回数はもどります。</p></div>` : ''}
+        <div class="hbc"><div class="k">TICKET</div><h3>追加チケット</h3><div class="big">${Number(d.tickets || 0).toLocaleString('ja-JP')}<small>枚 のこり</small></div>
+          <p>プランの回数をこえたときだけ使われます。期限はありません。</p>
+          ${HBP.tMsg ? `<p style="color:#16233F;font-weight:800">${esc(HBP.tMsg)}</p>` : ''}</div>
+        <div class="hbc"><div class="k">BUY</div>${packs.map(k => `<div class="hbplan"><div><b>${k.n}回分</b><span>${k.yen.toLocaleString('ja-JP')}円 ／ ありがとうポイントなら ${k.pt.toLocaleString('ja-JP')}pt</span></div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><button type="button" class="hbtag gold" data-tk="${k.id}" data-pay="pt" style="border:0;cursor:pointer">ポイントで</button><button type="button" class="hbtag" data-tk="${k.id}" data-pay="yen" style="border:0;cursor:pointer">お金で</button></div></div>`).join('')}
+          <p style="font-size:11.5px">いまのありがとうポイント：${Number(d.pts || 0).toLocaleString('ja-JP')}pt。お金での購入（Apple Pay・Google Pay・PayPay）は準備中のため、申し込みのあとハタラボからご案内します。</p></div>`;
+      HBP.tMsg = '';
+      body.querySelectorAll('[data-tk]').forEach(b => b.onclick = () => { jrSend({ type: 'ticket', pack: b.dataset.tk, pay: b.dataset.pay }); b.disabled = true; });
     } else if (p === 'gacha') {
       const G = HBP.gacha;
       if (!G) { body.innerHTML = '<div class="hbc"><p>ガチャを準備中だボー…</p></div>'; if (J.ready) jrSend({ type: 'gacha', peek: true }); return; }
