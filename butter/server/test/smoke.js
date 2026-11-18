@@ -266,7 +266,7 @@ function client(port, hello) {
   const wn = w.msgs.filter(m => m.type === 'reply_end').length;
   w.ws.send(JSON.stringify({ type: 'text', text: 'こんばんは' }));
   await w.until(() => w.msgs.filter(m => m.type === 'reply_end').length > wn);
-  assert.ok(lastParams.model === 'claude-haiku-4-5-20251001' && !lastParams.tools, 'ふだんは速いモデル');
+  assert.ok(lastParams.model === 'claude-haiku-5-5' && !lastParams.tools, 'ふだんは速いモデル');
   // 料金プランのおためし：家族の画面は切りかえられる（スーパー上位は一番賢いモデル＋長い記憶）、窓口からは受けつけない
   w.ws.send(JSON.stringify({ type: 'plan', plan: 'super' }));
   const pl = await w.until(m => m.type === 'plan');

@@ -25,7 +25,7 @@ const { WebSocketServer } = require('ws');
 
 const ENV = {
   PORT: Number(process.env.PORT || 8080),
-  MODEL: process.env.MODEL || 'claude-haiku-4-5-20251001',            // ふだん：速いモデル
+  MODEL: process.env.MODEL || 'claude-haiku-5-5',            // ふだん：速いモデル（X）。Haiku 4.5より約10分の1の料金
   SMART_MODEL: process.env.SMART_MODEL || 'claude-sonnet-5-5',        // 調べもの・むずかしい相談：賢いモデル
   PREMIUM_MODEL: process.env.PREMIUM_MODEL || 'claude-opus-5-5',      // 料金プランのおためし（上位・スーパー上位）：いちばん賢いモデル
   WEB_SEARCH: process.env.WEB_SEARCH !== 'off',                         // ネット検索（Claudeの web_search）
