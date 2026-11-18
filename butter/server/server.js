@@ -244,6 +244,7 @@ async function goenPeople(me) {
   for (let i = 0; i < 3; i++) { const r = await getRef(c).catch(() => null); c = r && r.parent; if (!c) break; const u = await getRef(c).catch(() => null); out.push({ code: c, name: (u && u.name) || c, rel: i === 0 ? '紹介してくれた人' : 'ご縁の先輩' }); }
   let wave = [me];
   for (let d = 0; d < 3 && wave.length; d++) { const next = []; for (const w of wave) for (const k of await refKids(w)) { out.push({ code: k.code, name: k.name || 'ゲスト', rel: d === 0 ? '紹介した人' : (d + 1) + '代目のご縁' }); next.push(k.code); } wave = next.slice(0, 120); }
+  for (const c of (await friendsOf(me)).list.slice(0, 100)) if (!out.some(x => x.code === c)) { const u = await getRef(c).catch(() => null); out.push({ code: c, name: (u && u.name) || 'ゲスト', rel: '友だち' }); }
   return out;
 }
 /** 紹介した人（と、その上の人）に、お試し・契約を知らせる */
@@ -256,6 +257,43 @@ async function tellUpline(S, what, kind) {
     await postInbox(c, { kind: 'goen', from: S.myRef, fromName: who, text, pt }).catch(() => {});
     c = up && up.parent;
   }
+}
+/* ===== ガチャ・友だち：デフォルトのキャラ、契約している人のアバター、協賛（会社）のAI棒が出る ===== */
+let SPONSORS = []; try { SPONSORS = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, 'sponsors.json'), 'utf8')); } catch (e) {}
+const CHARS = [
+  { id: 'c-hatabo', name: 'ハタボ', who: 'エンブレムのたまごから生まれた愛棒', color: '#F2C94C', rare: 1 },
+  { id: 'c-komugi', name: 'コムギ', who: '博多のひかえめな女の子', color: '#E9C27D', rare: 1 },
+  { id: 'c-jam', name: 'ジャム猫', who: '商売繁盛の招き猫・エリート経営コンサル', color: '#5B3A7A', rare: 2 },
+  { id: 'c-chi', name: 'チーちゃん', who: 'ご縁を招くチーズ色の柴犬', color: '#F39A3D', rare: 2 },
+  { id: 'c-gold', name: '金のハタボ', who: 'めったに出ない、金色のハタボ', color: '#C9A24A', rare: 3 },
+];
+const GACHA = { cost: 100, rate: { sponsor: 0.35, user: 0.25 } };
+const memCol = new Map();
+async function loadCol(code, name) {
+  try { if (deps.db) { const d = await deps.db.collection(name).doc(code).get(); return d.exists ? d.data() : {}; } } catch (e) { console.error(name + ' load', String(e.message).slice(0, 120)); }
+  return memCol.get(name + ':' + code) || {};
+}
+async function saveCol(code, name, data) {
+  try { if (deps.db) return void await deps.db.collection(name).doc(code).set(data, { merge: true }); } catch (e) { console.error(name + ' save', String(e.message).slice(0, 120)); }
+  memCol.set(name + ':' + code, Object.assign(memCol.get(name + ':' + code) || {}, data));
+}
+/** ガチャに出る、契約している人（ガチャに出る設定がオフの人はのぞく） */
+async function gachaUsers(me) {
+  let list = [];
+  try { if (deps.db) { const q = await deps.db.collection('refs').where('stage', 'in', ['contract', 'trial']).limit(200).get(); list = q.docs.map(d => Object.assign({ code: d.id }, d.data())); } } catch (e) { console.error('gacha users', String(e.message).slice(0, 120)); }
+  if (!deps.db) list = [...memRefs.entries()].filter(([, v]) => v.stage === 'contract' || v.stage === 'trial').map(([k, v]) => Object.assign({ code: k }, v));
+  return list.filter(u => u.code !== me && u.gachaOn !== false && funnelOf(u).stage === 'contract');
+}
+function pickW(arr, w) { const t = arr.reduce((a, x) => a + w(x), 0); let r = Math.random() * t; for (const x of arr) { r -= w(x); if (r <= 0) return x; } return arr[arr.length - 1]; }
+async function friendsOf(code) { const f = await loadCol(code, 'friends'); return { list: f.list || [], inbox: f.inbox || [], out: f.out || [] }; }
+async function isFriend(a, b) { const f = await friendsOf(a); return f.list.includes(b); }
+/** 伝言・AI棒と話すができる相手：ご縁でつながった人か、友だち */
+async function canTalk(me, other) { return (await isFriend(me, other)) || (await goenLinked(me, other)); }
+/** 友だちに見せる名刺：LINE ID・インスタは、本人が「見せる」にしたときだけ */
+function cardOf(code, r) {
+  r = r || {};
+  return { code, name: String(r.name || 'ゲスト').slice(0, 20), avatar: AVS[r.avatar] ? r.avatar : 'hatabo', grade: funnelOf(r).grade || '', lineupName: funnelOf(r).lineupName || '',
+    lineId: r.showLine && r.lineId ? String(r.lineId).slice(0, 40) : '', insta: r.showInsta && r.insta ? String(r.insta).replace(/^@/, '').slice(0, 40) : '' };
 }
 /** 紹介元の名前（「マー君さん」）。手で作ったコード（mac など）はそのまま */
 async function refLabel(code) {
@@ -789,6 +827,56 @@ function session(ws) {
     savePrefs(S.asGuest ? GUEST_COMMON : S.owner, { lessons: S.lessons });
     return speakOnly('がってんだ、覚えたぜ！', 'excited');
   }
+  /** ガチャ：1日1回むりょう、2回目からはありがとうポイント。デフォルトのキャラ・契約している人のアバター・協賛のAI棒 */
+  async function onGacha(m) {
+    if (!S.myRef) return send({ type: 'notice', why: 'gacha', detail: 'no ref' });
+    const me = await getRef(S.myRef).catch(() => null) || {}, day = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
+    if (m.peek) return send({ type: 'gacha', free: me.gachaDay !== day, pts: me.pts || 0, cost: GACHA.cost, col: (await loadCol(S.myRef, 'cards')).items || [] });
+    const free = me.gachaDay !== day;
+    if (!free && (me.pts || 0) < GACHA.cost) return send({ type: 'gacha', free, pts: me.pts || 0, cost: GACHA.cost, need: true, col: (await loadCol(S.myRef, 'cards')).items || [] });
+    await putRef(S.myRef, free ? { gachaDay: day } : { pts: (me.pts || 0) - GACHA.cost });
+    const r = Math.random(), users = r >= GACHA.rate.sponsor && r < GACHA.rate.sponsor + GACHA.rate.user ? await gachaUsers(S.myRef) : [];
+    let card;
+    if (r < GACHA.rate.sponsor && SPONSORS.length) { const sp = pickW(SPONSORS, x => x.weight || 1); card = { kind: 'sponsor', id: sp.id, name: sp.name, who: sp.who, catch: sp.catch, url: sp.url, color: sp.color || '#C9A24A', sample: !!sp.sample }; }
+    else if (users.length) { const u = users[Math.floor(Math.random() * users.length)]; card = Object.assign({ kind: 'user', id: u.code }, cardOf(u.code, u), { lineId: '', insta: '' }); }
+    else { const c = pickW(CHARS, x => ({ 1: 6, 2: 3, 3: 1 }[x.rare])); card = Object.assign({ kind: 'char' }, c); }
+    const col = (await loadCol(S.myRef, 'cards')).items || [];
+    const isNew = !col.some(x => x.id === card.id);
+    if (isNew) col.unshift({ kind: card.kind, id: card.id, name: card.name, who: card.who || card.lineupName || '', color: card.color || '', avatar: card.avatar || '', at: Date.now() });
+    await saveCol(S.myRef, 'cards', { items: col.slice(0, 200) });
+    if (card.kind === 'user') card.friend = await isFriend(S.myRef, card.id), card.asked = (await friendsOf(S.myRef)).out.includes(card.id);
+    send({ type: 'gacha', card, isNew, free: false, pts: free ? me.pts || 0 : (me.pts || 0) - GACHA.cost, cost: GACHA.cost, col: col.slice(0, 200) });
+  }
+  async function friendsView() {
+    if (!S.myRef) return { type: 'friends', list: [], inbox: [], out: [], me: {} };
+    const f = await friendsOf(S.myRef), me = await getRef(S.myRef).catch(() => null) || {};
+    const card = async c => cardOf(c, await getRef(c).catch(() => null));
+    return { type: 'friends', list: await Promise.all(f.list.slice(0, 100).map(card)), inbox: await Promise.all(f.inbox.slice(0, 50).map(card)), out: f.out,
+      me: { gachaOn: me.gachaOn !== false, showLine: !!me.showLine, showInsta: !!me.showInsta, lineId: me.lineId || '', insta: me.insta || '', contract: funnelOf(me).stage === 'contract' } };
+  }
+  /** 友だち申請：ガチャで出た人に。相手が承認したら、アバターどうしで伝言・AI棒と話すができる */
+  async function onFriend(m) {
+    const other = String(m.code || '').replace(/[^\w-]/g, '').slice(0, 20);
+    if (!S.myRef || !other || other === S.myRef) return send(await friendsView());
+    const mine = await friendsOf(S.myRef), theirs = await friendsOf(other), who = S.me || 'ハタボの人';
+    if (m.type === 'friend_req') {
+      const col = (await loadCol(S.myRef, 'cards')).items || [];
+      if (!col.some(x => x.id === other) || mine.list.includes(other) || mine.out.includes(other)) return send(await friendsView());   // ガチャで出た人にだけ
+      if (theirs.out.includes(S.myRef)) { await saveCol(S.myRef, 'friends', { list: [...mine.list, other], out: mine.out.filter(x => x !== other), inbox: mine.inbox.filter(x => x !== other) }); await saveCol(other, 'friends', { list: [...theirs.list, S.myRef], out: theirs.out.filter(x => x !== S.myRef) }); }
+      else { await saveCol(S.myRef, 'friends', { out: [...mine.out, other] }); await saveCol(other, 'friends', { inbox: [S.myRef, ...theirs.inbox.filter(x => x !== S.myRef)].slice(0, 50) }); postInbox(other, { kind: 'goen', from: S.myRef, fromName: who, text: who + 'さんから、AI棒の友だち申請がとどきました。マイハタボの「友だち」で承認できます。' }).catch(() => {}); }
+    } else if (m.type === 'friend_ok' && mine.inbox.includes(other)) {
+      await saveCol(S.myRef, 'friends', { list: [...new Set([...mine.list, other])], inbox: mine.inbox.filter(x => x !== other) });
+      await saveCol(other, 'friends', { list: [...new Set([...theirs.list, S.myRef])], out: theirs.out.filter(x => x !== S.myRef) });
+      postInbox(other, { kind: 'goen', from: S.myRef, fromName: who, text: who + 'さんが、友だち申請を承認しました。AI棒どうしで伝言や話ができます。' }).catch(() => {});
+    } else if (m.type === 'friend_no') {
+      await saveCol(S.myRef, 'friends', { inbox: mine.inbox.filter(x => x !== other) });
+      await saveCol(other, 'friends', { out: theirs.out.filter(x => x !== S.myRef) });
+    } else if (m.type === 'friend_del') {
+      await saveCol(S.myRef, 'friends', { list: mine.list.filter(x => x !== other) });
+      await saveCol(other, 'friends', { list: theirs.list.filter(x => x !== S.myRef) });
+    }
+    send(await friendsView());
+  }
   /** お試しの申し込み・プランの変更・お試しをやめる・契約。ヒロさんに案件メモで知らせる */
   async function onFunnel(m) {
     if (!S.myRef) return send({ type: 'notice', why: 'funnel', detail: 'no ref' });
@@ -1176,8 +1264,14 @@ function session(ws) {
           }
           // ご縁の人のAI棒をたずねる：つながっていれば、その人のアバターと「紹介してよいこと」だけで話す。話したことは、その人への伝言になる
           if (S.visit) {
-            const t = S.visit !== S.myRef && await goenLinked(S.myRef, S.visit) ? await getRef(S.visit).catch(() => null) : null;
-            if (!t) S.visit = '';
+            const sp = SPONSORS.find(x => x.id === S.visit);
+            const t = sp ? null : S.visit !== S.myRef && await canTalk(S.myRef, S.visit) ? await getRef(S.visit).catch(() => null) : null;
+            if (sp) {   // 協賛（会社）のAI棒
+              S.visitHost = sp.name; S.visitLog = []; S.avatar = 'hatabo'; S.voice = AVS.hatabo.voice(); S.history = []; S.memo = ''; S.consult = ''; S.visitSponsor = true;
+              S.system = HATABO_PERSONA + '\n\n【いまの役目：' + sp.name + 'のAI棒（協賛）】' + (sp.persona || '') + '\n会社の案内に関係ないことには答えない。うそや大げさなことは言わない。';
+            } else
+            if (!sp && !t) S.visit = '';
+            else if (sp) {}
             else {
               const av = AVS[t.avatar] ? t.avatar : 'hatabo', host = String(t.name || 'ご縁の人'), pf = t.owner ? await loadProfile(t.owner).catch(() => null) : null;
               S.visitHost = host; S.visitLog = []; S.avatar = av; S.voice = AVS[av].voice(); S.history = []; S.memo = ''; S.consult = '';
@@ -1212,7 +1306,7 @@ function session(ws) {
           }
         }
         send({ type: 'ready', me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs, guest: !!S.guest, service: S.role === 'サービス相談', myRef: S.myRef || '', visit: S.visit ? { code: S.visit, name: S.visitHost } : null, avatar: S.avatar || '', komugi: !!S.komugi, superUntil: superUntil(S.owner), canPlan: !!superUntil(S.owner) });
-        if (S.visit) { const T = S.avatar === 'komugi' ? x => x.replace(/だボー/g, 'です').replace(/ボー/g, 'です') : S.avatar === 'hatabo' ? x => x : x => x.replace(/だボー/g, 'だぜ').replace(/ボー/g, 'ぜ'); return speakOnly(T(S.visitHost + 'さんのAI棒だボー。話してくれたことは、' + S.visitHost + 'さんに伝言で届けるボー。'), 'excited'); }
+        if (S.visit) { const T = S.avatar === 'komugi' ? x => x.replace(/だボー/g, 'です').replace(/ボー/g, 'です') : S.avatar === 'hatabo' ? x => x : x => x.replace(/だボー/g, 'だぜ').replace(/ボー/g, 'ぜ'); return speakOnly(T(S.visitSponsor ? S.visitHost + 'のAI棒だボー。なんでも聞いてほしいボー。' : S.visitHost + 'さんのAI棒だボー。話してくれたことは、' + S.visitHost + 'さんに伝言で届けるボー。'), 'excited'); }
         if (m.greet && S.guest && S.consult) return recapGreet().then(deliverInbox).catch(() => {});      // 相談メモがある人には、振り返りからはじめる
         const hi = m.greet ? (S.guest ? (S.history.length ? (AVS[S.avatar] ? AVS[S.avatar].again : 'よう、また来てくれたな！つづきを話そうぜ。') : (AVS[S.avatar] ? AVS[S.avatar].greet(S.me) : guestGreeting(S.me))) : greeting(S.me, S.mode, S.trio)) : '';
         if (hi) await speakOnly(hi, 'excited');
@@ -1261,10 +1355,14 @@ function session(ws) {
       if (m.type === 'mypage') return send(await myPage(S));
       if (m.type === 'goen_tree') return send(await goenTree(S));
       if (m.type === 'funnel') return onFunnel(m);
+      if (m.type === 'gacha') return onGacha(m);
+      if (m.type === 'friends') return send(await friendsView());
+      if (m.type === 'friend_req' || m.type === 'friend_ok' || m.type === 'friend_no' || m.type === 'friend_del') return onFriend(m);
+      if (m.type === 'social') { const r = { gachaOn: m.gachaOn !== false, showLine: !!m.showLine, showInsta: !!m.showInsta, lineId: String(m.lineId || '').trim().slice(0, 40), insta: String(m.insta || '').trim().replace(/^@/, '').slice(0, 40) }; if (S.myRef) await putRef(S.myRef, r); return send(await friendsView()); }
       if (m.type === 'inbox') return send({ type: 'inbox', items: await loadInbox(S.myRef), people: (await goenPeople(S.myRef).catch(() => [])).slice(0, 60) });
       if (m.type === 'inbox_send') {
         const to = String(m.to || ''), t = String(m.text || '').trim().slice(0, 500);
-        if (!t || !(await goenLinked(S.myRef, to))) return send({ type: 'notice', why: 'inbox', detail: 'ご縁でつながった人にだけ送れます' });
+        if (!t || !(await canTalk(S.myRef, to))) return send({ type: 'notice', why: 'inbox', detail: 'ご縁でつながった人と友だちにだけ送れます' });
         await postInbox(to, { kind: 'msg', from: S.myRef, fromName: S.me || 'ご縁の人', text: t });
         return send({ type: 'inbox', items: await loadInbox(S.myRef), people: (await goenPeople(S.myRef).catch(() => [])).slice(0, 60), sent: true });
       }
@@ -1273,7 +1371,7 @@ function session(ws) {
     } catch (e) { send({ type: 'notice', why: 'server', detail: String(e.message).slice(0, 80) }); }
   });
   const life = setTimeout(() => fail('timeout', 'つなぎっぱなしの上限'), ENV.SESSION_MAX_MIN * 60000);
-  ws.on('close', () => { clearTimeout(life); stopReply('close'); if (S.stt) { try { S.stt.end(); } catch (e) {} } if (S.visit && S.visitLog && S.visitLog.length) postInbox(S.visit, { kind: 'msg', from: S.myRef, fromName: S.me || 'ご縁の人', text: 'あなたのAI棒と話しました：' + S.visitLog.slice(-6).map(x => '「' + x + '」').join('') }).catch(() => {}); else if (S.newTurns >= 2) summarize(); });
+  ws.on('close', () => { clearTimeout(life); stopReply('close'); if (S.stt) { try { S.stt.end(); } catch (e) {} } if (S.visit && !S.visitSponsor && S.visitLog && S.visitLog.length) postInbox(S.visit, { kind: 'msg', from: S.myRef, fromName: S.me || 'ご縁の人', text: 'あなたのAI棒と話しました：' + S.visitLog.slice(-6).map(x => '「' + x + '」').join('') }).catch(() => {}); else if (S.newTurns >= 2) summarize(); });
   return S;
 }
 

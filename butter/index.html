@@ -742,6 +742,26 @@ body.tall.av-hatabo .rothint, body.tall.av-komugi .rothint { display: inline-fle
 
 .svcnote { display: none; margin: 0; font-size: 11px; line-height: 1.5; color: #5E6B85; text-align: center; padding: 0 6px; }
 body.svc .svcnote { display: block; }
+
+.gbtn { font-size: 16px; padding: 14px; background: linear-gradient(100deg, #16233F, #2A3F6E); }
+.gwrap { position: relative; perspective: 900px; }
+.gwrap.pop .gcard { animation: gFlip .7s cubic-bezier(.3,1.4,.5,1) both; }
+@keyframes gFlip { from { transform: rotateY(90deg) scale(.8); opacity: 0; } to { transform: none; opacity: 1; } }
+.gcard { display: grid; justify-items: center; text-align: center; gap: 6px; padding: 22px 18px 18px; border-radius: 22px; background: #fff; border: 2px solid #16233F; box-shadow: 0 16px 34px -18px rgba(22,35,63,.55); }
+.gcard.sp { border-color: #C9A24A; background: linear-gradient(180deg, #FFF8E6, #fff 60%); }
+.gcard.ch { border-color: var(--c, #16233F); }
+.gcard b { font: 800 20px var(--display); color: #16233F; } .gcard > span:not(.hbtag) { font-size: 12.5px; color: #5E6B85; }
+.gcard p { margin: 4px 0 0; font-size: 13px; color: #16233F; } .gcard small { font-size: 11px; color: #8A93A6; }
+.gact { display: flex; gap: 8px; width: 100%; justify-content: center; margin-top: 6px; } .gact .hbbtn { margin-top: 0; flex: 1; }
+.gnew { position: absolute; top: -10px; right: 10px; background: #C0392B; color: #fff; font: 900 13px var(--display); padding: 4px 10px; border-radius: 999px; transform: rotate(8deg); }
+.gcol { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; }
+.gmini { display: grid; justify-items: center; gap: 2px; padding: 6px 2px; border-radius: 12px; background: #F6F8FC; }
+.gmini.sp { background: #FFF6DE; } .gmini span { font-size: 10px; font-weight: 700; color: #16233F; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.fcard { padding: 10px 0; border-top: 1px solid #EEF1F6; } .fcard:first-of-type { border-top: 0; }
+.fh { display: flex; gap: 10px; align-items: center; } .fh b { display: block; font: 800 15px var(--display); } .fh span { font-size: 12px; color: #5E6B85; }
+.fsoc { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; } .fsoc a { font-size: 12.5px; color: #16233F; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: #EEF1F6; text-decoration: none; }
+.hbsw { display: flex; gap: 10px; align-items: center; padding: 8px 0; font-size: 14px; font-weight: 700; } .hbsw input { width: 20px; height: 20px; accent-color: #16233F; }
+.hbin { width: 100%; font: inherit; font-size: 15px; padding: 10px 12px; border-radius: 12px; border: 1.5px solid #DCE2EC; margin-bottom: 4px; }
 </style>
 </head>
 <body>
@@ -1169,7 +1189,7 @@ body.svc .svcnote { display: block; }
 <div class="hbpage" id="hbPage" hidden>
   <div class="hbp-top"><img src="award_mark.svg" alt=""><b id="hbpTitle">マイハタボ</b><button type="button" id="hbpClose">ハタボと話す</button></div>
   <nav class="hbp-tabs" id="hbpTabs" aria-label="マイハタボのメニュー">
-    <button type="button" data-p="my">マイハタボ</button><button type="button" data-p="notes">メモ・議事録</button><button type="button" data-p="grow">育てたハタボ</button><button type="button" data-p="goen">ご縁</button><button type="button" data-p="inbox">伝言</button><button type="button" data-p="plan">プラン・支払い</button><button type="button" data-p="aisai">AISAI・愛祭</button><button type="button" data-p="times">ハタボタイムズ</button><button type="button" data-p="share">紹介する</button>
+    <button type="button" data-p="my">マイハタボ</button><button type="button" data-p="notes">メモ・議事録</button><button type="button" data-p="grow">育てたハタボ</button><button type="button" data-p="goen">ご縁</button><button type="button" data-p="inbox">伝言</button><button type="button" data-p="gacha">ガチャ</button><button type="button" data-p="friends">友だち</button><button type="button" data-p="plan">プラン・支払い</button><button type="button" data-p="aisai">AISAI・愛祭</button><button type="button" data-p="times">ハタボタイムズ</button><button type="button" data-p="share">紹介する</button>
   </nav>
   <div class="hbp-body" id="hbpBody"></div>
 </div>
@@ -2371,6 +2391,8 @@ body.svc .svcnote { display: block; }
   function jrOn(m) {
     switch (m.type) {
       case 'inbox': HBP.inbox = m; if (m.sent) toast('伝言をとどけたよ'); if (!$('hbPage').hidden && HBP.page === 'inbox') { if (m.sent || !HBP.inboxShown) { HBP.inboxShown = true; hbpRender(); } } break;
+      case 'gacha': HBP.gacha = m; if (!$('hbPage').hidden && HBP.page === 'gacha') hbpRender(); break;
+      case 'friends': HBP.friends = m; if (!$('hbPage').hidden && HBP.page === 'friends') hbpRender(); break;
       case 'goen': HBP.goen = m; if (!$('hbPage').hidden && HBP.page === 'goen') hbpRender(); break;
       case 'mypage': HBP.data = m; if (!$('hbPage').hidden) hbpRender(); break;
       case 'note_saved': toast({ minutes: '議事録を残したよ', memo: 'メモしたよ', doc: '書いた文章を残したよ', dengon: '伝言をとどけたよ' }[m.kind] || '残したよ'); if (!$('hbPage').hidden) jrSend({ type: 'mypage' }); break;
@@ -2742,11 +2764,11 @@ body.svc .svcnote { display: block; }
   ];
   function hbpRender() {
     const p = HBP.page, d = HBP.data, nm = avName() || 'ハタボ';
-    $('hbpTitle').textContent = { my: 'マイハタボ', notes: 'メモ・議事録', grow: '育てた' + nm, goen: 'ご縁のひろがり', inbox: '伝言', plan: 'プラン・支払い', aisai: 'AISAI・愛祭', times: 'ハタボタイムズ', share: '紹介する' }[p] || 'マイハタボ';
+    $('hbpTitle').textContent = { my: 'マイハタボ', notes: 'メモ・議事録', grow: '育てた' + nm, goen: 'ご縁のひろがり', inbox: '伝言', gacha: 'AI棒ガチャ', friends: '友だち', plan: 'プラン・支払い', aisai: 'AISAI・愛祭', times: 'ハタボタイムズ', share: '紹介する' }[p] || 'マイハタボ';
     document.querySelectorAll('#hbpTabs button').forEach(b => b.classList.toggle('on', b.dataset.p === p));
     { const on = document.querySelector('#hbpTabs .on'); if (on) try { on.scrollIntoView({ inline: 'center', block: 'nearest' }); } catch (e) {} }
     const body = $('hbpBody');
-    if (!d && p !== 'times' && p !== 'share' && p !== 'aisai' && p !== 'goen' && p !== 'inbox') { body.innerHTML = '<div class="hbc"><p>よみこみ中だボー…</p></div>'; return; }
+    if (!d && p !== 'times' && p !== 'share' && p !== 'aisai' && p !== 'goen' && p !== 'inbox' && p !== 'gacha' && p !== 'friends') { body.innerHTML = '<div class="hbc"><p>よみこみ中だボー…</p></div>'; return; }
     const n = x => Number(x || 0).toLocaleString('ja-JP');
     if (p === 'my') {
       const left = Math.max(0, d.limit - d.today), pct = Math.min(100, Math.round(d.today / Math.max(1, d.limit) * 100));
@@ -2773,6 +2795,49 @@ body.svc .svcnote { display: block; }
       body.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { HBP.filter = b.dataset.f; hbpRender(); });
       body.querySelectorAll('[data-copy]').forEach(b => b.onclick = async () => { const n = list.find(x => x.id === b.dataset.copy); try { await navigator.clipboard.writeText(n.title + '\n\n' + n.text); toast('コピーしたよ'); } catch (e) { toast('コピーできなかった'); } });
       body.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { if (confirmDel(b)) jrSend({ type: 'note_del', id: b.dataset.del }); });
+    } else if (p === 'gacha') {
+      const G = HBP.gacha;
+      if (!G) { body.innerHTML = '<div class="hbc"><p>ガチャを準備中だボー…</p></div>'; if (J.ready) jrSend({ type: 'gacha', peek: true }); return; }
+      const c = G.card, stars = r => '★'.repeat(r || 1);
+      const cardHtml = c ? (c.kind === 'sponsor'
+        ? `<div class="gcard sp" style="--c:${esc(c.color)}"><span class="hbtag gold">協賛</span>${avSvg('hatabo', 86, true)}<b>${esc(c.name)}</b><span>${esc(c.who || '')}</span><p>${esc(c.catch || '')}</p>${c.sample ? '<small>（協賛枠の見本です）</small>' : ''}
+            <div class="gact"><a class="hbbtn w" href="${esc(c.url)}" target="_blank" rel="noopener">サイトを見る</a><button type="button" class="hbbtn" onclick="hbpVisit('${esc(c.id)}')">AI棒と話す</button></div></div>`
+        : c.kind === 'user'
+        ? `<div class="gcard us"><span class="hbtag">オーナーのAI棒</span>${avSvg(c.avatar, 86)}<b>${esc(c.name)}さんのAI棒</b><span>${esc((c.lineupName || '') + ' ' + (c.grade || ''))}</span>
+            <div class="gact">${c.friend ? '<span class="hbtag">友だち</span>' : c.asked ? '<span class="hbtag hbmuted">申請中</span>' : `<button type="button" class="hbbtn" data-freq="${esc(c.code || c.id)}">友だち申請する</button>`}</div></div>`
+        : `<div class="gcard ch" style="--c:${esc(c.color)}"><span class="hbtag">${stars(c.rare)}</span>${avSvg(c.id === 'c-komugi' ? 'komugi' : c.id === 'c-gold' ? 'gold' : c.id === 'c-jam' ? 'jam' : c.id === 'c-chi' ? 'chi' : 'hatabo', 86)}<b>${esc(c.name)}</b><span>${esc(c.who)}</span></div>`) : '';
+      body.innerHTML = `
+        <div class="hbc"><div class="k">GACHA</div><h3>AI棒ガチャ</h3>
+          <p>ハタボの仲間、オーナーのAI棒、会社のAI棒（協賛）が出ます。オーナーのAI棒が出たら、友だち申請ができます。</p>
+          <button type="button" class="hbbtn gbtn" id="gGo">${G.free ? '今日の1回（むりょう）を回す' : 'ありがとうポイント ' + G.cost + 'pt で回す'}</button>
+          <p style="font-size:11.5px">いまのありがとうポイント：${Number(G.pts || 0).toLocaleString('ja-JP')}pt${G.need ? '　<b style="color:#C0392B">ポイントが足りません</b>' : ''}</p></div>
+        ${c ? `<div class="gwrap${HBP.gNew ? ' pop' : ''}">${cardHtml}${G.isNew ? '<div class="gnew">NEW!</div>' : ''}</div>` : ''}
+        <div class="hbc"><div class="k">COLLECTION</div><h3>集めたAI棒 ${(G.col || []).length}</h3><div class="gcol">${(G.col || []).map(x => `<div class="gmini${x.kind === 'sponsor' ? ' sp' : ''}">${avSvg(x.kind === 'user' ? x.avatar : x.id === 'c-komugi' ? 'komugi' : x.id === 'c-gold' ? 'gold' : x.id === 'c-jam' ? 'jam' : x.id === 'c-chi' ? 'chi' : 'hatabo', 40, x.kind === 'sponsor')}<span>${esc(x.name)}</span></div>`).join('') || '<p class="hbmuted">まだありません</p>'}</div></div>`;
+      HBP.gNew = false;
+      const gg = document.getElementById('gGo'); if (gg) gg.onclick = () => { gg.disabled = true; gg.textContent = 'ガラガラ…'; HBP.gNew = true; jrSend({ type: 'gacha' }); };
+      body.querySelectorAll('[data-freq]').forEach(b => b.onclick = () => { jrSend({ type: 'friend_req', code: b.dataset.freq }); b.disabled = true; b.textContent = '申請しました'; if (c) c.asked = true; });
+    } else if (p === 'friends') {
+      const F = HBP.friends;
+      if (!F) { body.innerHTML = '<div class="hbc"><p>友だちをよみこみ中だボー…</p></div>'; if (J.ready) jrSend({ type: 'friends' }); return; }
+      const me = F.me || {};
+      body.innerHTML = `
+        ${(F.inbox || []).length ? `<div class="hbc" style="border-color:#C9A24A"><div class="k">REQUEST</div><h3>友だち申請 ${F.inbox.length}</h3>${F.inbox.map(x => `<div class="hbplan"><div style="display:flex;gap:10px;align-items:center">${avSvg(x.avatar, 40)}<div><b>${esc(x.name)}さん</b><span>${esc((x.lineupName || '') + ' ' + (x.grade || ''))}</span></div></div><div style="display:flex;gap:6px"><button type="button" class="hbtag gold" data-fok="${esc(x.code)}" style="border:0;cursor:pointer">承認</button><button type="button" class="hbtag hbmuted" data-fno="${esc(x.code)}" style="border:0;cursor:pointer">見送る</button></div></div>`).join('')}</div>` : ''}
+        <div class="hbc"><div class="k">FRIENDS</div><h3>AI棒の友だち ${(F.list || []).length}</h3>
+          ${(F.list || []).map(x => `<div class="fcard"><div class="fh">${avSvg(x.avatar, 44)}<div><b>${esc(x.name)}さん</b><span>${esc((x.lineupName || '') + ' ' + (x.grade || ''))}</span></div></div>
+            <div class="fsoc">${x.lineId ? `<a href="https://line.me/ti/p/~${encodeURIComponent(x.lineId)}" target="_blank" rel="noopener">LINE：${esc(x.lineId)}</a>` : ''}${x.insta ? `<a href="https://www.instagram.com/${encodeURIComponent(x.insta)}/" target="_blank" rel="noopener">Instagram：@${esc(x.insta)}</a>` : ''}</div>
+            <div class="hbnact"><button type="button" class="hbtag" onclick="hbpTo('${esc(x.code)}')">伝言</button><button type="button" class="hbtag gold" onclick="hbpVisit('${esc(x.code)}')">AI棒と話す</button><button type="button" class="hbtag hbmuted" data-fdel="${esc(x.code)}">外す</button></div></div>`).join('') || '<p class="hbmuted">まだいません。ガチャでオーナーのAI棒が出たら、友だち申請できます。</p><button type="button" class="hbbtn" data-go="gacha">ガチャを回す</button>'}</div>
+        <div class="hbc"><div class="k">SETTINGS</div><h3>わたしの公開設定</h3>
+          <label class="hbsw"><input type="checkbox" id="sGacha" ${me.gachaOn ? 'checked' : ''}><span>ガチャに自分のAI棒を出す${me.contract ? '' : '（契約するとガチャに出ます）'}</span></label>
+          <label class="hbsw"><input type="checkbox" id="sLine" ${me.showLine ? 'checked' : ''}><span>友だちにLINE IDを見せる</span></label>
+          <input class="hbin" id="sLineId" maxlength="40" placeholder="LINE ID" value="${esc(me.lineId)}">
+          <label class="hbsw"><input type="checkbox" id="sInsta" ${me.showInsta ? 'checked' : ''}><span>友だちにInstagramを紹介する</span></label>
+          <input class="hbin" id="sInstaId" maxlength="40" placeholder="Instagramのアカウント（@なし）" value="${esc(me.insta)}">
+          <p style="font-size:11.5px">LINE IDとInstagramは、オンにしたときだけ、承認した友だちにだけ見えます。ガチャで引いた人には見えません。</p>
+          <button type="button" class="hbbtn" id="sSave">保存する</button></div>`;
+      body.querySelectorAll('[data-fok]').forEach(b => b.onclick = () => jrSend({ type: 'friend_ok', code: b.dataset.fok }));
+      body.querySelectorAll('[data-fno]').forEach(b => b.onclick = () => jrSend({ type: 'friend_no', code: b.dataset.fno }));
+      body.querySelectorAll('[data-fdel]').forEach(b => b.onclick = () => { if (confirmDel(b)) jrSend({ type: 'friend_del', code: b.dataset.fdel }); });
+      const sv = document.getElementById('sSave'); if (sv) sv.onclick = () => { jrSend({ type: 'social', gachaOn: $('sGacha').checked, showLine: $('sLine').checked, lineId: $('sLineId').value, showInsta: $('sInsta').checked, insta: $('sInstaId').value }); toast('保存したよ'); };
     } else if (p === 'inbox') {
       const ib = HBP.inbox;
       if (!ib) { body.innerHTML = '<div class="hbc"><p>伝言をよみこみ中だボー…</p></div>'; if (J.ready) jrSend({ type: 'inbox' }); return; }
@@ -2938,17 +3003,24 @@ body.svc .svcnote { display: block; }
   window.hbpVisit = code => { hbpClose(); J.visit = code; $('bubbles').innerHTML = ''; toast('AI棒をよんでいます…'); try { J.ws && J.ws.close(); } catch (e) {} };
   $('visitBack').addEventListener('click', () => { J.visit = ''; $('visitBar').hidden = true; $('bubbles').innerHTML = ''; toast('自分のAI棒にもどります'); try { J.ws && J.ws.close(); } catch (e) {} });
   window.hbpTo = code => { HBP.to = code; HBP.page = 'inbox'; HBP.inboxShown = false; hbpRender(); if (J.ready) jrSend({ type: 'inbox' }); };
+  // カードの絵：ひよこ（ハタボ・コムギ・金）、ジャム猫、チーちゃん、協賛はエンブレム
+  function avSvg(av, size, sponsor) {
+    if (sponsor) return `<svg width="${size}" height="${size}" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#16233F"/><circle cx="50" cy="50" r="36" fill="#fff"/><image href="award_mark.svg" x="20" y="20" width="60" height="60"/></svg>`;
+    if (av === 'jam' || av === 'chi') { const c = av === 'jam' ? ['#5B3A7A', '#7D5AA0'] : ['#F5B941', '#FFE19A']; return `<svg width="${size}" height="${size}" viewBox="0 0 100 100"><path d="M24 34 L30 12 L44 28 Z M76 34 L70 12 L56 28 Z" fill="${c[0]}"/><circle cx="50" cy="55" r="34" fill="${c[0]}"/><ellipse cx="50" cy="66" rx="18" ry="13" fill="${c[1]}"/><circle cx="38" cy="50" r="4" fill="#1C2233"/><circle cx="62" cy="50" r="4" fill="#1C2233"/><path d="M45 62 Q50 66 55 62" stroke="#1C2233" stroke-width="2.5" fill="none"/></svg>`; }
+    const col = av === 'komugi' ? ['#E9C27D', '#FBEBC8'] : av === 'gold' ? ['#D9AE45', '#FFF0B8'] : ['#FFE27A', '#FFF3C4'];
+    return `<svg width="${size}" height="${size}" viewBox="0 0 100 100"><path d="M44 16 Q46 6 52 10 Q54 4 60 9" fill="none" stroke="#F2B84B" stroke-width="3" stroke-linecap="round"/><circle cx="50" cy="48" r="34" fill="${col[0]}"/><ellipse cx="50" cy="60" rx="21" ry="17" fill="${col[1]}"/><circle cx="39" cy="42" r="4" fill="#1C2233"/><circle cx="61" cy="42" r="4" fill="#1C2233"/><path d="M45 50 L55 50 L50 56 Z" fill="#F2994A"/><circle cx="50" cy="64" r="7" fill="#fff"/><image href="award_mark.svg" x="44.5" y="58.5" width="11" height="11"/><path d="M16 74 L24 68 L31 76 L39 68 L46 76 L54 68 L61 76 L69 68 L76 76 L84 74 Q84 94 50 95 Q16 94 16 74 Z" fill="#FFFDF7" stroke="#E6E1D3" stroke-width="1.5"/></svg>`;
+  }
   function hbpOpen(p) {
     HBP.page = p || 'my'; $('hbPage').hidden = false; hbpRender(); if (HBS.friend === null) hbpFriend();
     if (J.ready) jrSend({ type: 'mypage' });
   }
   function hbpClose() { $('hbPage').hidden = true; }
   $('hbpClose').addEventListener('click', hbpClose);
-  $('hbpTabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; HBP.page = b.dataset.p; if (HBP.page === 'goen') HBP.goen = HBP.goen || null; hbpRender(); if (J.ready) if (HBP.page === 'inbox') HBP.inboxShown = false; jrSend({ type: HBP.page === 'goen' ? 'goen_tree' : HBP.page === 'inbox' ? 'inbox' : 'mypage' }); });
+  $('hbpTabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; HBP.page = b.dataset.p; if (HBP.page === 'goen') HBP.goen = HBP.goen || null; hbpRender(); if (J.ready) if (HBP.page === 'inbox') HBP.inboxShown = false; jrSend(HBP.page === 'gacha' ? { type: 'gacha', peek: true } : { type: HBP.page === 'goen' ? 'goen_tree' : HBP.page === 'inbox' ? 'inbox' : HBP.page === 'friends' ? 'friends' : 'mypage' }); });
   $('myBtn').addEventListener('click', () => hbpOpen('my'));
   const HBP_START = (() => { const g = n => { let v = new URLSearchParams(location.search).get(n) || Q.get(n); if (!v) { try { const st = new URLSearchParams(location.search).get('liff.state'); if (st) v = new URLSearchParams(decodeURIComponent(st).split('?')[1] || '').get(n); } catch (e) {} } return v; }; return String(g('page') || '').replace(/[^a-z]/g, ''); })();
   if (HBP_START && HBP_START !== 'talk') hbpOpen(HBP_START);
-  window.hbpPreview = (d, pg, gn, ib) => { HBP.data = d; if (gn) HBP.goen = gn; if (ib) { HBP.inbox = ib; HBP.inboxShown = true; } hbpOpen(pg); };   // 画面の確認用
+  window.hbpPreview = (d, pg, gn, ib, ex) => { HBP.data = d; if (gn) HBP.goen = gn; if (ib) { HBP.inbox = ib; HBP.inboxShown = true; } if (ex) Object.assign(HBP, ex); hbpOpen(pg); };   // 画面の確認用
   $('trioBtn').addEventListener('click', () => jrSend({ type: 'trio', on: !J.trio }));
   $('planBtn').addEventListener('click', () => { const p = store.get('jrPlan', J.canPlan ? 'super' : 'std'); jrSend({ type: 'plan', plan: PLAN_ORDER[(PLAN_ORDER.indexOf(p) + 1) % PLAN_ORDER.length] }); });
   $('gClose').addEventListener('click', () => { $('goenBox').hidden = true; });
