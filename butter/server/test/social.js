@@ -99,5 +99,16 @@ function client(port, hello) {
   fam.ws.send(JSON.stringify({ type: 'text', text: 'こんにちは' })); await fam.until(m => m.type === 'reply_end');
   assert.ok(/opus/.test(fp.model) && /Claudeと同じように/.test(sysText(fp.system)), '家族はいちばん賢いモデルとClaudeと同じ答え方');
   deps.claude.messages.stream = o;
-  console.log('OK：ガチャ・友だち・LINE ID・伝言・協賛'); process.exit(0);
+  // キャラ設定
+  const fam2 = await client(port, { type: 'hello', pass: 'ok', mode: 'family' }); await fam2.until(m => m.type === 'ready');
+  fam2.ws.send(JSON.stringify({ type: 'custom_set', c: { aiName: 'ピヨ', callMe: 'ヒロさん', tone: 'polite', len: 'short', about: '川崎でお祭り', rules: '結論から' } }));
+  const cs = await fam2.until(m => m.type === 'custom' && m.saved);
+  fam2.ws.send(JSON.stringify({ type: 'custom_set', c: { aiName: 'べつの名前' } }));
+  const cs2 = await fam2.until(m => m.type === 'custom' && m.saved && m !== cs);
+  assert.strictEqual(cs2.c.aiName, 'ピヨ', '名前の変更はオプション');
+  let fp2 = null; const o3 = deps.claude.messages.stream; deps.claude.messages.stream = p => { fp2 = p; return o3(p); };
+  fam2.ws.send(JSON.stringify({ type: 'text', text: 'やあ' })); const rs = await fam2.until(m => m.type === 'reply_start');
+  await fam2.until(m => m.type === 'reply_end'); deps.claude.messages.stream = o3;
+  assert.ok(/キャラ設定/.test(sysText(fp2.system)) && rs.as === 'ピヨ', 'キャラ設定が会話に入る');
+  console.log('OK：ガチャ・友だち・LINE ID・伝言・協賛・キャラ設定'); process.exit(0);
 })().catch(e => { console.error('NG', e); process.exit(1); });
