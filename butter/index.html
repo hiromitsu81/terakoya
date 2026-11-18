@@ -2349,7 +2349,8 @@ body.svc .svcnote { display: block; }
     let r0 = urlParam('ref');
     const asGuest = urlParam('test') === 'guest';
     const agent = urlParam('agent') === 'service' ? 'service' : '';   // 公式LINEのリッチメニュー「ハタボに相談」＝サービス相談
-    const ref = String(r0 || store.get('jrRef', '')).replace(/[^\w-]/g, '').slice(0, 20);
+    // 紹介コードは、そのとき開いたURLのものだけ送る（前に開いた紹介URLを覚えて使うと、別のアバター（コムギなど）で出てしまう）。だれの紹介かはサーバーが最初の1回で覚えている
+    const ref = String(r0 || '').replace(/[^\w-]/g, '').slice(0, 20);
     if (r0) store.set('jrRef', ref);
     ws.onopen = () => jrSend(Object.assign({ type: 'hello', mode: BIZ() ? 'business' : 'family', greet: !J.greeted, ref, asGuest, agent, visit: J.visit || '', app: HATABO_APP ? 'hatabo' : '' }, typeof tr === 'boolean' ? { trio: tr } : {}, LIFF ? { idToken: idToken() } : { pass: cfg.pass }));
     ws.onmessage = ev => { let m; try { m = JSON.parse(ev.data); } catch (e) { return; } if (m.type === 'ready') clearTimeout(giveUp); jrOn(m); };

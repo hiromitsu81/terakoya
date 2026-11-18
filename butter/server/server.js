@@ -1162,12 +1162,18 @@ function session(ws) {
           if (S.newVisit && parent) tellUpline(S, 'ハタボと話しはじめました', 'visit').catch(() => {});
           if (mine && mine.stage === 'trial' && S.funnel.stage === 'contract' && !mine.thanked) { putRef(S.myRef, { stage: 'contract', thanked: true, contractAt: mine.trialUntil || Date.now() }).catch(() => {}); tellUpline(S, (S.funnel.lineupName || '') + ' ' + (S.funnel.grade || '') + 'を契約しました', 'contract').catch(() => {}); }
           // 紹介から来た人は、紹介した人のアバターで（コムギの紹介ならコムギ）。リッチメニューのサービス相談と、役割を決めた窓口はそのまま
-          if (S.guest && !S.agent && S.role === '汎用' && parent) {
-            let av = '', c = parent;
-            for (let i = 0; i < 3 && c && !av; i++) { if (ENV.KOMUGI_REFS.includes(c)) { av = 'komugi'; break; } const u = await getRef(c).catch(() => null); if (u && AVS[u.avatar]) av = u.avatar; c = u && u.parent; }
-            if (av && av !== S.avatar && AVS[av]) { S.system = S.system.replace(AVS[S.avatar].persona(), AVS[av].persona()); S.avatar = av; S.voice = AVS[av].voice(); }
+          if (S.guest && !S.agent && !S.visit) {
+            if (S.role !== '汎用' && S.role !== 'サービス相談') {
+              // 役割を決めたURL（マー君の ?ref=mac など）で開いた人：そのアバターを自分のものとして覚える
+              putRef(S.myRef, { avatar: S.avatar, avatarFixed: true }).catch(() => {});
+            } else if (S.role === '汎用') {
+              // ふだん：自分のアバターが決まっていればそれ。なければ、紹介した人（人の紹介コードだけ・3代まで）のアバターを引きつぐ
+              let av = mine && mine.avatarFixed && AVS[mine.avatar] ? mine.avatar : '', c = parent;
+              for (let i = 0; i < 3 && c && !av; i++) { const u = await getRef(c).catch(() => null); if (u && u.owner && AVS[u.avatar] && u.avatar !== 'hatabo') av = u.avatar; c = u && u.parent; }
+              if (av && av !== S.avatar && AVS[av]) { S.system = S.system.replace(AVS[S.avatar].persona(), AVS[av].persona()); S.avatar = av; S.voice = AVS[av].voice(); }
+              putRef(S.myRef, { avatar: S.avatar }).catch(() => {});
+            }
           }
-          if (S.guest && S.avatar && !S.agent && !S.visit) putRef(S.myRef, { avatar: S.avatar }).catch(() => {});
           // ご縁の人のAI棒をたずねる：つながっていれば、その人のアバターと「紹介してよいこと」だけで話す。話したことは、その人への伝言になる
           if (S.visit) {
             const t = S.visit !== S.myRef && await goenLinked(S.myRef, S.visit) ? await getRef(S.visit).catch(() => null) : null;
@@ -1188,7 +1194,7 @@ function session(ws) {
           console.log('guest in', JSON.stringify({ owner: S.owner, name: S.me, ref: S.ref || '', avatar: S.avatar, myRef: S.myRef }));   // ミニアプリを移ると LINE のIDが変わるので、スーパー上位（SUPER_OWNERS）に入れるIDをここで見る
           let k = S.avatar === 'komugi', c = S.ref || S.refFrom;
           for (let i = 0; !k && c && i < 3; i++) { if (ENV.KOMUGI_REFS.includes(c)) k = true; else { const up = await getRef(c).catch(() => null); c = up && up.parent; } }
-          if (k && !S.komugi) { S.komugi = true; S.system += komugiBlock(await komugiNews()); }
+          if (k && !S.komugi && S.avatar === 'komugi') { S.komugi = true; S.system += komugiBlock(await komugiNews()); }
         }
         const pr = await loadPrefs(S.owner);
         const lp = S.guest ? await loadPrefs(GUEST_COMMON) : pr;      // 窓口は、ヒロさんがテストで教えたことをみんなで使う
