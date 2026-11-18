@@ -785,6 +785,40 @@ textarea.hbin { resize: vertical; line-height: 1.6; }
 .av-hatabo.liffmode #chip, .av-komugi.liffmode #chip { display: none; }
 
 body.pcweb #talkOaBtn, body.pcweb .pinbar { display: none !important; }
+
+/* ===== トーク画面（自分用）：Claudeと同じ作り。キャラの画面はプレゼン用。左右のスワイプで切りかえ ===== */
+.chatv{position:fixed;inset:0;z-index:40;display:none;flex-direction:column;background:#fff;color:#16233F;font-family:'Noto Sans JP','Noto Sans CJK JP',sans-serif}
+body.chatview .chatv{display:flex}
+.chatv .cv-top{display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;border-bottom:1px solid #E6EAF2}
+.chatv .cv-top img{width:30px;height:30px;border-radius:50%}
+.chatv .cv-top b{font-size:17px;font-weight:800;margin-right:auto}
+.chatv .cv-top button{border:1px solid #DCE2EC;background:#fff;color:#16233F;border-radius:999px;padding:6px 12px;font:700 13px inherit}
+.chatv .cv-list{flex:1;overflow-y:auto;padding:16px 16px 8px;display:flex;flex-direction:column;gap:14px;-webkit-overflow-scrolling:touch}
+.chatv .cv-empty{margin:auto;text-align:center;color:#8A93A6;font-size:14px;line-height:1.8}
+.chatv .cv-m{max-width:100%;font-size:16px;line-height:1.75;white-space:pre-wrap;word-break:break-word}
+.chatv .cv-m.me{align-self:flex-end;max-width:82%;background:#EEF1F7;border-radius:18px 18px 4px 18px;padding:10px 14px}
+.chatv .cv-m.me.partial{opacity:.55}
+.chatv .cv-m.her .cv-who{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:#5E6B85;margin-bottom:2px}
+.chatv .cv-m.her .cv-who img{width:18px;height:18px;border-radius:50%}
+.chatv .cv-m img:not(.cvw){max-width:100%;border-radius:12px}
+.chatv .cv-m a{color:#2B4C8C}
+.chatv .cv-bot{border-top:1px solid #E6EAF2;padding:8px 12px calc(10px + env(safe-area-inset-bottom));background:#fff}
+.chatv .cv-in{display:flex;gap:8px;align-items:center;border:1px solid #DCE2EC;border-radius:24px;padding:4px 4px 4px 14px}
+.chatv .cv-in input{flex:1;border:0;outline:0;font:16px inherit;color:#16233F;background:transparent;min-width:0}
+.chatv .cv-in button{border:0;background:#16233F;color:#fff;border-radius:50%;width:36px;height:36px;font:800 16px inherit}
+.chatv .cv-row{display:flex;align-items:center;justify-content:space-between;margin-top:10px}
+.chatv .cv-row .cv-s{width:96px;display:flex}
+.chatv .cv-row .cv-s:last-child{justify-content:flex-end}
+.chatv .cv-pill{border:1px solid #DCE2EC;background:#fff;color:#16233F;border-radius:999px;padding:7px 12px;font:700 12.5px inherit;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.chatv .cv-pill[aria-pressed="true"]{background:#16233F;color:#fff;border-color:#16233F}
+.chatv .cv-mic{position:relative;width:72px;height:72px;border-radius:50%;border:0;background:#16233F;padding:0;display:grid;place-items:center;box-shadow:0 10px 24px -10px rgba(22,35,63,.6)}
+.chatv .cv-mic img{width:52px;height:52px;border-radius:50%;background:#fff;position:relative;z-index:1}
+.chatv .cv-mic::before{content:"";position:absolute;inset:-6px;border-radius:50%;background:conic-gradient(from 0deg,rgba(110,139,194,0) 0 40%,#6E8BC2 70%,rgba(110,139,194,0) 71% 100%);-webkit-mask:radial-gradient(closest-side,transparent 86%,#000 88%);opacity:0;transition:opacity .2s}
+body.cv-listen .chatv .cv-mic::before,body.cv-speak .chatv .cv-mic::before,body.jrthinking .chatv .cv-mic::before{opacity:1;animation:cvspin 1.2s linear infinite}
+@keyframes cvspin{to{transform:rotate(360deg)}}
+.chatv .cv-cap{text-align:center;font-size:11.5px;color:#5E6B85;margin-top:4px;min-height:15px}
+.cvfab{position:fixed;right:14px;top:calc(12px + env(safe-area-inset-top));z-index:39;display:none;border:1px solid #DCE2EC;background:#fff;color:#16233F;border-radius:999px;padding:7px 14px;font:800 13px 'Noto Sans JP',sans-serif;box-shadow:0 6px 16px -8px rgba(22,35,63,.5)}
+body.av-hatabo:not(.chatview) .cvfab,body.av-komugi:not(.chatview) .cvfab{display:block}
 </style>
 </head>
 <body>
@@ -1210,6 +1244,19 @@ body.pcweb #talkOaBtn, body.pcweb .pinbar { display: none !important; }
 
 <div class="pinbar" id="pinBar" hidden><div><b>ハタボのトークをピン留めしよう</b><span>トーク一覧の「ハタボ」を長押し →「ピン留め」で、いつもいちばん上に。メニューからすぐこの画面にもどれます。</span></div><button type="button" id="pinGo">トークを開く</button><button type="button" id="pinX" aria-label="とじる">×</button></div>
 <div class="visitbar" id="visitBar" hidden><img src="award_mark.svg" alt=""><span id="visitName"></span><button type="button" id="visitBack">もどる</button></div>
+<div class="chatv" id="chatV" aria-label="トーク">
+  <div class="cv-top"><img src="award_mark.svg" alt=""><b id="cvName">ハタボ</b><button type="button" id="cvChar">キャラ画面</button><button type="button" id="cvMy">マイハタボ</button></div>
+  <div class="cv-list" id="cvList"><p class="cv-empty" id="cvEmpty">下のエンブレムを押して話しかけてね。<br>話したことと返事が、ここに残ります。</p></div>
+  <div class="cv-bot">
+    <form class="cv-in" id="cvForm"><input id="cvInput" type="text" placeholder="文字でもOK" autocomplete="off" aria-label="ハタボに送る文字"><button type="submit" aria-label="送る">↑</button></form>
+    <div class="cv-row">
+      <div class="cv-s"><button type="button" class="cv-pill" id="cvSpk" aria-pressed="true">声あり</button></div>
+      <div><button type="button" class="cv-mic" id="cvMic" aria-label="話す"><img src="award_mark.svg" alt=""></button><div class="cv-cap" id="cvCap">おして話す</div></div>
+      <div class="cv-s"><button type="button" class="cv-pill" id="cvPlan" hidden>グレード</button></div>
+    </div>
+  </div>
+</div>
+<button type="button" class="cvfab" id="cvFab">トーク画面</button>
 <div class="hbpage" id="hbPage" hidden>
   <div class="hbp-top"><img src="award_mark.svg" alt=""><b id="hbpTitle">マイハタボ</b><button type="button" id="hbpClose">ハタボと話す</button></div>
   <nav class="hbp-tabs" id="hbpTabs" aria-label="マイハタボのメニュー">
@@ -2560,7 +2607,7 @@ body.pcweb #talkOaBtn, body.pcweb .pinbar { display: none !important; }
     const a = AC();
     let buf = null;
     try { const bin = atob(m.mp3), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); buf = await a.decodeAudioData(u8.buffer); } catch (e) {}
-    if (!buf || m.gen !== J.gen) { J.playing = false; jrPump(); jrDrain(); return; }
+    if (!buf || m.gen !== J.gen || J.muted) { J.playing = false; jrPump(); jrDrain(); return; }   // スピーカーを切っているときは鳴らさない
     if (!J.gain) { J.gain = a.createGain(); J.an = a.createAnalyser(); J.an.fftSize = 512; J.gain.connect(J.an); J.an.connect(a.destination); }
     J.gain.gain.value = J.vol * autoVol();
     const src = a.createBufferSource(); src.buffer = buf; src.connect(J.gain); J.src = src;
@@ -2608,9 +2655,10 @@ body.pcweb #talkOaBtn, body.pcweb .pinbar { display: none !important; }
       else J.loud = Math.max(0, J.loud - ms / 2);
       // 声が小さいマイク（離れて話す・小さい声）でも聞き取れるように、話しているときの音量を見て自動で大きくする（最大6倍・音割れしないようにやわらかく）
       let pk = 0; for (let i = 0; i < d.length; i++) { const x = Math.abs(d[i]); if (x > pk) pk = x; }
-      J.gain = J.gain || 1.5;
-      if (rms > Math.max(0.004, J.floor * 2.5)) J.gain = Math.max(1, Math.min(6, J.gain * 0.9 + (0.45 / Math.max(pk, 0.02)) * 0.1));
-      const g = J.gain;
+      // J.gain は声を鳴らす音量つまみなので、マイクの増幅は J.micGain に分ける。ハタボが話しているあいだは増幅しない（自分の声を拾って止まらないように）
+      J.micGain = J.micGain || 1.5;
+      if (!J.playing && rms > Math.max(0.004, J.floor * 2.5)) J.micGain = Math.max(1, Math.min(6, J.micGain * 0.9 + (0.45 / Math.max(pk, 0.02)) * 0.1));
+      const g = J.playing ? 1 : J.micGain;
       const ratio = a.sampleRate / 16000, n = Math.floor(d.length / ratio), pcm = new Int16Array(n);
       for (let i = 0; i < n; i++) {
         const s0 = Math.floor(i * ratio), s1 = Math.min(d.length, Math.floor((i + 1) * ratio));
@@ -3127,6 +3175,65 @@ body.pcweb #talkOaBtn, body.pcweb .pinbar { display: none !important; }
   window.hbpPreview = (d, pg, gn, ib, ex) => { HBP.data = d; if (gn) HBP.goen = gn; if (ib) { HBP.inbox = ib; HBP.inboxShown = true; } if (ex) Object.assign(HBP, ex); hbpOpen(pg); };   // 画面の確認用
   $('trioBtn').addEventListener('click', () => jrSend({ type: 'trio', on: !J.trio }));
   $('planBtn').addEventListener('click', () => { const p = store.get('jrPlan2', J.canPlan ? 'super' : 'std'); jrSend({ type: 'plan', plan: PLAN_ORDER[(PLAN_ORDER.indexOf(p) + 1) % PLAN_ORDER.length] }); });
+
+  /* --- トーク画面（自分用）。話したことと返事をぜんぶ残して、さかのぼって読める --- */
+  (() => {
+    const V = $('chatV'), L = $('cvList'), map = new WeakMap();
+    const isApp = () => document.body.classList.contains('av-hatabo') || document.body.classList.contains('av-komugi');
+    const setView = v => { document.body.classList.toggle('chatview', v === 'chat' && isApp()); store.set('hbView', v); if (v === 'chat') requestAnimationFrame(() => { L.scrollTop = L.scrollHeight; }); };
+    let stick = true;
+    L.addEventListener('scroll', () => { stick = L.scrollHeight - L.scrollTop - L.clientHeight < 80; }, { passive: true });
+    const sync = () => {
+      for (const b of bubbles.children) {
+        if (!b.classList || !b.classList.contains('bubble')) continue;
+        let row = map.get(b);
+        const her = !b.classList.contains('me');
+        if (!row) {
+          row = document.createElement('div');
+          row.className = 'cv-m ' + (her ? 'her' : 'me');
+          if (her) { const w = document.createElement('div'); w.className = 'cv-who'; w.innerHTML = '<img class="cvw" src="award_mark.svg" alt="">'; w.append(document.createTextNode('')); row.append(w); }
+          const body = document.createElement('div'); body.className = 'cv-b'; row.append(body);
+          map.set(b, row); L.append(row); $('cvEmpty').hidden = true;
+        }
+        row.classList.toggle('partial', b.classList.contains('partial'));
+        const kids = [...b.children], who = kids.find(k => k.classList.contains('who'));
+        if (her && who) row.firstChild.lastChild.textContent = who.textContent;
+        const bodyHtml = kids.filter(k => k !== who).map(k => k.outerHTML.replace(/^<span[^>]*>|<\/span>$/g, '')).join('');
+        const bd = row.querySelector('.cv-b'); if (bd.innerHTML !== bodyHtml) bd.innerHTML = bodyHtml;
+      }
+      // 途中の文字（話している最中）の吹き出しが消えたら、トーク画面からも消す
+      for (const row of [...L.querySelectorAll('.cv-m.partial')]) { let alive = false; for (const b of bubbles.children) if (map.get(b) === row) alive = true; if (!alive) row.remove(); }
+      if (stick) L.scrollTop = L.scrollHeight;
+    };
+    new MutationObserver(() => requestAnimationFrame(sync)).observe(bubbles, { childList: true, subtree: true, characterData: true });
+    $('cvChar').addEventListener('click', () => setView('char'));
+    $('cvFab').addEventListener('click', () => setView('chat'));
+    $('cvMy').addEventListener('click', () => hbpOpen('my'));
+    $('cvMic').addEventListener('click', () => $('talkBtn').click());
+    $('cvForm').addEventListener('submit', e => { e.preventDefault(); const v = $('cvInput').value.trim(); if (!v) return; $('typedInput').value = v; $('cvInput').value = ''; $('typed').requestSubmit ? $('typed').requestSubmit() : $('typed').dispatchEvent(new Event('submit', { cancelable: true })); stick = true; });
+    const spk = $('cvSpk');
+    const spkShow = () => { spk.setAttribute('aria-pressed', J.muted ? 'false' : 'true'); spk.textContent = J.muted ? '声なし' : '声あり'; };
+    J.muted = store.get('hbMute', false); spkShow();
+    spk.addEventListener('click', () => { J.muted = !J.muted; store.set('hbMute', J.muted); if (J.muted) { try { jrStopAudio(); } catch (e) {} } spkShow(); });
+    $('cvPlan').addEventListener('click', () => $('planBtn').click());
+    // 話すボタンの文字・グレード・名前を、キャラ画面とそろえる
+    setInterval(() => {
+      const tb = $('talkBtn').querySelector('b'); $('cvCap').textContent = tb ? tb.textContent : '';
+      const pb = $('planBtn'), cp = $('cvPlan'); cp.hidden = pb.hidden; if (cp.textContent !== pb.textContent) cp.textContent = pb.textContent;
+      const nm = (typeof avName === 'function' && avName()) || 'ハタボ'; if ($('cvName').textContent !== nm) $('cvName').textContent = nm;
+      document.body.classList.toggle('cv-speak', state === 'speaking'); document.body.classList.toggle('cv-listen', state === 'listening' && !!J.ready);
+      if (isApp() && !document.body.dataset.cvInit) { document.body.dataset.cvInit = '1'; setView(store.get('hbView', 'chat')); }
+    }, 300);
+    // 左右のスワイプで、トーク画面とキャラ画面を切りかえる
+    let sx = 0, sy = 0;
+    document.addEventListener('touchstart', e => { const t = e.touches[0]; sx = t.clientX; sy = t.clientY; }, { passive: true });
+    document.addEventListener('touchend', e => {
+      if (!isApp() || !$('hbPage').hidden) return;
+      const t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
+      if (Math.abs(dx) < 80 || Math.abs(dy) > Math.abs(dx) * 0.6) return;
+      setView(document.body.classList.contains('chatview') ? 'char' : 'chat');
+    }, { passive: true });
+  })();
   $('gClose').addEventListener('click', () => { $('goenBox').hidden = true; });
   $('gSave').addEventListener('click', () => jrSend({ type: 'profile', profile: { character: $('gChar').value, name: $('gName').value.trim(), skills: $('gSkills').value.trim(), seeking: $('gSeek').value.trim(), shareable: $('gShare').value.trim() } }));
   $('gGo').addEventListener('click', () => { const c = $('gOther').value.trim(); if (c) jrSend({ type: 'goen', code: c }); });
