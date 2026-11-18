@@ -2246,7 +2246,7 @@ body.wideshow.av-hatabo .stage svg, body.wideshow.av-komugi .stage svg { aspect-
       case 'ready':
         document.body.classList.remove('connecting');
         J.ready = true; J.tries = 0; J.greeted = true; J.profile = m.profile || null; 
-        J.guest = !!m.guest; J.avatar = m.avatar || ''; document.body.classList.toggle('av-komugi', J.avatar === 'komugi'); if (HATABO_APP && !J.avatar) J.avatar = 'hatabo'; document.body.classList.toggle('av-hatabo', J.avatar === 'hatabo'); { const t = document.querySelector('#butterTag text'), nm = { komugi: 'コムギ', hatabo: 'ハタボ' }[J.avatar]; if (t && nm) t.textContent = nm; } if (J.avatar === 'komugi') { const ib = document.getElementById('introBubble'); if (ib) ib.remove(); } if (J.avatar) { try { document.body.classList.toggle('hb-hatched', localStorage.getItem('hatched_' + J.avatar) === '1'); } catch (e) {} } $('goenBtn').hidden = J.guest; J.myRef = m.myRef || ''; $('shareBtn').hidden = false;
+        J.guest = !!m.guest; J.avatar = m.avatar || ''; document.body.classList.toggle('av-komugi', J.avatar === 'komugi'); if (HATABO_APP && !J.avatar) J.avatar = 'hatabo'; document.body.classList.toggle('av-hatabo', J.avatar === 'hatabo'); { const t = document.querySelector('#butterTag text'), nm = { komugi: 'コムギ', hatabo: 'ハタボ' }[J.avatar]; if (t && nm) t.textContent = nm; } if (J.avatar === 'komugi') { const ib = document.getElementById('introBubble'); if (ib) ib.remove(); } if (J.avatar) { try { document.body.classList.toggle('hb-hatched', localStorage.getItem('hatched_' + J.avatar) === '1'); } catch (e) {} } $('goenBtn').hidden = J.guest; J.myRef = m.myRef || ''; J.me = String(m.me || '').replace(/（テスト）$/, ''); $('shareBtn').hidden = false;
         document.body.classList.toggle('familyok', !J.guest);
         document.body.classList.toggle('guestmode', J.guest);
         if (J.guest) { $('typedInput').placeholder = J.avatar === 'komugi' ? 'マー君にしてほしいこと、なんでもどうぞ' : 'ヒロさんにしてほしいこと、なんでもどうぞ'; }
@@ -2570,15 +2570,38 @@ body.wideshow.av-hatabo .stage svg, body.wideshow.av-komugi .stage svg { aspect-
   }
   $('goenBtn').addEventListener('click', goenOpen);
   // 友だちに紹介する：送るURLには、押した人の紹介コードがつく（だれの紹介で来たかがわかる）
-  $('shareBtn').addEventListener('click', async () => {
+  // 紹介：カードタイプ（紺と白、エンブレム）で送る。送れないときは文字だけで
+  function shareCard(url) {
+    const who = J.me ? J.me + 'さんから、' : '';
+    const EMB = 'https://hiromitsu81.github.io/terakoya/butter/line/emblem.png';
+    return { type: 'flex', altText: who + 'AIの愛棒「ハタボ」の紹介です', contents: { type: 'bubble', size: 'kilo',
+      header: { type: 'box', layout: 'horizontal', spacing: 'md', alignItems: 'center', paddingAll: '16px', backgroundColor: '#16233F', contents: [
+        { type: 'image', url: EMB, size: '48px', aspectMode: 'fit', flex: 0 },
+        { type: 'box', layout: 'vertical', contents: [
+          { type: 'text', text: 'ハタボ', color: '#FFFFFF', weight: 'bold', size: 'xl' },
+          { type: 'text', text: 'すべての人に、AIのある愛棒を。', color: '#C9D0DC', size: 'xxs' }] }] },
+      body: { type: 'box', layout: 'vertical', spacing: 'md', paddingAll: '18px', contents: [
+        { type: 'text', text: who + 'ハタボの紹介です', weight: 'bold', size: 'md', color: '#16233F', wrap: true },
+        { type: 'text', text: 'PCとスマホで話すだけ。調べもの・下書き・相談まで、いっしょに動くAIの愛棒だボー。', size: 'sm', color: '#5E6B85', wrap: true },
+        { type: 'separator', color: '#DCE2EC' },
+        { type: 'text', text: 'アプリを入れずに、LINEからすぐ話せます', size: 'xs', color: '#5E6B85', wrap: true }] },
+      footer: { type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '14px', contents: [
+        { type: 'button', style: 'primary', color: '#16233F', height: 'sm', action: { type: 'uri', label: 'ハタボと話してみる', uri: url } },
+        { type: 'button', style: 'secondary', color: '#EEF1F6', height: 'sm', action: { type: 'uri', label: '友だち追加', uri: 'https://line.me/R/ti/p/@024curid' } }] } } };
+  }
+  async function shareHatabo() {
     // 紹介は、だれからでも汎用のハタボ（HATHA LABのミニアプリ）へ。紹介コードがあれば「だれの紹介か」もつける
     const url = 'https://miniapp.line.me/2012676035-yCkx6tBu' + (J.myRef ? '?ref=' + encodeURIComponent(J.myRef) : '');
     const text = 'AIの愛棒「ハタボ」だよ。話すだけで、調べもの・下書き・相談までいっしょにやってくれるボー。気軽に話してみて！\n' + url;
     try {
-      if (window.liff && liff.isApiAvailable && liff.isApiAvailable('shareTargetPicker')) { const r = await liff.shareTargetPicker([{ type: 'text', text }]); if (r) toast('送ったよ！ありがとう'); return; }
+      if (window.liff && liff.isApiAvailable && liff.isApiAvailable('shareTargetPicker')) {
+        let r; try { r = await liff.shareTargetPicker([shareCard(url)]); } catch (e) { r = await liff.shareTargetPicker([{ type: 'text', text }]); }
+        if (r) toast('送ったよ！ありがとう'); return;
+      }
     } catch (e) {}
     location.href = 'https://line.me/R/share?text=' + encodeURIComponent(text);
-  });
+  }
+  $('shareBtn').addEventListener('click', shareHatabo);
   $('trioBtn').addEventListener('click', () => jrSend({ type: 'trio', on: !J.trio }));
   $('planBtn').addEventListener('click', () => { const p = store.get('jrPlan', J.canPlan ? 'super' : 'std'); jrSend({ type: 'plan', plan: PLAN_ORDER[(PLAN_ORDER.indexOf(p) + 1) % PLAN_ORDER.length] }); });
   $('gClose').addEventListener('click', () => { $('goenBox').hidden = true; });
