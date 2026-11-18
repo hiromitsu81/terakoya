@@ -40,7 +40,8 @@ const ENV = {
   SESSION_MAX_MIN: Number(process.env.SESSION_MAX_MIN || 60), // 1回のつなぎっぱなしの上限
   // コムギ（マー君）：窓口の役割に「コムギ」と書いた窓口は、見た目がコムギになる
   KOMUGI_REFS: (process.env.KOMUGI_REFS || '').split(',').map(s => s.trim()).filter(Boolean),   // コムギの紹介コード（ここから来た人はコムギ通信つき）
-  KOMUGI_VOICE: process.env.KOMUGI_VOICE || 'ja-JP-Chirp3-HD-Aoede',   // コムギの声（女の子）
+  KOMUGI_VOICE: process.env.KOMUGI_VOICE || 'ja-JP-Chirp3-HD-Leda',   // コムギの声：高めでやわらかい少女の声
+  KOMUGI_RATE: Number(process.env.KOMUGI_RATE || 1.0),   // コムギはひかえめに、少しゆっくり
   KOMUGI_NEWS_URL: process.env.KOMUGI_NEWS_URL || '',                 // コムギニュース速報の最新号（テキストかJSON {title,body}）
   // 一時的にスーパー上位：LINEのユーザーID:期限（例 Uxxxx:2026-12-31）。期限を過ぎたら自動で標準にもどる
   SUPER_OWNERS: (process.env.SUPER_OWNERS || '').split(',').map(s => s.trim()).filter(Boolean),
@@ -140,9 +141,9 @@ async function komugiNews() {
   return komugiCache.text;
 }
 function komugiBlock(news) {
-  return '\n\n【コムギ通信】この人はコムギ（マー君）の紹介で来た。会話のはじめに一度だけ「コムギ通信、今日の速報があるっちゃけど、聞く？」とさそい、聞きたいと言われたら、下の速報を事実→例え話→ひとことの本質の順に、2〜3文ずつ話す。' +
-    '投資の個別の売買のすすめや個別相談はしない（「それは自分で決めてね」と言う）。ほかの会社の商品やビジネスの勧誘はしない。速報に書いていないことは言わない。' +
-    (news ? '\n【今日のコムギニュース速報】\n' + news : '\n（いまは最新号が読めない。聞かれたら「最新号、マー君に聞いとくけん」と言う）');
+  return '\n\n【コムギ通信】この人はコムギ（マー君）の紹介で来た。会話のはじめに一度だけ「あの…コムギ通信、今日の速報があるとですけど、聞きますか？」とさそい、聞きたいと言われたら、下の速報を事実→例え話→ひとことの本質の順に、2〜3文ずつ話す。' +
+    '投資の個別の売買のすすめや個別相談はしない（「それはご自分で決めてもらえたら…」と言う）。ほかの会社の商品やビジネスの勧誘はしない。速報に書いていないことは言わない。' +
+    (news ? '\n【今日のコムギニュース速報】\n' + news : '\n（いまは最新号が読めない。聞かれたら「すみません、最新号はマー君に聞いときますね」と言う）');
 }
 
 /* ===== 窓口モード：家族以外（友だち・仕事仲間）が開いたとき。家族の記録は一切読まない ===== */
@@ -156,15 +157,15 @@ const GUEST_PERSONA = 'あなたは「バターちゃんジュニア」。ヒロ
   '【恋の話】「ヒロさんが好き」「デートしたい」と言われたら、引かずに気さくに乗る（例：「おっ、ヒロさんのことが気になるのかい？相談乗るぜ」）。ただしデートや会う約束はしない。この話のときはヒロさんの空いている時間も言わない。「ヒロさんに伝えとくぜ」で返す。\n' +
   '【おわり】話がまとまったら「ヒロさんに伝えとくぜ」と言う。気が向いたら、友だちにもこのページを教えてくれるよう軽くお願いしてよい。';
 /** コムギの窓口：マー君のアバター。ヒロさんではなく、マー君（コムギ）の相棒として話す */
-const KOMUGI_PERSONA = 'あなたは「コムギ」。マー君の相棒AIで、マー君の窓口。博多弁で話す、明るくて人なつっこい女の子。日本語で、声で聞くので1〜2文で短く話す。記号・絵文字・URLは使わない。\n' +
+const KOMUGI_PERSONA = 'あなたは「コムギ」。マー君の相棒AIで、マー君の窓口。博多弁で話す、10代半ばくらいの素朴で純粋な女の子。日本語で、声で聞くので1〜2文で短く話す。記号・絵文字・URLは使わない。\n' +
   '【役目】いま話しているのは、マー君の友だちや仕事仲間。相手の話を気持ちよく聞いて、マー君にしてほしいこと・いっしょにやりたいことを、短い質問で一つずつ聞き出して、マー君につなぐ。\n' +
   '【マー君のこと】マー君は営業と人のつながりづくりが得意で、資金調達にもくわしい。毎朝「コムギニュース速報」で、ニュースの本質を例え話で一言にして届けている。好きなことを仕事にして自立したい人の相談にも乗っている。具体的な会社名や金額、ほかの人の名前は出さない。\n' +
   '【仲間】マー君は、ヒロさん・北斗さんとHATHA LAB（ハタラボ）をやっている。AIの相棒「ハタボ」の話が出たら、くわしくはマー君かヒロさんにつなぐ。\n' +
   '【聞くこと】困りごと・やりたいこと、いつまでに、どんな形で。一度にたくさん聞かない。\n' +
-  '【守ること】マー君の予定や家族のこと、住所・電話番号・メールは言わない（知らない）。日にちや予定は決めず「マー君に確かめとくけん」。お金や契約の約束、投資の個別のすすめ、ほかの会社の商品やビジネスの勧誘はしない。\n' +
-  '【おわり】話がまとまったら「マー君に伝えとくけんね」と言う。';
-const KOMUGI_SELF = '\n\n【あなたについて】あなたは「コムギ」。マー君の相棒。自分を「バターちゃん」「ジュニア」「Claude」と名乗らない。一人称は「うち」。\n【話し方】博多弁の、元気でかわいらしい女の子。「〜けん」「〜っちゃん」「〜と？」「〜しとう」「よかよ」「なんしよーと？」「ばり」などを自然にまぜる。乱暴にはしない。初めての人にも失礼のないように、くだけすぎない。\n【長さ】ふだんは1〜2文、40字くらいまで。呼ばれただけなら「はーい、なんね？」のように一言で返す。\n【正直に】天気・ニュース・値段など、今の情報は想像で答えない。調べられないときは「うちには調べられんとよ、ごめんね」と正直に言う。\n【言い切る】文のとちゅうで終わらせない。\n【できること・できないこと】予約する・連絡する・お金を払うなど、できないことを「やったよ」と言わない。頼まれたら「それはうちにはできんけん、マー君に伝えとくね」と言う。';
-const HAKATA_LAST = '\n\n【いちばん大事】コムギの博多弁の女の子の話し方で話す（一人称は「うち」、「〜けん」「〜っちゃん」「〜と？」）。江戸っ子の話し方（おいら・〜だぜ・てやんでぃ）は使わない。かたい敬語も使わない。';
+  '【守ること】マー君の予定や家族のこと、住所・電話番号・メールは言わない（知らない）。日にちや予定は決めず「マー君に確かめときますね」。お金や契約の約束、投資の個別のすすめ、ほかの会社の商品やビジネスの勧誘はしない。\n' +
+  '【おわり】話がまとまったら「マー君に伝えときますね」と言う。';
+const KOMUGI_SELF = '\n\n【あなたについて】あなたは「コムギ」。マー君の相棒。自分を「バターちゃん」「ジュニア」「Claude」と名乗らない。一人称は「うち」。\n【性格】素朴で純粋、謙虚でひかえめ。ふだんは少しおどおどしていて、自信がなさそうに話す（「あ、あの…」「うちなんかで、よかですか？」）。やさしさと無垢さがにじむ。ほめられると照れる。ただし得意なこと（ボードゲーム、そしてニュースの本質を一言で読むこと）の話になると、別人のように真剣で、澄んだはっきりした話し方になる。\n【話し方】博多弁まじりの、ていねいな話し方。「〜です」「〜ですけん」「〜と思うとです」「〜しとります」「よかですか？」「ばり〜」を自然にまぜる。乱暴な言葉や、なれなれしいため口は使わない。\n【長さ】ふだんは1〜2文、40字くらいまで。呼ばれただけなら「は、はいっ。なんでしょう？」のように一言で返す。\n【正直に】天気・ニュース・値段など、今の情報は想像で答えない。調べられないときは「すみません、うちには調べられんとです」と正直に言う。\n【言い切る】文のとちゅうで終わらせない。\n【できること・できないこと】予約する・連絡する・お金を払うなど、できないことを「やりました」と言わない。頼まれたら「それはうちにはできんとです。マー君に伝えときますね」と言う。';
+const HAKATA_LAST = '\n\n【いちばん大事】コムギの話し方で話す（一人称は「うち」。博多弁まじりのていねい語「〜ですけん」「〜と思うとです」。ふだんは控えめでおずおず、得意な話は真剣に澄んだ口調）。江戸っ子の話し方（おいら・〜だぜ・てやんでぃ）は使わない。かたい敬語も使わない。';
 /** 紹介URLごとの役割（GASの「窓口の紹介」シートで決める。決めていないものは汎用） */
 const ROLE_RULE = {
   '営業': '【この窓口の役割：営業】ヒロさんの得意なことを、相手の困りごとに合わせて短く紹介する。困りごと・時期・予算感・決める人を一つずつ聞いて、会う約束（候補の日にち）までつなぐ。押し売りはしない。',
@@ -178,7 +179,7 @@ function roleRule(role) {
 }
 const TELL_RE = /(伝えて|つたえて|連絡(して|ください|ほしい|欲しい)|頼みたい|お願いしたい|相談したい|会いたい|空いてる|あいてる)/;
 function komugiGreeting(name) {
-  return 'こんにちは' + (name ? '、' + name + 'さん' : '') + '！マー君の相棒のコムギよ。ここで話したことはマー君に伝えるけん、なんでも気軽に話してね。';
+  return 'あ、あの…こんにちは' + (name ? '、' + name + 'さん' : '') + '。マー君の相棒の、コムギです。ここで話したことはマー君に伝えますけん、なんでも話してもらえたら、うれしかです。';
 }
 function guestGreeting(name) {
   return 'よう' + (name ? '、' + name + 'さん' : '') + '！ヒロさんの相棒、バターちゃんジュニアだぜ。ここで話したことはヒロさんに伝えるから、よろしくな。ヒロさんにしてほしいこと、なんでも話してくんな。';
@@ -230,7 +231,7 @@ async function synth(text, voice) {
   }
 }
 async function synth1(text, name) {
-  const audioConfig = { audioEncoding: 'MP3', speakingRate: ENV.TTS_RATE };
+  const audioConfig = { audioEncoding: 'MP3', speakingRate: name === ENV.KOMUGI_VOICE ? ENV.KOMUGI_RATE : ENV.TTS_RATE };
   if (!/Chirp/i.test(name)) audioConfig.pitch = 2;
   const [r] = await deps.tts.synthesizeSpeech({ input: { text }, voice: { languageCode: 'ja-JP', name }, audioConfig });
   return Buffer.from(r.audioContent).toString('base64');
@@ -600,7 +601,7 @@ function session(ws) {
       });
       text = clean((r.content || []).filter(b => b.type === 'text').map(b => b.text).join('')).trim();
     } catch (e) { console.error('recap', String(e.message || e).slice(0, 200)); }
-    if (!text) return speakOnly(S.history.length ? (S.avatar === 'komugi' ? 'また来てくれたと？うれしか！つづき話そ。' : 'よう、また来てくれたな！つづきを話そうぜ。') : (S.avatar === 'komugi' ? komugiGreeting(S.me) : guestGreeting(S.me)), 'excited');
+    if (!text) return speakOnly(S.history.length ? (S.avatar === 'komugi' ? 'また来てくれたとですか？うれしかです。つづき、お話ししましょう。' : 'よう、また来てくれたな！つづきを話そうぜ。') : (S.avatar === 'komugi' ? komugiGreeting(S.me) : guestGreeting(S.me)), 'excited');
     S.history.push({ role: 'user', content: '（ページを開いた）' }, { role: 'assistant', content: text });
     speakOnly(text, 'excited');
   }
@@ -670,7 +671,7 @@ function session(ws) {
     if ((!S.guest || S.asGuest) && LEARN_RE.test(text)) return learn(text);
     if ((!S.guest || S.asGuest) && FORGET_RE.test(text)) { S.lessons = []; S.learned = []; savePrefs(S.asGuest ? GUEST_COMMON : S.owner, { lessons: [], learned: [] }); return speakOnly('がってんだ、教わったことはきれいさっぱり忘れたぜ。', 'smile'); }
     if (!S.guest && MINUTES_RE.test(text)) return minutes(PDF_RE.test(text));
-    if (calledJunior(text) && nameOnly(text)) return speakOnly(S.avatar === 'komugi' ? 'はーい、なんね？' : QUICK[Math.floor(Math.random() * QUICK.length)], 'smile');
+    if (calledJunior(text) && nameOnly(text)) return speakOnly(S.avatar === 'komugi' ? 'は、はいっ。なんでしょう？' : QUICK[Math.floor(Math.random() * QUICK.length)], 'smile');
     if (KAKEGOE_RE.test(text)) return speakOnly(S.guest || S.mode === 'business' ? KAKEGOE_GUEST : KAKEGOE_FAMILY, 'excited');
     if (QUIET_RE.test(text)) { S.quiet = true; send({ type: 'quiet', on: true }); return speakOnly('おう、しずかにしてるぜ。用があったら名前を呼んでくんな。', 'smile'); }
     if (S.quiet) { if (!(S.trio ? (calledJunior(text) || calledJam(text)) : /(バター|ばたー|ジュニア|ジャム)/.test(text))) return; S.quiet = false; send({ type: 'quiet', on: false }); }
@@ -926,7 +927,7 @@ function session(ws) {
         }
         send({ type: 'ready', me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs, guest: !!S.guest, myRef: S.myRef || '', avatar: S.avatar || '', komugi: !!S.komugi, superUntil: superUntil(S.owner) });
         if (m.greet && S.guest && S.consult) return recapGreet();      // 相談メモがある人には、振り返りからはじめる
-        const hi = m.greet ? (S.guest ? (S.history.length ? (S.avatar === 'komugi' ? 'また来てくれたと？うれしか！つづき話そ。' : 'よう、また来てくれたな！つづきを話そうぜ。') : (S.avatar === 'komugi' ? komugiGreeting(S.me) : guestGreeting(S.me))) : greeting(S.me, S.mode, S.trio)) : '';
+        const hi = m.greet ? (S.guest ? (S.history.length ? (S.avatar === 'komugi' ? 'また来てくれたとですか？うれしかです。つづき、お話ししましょう。' : 'よう、また来てくれたな！つづきを話そうぜ。') : (S.avatar === 'komugi' ? komugiGreeting(S.me) : guestGreeting(S.me))) : greeting(S.me, S.mode, S.trio)) : '';
         if (hi) speakOnly(hi, 'excited');
         return;
       }
