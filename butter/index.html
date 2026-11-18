@@ -633,7 +633,7 @@ body.av-hatabo, body.av-komugi {
 body.tall.av-hatabo .stage svg, body.tall.av-komugi .stage svg { aspect-ratio: 580 / 660; }
 body.liffTall.av-hatabo .stage, body.liffTall.av-komugi .stage { min-height: calc(84px + 100vw * 633 / 520); }
 body.liffTall.av-hatabo .stage svg, body.liffTall.av-komugi .stage svg { aspect-ratio: 520 / 633; }
-body.wideshow.av-hatabo .stage svg, body.wideshow.av-komugi .stage svg { aspect-ratio: 900 / 392; }
+body.wideshow.av-hatabo .stage svg, body.wideshow.av-komugi .stage svg { aspect-ratio: 900 / 482; }
 /* ===== マイハタボ（リッチメニューから ?page=my など）：白と紺 ===== */
 .mybtn { display: none; }
 .av-hatabo .mybtn, .av-komugi .mybtn { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 999px; border: 1.5px solid #16233F; background: #fff; color: #16233F; font: 800 13px var(--display); cursor: pointer; }
@@ -689,6 +689,21 @@ body.wideshow.av-hatabo .stage svg, body.wideshow.av-komugi .stage svg { aspect-
 .hbntext { white-space: pre-wrap; font-size: 13.5px; line-height: 1.75; color: #16233F; margin-top: 12px; padding-top: 12px; border-top: 1px solid #EEF1F6; overflow-wrap: anywhere; }
 .hbnact { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
 .hbnact button { border: 0; cursor: pointer; }
+
+/* ハタボ・コムギのスマホ縦：スクロールしないで、ひと画面に収める */
+body.tall.av-hatabo, body.tall.av-komugi { height: 100dvh; overflow: hidden; }
+body.tall.av-hatabo .app, body.tall.av-komugi .app { height: 100dvh; grid-template-rows: auto minmax(0, 1fr) auto auto; gap: 6px; overflow: hidden; }
+body.tall.av-hatabo .stage, body.tall.av-komugi .stage { min-height: 0 !important; padding-top: 62px; overflow: hidden; }
+body.tall.av-hatabo .stage svg, body.tall.av-komugi .stage svg { width: auto !important; height: 100%; max-width: 100%; max-height: 100%; }
+body.tall.av-hatabo .bubbles, body.tall.av-komugi .bubbles { max-height: 20dvh; overflow-y: auto; }
+body.tall.av-hatabo .talk, body.tall.av-komugi .talk { gap: 6px; }
+/* 横向きのおしらせ */
+.rothint { display: none; }
+body.tall.av-hatabo .rothint, body.tall.av-komugi .rothint { display: inline-flex; justify-self: center; align-items: center; gap: 6px;
+  padding: 5px 12px 5px 9px; border-radius: 999px; background: rgba(22,35,63,.88); color: #fff; font: 700 12px var(--display); border: 0; cursor: pointer; white-space: nowrap; box-shadow: 0 6px 16px -8px rgba(22,35,63,.6); }
+.rothint svg { width: 18px; height: 18px; stroke: #fff; fill: none; stroke-width: 2; animation: rotHint 2.4s ease-in-out infinite; }
+@keyframes rotHint { 0%, 30% { transform: rotate(0); } 55%, 100% { transform: rotate(-90deg); } }
+.rothint.gone { display: none !important; }
 </style>
 </head>
 <body>
@@ -1068,6 +1083,7 @@ body.wideshow.av-hatabo .stage svg, body.wideshow.av-komugi .stage svg { aspect-
   </section>
 
   <section class="talk" aria-label="おしゃべり">
+<button type="button" class="rothint" id="rotHint"><svg viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>スマホを横にすると、大きく見られるよ</button>
     <div class="bubbles" id="bubbles" aria-live="polite"></div>
     <p class="hint" id="diag" hidden></p>
     <p class="hint" id="hint">「バターちゃん」と呼んでから話しかけてね。</p>
@@ -2996,7 +3012,7 @@ body.wideshow.av-hatabo .stage svg, body.wideshow.av-komugi .stage svg { aspect-
     document.body.classList.toggle('liffTall', liffTall);
     // ハタボ・コムギ（たまご・ひよこ）は背が高いので、上をのばして頭が切れないように、里親の札ともかさならないように
     const av = /\bav-(hatabo|komugi)\b/.test(document.body.className);
-    scene.setAttribute('viewBox', av ? (liffTall ? '-10 10 520 633' : on ? '-40 10 580 660' : wide ? '-175 20 900 392' : '-160 -100 880 520')
+    scene.setAttribute('viewBox', av ? (liffTall ? '-10 10 520 633' : on ? '-40 10 580 660' : wide ? '-175 -70 900 482' : '-160 -100 880 520')
       : liffTall ? '-10 108 520 535' : on ? '-40 110 580 560' : wide ? '-175 112 900 300' : '-160 0 880 420');
     // 下の段は少し大きく（1.2倍）。足もとを (95,600) と (405,600) に
     $('nekoWrap').setAttribute('transform', on ? 'translate(95 600) scale(1.2) translate(65 -345)' : '');
@@ -3007,7 +3023,10 @@ body.wideshow.av-hatabo .stage svg, body.wideshow.av-komugi .stage svg { aspect-
   layoutTall();
   { let lastAv = null; new MutationObserver(() => { const av = /\bav-(hatabo|komugi)\b/.test(document.body.className); if (av !== lastAv) { lastAv = av; layoutTall(); } avText(); }).observe(document.body, { attributes: true, attributeFilter: ['class'] }); }
   avText();
-  setTimeout(() => document.documentElement.classList.remove('hbapp'), 4000);   // 念のため：4秒たっても見えなければ出す
+  setTimeout(() => document.documentElement.classList.remove('hbapp'), 4000);
+  { const h = document.getElementById('rotHint'); let k = 0; try { k = Number(localStorage.getItem('rotHintN') || 0); } catch (e) {}
+    if (k >= 3) h.classList.add('gone'); else { try { localStorage.setItem('rotHintN', String(k + 1)); } catch (e) {} setTimeout(() => h.classList.add('gone'), 9000); }
+    h.addEventListener('click', () => { h.classList.add('gone'); try { localStorage.setItem('rotHintN', '9'); } catch (e) {} }); }   // 念のため：4秒たっても見えなければ出す
 
   // ===== ネコちゃん（招き猫） =====
   const neko = $('neko');
