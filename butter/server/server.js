@@ -60,8 +60,9 @@ const ENV = {
 function superUntil(owner) {
   if (!owner) return '';
   for (const x of ENV.SUPER_OWNERS) {
-    const [id, until] = x.split(':');
-    if (id === owner && (!until || Date.now() < new Date(until + 'T23:59:59+09:00').getTime())) return until || '無期限';
+    // 「g:」つき（ハタボのアプリ）でも、なしでも書ける。期限は最後の「:YYYY-MM-DD」
+    const mm = String(x).match(/^(.*?)(?::(\d{4}-\d{2}-\d{2}))?$/), id = (mm && mm[1] || '').replace(/^g:/, ''), until = mm && mm[2];
+    if (id && (id === owner || 'g:' + id === owner) && (!until || Date.now() < new Date(until + 'T23:59:59+09:00').getTime())) return until || '無期限';
   }
   return '';
 }
