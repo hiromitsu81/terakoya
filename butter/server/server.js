@@ -32,7 +32,7 @@ const ENV = {
   TTS_VOICE: process.env.TTS_VOICE || 'ja-JP-Chirp3-HD-Algenib',   // ジュニアの声：低めでガラガラ
   TTS_RATE: Number(process.env.TTS_RATE || 1.12),
   GAS_URL: process.env.GAS_URL || '',
-  ALLOWED_ORIGINS: (process.env.ALLOWED_ORIGINS || 'https://hiromitsu81.github.io,https://miniapp.line.me,https://liff.line.me').split(',').map(s => s.trim()).filter(Boolean),
+  ALLOWED_ORIGINS: (process.env.ALLOWED_ORIGINS || 'https://hiromitsu81.github.io,https://app.hatha-lab.com,https://miniapp.line.me,https://liff.line.me').split(',').map(s => s.trim()).filter(Boolean),
   DAILY_LIMIT: Number(process.env.DAILY_LIMIT || 400),       // 一人1日に答える回数
   DAILY_LIMIT_GUEST: Number(process.env.DAILY_LIMIT_GUEST || 30),   // 窓口（家族以外）の1日の回数。紹介コードつき
   DAILY_LIMIT_NOREF: Number(process.env.DAILY_LIMIT_NOREF || 10),   // 紹介コードなしで来た人
