@@ -765,6 +765,10 @@ body.svc .svcnote { display: block; }
 
 .hbl { display: block; font: 800 12px var(--display); color: #5E6B85; margin: 10px 0 4px; }
 textarea.hbin { resize: vertical; line-height: 1.6; }
+
+.gdrive { display: grid; gap: 4px; margin: 10px 0 2px; padding: 12px; border-radius: 14px; background: #F3F5FA; }
+.gdrive b { font: 800 14px var(--display); } .gdrive span { font-size: 12px; color: #5E6B85; }
+.gdrive.on { background: #EEF6E3; } .gdrive .hbbtn { margin-top: 6px; } .gdrive .hbtag { justify-self: start; }
 </style>
 </head>
 <body>
@@ -2395,11 +2399,13 @@ textarea.hbin { resize: vertical; line-height: 1.6; }
     switch (m.type) {
       case 'inbox': HBP.inbox = m; if (m.sent) toast('伝言をとどけたよ'); if (!$('hbPage').hidden && HBP.page === 'inbox') { if (m.sent || !HBP.inboxShown) { HBP.inboxShown = true; hbpRender(); } } break;
       case 'custom': HBP.custom = m; if (m.saved) { toast('キャラ設定を保存したよ'); window.__aiName = m.aiName || ''; avText(); const t = document.querySelector('#butterTag text'); if (t && avName()) t.textContent = avName(); } if (!$('hbPage').hidden && HBP.page === 'custom') hbpRender(); break;
+      case 'google': HBP.google = m; if (!$('hbPage').hidden && HBP.page === 'notes') hbpRender(); break;
+      case 'google_url': try { if (window.liff && liff.openWindow) liff.openWindow({ url: m.url, external: true }); else window.open(m.url, '_blank'); } catch (e) { location.href = m.url; } toast('ブラウザでGoogleにログインしてね。終わったらLINEにもどってきてね'); setTimeout(() => jrSend({ type: 'google_status' }), 20000); break;
       case 'gacha': HBP.gacha = m; if (!$('hbPage').hidden && HBP.page === 'gacha') hbpRender(); break;
       case 'friends': HBP.friends = m; if (!$('hbPage').hidden && HBP.page === 'friends') hbpRender(); break;
       case 'goen': HBP.goen = m; if (!$('hbPage').hidden && HBP.page === 'goen') hbpRender(); break;
       case 'limit': HBP.limitHit = m.why || 'plan'; setTimeout(() => hbpOpen('ticket'), 1800); break;
-      case 'mypage': if (m.ticketOk || m.ticketNg) { HBP.tMsg = m.ticketOk || m.ticketNg; toast(HBP.tMsg); if (m.ticketOk) HBP.limitHit = ''; } HBP.data = m; if (!$('hbPage').hidden) hbpRender(); break;
+      case 'mypage': if (m.driveMsg) toast(m.driveMsg); if (m.ticketOk || m.ticketNg) { HBP.tMsg = m.ticketOk || m.ticketNg; toast(HBP.tMsg); if (m.ticketOk) HBP.limitHit = ''; } HBP.data = m; if (!$('hbPage').hidden) hbpRender(); break;
       case 'note_saved': toast({ minutes: '議事録を残したよ', memo: 'メモしたよ', doc: '書いた文章を残したよ', dengon: '伝言をとどけたよ' }[m.kind] || '残したよ'); if (!$('hbPage').hidden) jrSend({ type: 'mypage' }); break;
       case 'ready':
         document.body.classList.remove('connecting');
@@ -2792,12 +2798,19 @@ textarea.hbin { resize: vertical; line-height: 1.6; }
       body.innerHTML = `
         <div class="hbc"><div class="k">NOTES</div><h3>メモ・議事録</h3>
           <p>話しながら「〇〇をメモして」「議事録つくって」と言うと、ここに残ります。長い文章（企画書・メールの下書きなど）も自動で残ります。</p>
+          ${(() => { const G = HBP.google; if (!G) { if (J.ready) jrSend({ type: 'google_status' }); return ''; } if (!G.ready) return '<p class="hbmuted" style="font-size:11.5px">Googleドライブへの保存は準備中です。</p>';
+            return G.linked ? `<div class="gdrive on"><b>Googleドライブ：${esc(G.email || '連携ずみ')}</b><span>「ハタボ」フォルダに保存されます</span><label class="hbsw" style="padding:4px 0"><input type="checkbox" id="gAuto" ${G.auto ? 'checked' : ''}><span>新しい議事録・メモ・書いた文章を自動で保存</span></label><button type="button" class="hbtag hbmuted" id="gUnlink" style="border:0;cursor:pointer">連携をやめる</button></div>`
+              : `<div class="gdrive"><b>Googleアカウントと連携</b><span>議事録・メモ・書いた文章を、あなたのGoogleドライブの「ハタボ」フォルダに保存できます。ハタボがさわれるのは、ハタボが作ったファイルだけです。</span><button type="button" class="hbbtn" id="gLink">Googleと連携する</button></div>`; })()}
           <div class="hbfil">${[['all', 'ぜんぶ'], ['minutes', '議事録'], ['memo', 'メモ'], ['doc', '書いた文章']].map(([k, l]) => `<button type="button" data-f="${k}" class="${f === k ? 'on' : ''}">${l}</button>`).join('')}</div></div>
         ${d.summary ? `<details class="hbc hbnote"><summary><span class="hbtag">これまでのまとめ</span><b>前の会話のまとめ</b></summary><div class="hbntext">${esc(d.summary)}</div></details>` : ''}
         ${shown.length ? shown.map(x => `<details class="hbc hbnote"><summary><span class="hbtag${x.kind === 'minutes' ? ' gold' : ''}">${K[x.kind] || 'メモ'}</span><b>${esc(x.title)}</b><time>${dt(x.at)}</time></summary>
-          <div class="hbntext">${esc(x.text)}</div><div class="hbnact"><button type="button" class="hbtag" data-copy="${esc(x.id)}">コピー</button><button type="button" class="hbtag hbmuted" data-del="${esc(x.id)}">消す</button></div></details>`).join('')
+          <div class="hbntext">${esc(x.text)}</div><div class="hbnact">${x.url ? `<a class="hbtag gold" href="${esc(x.url)}" target="_blank" rel="noopener" style="text-decoration:none">ドライブで開く</a>` : HBP.google && HBP.google.linked ? `<button type="button" class="hbtag" data-drive="${esc(x.id)}">ドライブに保存</button>` : ''}<button type="button" class="hbtag" data-copy="${esc(x.id)}">コピー</button><button type="button" class="hbtag hbmuted" data-del="${esc(x.id)}">消す</button></div></details>`).join('')
           : '<div class="hbc"><p class="hbmuted">まだありません。「今のをメモして」と話しかけてみてください。</p></div>'}`;
       body.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { HBP.filter = b.dataset.f; hbpRender(); });
+      body.querySelectorAll('[data-drive]').forEach(b => b.onclick = () => { b.disabled = true; b.textContent = '保存中…'; jrSend({ type: 'note_drive', id: b.dataset.drive }); });
+      { const gl = document.getElementById('gLink'); if (gl) gl.onclick = () => { gl.disabled = true; gl.textContent = 'ひらいています…'; jrSend({ type: 'google_link' }); };
+        const ga = document.getElementById('gAuto'); if (ga) ga.onchange = () => jrSend({ type: 'google_auto', on: ga.checked });
+        const gu = document.getElementById('gUnlink'); if (gu) gu.onclick = () => { if (confirmDel(gu)) jrSend({ type: 'google_unlink' }); }; }
       body.querySelectorAll('[data-copy]').forEach(b => b.onclick = async () => { const n = list.find(x => x.id === b.dataset.copy); try { await navigator.clipboard.writeText(n.title + '\n\n' + n.text); toast('コピーしたよ'); } catch (e) { toast('コピーできなかった'); } });
       body.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { if (confirmDel(b)) jrSend({ type: 'note_del', id: b.dataset.del }); });
     } else if (p === 'custom') {
@@ -3052,6 +3065,7 @@ textarea.hbin { resize: vertical; line-height: 1.6; }
     if (J.ready) jrSend({ type: 'mypage' });
   }
   function hbpClose() { $('hbPage').hidden = true; }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !$('hbPage').hidden && HBP.page === 'notes' && J.ready) jrSend({ type: 'google_status' }); });
   $('hbpClose').addEventListener('click', hbpClose);
   $('hbpTabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; HBP.page = b.dataset.p; if (HBP.page === 'goen') HBP.goen = HBP.goen || null; hbpRender(); if (J.ready) if (HBP.page === 'inbox') HBP.inboxShown = false; jrSend(HBP.page === 'gacha' ? { type: 'gacha', peek: true } : HBP.page === 'custom' ? { type: 'custom_get' } : { type: HBP.page === 'goen' ? 'goen_tree' : HBP.page === 'inbox' ? 'inbox' : HBP.page === 'friends' ? 'friends' : 'mypage' }); });
   $('myBtn').addEventListener('click', () => hbpOpen('my'));
