@@ -166,7 +166,7 @@ async function myPage(S) {
     streak: st.last === day || st.last === new Date(Date.now() - 15 * 3600000).toISOString().slice(0, 10) ? st.streak || 0 : 0,
     lv, lvPct: Math.round((tot - base) / Math.max(1, next - base) * 100), learned: (S.learned || []).length + (S.lessons || []).length,
     kids: (mine && mine.kids) || 0, myRef: S.myRef || '', from: S.refFrom ? await refLabel(S.refFrom) : '',
-    pts: (mine && mine.pts) || 0, thanks: THANKS,
+    pts: (mine && mine.pts) || 0, thanks: THANKS, tickets: (mine && mine.tickets) || 0, ticketPacks: TICKETS,
     unread: S.myRef ? (await loadInbox(S.myRef).catch(() => [])).filter(x => !x.read).length : 0,
     funnel: S.funnel || funnelOf(mine), lineups: LINEUP, trialDays: TRIAL_DAYS, trialDaily: TRIAL_DAILY,
     notes: (await loadNotes(S.owner).catch(() => [])).slice(0, 50), summary: String(S.memo || '').slice(0, 3000) };
@@ -267,6 +267,7 @@ const CHARS = [
   { id: 'c-chi', name: 'チーちゃん', who: 'ご縁を招くチーズ色の柴犬', color: '#F39A3D', rare: 2 },
   { id: 'c-gold', name: '金のハタボ', who: 'めったに出ない、金色のハタボ', color: '#C9A24A', rare: 3 },
 ];
+const TICKETS = [{ id: 't10', n: 10, yen: 300, pt: 300 }, { id: 't30', n: 30, yen: 800, pt: 800 }, { id: 't100', n: 100, yen: 2400, pt: 2400 }];
 const GACHA = { cost: 100, rate: { sponsor: 0.35, user: 0.25 } };
 const memCol = new Map();
 async function loadCol(code, name) {
@@ -827,6 +828,28 @@ function session(ws) {
     savePrefs(S.asGuest ? GUEST_COMMON : S.owner, { lessons: S.lessons });
     return speakOnly('がってんだ、覚えたぜ！', 'excited');
   }
+  /** 追加チケット：プランの回数をこえたら、1枚で1回話せる。ポイントで買うか、お金で申し込む */
+  async function useTicket() {
+    if (!S.myRef) return false;
+    const r = await getRef(S.myRef).catch(() => null);
+    if (!r || !(r.tickets > 0)) return false;
+    await putRef(S.myRef, { tickets: r.tickets - 1 });
+    return true;
+  }
+  async function onTicket(m) {
+    const pk = TICKETS.find(x => x.id === m.pack);
+    if (!S.myRef || !pk) return send(await myPage(S));
+    const r = await getRef(S.myRef).catch(() => null) || {};
+    if (m.pay === 'pt') {
+      if ((r.pts || 0) < pk.pt) return send(Object.assign(await myPage(S), { ticketNg: 'ポイントが足りません' }));
+      await putRef(S.myRef, { pts: (r.pts || 0) - pk.pt, tickets: (r.tickets || 0) + pk.n });
+      send(Object.assign(await myPage(S), { ticketOk: pk.n + '回分のチケットを追加しました' }));
+    } else {
+      gas(Object.assign({ action: 'lead', lead: { who: S.me, ref: await refLabel(S.refFrom || S.ref || ''), kind: '契約', title: '追加チケットの申し込み：' + pk.n + '回 ' + pk.yen + '円', need: '追加チケット', when: '', budget: pk.yen + '円', next: 'お支払いを案内して、チケットを付ける', memo: '' } }, S.auth)).catch(() => {});
+      console.log('ticket order', JSON.stringify({ owner: S.owner, name: S.me, pack: pk.id }));
+      send(Object.assign(await myPage(S), { ticketOk: '申し込みました。お支払いの案内のあと、チケットが付きます' }));
+    }
+  }
   /** ガチャ：1日1回むりょう、2回目からはありがとうポイント。デフォルトのキャラ・契約している人のアバター・協賛のAI棒 */
   async function onGacha(m) {
     if (!S.myRef) return send({ type: 'notice', why: 'gacha', detail: 'no ref' });
@@ -1042,9 +1065,9 @@ function session(ws) {
   async function reply(content, logText, as) {
     const jam = as === 'jam';
     const voice = jam ? JAM_VOICE : S.voice;
-    if (!S.asGuest && !quotaOk(S.owner || 'anon', S.guest, !!S.refFrom)) return speakOnly(S.guest ? 'すまねぇ、きょうここで話せる回数がいっぱいになっちまった。続きはヒロさんに伝えとくから、また明日話そうぜ！' : 'きょうの回数がいっぱいになっちまった。また明日話そうぜ！', 'shy');
+    if (!S.asGuest && !quotaOk(S.owner || 'anon', S.guest, !!S.refFrom) && !(await useTicket())) { send({ type: 'limit', why: 'plan' }); return speakOnly(S.guest ? 'すまねぇ、きょうここで話せる回数がいっぱいになっちまった。続きはヒロさんに伝えとくから、また明日話そうぜ！' : 'きょうの回数がいっぱいになっちまった。また明日話そうぜ！', 'shy'); }
     bumpStats(S);
-    if (!S.asGuest && S.funnel && S.funnel.stage === 'trial' && (counts.get((S.owner || 'anon') + ':' + new Date().toISOString().slice(0, 10)) || 0) > TRIAL_DAILY)
+    if (!S.asGuest && S.funnel && S.funnel.stage === 'trial' && (counts.get((S.owner || 'anon') + ':' + new Date().toISOString().slice(0, 10)) || 0) > TRIAL_DAILY && !(await useTicket()) && (send({ type: 'limit', why: 'trial' }) || true))
       return speakOnly(S.avatar === 'komugi' ? 'お試しは1日' + TRIAL_DAILY + '回までなんです。また明日、話しましょう。' : 'お試しのZは1日' + TRIAL_DAILY + '回までだボー。また明日話そうボー。', 'shy');
     if (Date.now() - (S.brainAt || 0) > 10 * 60 * 1000) { try { await loadBrain(true); } catch (e) {} }   // 記録は10分ごとに読みなおす
     let noRecord = false;
@@ -1356,6 +1379,7 @@ function session(ws) {
       if (m.type === 'goen_tree') return send(await goenTree(S));
       if (m.type === 'funnel') return onFunnel(m);
       if (m.type === 'gacha') return onGacha(m);
+      if (m.type === 'ticket') return onTicket(m);
       if (m.type === 'friends') return send(await friendsView());
       if (m.type === 'friend_req' || m.type === 'friend_ok' || m.type === 'friend_no' || m.type === 'friend_del') return onFriend(m);
       if (m.type === 'social') { const r = { gachaOn: m.gachaOn !== false, showLine: !!m.showLine, showInsta: !!m.showInsta, lineId: String(m.lineId || '').trim().slice(0, 40), insta: String(m.insta || '').trim().replace(/^@/, '').slice(0, 40) }; if (S.myRef) await putRef(S.myRef, r); return send(await friendsView()); }
