@@ -8,7 +8,7 @@
 .hbh .in{max-width:1240px;margin:0 auto;padding:0 24px;height:68px;display:flex;align-items:center;gap:28px}
 .hbh .brand{display:flex;align-items:center;gap:10px;text-decoration:none;flex:none}
 .hbh .brand img{width:36px;height:36px}
-.hbh .brand b{font:900 21px/1 "Noto Sans JP",sans-serif;letter-spacing:.06em;color:var(--hb-ink)}
+.hbh .brand b{font:900 21px/1 "Noto Sans JP",sans-serif;letter-spacing:.06em;color:#62AD7F}
 .hbh .brand small{display:block;font:700 9px/1 "Noto Sans JP";letter-spacing:.18em;color:var(--hb-soft);margin-top:4px}
 .hbh nav{display:flex;gap:16px;flex:1;font-size:14px;font-weight:700}
 .hbh nav a{text-decoration:none;padding:8px 0;border-bottom:2px solid transparent;white-space:nowrap}
