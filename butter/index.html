@@ -1058,6 +1058,9 @@ body.stagemode .stagebar { display: grid; gap: 8px; }
   const Q = new URLSearchParams(location.search.replace(/^\?liff\.state=[^&]*&?/, '?'));
   const LIFF = Q.get('liff') === '1';
   const LIFF_ID = Q.get('liffId') || store.get('liffId', '');
+  // ハタボのミニアプリ（HATHA LAB）で開いたときは、つながる前からハタボの見た目にする（家族のバターちゃんは寺小屋の入口）
+  const HATABO_APP = /^20126760(32|33|35)-/.test(LIFF_ID);
+  if (HATABO_APP) { document.body.classList.add('av-hatabo'); const t = document.querySelector('#butterTag text'); if (t) t.textContent = 'ハタボ'; }
   if (LIFF) {
     cfg.mode = 'liff';
     if (Q.get('g')) cfg.url = 'https://script.google.com/macros/s/' + Q.get('g') + '/exec';
