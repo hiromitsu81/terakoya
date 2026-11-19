@@ -15,6 +15,7 @@ const gasSrv = http.createServer((req, res) => {
       if (j.pass === 'flaky') return res.end('<html>error</html>');
       if (j.idToken === 'guest-closed') return res.end(JSON.stringify({ ok: true, guest: true, closed: true }));
       if (j.idToken === 'guest-y') return res.end(JSON.stringify({ ok: true, guest: true, owner: 'g:y', me: 'ユウ', slots: [] }));
+      if (j.idToken === 'guest-s') return res.end(JSON.stringify({ ok: true, guest: true, owner: 'g:s', me: 'ハヤト', role: j.ref === 'hayato' ? '参謀' : '汎用', slots: [] }));
       if (j.idToken === 'guest-p') return res.end(JSON.stringify({ ok: true, guest: true, owner: 'g:p', me: 'たく', role: j.ref === 'taku' ? '清掃ヒアリング' : '汎用', consult: j.ref === 'taku' ? '相談メモ：のこり8項目' : '', slots: [] }));
       if (j.idToken === 'guest-t') return res.end(JSON.stringify({ ok: true, guest: true, owner: 'g:t', me: 'たく', role: '清掃ヒアリング', slots: [] }));
       if (j.idToken === 'guest-x') return res.end(JSON.stringify({ ok: true, guest: true, owner: 'g:x', me: 'マー君', role: 'サポート・コンサル相談', consult: j.ref === 'macpmo' ? '清掃シートのAirHost連携を来月までに' : '', slots: [{ label: '11/20(木) 19時ごろ', start: '2026-11-20T10:00:00Z', end: '2026-11-20T12:00:00Z' }] }));
@@ -357,6 +358,19 @@ function client(port, hello) {
       assert.strictEqual(await srv.hearingCheckAll(), 0, 'まだ1か月たっていない');
       Date.now = () => real() + 31 * 86400000;
       try { assert.ok(await srv.hearingCheckAll() >= 1, '1か月で知らせる'); assert.strictEqual(await srv.hearingCheckAll(), 0, '知らせるのは1回だけ'); } finally { Date.now = real; }
+    }
+    // 参謀（ハヤトさんの窓口）：役割の決まり、メニューから開いても参謀
+    { const s1 = await client(port, { type: 'hello', idToken: 'guest-s', ref: 'hayato' });
+      await s1.until(m => m.type === 'ready'); s1.ws.close();
+      let ss = ''; const os = deps.claude.messages.stream;
+      deps.claude.messages.stream = p => { ss = sysText(p.system); return os(p); };
+      const s2 = await client(port, { type: 'hello', idToken: 'guest-s', agent: 'service' });
+      await s2.until(m => m.type === 'ready');
+      const k = s2.msgs.filter(m => m.type === 'reply_end').length;
+      s2.ws.send(JSON.stringify({ type: 'text', text: 'こんにちは' }));
+      await s2.until(() => s2.msgs.filter(m => m.type === 'reply_end').length > k, 8000);
+      assert.ok(/参謀/.test(ss) && /ヒロさんに送りますか/.test(ss) && /ゲリー/.test(ss), '参謀の決まり（メニューから開いても） ' + [/参謀/.test(ss), /ヒロさんに送りますか/.test(ss), /ゲリー/.test(ss), ss.length]);
+      deps.claude.messages.stream = os; s2.ws.close();
     }
     // 公式LINEのメニュー（agent=service）やトークのボタン（紹介コードなし）から開いても、ヒアリングと相談メモが効く
     { const p1 = await client(port, { type: 'hello', idToken: 'guest-p', ref: 'taku' });
