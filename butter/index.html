@@ -2623,7 +2623,8 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
     const ref = String(r0 || '').replace(/[^\w-]/g, '').slice(0, 20);
     if (r0) store.set('jrRef', ref);
     ws.onopen = () => jrSend(Object.assign({ type: 'hello', mode: BIZ() ? 'business' : 'family', greet: !J.greeted, ref, asGuest, peek, agent, visit: J.visit || '', app: KOMUGI_APP ? 'komugi' : HATABO_APP ? 'hatabo' : '' }, typeof tr === 'boolean' ? { trio: tr } : {}, LIFF ? { idToken: idToken() } : { pass: cfg.pass }));
-    ws.onmessage = ev => { let m; try { m = JSON.parse(ev.data); } catch (e) { return; } if (m.type === 'ready') clearTimeout(giveUp); jrOn(m); };
+    ws.onmessage = ev => { J.lastRx = Date.now(); let m; try { m = JSON.parse(ev.data); } catch (e) { return; } if (m.type === 'pong') return; if (m.type === 'ready') clearTimeout(giveUp); jrOn(m); };
+    J.lastRx = Date.now();
     ws.onclose = () => {
       clearTimeout(giveUp);
       const was = J.ready; J.ready = false; jrStopAudio();
@@ -2638,6 +2639,17 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
     };
   }
   const diag = $('diag');
+  // つながりの見張り：15びょうごとに確かめる。返事が35びょう来なければ切れたとみなして、つなぎなおす。
+  // 「聞いてる」の表示のまま、じつはつながっていない、をなくす（サーバーの入れかえ・電波の切れ目のあと）
+  setInterval(() => {
+    if (J.dead || document.visibilityState !== 'visible') return;
+    if (J.ws && J.ws.readyState === 1) {
+      if (Date.now() - (J.lastRx || 0) > 35000) { hint.textContent = 'つながりが切れたので、つなぎなおしているよ…'; try { J.ws.close(); } catch (e) {} setTimeout(jrConnect, 300); return; }
+      jrSend({ type: 'ping' });
+    } else if (convOn && !(J.ws && J.ws.readyState === 0)) {
+      hint.textContent = 'いまつながっていないよ。つなぎなおしているね…'; jrConnect();
+    }
+  }, 15000);
   function jrOn(m) {
     switch (m.type) {
       case 'inbox': HBP.inbox = m; if (m.sent) toast('伝言をとどけたよ'); if (!$('hbPage').hidden && HBP.page === 'inbox') { if (m.sent || !HBP.inboxShown) { HBP.inboxShown = true; hbpRender(); } } break;
