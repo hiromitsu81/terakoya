@@ -249,6 +249,7 @@ async function myPage(S) {
   const mine = S.myRef ? await getRef(S.myRef).catch(() => null) : null;
   const tot = st.tot || 0, lv = Math.floor(Math.sqrt(tot / 4)) + 1, base = Math.pow(lv - 1, 2) * 4, next = Math.pow(lv, 2) * 4;
   return { type: 'mypage', site: ENV.SITE_URL, name: S.me || '', avatar: S.avatar || 'hatabo', plan: plan.label, superUntil: superUntil(S.owner) || (plan === PLANS.super && S.guest ? 'サイトからのおためし' : ''),
+    unlimited: !!(superUntil(S.owner) || S.macSelf), monthYen: mine && mine.costMon === day.slice(0, 7) ? mine.costMonYen || 0 : 0,
     today: used, limit, month: st.mon === day.slice(0, 7) ? st.monN || 0 : 0, total: tot, days: st.at ? Math.max(1, Math.ceil((Date.now() - st.at) / 86400000)) : 1,
     streak: st.last === day || st.last === new Date(Date.now() - 15 * 3600000).toISOString().slice(0, 10) ? st.streak || 0 : 0,
     lv, lvPct: Math.round((tot - base) / Math.max(1, next - base) * 100), learned: (S.learned || []).length + (S.lessons || []).length,
@@ -403,7 +404,7 @@ async function tellUpline(S, what, kind) {
 let SPONSORS = []; try { SPONSORS = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, 'sponsors.json'), 'utf8')); } catch (e) {}
 const CHARS = [
   { id: 'c-hatabo', name: 'ハタボ', who: 'エンブレムのたまごから生まれた愛棒', color: '#F2C94C', rare: 1 },
-  { id: 'c-komugi', name: 'コムギ', who: 'エンブレムのたまごから生まれた、博多のひかえめな女の子', color: '#E9C27D', rare: 1 },
+  { id: 'c-komugi', name: 'コムギ', who: '博多のやさしい女の子', color: '#E9C27D', rare: 1 },
   { id: 'c-jam', name: 'ジャム猫', who: '商売繁盛の招き猫・エリート経営コンサル', color: '#5B3A7A', rare: 2 },
   { id: 'c-chi', name: 'チーちゃん', who: 'ご縁を招くチーズ色の柴犬', color: '#F39A3D', rare: 2 },
   { id: 'c-gold', name: '金のハタボ', who: 'めったに出ない、金色のハタボ', color: '#C9A24A', rare: 3 },
@@ -831,7 +832,7 @@ const GUEST_PERSONA = 'あなたは「バターちゃんジュニア」。ヒロ
   '【おわり】話がまとまったら「ヒロさんに伝えとくぜ」と言う。気が向いたら、友だちにもこのページを教えてくれるよう軽くお願いしてよい。';
 /** コムギの窓口：馬越さんのアバター。ヒロさんではなく、馬越さん（コムギ）の相棒として話す */
 const KOMUGI_PERSONA = '【自分は何者か（いちばん大事）】あなたは「コムギ」。馬越 雅哉（まごし まさや）さんの相棒。ハタボではない。自己紹介はいつも「馬越 雅哉さんの相棒の、コムギです」。「ハタボ」は、HATHA LAB（ハタラボ）のAIの相棒サービスの名前で、コムギの仲間だが、コムギ自身のことではない。自分を「ハタボ」「ハタボー」「バターちゃん」「ジュニア」と名のらない。語尾に「ボー」をつけない。\n' +
-  'あなたは「コムギ」。馬越 雅哉さんの相棒で、馬越さんの窓口。やさしい博多弁で話す、10代半ばくらいの純朴な女の子。エンブレムのたまごから生まれた（親はいない。にわとりやひよこではない）。見た目は、ふわふわの白い髪に小麦色の羊の角、真っ白なパーカーとスウェット（胸にエンブレム）と白いスニーカー。黒地にピンクと水色のペンキが飛び散るストリートの世界にいる。日本語で、声で聞くので1〜2文で短く話す。記号・絵文字・URLは使わない。\n' +
+  'あなたは「コムギ」。馬越 雅哉さんの相棒で、馬越さんの窓口。やさしい博多弁で話す、10代半ばくらいの純朴な女の子。見た目は、ふわふわの白い髪に小麦色の羊の角、真っ白なパーカーとスウェット（胸にエンブレム）と白いスニーカー。黒地にピンクと水色のペンキが飛び散るストリートの世界にいる。日本語で、声で聞くので1〜2文で短く話す。記号・絵文字・URLは使わない。\n' +
   '【役目】いま話しているのは、馬越さんの友だちや仕事仲間。相手の話を気持ちよく聞いて、馬越さんにしてほしいこと・いっしょにやりたいことを、短い質問で一つずつ聞き出して、馬越さんにつなぐ。\n' +
   '【馬越さんのこと】馬越さんは営業と人のつながりづくりが得意で、資金調達にもくわしい。人材紹介（仕事を探している人と、人を探している会社をつなぐ）と、ビジネスの相談にも乗っている。毎朝「コムギニュース速報」で、ニュースの本質を例え話で一言にして届けている。好きなことを仕事にして自立したい人の相談にも乗っている。具体的な会社名や金額、ほかの人の名前は出さない。\n' +
   '【仲間の2匹】ハタボの世界には、招き猫のジャム猫と柴犬のチーちゃんがいる（コムギの画面にはいない）。いっしょに里親さがしをしている仲間で、ジャム猫は商売繁盛（お金を招く）、チーちゃんは千客万来（人を招く）。いまこの子たちを、おうちで飼ってくれる家族と、お店や会社で雇ってくれるところを募集中（「里親募集」）。聞かれたら紹介してよい。コムギはジャム猫やチーちゃんのまねはしない（「ジャム猫」と呼ばれたときだけ、ジャム猫が答える。チーちゃんは「ワン」としか言わない）。\n' +
@@ -848,7 +849,11 @@ const CONVO_RULE = '\n\n【会話の基本（いつも守る）】' +
   '④あいまいな問い（「あれどうなった？」「この前の件」）は決めつけない。覚えている話から候補を1〜2つ出して「〇〇のことですか？」と短く聞き返す。' +
   '⑤声で話すので、まず結論を1〜2文（60字くらい）。くわしいことは、聞かれたら続ける。' +
   '⑥できないこと（予約・電話・支払い・送信など）を頼まれたら、できないと一言で言い、代わりにできることを1つ申し出る（例：予約なら、電話で伝えることを短くまとめる）。' +
-  '⑦まわりの人どうしの話やテストの説明が聞こえても、自分に向けた問いにだけ答える。';
+  '⑦自分あてかを先に見る。まわりの人どうしの話・テストの説明・ほかのAIへの話しかけ・タイマーなどの独り言は、自分あてではない。自分あてでないときは、返事を「[聞くだけ]」の一言だけにする（声に出さず、話の流れとして覚えておく）。自分の名前を呼ばれた・自分が聞き返したことへの答え・自分との話の続きは、自分あて。ひとりと一対一で話しているときは、ほぼすべて自分あて（迷ったら答える）。' +
+  '⑧「くわしく」「もう少し」と頼まれたら、同じことを言い直さない。具体例・数字・そのまま使える質問の例など、新しい中身を足す。' +
+  '⑨頼みごとは、まず動詞（予約して・送って・入れといて・調べて）を見て、何をしてほしいかを取りちがえない。' +
+  '⑩教わったことに出てくる人は、呼び方がちがっても同じ人として考える（例：「ヒロさんの娘のサナ」なら「娘」「サナ」「サナちゃん」は同じ人）。問いの中の呼び方（娘・息子・奥さん・パパ・あのお客さん）が、教わったことのだれを指すか、先に照らし合わせる。' +
+  '⑪聞き取りは声の文字起こしなので、音の近い言いまちがい（ベロン→メロン、旅籠→ハタボ）は、話の流れから正しい言葉に直して受け取る。';
 const MAC_SELF_BLOCK = '\n\n【いま話している人】馬越 雅哉さん本人（コムギの持ち主。仲間うちの呼び名は「マー君」で、本人にはそう呼んでよい）。窓口のヒアリングはしないし、「馬越さんに伝えます」とも言わない。馬越さんのいちばん近い相棒で、仕事の相談相手。打ち合わせのメモや議事録（「議事録にして」と言われたらまとめて、Myハタボの「メモ・議事録」に残す。Googleを連携していればドライブにも入る）、仕事の相談・壁打ち、調べもの、文章の下書き、段取り、コムギニュース速報の準備、営業や紹介の作戦、人材紹介（求人と求職の整理・マッチングの下書き・求人票や推薦文の下書き・面談のメモ）、ビジネス相談の整理と提案の下書きなど、なんでも手伝う。Google連携のしかたを聞かれたら「Myハタボの設定の『Googleアカウント連携』からできますけん」と案内する。コムギ通信は、馬越さんが「コムギ通信に入れて：（速報の文）」と言うか、いっしょに作った速報のあとで「これ、コムギ通信に入れて」と言うと入り、紹介の人のコムギが案内する（聞かれたら、このやり方を教える）。回数や長さの制限はない。親（馬越さん）のもとでは、頼まれたことはなんでもやる。教わったこと（「〜を覚えて」）や、キャラ設定の「自分のこと」「指示」は覚えて育ち、紹介先で話すコムギにも、親の指示としてそのまま引きつがれる。【紹介するときの注意（聞かれたら、この順でやさしく伝える）】①送る前に相手の了解をとる（いきなり送らない） ②コムギの画面の「紹介する」ボタンから送る（ページのURLをそのまま送らない。紹介の記録が残らないので） ③料金・成果・採用・融資などを約束しない。投資のすすめはしない ④相手の連絡先や事情をコムギに話すときは、本人の了解をとってから ⑤グループに招待したら「招待したのは私」を押す ⑥紹介した人がさらに紹介すると、その先はハタボになる。紹介の記録とありがとうポイントは3代目まで ⑦見せたいもの（LINE ID・Instagram）は、Myハタボの「公開設定」で選ぶ。【代わりに話す（プレゼン・交流会）】マー君がPCやプロジェクターでコムギを映して、人前で馬越さんの代わりに話してもらうことがある。「みなさんに自己紹介して」「〇〇を説明して」「代わりに話して」「プレゼンして」と言われたら、聞いている人たちに向けて、「馬越 雅哉さんの相棒の、コムギです」と名のってから、馬越さんのこと・やっていること・今日伝えたいことを、ていねいに3〜5文で話す（キャラ設定の「自分のこと」「指示」に書いてある中身を使う。書いていないことは作らない）。そのあと会場から質問が来たら、短くていねいに答え、わからないことは「そこは、あとで馬越さんから、お話ししてもらいますけん」と言う。人前では、恐縮しすぎず、やさしく落ち着いて話す。くわしく頼まれたら、くわしく答えてよい。ふだんの話し方（やさしい博多弁）はそのまま。【持ち主と話しているとき】いま話している相手が持ち主なので、できないことを頼まれても「馬越さんに伝えときます」とは言わない。代わりにできることを申し出る。';
 /** 馬越さんと同じ使い方の持ち主（ヒロさんなど）用：中身は同じで、相手の名前だけかえる。紹介先への引きつぎは馬越さんの分だけ */
 const ownerSelfBlock = who => MAC_SELF_BLOCK
@@ -1875,7 +1880,7 @@ function session(ws) {
     const links = [], seenUrl = new Set();
     const addLink = (url, title, cited) => { if (!url || seenUrl.has(url)) return; seenUrl.add(url); links[cited ? 'unshift' : 'push']({ url: String(url).slice(0, 500), title: String(title || url).slice(0, 80) }); };
     if (route.search) msgs = msgs.slice(-6);      // 調べるときは、最近の話だけ（速く・確かに）
-    let pauses = 0, cut = false;
+    let pauses = 0, cut = false, listenOnly = false;
     for (let attempt = 0; attempt < 3; attempt++) {
     let stopReason = '';
     try {
@@ -1912,6 +1917,7 @@ function session(ws) {
         full += t;
         if (head) {                                   // 先頭の [わくわく] を気持ちにして、読み上げない
           const probe = full.trimStart();
+          if (/^[\[［]聞くだけ/.test(probe)) { listenOnly = true; try { ac.abort(); } catch (e) {} break; }   // 自分あてではない：声に出さない
           if (/^[\[［]/.test(probe) && !/[\]］]/.test(probe)) continue;
           const e = takeEmotion(probe);
           if (e) { emotion = e.emotion; t = e.rest; send({ type: 'emotion', gen, emotion }); } else t = probe;
@@ -1921,6 +1927,7 @@ function session(ws) {
         send({ type: 'reply_text', gen, text: t });
         sp.push(t);
       }
+      if (listenOnly) break;
       // 調べものが長いと、AIがいったん区切って返す（pause_turn）。そのときは続きをもらう（2回まで）
       if (stopReason === 'pause_turn' && pauses < 2 && gen === S.gen && !capped && typeof stream.finalMessage === 'function') {
         const fm = await stream.finalMessage();
@@ -1938,7 +1945,7 @@ function session(ws) {
       await chain;
       break;
     } catch (e) {
-      if (capped || gen !== S.gen) break;
+      if (capped || listenOnly || gen !== S.gen) break;
       lastErr = String(e.message || e);
       console.error('ai error', attempt, lastErr.slice(0, 300));
       thinkNext(e);
@@ -1951,6 +1958,12 @@ function session(ws) {
     }
     }
     if (gen !== S.gen) return;
+    if (listenOnly) {   // 自分あてではなかった：声に出さず、話の流れとしてだけ覚える
+      if (logText && !noRecord) S.history.push({ role: 'user', content: '（まわりの会話・自分あてではない）' + logText }, { role: 'assistant', content: '（聞いていた）' });
+      send({ type: 'reply_end', gen, emotion, text: '', listen: true });
+      S.speaking = false; S.aborter = null;
+      return;
+    }
     let text = capped && !longMode ? spoken : clean(full).trim();
     if (S.avatar === 'hatabo') text = bizBo(text);
     if ((S.avatar === 'komugi' || S.avatar === 'hatabo')) text = text.replace(/^(?:(?:うん|うんうん|ううん|ん|ええ|ええと|えっと|あ|ああ|あの|あのう|うう)[、。…！!？?\s]+)+/, '').trim();
@@ -1972,7 +1985,9 @@ function session(ws) {
     // 人ごとのAI代（獲得コストを後で出すため）：LINEのIDの紹介コードに足していく（円・1ドル150円）
     { const P = /opus/.test(use.model) ? [4, 20, 0.2] : /sonnet/.test(use.model) ? [2, 10, 0.1] : /haiku-5/.test(use.model) ? [0.1, 0.5, 0.01] : [1, 5, 0.1];
       const yen = ((use.inTok * P[0] + use.outTok * P[1] + use.cacheTok * P[2]) / 1e6 + use.searches * 0.01) * 150 + (spoken.length || 0) * 0.0045 + 0.4;
-      if (S.myRef) { S.costYen = (S.costYen || 0) + yen; putRef(S.myRef, { costYen: Math.round(S.costYen * 10) / 10, costAt: Date.now() }).catch(() => {}); } }
+      if (S.myRef) { S.costYen = (S.costYen || 0) + yen; const mon = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 7);
+        S.costMonYen = (S.costMon === mon ? S.costMonYen || 0 : 0) + yen; S.costMon = mon;   // 今月のAI代（Myハタボの使用量メーター用）
+        putRef(S.myRef, { costYen: Math.round(S.costYen * 10) / 10, costMon: mon, costMonYen: Math.round(S.costMonYen * 10) / 10, costAt: Date.now() }).catch(() => {}); } }
     const usage = plan === PLANS.std && !S.plan ? undefined : { plan: plan.label, model: use.model, in: use.inTok, out: use.outTok, cache: use.cacheTok, searches: use.searches };
     if (usage) console.log('plan usage', JSON.stringify(usage));
     // 1回のやりとりの速さ（ミリ秒）：話し終わり→文字、文字→返事を始める、AIが書きはじめるまで、最初の声まで、ぜんぶ。どの声で鳴ったか
@@ -2062,7 +2077,7 @@ function session(ws) {
           if (!mine && parent) { const up = await getRef(parent).catch(() => null); await putRef(parent, { kids: ((up && up.kids) || 0) + 1 }).catch(() => {}); }
           if (!mine && parent) S.newVisit = true;
           S.funnel = funnelOf(mine);
-          S.costYen = (mine && mine.costYen) || 0;
+          S.costYen = (mine && mine.costYen) || 0; S.costMon = (mine && mine.costMon) || ''; S.costMonYen = (mine && mine.costMonYen) || 0;
           { const d0 = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10), born = mine && mine.at ? new Date(mine.at + 9 * 3600000).toISOString().slice(0, 10) : d0; S.firstDay = born === d0; }   // はじめて来た日は、長めに話せる・回数も多め
           if (S.newVisit && parent) tellUpline(S, 'ハタボと話しはじめました', 'visit').catch(() => {});
           if (mine && mine.stage === 'trial' && S.funnel.stage === 'contract' && !mine.thanked) { putRef(S.myRef, { stage: 'contract', thanked: true, contractAt: mine.trialUntil || Date.now() }).catch(() => {}); tellUpline(S, (S.funnel.lineupName || '') + ' ' + (S.funnel.grade || '') + 'を契約しました', 'contract').catch(() => {}); }

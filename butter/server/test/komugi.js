@@ -55,6 +55,16 @@ function client(port, hello) {
   for (let i = 0; i < 4; i++) { h.ws.send(JSON.stringify({ type: 'text', text: '相談' + i })); await new Promise(r => setTimeout(r, 300)); }
   assert(!h.msgs.some(x => x.type === 'limit'), 'ヒロさんも制限なし');
   assert(/ヒロさん本人/.test(lastSys) && !/馬越 雅哉さん本人/.test(lastSys) && !/HUB役（いちばん大事）/.test(lastSys), 'ヒロさんにも相棒の決まり（相手はヒロさん）');
+  // 自分あてではない話（まわりの会話）には「[聞くだけ]」：声も吹き出しも出さない
+  const os0 = deps.claude.messages.stream;
+  deps.claude.messages.stream = p => ({ async *[Symbol.asyncIterator]() { yield { type: 'content_block_delta', delta: { type: 'text_delta', text: '[聞くだけ]' } }; }, finalMessage: async () => ({ usage: {}, stop_reason: 'end_turn' }), abort() {} });
+  const n0 = h.msgs.length;
+  h.ws.send(JSON.stringify({ type: 'text', text: 'バターちゃん、いまのどう思う？' }));
+  const le = await h.until(x => x.type === 'reply_end' && h.msgs.indexOf(x) >= n0);
+  deps.claude.messages.stream = os0;
+  assert(le.listen && !le.text, '自分あてでないときは聞くだけ');
+  assert(!h.msgs.slice(n0).some(x => x.type === 'audio'), '聞くだけのときは声を出さない');
+  assert(/ヒロさんの娘のサナ/.test(lastSys) || /呼び方がちがっても同じ人/.test(lastSys), 'だれのことかを照らし合わせる決まり');
   h.ws.close();
   // 不具合・要望は、ハタボ事務局へ
   m.ws.send(JSON.stringify({ type: 'text', text: '返事が出ない不具合があるので直してほしい' }));

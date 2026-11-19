@@ -934,9 +934,9 @@ body.av-hatabo .cvfab, body.av-komugi .cvfab { display: none !important; }
 :is(html.kmapp, body.av-komugi) .vsw button { color: #A9A2BC; }
 :is(html.kmapp, body.av-komugi) .vsw button[aria-pressed="true"] { background: linear-gradient(100deg, #FF2E9A 0%, #8B5CF6 55%, #1FD1F2 100%); color: #fff; }
 
-/* コムギも、エンブレムのたまごから生まれる：かえる前はたまごだけ、われたらコムギが飛び出す（ひよこ・にわとりは出ない） */
-.av-komugi:not(.hb-hatched) #butter > #hataboAv { display: inline; }
-.av-komugi:not(.hb-hatched) #komugiAv { display: none; }
+/* コムギは、たまごから生まれない（たまごはハタボの設定）。はじめからコムギを出す */
+.av-komugi #butter > #hataboAv { display: none; }
+.av-komugi #komugiAv { display: inline; }
 .av-komugi .hbChick { display: none !important; }
 .av-komugi .hbEgg { transform-origin: 250px 350px; transform-box: view-box; animation: hbRock 3s ease-in-out infinite; }
 .av-komugi.hb-hatching .hbEgg { animation: hbShake .12s linear 6; }
@@ -2697,7 +2697,8 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
         if ((J.playing || Date.now() - (J.lastPlayEnd || 0) < 700) && !JR_CALL(m.text)) break;
         jrHeard(m.text); break;
       case 'reply_start':
-        if ((document.body.classList.contains('av-hatabo') || document.body.classList.contains('av-komugi')) && !document.body.classList.contains('hb-hatched')) hbHatch();   // コムギも、エンブレムのたまごから生まれる（ひよこは出ない）
+        if (document.body.classList.contains('av-komugi')) document.body.classList.add('hb-hatched');   // コムギは、たまごから生まれない（たまごはハタボの設定）。はじめからコムギ
+        else if (document.body.classList.contains('av-hatabo') && !document.body.classList.contains('hb-hatched')) hbHatch();
         J.gen = m.gen; J.queue = []; J.endEmo = null; jrStopAudio();
         J.out = m.nobubble ? null : addBubble(m.as || 'ジュニア', '…', 'her'); J.outText = ''; J.thinkAt = Date.now();
         if (m.emotion) setEmo(m.emotion);
@@ -2713,6 +2714,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
         break;
       case 'reply_end':
         if (m.gen !== J.gen) break;
+        if (m.listen) { if (J.out && J.out.parentElement) J.out.parentElement.remove(); J.out = null; J.queue = []; setState('listening'); break; }   // 自分あてではなかった：返事を出さず、聞くだけ
         if (J.out) J.out.textContent = m.text || J.outText || '（うまく答えられなかったよ。もう一回呼んでね）' + (m.why && J.canPlan ? '［原因：' + m.why + '］' : '');   // 制限なしの人（ヒロさん・馬越さん）には原因も出す
         if (m.text && history.length && history[history.length - 1].role === 'user') { history.push({ role: 'assistant', content: m.text }); if (history.length > 12) history = history.slice(-12); }
         J.endEmo = m.emotion || 'smile';
@@ -3101,8 +3103,10 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
       body.innerHTML = (d.unread ? `<div class="hbc" style="border-color:#C9A24A"><div class="k">MESSAGE</div><h3>伝言が ${d.unread} 件あります</h3><button type="button" class="hbbtn" data-go="inbox">伝言を見る</button></div>` : '') + hbpSetup() + `
         <div class="hbc"><div class="k">MY HATABO</div><h3>${esc(d.name ? d.name + 'さんの' + nm : 'あなたの' + nm)}</h3>
           <span class="hbtag">${esc(d.plan)}</span> ${d.funnel && d.funnel.stage === 'trial' ? '<span class="hbtag gold">お試し あと' + d.funnel.daysLeft + '日</span>' : d.funnel && d.funnel.stage === 'contract' ? '<span class="hbtag">' + esc(d.funnel.lineupName + ' ' + d.funnel.grade) + '</span>' : '<button type="button" class="hbtag gold" data-go="plan" style="border:0;cursor:pointer">7日間無料で試す</button>'} ${d.superUntil ? '<span class="hbtag gold">' + esc(/^\d/.test(d.superUntil) ? d.superUntil + ' まで' : d.superUntil) + '</span>' : ''}
-          <div style="margin-top:12px" class="big">${n(left)}<small>回 きょうの残り</small></div>
-          <div class="hbbar"><i style="width:${pct}%"></i></div><p>きょう ${n(d.today)} 回 ／ 1日 ${n(d.limit)} 回まで ・ 追加チケット ${n(d.tickets)} 枚</p><button type="button" class="hbbtn w" data-go="ticket">＋ 追加チケット</button></div>
+          ${d.unlimited ? `<div style="margin-top:12px" class="big">制限なし<small>（回数の上限はありません）</small></div>
+          <p>きょう ${n(d.today)} 回 ・ 今月 ${n(d.month)} 回 ・ 今月のAI代の目安 約${n(Math.round(d.monthYen || 0))}円</p>` : `<div style="margin-top:12px" class="big">${n(left)}<small>回 きょうの残り</small></div>
+          <div class="hbbar"><i style="width:${pct}%"></i></div><p>きょう ${n(d.today)} 回 ／ 1日 ${n(d.limit)} 回まで ・ 追加チケット ${n(d.tickets)} 枚</p>
+          <p style="font-size:12px">今月 ${n(d.month)} 回 ・ AI代の目安 約${n(Math.round(d.monthYen || 0))}円</p><button type="button" class="hbbtn w" data-go="ticket">＋ 追加チケット</button>`}</div>
         <div class="hbc"><div class="k">THIS MONTH</div><div class="hbstats"><div><b>${n(d.month)}</b><span>今月の会話</span></div><div><b>${n(d.total)}</b><span>これまで</span></div><div><b>${n(d.days)}</b><span>日目</span></div></div></div>
         <div class="hbc"><div class="k">NOTES</div><h3>メモ・議事録</h3><div class="big">${n((d.notes || []).length)}<small>件</small></div><button type="button" class="hbbtn w" data-go="notes">メモ・議事録を見る</button></div>
         <div class="hbc"><div class="k">MEMORY</div><h3>覚えていること</h3><div class="big">${n(d.learned)}<small>こ</small></div><p>話した中で、${esc(nm)}が覚えたこと。消したいときは「〇〇を忘れて」と話しかけてください。</p></div>`;
@@ -4035,7 +4039,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
   });
   showMode();
   liffBoot();
-  if (HATABO_APP) { const ib = KOMUGI_APP ? addBubble('コムギ', 'はじめまして。馬越 雅哉さんの相棒の、コムギです。話しかけてもらえたら、たまごから生まれますけん。', 'her') : addBubble('ハタボ', 'はじめまして、ハタボです。話しかけると、たまごから生まれます。', 'her'); if (ib) ib.parentElement.id = 'introBubble'; }
+  if (HATABO_APP) { const ib = KOMUGI_APP ? addBubble('コムギ', 'はじめまして。馬越 雅哉さんの相棒の、コムギです。気軽に話しかけてくださいね。', 'her') : addBubble('ハタボ', 'はじめまして、ハタボです。話しかけると、たまごから生まれます。', 'her'); if (ib) ib.parentElement.id = 'introBubble'; }
   else if (LIFF) addBubble('ジュニア', 'よう！バターちゃんジュニアだぜ。となりは柴犬のチーちゃんと、招き猫のジャム猫！', 'her');
   else addBubble('バターちゃん', 'こんにちは！バターちゃんだよ。となりは柴犬のチーちゃん！', 'her');
   setState('idle');
