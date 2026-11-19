@@ -2819,7 +2819,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
   }
   document.addEventListener('audiounlocked', () => { try { jrPump(); } catch (e) {} });
   // 声が出ないときの手がかり：ヒロさん（制限なしの人）にだけ、画面の下に原因を出す
-  function jrDiag(t) { try { console.warn('voice', t); if (J.canPlan && !J['diag_' + t]) { J['diag_' + t] = true; toast('［声］' + t); } } catch (e) {} }
+  function jrDiag(t) { try { console.warn('voice', t); if ((J.canPlan || J.office) && !J['diag_' + t]) { J['diag_' + t] = true; toast('［声］' + t); } } catch (e) {} }
   // ふつうの音声プレーヤーで1文を鳴らす（音の準備が止められているスマホ向けの予備）。鳴らせたら true
   function playEl(m) {
     return new Promise(ok => {
