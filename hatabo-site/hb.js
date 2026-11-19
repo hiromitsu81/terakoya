@@ -2,7 +2,25 @@
 (function(){
   /* ---------- menu ---------- */
   var mb=document.querySelector('.hbh .menu'),nv=document.querySelector('.hbh nav');
-  if(mb&&nv)mb.addEventListener('click',function(){nv.classList.toggle('open')});
+  if(mb&&nv){mb.setAttribute('aria-expanded','false');mb.addEventListener('click',function(){var o=nv.classList.toggle('open');mb.setAttribute('aria-expanded',o?'true':'false');mb.textContent=o?'とじる':'メニュー'});
+   /* 今いるページのタブを見える位置に */
+   var cur=location.pathname.split('/').pop()||'index.html';[].forEach.call(nv.querySelectorAll('a'),function(a){if(a.getAttribute('href')===cur&&a.offsetParent){a.classList.add('on');try{nv.scrollLeft=a.getBoundingClientRect().left-nv.getBoundingClientRect().left-12}catch(e){}}})}
+
+  /* ファーストビューのカルーセルが見えている間は、右下のボタンをかくす */
+  var fvv=document.querySelector('.fv');if(fvv&&'IntersectionObserver'in window)new IntersectionObserver(function(es){document.body.classList.toggle('fvon',es[0].isIntersecting&&es[0].intersectionRatio>.35)},{threshold:[0,.35,.6]}).observe(fvv);
+  /* ---------- スマホのカルーセル ---------- */
+  var mqc=window.matchMedia?matchMedia('(max-width:760px)'):null;
+  [].forEach.call(document.querySelectorAll('.trg,.scg,.gkl,.lugrid,.kp3,[data-car]'),function(el){
+   var n=el.children.length;if(n<2)return;el.classList.add('mcar');
+   var bar=document.createElement('div');bar.className='mcbar';bar.innerHTML='<button type="button" class="pv" aria-label="前へ"></button><i><b></b></i><span>1 / '+n+'</span><button type="button" class="nx" aria-label="次へ"></button>';
+   el.parentNode.insertBefore(bar,el.nextSibling);
+   var th=bar.querySelector('b'),ct=bar.querySelector('span'),pv=bar.querySelector('.pv'),nx=bar.querySelector('.nx');
+   function step(){var c=el.children[0],c2=el.children[1];return c2?c2.offsetLeft-c.offsetLeft:el.clientWidth}
+   function up(){var sw=el.scrollWidth,cw=el.clientWidth,mx=sw-cw;if(sw<=0)return;var w=Math.max(12,cw/sw*100),r=mx>0?el.scrollLeft/mx:0;th.style.width=w+'%';th.style.left=(r*(100-w))+'%';var i=mx>0&&el.scrollLeft>=mx-4?n:Math.round(el.scrollLeft/step())+1;ct.textContent=Math.min(n,Math.max(1,i))+' / '+n;pv.disabled=el.scrollLeft<4;nx.disabled=el.scrollLeft>=mx-4}
+   var tk2=0;el.addEventListener('scroll',function(){if(!tk2){tk2=1;requestAnimationFrame(function(){tk2=0;up()})}},{passive:true});
+   pv.addEventListener('click',function(){el.scrollBy({left:-step(),behavior:'smooth'})});nx.addEventListener('click',function(){el.scrollBy({left:step(),behavior:'smooth'})});
+   addEventListener('resize',up);setTimeout(up,60);up();
+  });
 
   /* ---------- consult widget ---------- */
   var P=window.HB_CW||null;var SYS=(P&&P.sys?P.sys:[]).concat([
