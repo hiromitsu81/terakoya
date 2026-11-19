@@ -1491,7 +1491,7 @@ function session(ws) {
     // 話し終わりの見分け：文字が少しのあいだ変わらなければ、Googleの合図を待たずに区切る（三人モードは、まわりの声を待つので使わない）
     const eouArm = () => { clearTimeout(eou); if (!ENV.EOU_MS || S.trio) return; eou = setTimeout(() => { if (S.stt === st) { S.stt = null; try { st.end(); } catch (e) {} } }, ENV.EOU_MS); };
     st.on('data', d => {
-      if (d.speechEventType === 'END_OF_SINGLE_UTTERANCE') { clearTimeout(eou); try { st.end(); } catch (e) {} return; }
+      if (d.speechEventType === 'END_OF_SINGLE_UTTERANCE') { clearTimeout(eou); if (S.stt === st) S.stt = null; try { st.end(); } catch (e) {} return; }   // 先に手放す：閉じた聞き取りに音を書くと「write after end」で、その文が聞こえなかったことになる
       const r = d.results && d.results[0];
       if (!r || !r.alternatives || !r.alternatives[0]) return;
       const t = r.alternatives[0].transcript || '';
@@ -1506,7 +1506,7 @@ function session(ws) {
         if (S.speaking && all.length >= 2 && (!S.trio || calledJunior(all) || calledJam(all) || STOP_RE.test(all))) stopReply('barge');
       }
     });
-    st.on('error', e => { clearTimeout(eou); if (S.stt === st) S.stt = null; if (!/Audio Timeout|DEADLINE|exceeded maximum/i.test(String(e.message))) send({ type: 'notice', why: 'stt', detail: String(e.message).slice(0, 80) }); });
+    st.on('error', e => { clearTimeout(eou); if (S.stt === st) S.stt = null; if (/write after end/i.test(String(e.message))) return; if (!/Audio Timeout|DEADLINE|exceeded maximum/i.test(String(e.message))) send({ type: 'notice', why: 'stt', detail: String(e.message).slice(0, 80) }); });
     // 聞こえた文はページへ。ページがガチャ・UFO・チーちゃんの芸などを先に見て、話す分だけ {type:'text'} で返してくる
     st.on('end', () => { clearTimeout(eou); if (S.stt === st) S.stt = null; S.heardAt = Date.now(); S.eouMs = S.lastPartial ? S.heardAt - S.lastPartial : null; let t = (finalText.length >= lastAll.length ? finalText : lastAll).trim(); if (S.avatar === 'hatabo' || S.avatar === 'komugi') t = hearFix(t); if (t) send({ type: 'heard', text: t }); });
     S.stt = st;
@@ -1514,6 +1514,7 @@ function session(ws) {
   function onAudio(buf) {
     if (!S.ready) return;
     if (S.stt && Date.now() - S.sttStarted > 240000) { try { S.stt.end(); } catch (e) {} S.stt = null; }   // 1本は5分まで
+    if (S.stt && (S.stt.writableEnded || S.stt.destroyed)) S.stt = null;   // 閉じかけの聞き取りには書かない
     if (!S.stt) sttStart();
     try { S.stt.write(buf); S.sttBytes += buf.length; } catch (e) { S.stt = null; }
   }

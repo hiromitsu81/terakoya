@@ -2397,7 +2397,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
     try {
       const r = await callGas(LIFF ? { action: 'chat', tts: !LIFF_BROWSER_VOICE(), messages: history } : { action: 'chat', messages: history });
       nextAudio = r.audio || null;
-      if (!r.ok) { if (r.detail) hint.textContent = '（パパへ：原因 ' + r.detail + '）'; throw new Error(r.error || 'error'); }
+      if (!r.ok) { if (r.detail) hint.textContent = '（調べ用：原因 ' + r.detail + '）'; throw new Error(r.error || 'error'); }
       answer = String(r.text || '').replace(/^[\[［][^\]］]{1,6}[\]］]\s*/, '').trim();
       mood = r.emotion || 'smile';
       if (r.state) applyPet(r.state, true);
@@ -2648,7 +2648,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
       hint.textContent = !was && J.tries >= 3
         ? 'いまサーバーにつながっていないよ。自動でつなぎなおすね（まんなかのボタンを押すと、すぐつなぎなおすよ）。'
         : 'サーバーにつなぎなおしているよ…';
-      if (!was && J.tries >= 3 && diag) { diag.hidden = false; diag.textContent = '（パパへ：サーバーにつながりません。Cloud Run のようすを見てください）'; }
+      if (!was && J.tries >= 3 && diag) { diag.hidden = false; diag.textContent = '（調べ用：サーバーにつながりません。Cloud Run のようすを見てください）'; }
       if (document.visibilityState === 'visible' && convOn) setTimeout(jrConnect, was ? 800 : Math.min(15000, 2000 * J.tries));
     };
   }
@@ -2764,7 +2764,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
         if (row.children.length) host.append(row);
         break;
       }
-      case 'notice': if (diag && m.detail) { diag.hidden = false; diag.textContent = '（パパへ：' + m.why + ' ' + m.detail + '）'; const L = $('cvList'); if (L && document.body.classList.contains('chatview') && J.canPlan) { const n = document.createElement('p'); n.className = 'cv-empty'; n.textContent = '（パパへ：' + m.why + ' ' + m.detail + '）'; L.append(n); L.scrollTop = L.scrollHeight; } } break;   // トーク画面でも、声が作れなかった原因を出す（制限なしの人だけ）
+      case 'notice': if (diag && m.detail) { diag.hidden = false; diag.textContent = '（調べ用：' + m.why + ' ' + m.detail + '）'; const L = $('cvList'); if (L && document.body.classList.contains('chatview') && J.canPlan) { const n = document.createElement('p'); n.className = 'cv-empty'; n.textContent = '（調べ用：' + m.why + ' ' + m.detail + '）'; L.append(n); L.scrollTop = L.scrollHeight; } } break;   // トーク画面でも、声が作れなかった原因を出す（制限なしの人だけ）
       case 'error':
         document.body.classList.remove('connecting');
         if (m.code === 'closed') { J.dead = true; hint.textContent = 'いま窓口はお休み中です。また今度お話ししましょう。'; addBubble('ジュニア', 'いま窓口はお休み中です。ヒロさんには直接ご連絡ください。', 'her'); }
