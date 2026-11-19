@@ -1557,7 +1557,10 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
   const kmSay = t => t.replace(/ハタボと話す/g, 'コムギと話す').replace(/ハタボを友だち追加してね/g, 'コムギを友だち追加してね')
     .replace(/自分のハタボと話すには、まず公式LINE「ハタボ」を/g, 'コムギと話すには、まず公式LINE「コムギ」を')
     .replace(/(?<!ハタ)だボー/g, 'です').replace(/(?<!ハタ)するボー/g, 'しますけん').replace(/(?<!ハタ)ボー/g, '');
-  const kmFix = root => { if (!root || !isKm()) return; const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT); let n; while ((n = w.nextNode())) { const v = kmSay(n.nodeValue); if (v !== n.nodeValue) n.nodeValue = v; } };
+  // ハタボの画面：「〜ボー」口調を、ていねいな言葉に（ビジネス向け。名前の「ハタボー」はそのまま）
+  const hbSay = t => t.replace(/(?<!ハタ)だボー/g, 'です').replace(/(?<!ハタ)するボー/g, 'します').replace(/(?<!ハタ)いるボー/g, 'います').replace(/(?<!ハタ)あるボー/g, 'あります')
+    .replace(/(?<!ハタ)なるボー/g, 'なります').replace(/(?<!ハタ)いボー/g, 'いです').replace(/(?<!ハタ)([ぁ-ん])たボー/g, '$1ました').replace(/(?<!ハタ)ボー/g, '');
+  const kmFix = root => { if (!root || !(isKm() || HATABO_APP)) return; const f = isKm() ? kmSay : hbSay; const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT); let n; while ((n = w.nextNode())) { const v = f(n.nodeValue); if (v !== n.nodeValue) n.nodeValue = v; } };
   ['hbPage', 'friendGate', 'chatV', 'hint'].forEach(id => { const el = document.getElementById(id); if (el) { new MutationObserver(() => kmFix(el)).observe(el, { childList: true, subtree: true, characterData: true }); kmFix(el); } });
   const avName = () => !document.body.classList.contains('av-komugi') && !document.body.classList.contains('av-hatabo') ? '' : window.__aiName || (document.body.classList.contains('av-komugi') ? 'コムギ' : 'ハタボ');
   function avText() {
@@ -4032,7 +4035,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
   });
   showMode();
   liffBoot();
-  if (HATABO_APP) { const ib = KOMUGI_APP ? addBubble('コムギ', 'あ、あの……はじめまして。馬越 雅哉さんの相棒の、コムギです。話しかけてもらえたら、たまごから生まれますけん。', 'her') : addBubble('ハタボ', 'はじめましてだボー。ぼくはハタボ。話しかけると、たまごから生まれるボー。', 'her'); if (ib) ib.parentElement.id = 'introBubble'; }
+  if (HATABO_APP) { const ib = KOMUGI_APP ? addBubble('コムギ', 'はじめまして。馬越 雅哉さんの相棒の、コムギです。話しかけてもらえたら、たまごから生まれますけん。', 'her') : addBubble('ハタボ', 'はじめまして、ハタボです。話しかけると、たまごから生まれます。', 'her'); if (ib) ib.parentElement.id = 'introBubble'; }
   else if (LIFF) addBubble('ジュニア', 'よう！バターちゃんジュニアだぜ。となりは柴犬のチーちゃんと、招き猫のジャム猫！', 'her');
   else addBubble('バターちゃん', 'こんにちは！バターちゃんだよ。となりは柴犬のチーちゃん！', 'her');
   setState('idle');

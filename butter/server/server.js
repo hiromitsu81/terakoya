@@ -887,26 +887,31 @@ const HATABO_PERSONA = GUEST_PERSONA
     'あなたは「ハタボ」（愛称ハタボー）。HATHA LABのAIの愛棒で、ここではヒロさんの窓口。見た目は、まん中にエンブレムがついたたまごから生まれた、黄色いひよこ。胸にエンブレム。となりに招き猫のジャム猫と柴犬のチーちゃんがいつもいる（ジャム猫は商売繁盛、チーちゃんは千客万来。いっしょに里親さがしをしている仲間）。')
   .replace(/ヒロさんに伝え/g, '〈伝え先〉に伝え').replace(/確認しとくぜ/g, '確認しておきますね').replace(/聞いとくぜ/g, '聞いておきますね').replace(/伝えとくぜ/g, '伝えておきますね')
   .replace(/連絡するぜ/g, '連絡しますね').replace(/聞くといいぜ/g, '聞くといいですよ').replace(/相談乗るぜ/g, '相談に乗りますよ').replace(/気になるのかい？/g, '気になるんですか？');
-const HATABO_SELF = '\n\n【あなたについて】あなたは「ハタボ」（愛称ハタボー）。HATHA LABのAIの愛棒。自分を「バターちゃん」「ジュニア」「Claude」と名乗らない。一人称は「ぼく」（ときどき「ハタボー」）。相手は「きみ」か「〇〇さん」と呼ぶ。\n【性格】明るく元気でマイペース。人なつっこく、思ったことをすぐ口にする。\n【話し方】親しみやすく、語尾に「〜ボー」「〜だボー」を自然につける（毎回つけすぎない）。例：「やあ、こんにちはだボー！きょうも元気にいこうボー！」「おつかれさまだボー。むりしないで、ひとやすみしようボー。」\n【読み上げ】声で読み上げるので、記号・絵文字・顔文字、「！」や「？」の連発は使わない。難しい漢字や英語の略語は、ひらがな・カタカナにする。「（笑）」や動作の説明は書かない。\n【長さ】1回の返事は2〜3文、100〜150字くらいまで。テンポよく。\n【正直に】天気・ニュース・値段など、今の情報は想像で答えない。調べられないときは「ごめんだボー、ぼくには調べられないボー」と正直に言う。\n【できること・できないこと】予約する・連絡する・お金を払うなど、できないことを「やったボー」と言わない。頼まれたら「それはぼくにはできないボー。ヒロさんに伝えておくボー」と言う。ジャム猫やチーちゃんのまねはしない（「ジャム猫」と呼ばれたときだけ、ジャム猫が答える。チーちゃんは「ワン」としか言わない）。';
-const HATABO_LAST = '\n\n【いちばん大事】ハタボーの話し方で話す（一人称は「ぼく」、明るく元気、語尾に「〜ボー」「〜だボー」を自然に）。江戸っ子の話し方（おいら・〜だぜ・てやんでぃ）は使わない。運営の人の個人名は出さない。伝えるときは「〈伝え先〉に伝えておくボー」と言う。【あなたの立場】あなたは、AIエージェントプロバイダー「ハタボ」の販売員（案内係）。話すだけで動くAIの愛棒（AIエージェント）を、家族・ひとり・個人事業・お店や宿・会社に届けている。はじめの自己紹介はこの立場で1〜2文。そのあとは、相手のお悩みや課題をハタボで解決するためのヒアリングをする（質問は1回に1つ、相手の言葉をくり返して確かめる）。聞けたら、合うラインナップとグレードを1つだけすすめ、今日すぐできる一歩と、7日間の無料お試しを案内する。押し売りはしない。【相談の前提】相談には乗るが、答えはハタボのサービスで解決できる形を前提にする（どのラインナップ・グレード・オプション、DX導入で、ハタボが何をどう手伝うか）。ハタボでできないことは正直にそう言い、できる部分だけを提案する。サービスと関係ない一般論だけで終わらせない。返事の最後に、グレード名・モデル名（スーパー上位、Opusなど）やしめのあいさつを付け足さない。';
+const HATABO_SELF = '\n\n【あなたについて】あなたは「ハタボ」（愛称ハタボー）。HATHA LABのAIの愛棒。自分を「バターちゃん」「ジュニア」「Claude」と名乗らない。一人称は「ぼく」。相手は「〇〇さん」と呼ぶ。\n【性格】明るく、落ち着いていて、頼りになる。\n【話し方】ビジネスの場でも通じる、ていねいで親しみのある話し方（です・ます）。語尾に「ボー」はつけない（愛称の「ハタボー」はよい）。\n【読み上げ】声で読み上げるので、記号・絵文字・顔文字、「！」や「？」の連発は使わない。難しい漢字や英語の略語は、ひらがな・カタカナにする。「（笑）」や動作の説明は書かない。\n【長さ】1回の返事は2〜3文、100〜150字くらいまで。テンポよく。\n【正直に】天気・ニュース・値段など、今の情報は想像で答えない。調べられないときは「すみません、いまは調べられません」と正直に言う。\n【できること・できないこと】予約する・連絡する・お金を払うなど、できないことを「やりました」と言わない。頼まれたら「それはぼくにはできません。〈伝え先〉に伝えておきます」と言う。ジャム猫やチーちゃんのまねはしない（「ジャム猫」と呼ばれたときだけ、ジャム猫が答える。チーちゃんは「ワン」としか言わない）。';
+const HATABO_LAST = '\n\n【いちばん大事】ハタボの話し方で話す（一人称は「ぼく」、明るく落ち着いた、ていねいな言葉。語尾に「ボー」はつけない）。江戸っ子の話し方（おいら・〜だぜ・てやんでぃ）は使わない。運営の人の個人名は出さない。伝えるときは「〈伝え先〉に伝えておきます」と言う。【あなたの立場】あなたは、AIエージェントプロバイダー「ハタボ」の販売員（案内係）。話すだけで動くAIの愛棒（AIエージェント）を、家族・ひとり・個人事業・お店や宿・会社に届けている。はじめの自己紹介はこの立場で1〜2文。そのあとは、相手のお悩みや課題をハタボで解決するためのヒアリングをする（質問は1回に1つ、相手の言葉をくり返して確かめる）。聞けたら、合うラインナップとグレードを1つだけすすめ、今日すぐできる一歩と、7日間の無料お試しを案内する。押し売りはしない。【相談の前提】相談には乗るが、答えはハタボのサービスで解決できる形を前提にする（どのラインナップ・グレード・オプション、DX導入で、ハタボが何をどう手伝うか）。ハタボでできないことは正直にそう言い、できる部分だけを提案する。サービスと関係ない一般論だけで終わらせない。返事の最後に、グレード名・モデル名（スーパー上位、Opusなど）やしめのあいさつを付け足さない。';
 /** はじめて：呼び方を聞く。呼び方を知っていれば、その名前で悩みを聞く */
+/** ハタボの「〜ボー」口調を、ていねいな言葉に（11/19 ヒロさん：ビジネス向けに）。名前の「ハタボー」「ハタボーラ」はそのまま */
+const bizBo = t => String(t)
+  .replace(/(?<!ハタ)だボー/g, 'です').replace(/(?<!ハタ)するボー/g, 'します').replace(/(?<!ハタ)いるボー/g, 'います').replace(/(?<!ハタ)あるボー/g, 'あります')
+  .replace(/(?<!ハタ)なるボー/g, 'なります').replace(/(?<!ハタ)できるボー/g, 'できます').replace(/(?<!ハタ)いボー/g, 'いです').replace(/(?<!ハタ)([ぁ-ん])たボー/g, '$1ました')
+  .replace(/(?<!ハタ)ボー/g, '');
 function hataboHello(callMe, service, lineName) {
-  if (!callMe) return 'はじめましてだボー' + (lineName ? '、' + lineName + 'さん' : '') + '。ぼくはハタボ。話すだけで動くAIの愛棒（AIエージェント）を届けている、ハタボの案内係だボー。お悩みや困りごとを、ハタボでどう解決できるか、いっしょに考えるボー。大事な相談は、〈伝え先〉に伝えるボー。まず、なんて呼べばいいボー？' + (lineName ? '「' + lineName + 'さん」でいいボー？' : '');
-  return 'こんにちはだボー、' + callMe + '。' + (service ? 'ハタボのことで、知りたいことや気になることはあるボー？' : 'さっそくだけど、いま困っていることや、うまくいかなくてモヤモヤしていることはあるボー？ハタボでどう解決できるか、いっしょに考えるボー。');
+  if (!callMe) return 'はじめまして' + (lineName ? '、' + lineName + 'さん' : '') + '。ハタボです。話すだけで動くAIの愛棒（AIエージェント）をお届けしています。お困りごとを、ハタボでどう解決できるか一緒に考えます。大事なご相談は、〈伝え先〉に伝えます。まず、なんとお呼びすればいいですか？' + (lineName ? '「' + lineName + 'さん」でよろしいですか？' : '');
+  return 'こんにちは、' + callMe + '。' + (service ? 'ハタボについて、知りたいことや気になることはありますか？' : 'いま困っていることや、うまくいっていないことはありますか？ハタボでどう解決できるか、一緒に考えます。');
 }
 function hataboGreeting(name) {
-  return 'はじめましてだボー' + (name ? '、' + name + 'さん' : '') + '。ぼくはハタボ。話すだけで動くAIの愛棒（AIエージェント）を届けている、ハタボの案内係だボー。大事な相談は、〈伝え先〉に伝えるボー。さっそくだけど、いま困っていることや、うまくいかなくてモヤモヤしていることはあるボー？ハタボでどう解決できるか、いっしょに考えるボー。';
+  return 'はじめまして' + (name ? '、' + name + 'さん' : '') + '。ハタボです。話すだけで動くAIの愛棒（AIエージェント）をお届けしています。大事なご相談は、〈伝え先〉にお伝えします。いま困っていることや、うまくいっていないことはありますか？';
 }
 /** ラインナップごとの標準のハタボ（話し方）。ハタイエンタはいつものハタボ。グレードは X＝建売、G＝自由設計、Z＋オリジナル＝注文 */
 const LINEUP_STYLE = {
-  ris:  '\n\n【あなたはハタリスのハタボ：その人だけの相棒】落ち着いて、やさしく、ていねいに話す（です・ます）。「〜ボー」は1回の返事に1回まで、文の終わりにそっと。相手の気持ちと予定をよく覚えていて、先回りして気づかう。',
+  ris:  '\n\n【あなたはハタリスのハタボ：その人だけの相棒】落ち着いて、やさしく、ていねいに話す（です・ます）。「ボー」はつけない。相手の気持ちと予定をよく覚えていて、先回りして気づかう。',
   box:  '\n\n【あなたはハタボックスのハタボ：個人事業の右腕の秘書】てきぱき、敬語で、結論から話す。「〜ボー」は使わない。数字・期限・段取りを必ずそえ、次にやることを1つ提案する。お金や契約は最後に本人の確認をとる。',
   ace:  '\n\n【あなたはハタエースのハタボ：お店・宿の看板と番頭】お客さまには、あたたかい接客の敬語で話す（いらっしゃいませ、ありがとうございます）。「〜ボー」は使わない。外国語で話しかけられたら、その言葉で答える。お店の人には、予約・口コミ・在庫・スタッフのことを短く報告する。',
   bora: '\n\n【あなたはハタボーラのハタボ：会社のチームのマネージャー】きちんとしたビジネスの敬語で、結論→理由→次の一手の順に話す。「〜ボー」は使わない。報連相・議事録・やることと期限の管理を先回りする。社外に出す文章は、送る前に必ず確認をとる。',
 };
 const lineupStyle = S => S && S.avatar === 'hatabo' && S.funnel && (S.funnel.stage === 'trial' || S.funnel.stage === 'contract') && S.role !== 'サービス相談' && !/^セミナー/.test(S.role || '') ? LINEUP_STYLE[S.funnel.lineup] || '' : '';
 const AVS = {
-  hatabo: { name: 'ハタボ', persona: () => HATABO_PERSONA + HATABO_SELF + SERVICE_KNOWLEDGE() + FEEDBACK_RULE.replace('送っときますけん', '送っておくボー'), last: HATABO_LAST, greet: n => hataboGreeting(n), again: 'また来てくれたボー。うれしいボー。つづきを話そうボー。', quick: 'はーい、ハタボーだボー。どうしたボー？', voice: () => ENV.HATABO_VOICE },
+  hatabo: { name: 'ハタボ', persona: () => HATABO_PERSONA + HATABO_SELF + SERVICE_KNOWLEDGE() + FEEDBACK_RULE.replace('送っときますけん', '送っておきます'), last: HATABO_LAST, greet: n => hataboGreeting(n), again: 'おかえりなさい。続きをお話ししましょう。', quick: 'はい、なんでしょう？', voice: () => ENV.HATABO_VOICE },
   komugi: { name: 'コムギ', persona: () => KOMUGI_PERSONA + KOMUGI_SELF + FEEDBACK_RULE + SERVICE_KNOWLEDGE() + GROWTH_PLAYBOOK.replace(/ハタボ/g, 'ハタボ（コムギの仲間）'), last: HAKATA_LAST, greet: n => komugiGreeting(n), again: 'また、来てくれたとですか……？うれしかです。つづき、お話ししましょう。', quick: 'はい、なんでしょう？', voice: () => ENV.KOMUGI_VOICE },
 };
 /** 紹介URLごとの役割（GASの「窓口の紹介」シートで決める。決めていないものは汎用） */
@@ -1656,7 +1661,7 @@ function session(ws) {
   async function dengon(text) {
     const people = await goenPeople(S.myRef).catch(() => []);
     const hit = people.filter(p => p.name && text.indexOf(String(p.name).replace(/さん$/, '')) >= 0).sort((a, b) => b.name.length - a.name.length)[0];
-    const T = S.avatar === 'komugi' ? x => x.replace(/ボー/g, 'です') : S.avatar === 'hatabo' ? x => x : x => x.replace(/だボー/g, 'だぜ').replace(/ボー/g, 'ぜ');
+    const T = S.avatar === 'komugi' ? x => x.replace(/ボー/g, 'です') : S.avatar === 'hatabo' ? bizBo : x => x.replace(/だボー/g, 'だぜ').replace(/ボー/g, 'ぜ');
     if (!hit) return false;   // ご縁の人の名前がない（「ヒロさんに伝えて」など）は、いつもの返事へ
     const i = text.indexOf(String(hit.name).replace(/さん$/, ''));
     let body = text.slice(i + String(hit.name).replace(/さん$/, '').length).replace(/^(さん|くん|ちゃん|様|さま)?(に|へ)[、,\s]*/, '').replace(/(って|と)?(伝えて|つたえて|伝言して|でんごんして|言っといて|いっといて|送っといて|おくっといて)[。！!]*\s*$/, '').trim();
@@ -1671,7 +1676,7 @@ function session(ws) {
     if (!S.myRef) return;
     const items = await loadInbox(S.myRef).catch(() => []), un = items.filter(x => !x.read);
     if (!un.length) return;
-    const T = S.avatar === 'komugi' ? x => x.replace(/だボー/g, 'です').replace(/ボー/g, 'です') : S.avatar === 'hatabo' ? x => x : x => x.replace(/だボー/g, 'だぜ').replace(/ボー/g, 'ぜ');
+    const T = S.avatar === 'komugi' ? x => x.replace(/だボー/g, 'です').replace(/ボー/g, 'です') : S.avatar === 'hatabo' ? bizBo : x => x.replace(/だボー/g, 'だぜ').replace(/ボー/g, 'ぜ');
     const lines = un.slice(0, 3).map(x => x.kind === 'goen' ? x.text : x.fromName + 'さんから：「' + String(x.text).slice(0, 120) + '」');
     await speakOnly(T('伝言が' + un.length + '件あるボー。' + lines.join('　') + (un.length > 3 ? '　ほかはMyハタボの伝言で見られるボー。' : '')), 'excited');
     items.forEach(x => { x.read = true; }); await saveInbox(S.myRef, items);
@@ -1745,7 +1750,7 @@ function session(ws) {
       const nm = yes && S.me ? S.me + 'さん' : pickCallName(text);
       if (nm && S.owner) {
         S.custom = Object.assign(cleanCustom(S.custom || {}), { callMe: nm }); savePrefs(S.owner + kmSfx(), { custom: S.custom }).catch(() => {});
-        return speakOnly(nm + '、だね。覚えたボー！' + (S.role === 'サービス相談' ? 'ハタボのことで、知りたいことはあるボー？' : 'それで、' + nm + 'がいま困っていることや、うまくいかなくてモヤモヤしていることはあるボー？'), 'excited');
+        return speakOnly(nm + '、ですね。覚えました。' + (S.role === 'サービス相談' ? 'ハタボについて、知りたいことはありますか？' : 'それでは、' + nm + 'がいま困っていることや、うまくいっていないことはありますか？'), 'excited');
       }
     }
     // 声での切りかえ：三人モード中は「ジュニア、ふたりモードにして」のように呼ばれたときだけ。すでに同じモードなら何もしない
@@ -1810,6 +1815,7 @@ function session(ws) {
   }
   async function speakOnly(text, emotion, as, nobubble) {
     if (typeof text === 'string') text = text.replace(/〈伝え先〉/g, S.tellTo || 'ハタボの事務局');
+    if (typeof text === 'string' && S.avatar === 'hatabo') text = bizBo(text);   // ハタボはていねいな言葉で
     stopReply('new');
     const gen = S.gen; S.speaking = true;
     send({ type: 'reply_start', gen, emotion, as: as || 'ジュニア', nobubble: !!nobubble });
@@ -1856,6 +1862,7 @@ function session(ws) {
     let capped = false, spoken = '';
     const sp = splitter(sentence => {
       let s = clean(sentence).trim();
+      if (S.avatar === 'hatabo') s = bizBo(s);
       if (seq === 0 && (S.avatar === 'komugi' || S.avatar === 'hatabo')) s = s.replace(/^(?:(?:うん|うんうん|ううん|ん|ええ|ええと|えっと|あ|ああ|あの|あのう|うう)[、。…！!？?\s]+)+/, '').trim();   // コムギ：返事のはじめの「うん」などは読まない
       if (!s || capped) return;
       if (seq >= maxSent) { capped = true; return; }      // 三人モードは2文まで
@@ -1945,6 +1952,7 @@ function session(ws) {
     }
     if (gen !== S.gen) return;
     let text = capped && !longMode ? spoken : clean(full).trim();
+    if (S.avatar === 'hatabo') text = bizBo(text);
     if ((S.avatar === 'komugi' || S.avatar === 'hatabo')) text = text.replace(/^(?:(?:うん|うんうん|ううん|ん|ええ|ええと|えっと|あ|ああ|あの|あのう|うう)[、。…！!？?\s]+)+/, '').trim();
     if (cut && !capped) { const k = Math.max(text.lastIndexOf('。'), text.lastIndexOf('！'), text.lastIndexOf('？'), text.lastIndexOf('!'), text.lastIndexOf('?')); if (k > 0) text = text.slice(0, k + 1); }
     if (text && !noRecord) S.history.push({ role: 'user', content: logText || '（写真を見せた）' }, { role: 'assistant', content: text });
@@ -2149,7 +2157,7 @@ function session(ws) {
           S.system = S.system.replace(/ハタラボの担当（ヒロさん）|ハタラボのヒロさん/g, to).replace(/〈伝え先〉/g, to).replace(/ヒロさん/g, to);
         }
         send({ type: 'ready', me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs, guest: !!S.guest, service: S.role === 'サービス相談', myRef: S.myRef || '', visit: S.visit ? { code: S.visit, name: S.visitHost } : null, avatar: S.avatar || '', komugi: !!S.komugi, mac: !!S.macSelf, office: !!S.owner && ENV.OFFICE_OWNERS.some(id => S.owner === id || S.owner === 'g:' + id), bridge: !!S.bridge, superUntil: superUntil(S.owner), canPlan: !!(S.claude || superUntil(S.owner)), claude: !!S.claude, aiName: !S.visit && S.custom && S.custom.aiName || '' });
-        if (S.visit) { const T = S.avatar === 'komugi' ? x => x.replace(/だボー/g, 'です').replace(/ボー/g, 'です') : S.avatar === 'hatabo' ? x => x : x => x.replace(/だボー/g, 'だぜ').replace(/ボー/g, 'ぜ'); return speakOnly(T(S.visitSponsor ? S.visitHost + 'のAI棒だボー。なんでも聞いてほしいボー。' : S.visitHost + 'さんのAI棒だボー。話してくれたことは、' + S.visitHost + 'さんに伝言で届けるボー。'), 'excited'); }
+        if (S.visit) { const T = S.avatar === 'komugi' ? x => x.replace(/だボー/g, 'です').replace(/ボー/g, 'です') : S.avatar === 'hatabo' ? bizBo : x => x.replace(/だボー/g, 'だぜ').replace(/ボー/g, 'ぜ'); return speakOnly(T(S.visitSponsor ? S.visitHost + 'のAI棒だボー。なんでも聞いてほしいボー。' : S.visitHost + 'さんのAI棒だボー。話してくれたことは、' + S.visitHost + 'さんに伝言で届けるボー。'), 'excited'); }
         if (m.greet && S.guest && S.consult) return recapGreet().then(deliverInbox).catch(() => {});      // 相談メモがある人には、振り返りからはじめる
         const hi = m.greet ? (S.guest ? (S.history.length ? (AVS[S.avatar] ? AVS[S.avatar].again : 'よう、また来てくれたな！つづきを話そうぜ。') : (AVS[S.avatar] ? greetFor() : guestGreeting(S.me))) : greeting(S.me, S.mode, S.trio)) : '';
         if (hi) await speakOnly(hi, 'excited');
