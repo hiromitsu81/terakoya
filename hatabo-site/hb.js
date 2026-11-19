@@ -145,7 +145,7 @@
     function walk(root,re,heads){
       var w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:function(n){
         for(var p=n.parentNode;p&&p!==root.parentNode;p=p.parentNode){if(skip[p.nodeName]||(p.classList&&/\b(k-hb|k-ai|k-love|v-talk|v-listen|v-read|v-write|v-see)\b/.test(p.className||'')))return NodeFilter.FILTER_REJECT;if(p.closest&&p.closest('svg'))return NodeFilter.FILTER_REJECT}
-        return re.test(n.nodeValue)?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT}});
+        re.lastIndex=0;return re.test(n.nodeValue)?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT}});
       var list=[];while(w.nextNode())list.push(w.currentNode);
       list.forEach(function(n){
         var f=document.createDocumentFragment(),t=n.nodeValue,last=0;re.lastIndex=0;var m;
