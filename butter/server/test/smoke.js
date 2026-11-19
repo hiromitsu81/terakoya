@@ -349,8 +349,15 @@ function client(port, hello) {
     const hn = ht.msgs.filter(m => m.type === 'reply_end').length;
     ht.ws.send(JSON.stringify({ type: 'text', text: '予約が変わると漏れるんだよね' }));
     await ht.until(() => ht.msgs.filter(m => m.type === 'reply_end').length > hn, 8000);
-    assert.ok(/清掃管理のヒアリング/.test(hs) && /販売員ではない/.test(hs) && !/便利屋/.test(hs) && /ヒロさん/.test(hs), 'ヒアリングの決まり');
+    assert.ok(/清掃管理のヒアリング/.test(hs) && /販売員ではない/.test(hs) && /聞かれたら答えてよい/.test(hs) && /AIの子たちの案内/.test(hs) && /ヒロさん/.test(hs), 'ヒアリングの決まり（聞かれたらサービスも答える）');
     deps.claude.messages.stream = oh; ht.ws.close();
+    // 1か月たったら、ヒロさんに「上限を戻しますか」と知らせる（1回だけ）
+    { const srv = require('../server'), real = Date.now;
+      await srv.hearingStart('hz', 'テスト');
+      assert.strictEqual(await srv.hearingCheckAll(), 0, 'まだ1か月たっていない');
+      Date.now = () => real() + 31 * 86400000;
+      try { assert.ok(await srv.hearingCheckAll() >= 1, '1か月で知らせる'); assert.strictEqual(await srv.hearingCheckAll(), 0, '知らせるのは1回だけ'); } finally { Date.now = real; }
+    }
     // 公式LINEのメニュー（agent=service）やトークのボタン（紹介コードなし）から開いても、ヒアリングと相談メモが効く
     { const p1 = await client(port, { type: 'hello', idToken: 'guest-p', ref: 'taku' });
       assert.ok((await p1.until(m => m.type === 'ready')).plain === true, 'ref=takuでヒアリング'); p1.ws.close();
