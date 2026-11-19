@@ -15,6 +15,7 @@ const gasSrv = http.createServer((req, res) => {
       if (j.pass === 'flaky') return res.end('<html>error</html>');
       if (j.idToken === 'guest-closed') return res.end(JSON.stringify({ ok: true, guest: true, closed: true }));
       if (j.idToken === 'guest-y') return res.end(JSON.stringify({ ok: true, guest: true, owner: 'g:y', me: 'ユウ', slots: [] }));
+      if (j.idToken === 'guest-p') return res.end(JSON.stringify({ ok: true, guest: true, owner: 'g:p', me: 'たく', role: j.ref === 'taku' ? '清掃ヒアリング' : '汎用', consult: j.ref === 'taku' ? '相談メモ：のこり8項目' : '', slots: [] }));
       if (j.idToken === 'guest-t') return res.end(JSON.stringify({ ok: true, guest: true, owner: 'g:t', me: 'たく', role: '清掃ヒアリング', slots: [] }));
       if (j.idToken === 'guest-x') return res.end(JSON.stringify({ ok: true, guest: true, owner: 'g:x', me: 'マー君', role: 'サポート・コンサル相談', consult: j.ref === 'macpmo' ? '清掃シートのAirHost連携を来月までに' : '', slots: [{ label: '11/20(木) 19時ごろ', start: '2026-11-20T10:00:00Z', end: '2026-11-20T12:00:00Z' }] }));
       const ok = j.pass === 'ok' || j.idToken === 'tok-' + 'b';
@@ -350,6 +351,21 @@ function client(port, hello) {
     await ht.until(() => ht.msgs.filter(m => m.type === 'reply_end').length > hn, 8000);
     assert.ok(/清掃管理のヒアリング/.test(hs) && /販売員ではない/.test(hs) && !/便利屋/.test(hs) && /ヒロさん/.test(hs), 'ヒアリングの決まり');
     deps.claude.messages.stream = oh; ht.ws.close();
+    // 公式LINEのメニュー（agent=service）やトークのボタン（紹介コードなし）から開いても、ヒアリングと相談メモが効く
+    { const p1 = await client(port, { type: 'hello', idToken: 'guest-p', ref: 'taku' });
+      assert.ok((await p1.until(m => m.type === 'ready')).plain === true, 'ref=takuでヒアリング'); p1.ws.close();
+      for (const h of [{ agent: 'service' }, {}]) {
+        let ps = ''; const op = deps.claude.messages.stream;
+        deps.claude.messages.stream = p => { ps = sysText(p.system); return op(p); };
+        const p2 = await client(port, Object.assign({ type: 'hello', idToken: 'guest-p' }, h));
+        const r2 = await p2.until(m => m.type === 'ready');
+        const n2 = p2.msgs.filter(m => m.type === 'reply_end').length;
+        p2.ws.send(JSON.stringify({ type: 'text', text: 'こんにちは' }));
+        await p2.until(() => p2.msgs.filter(m => m.type === 'reply_end').length > n2, 8000);
+        assert.ok(r2.plain === true && /清掃管理のヒアリング/.test(ps) && /のこり8項目/.test(ps), 'メニュー・ボタンからでもヒアリング ' + JSON.stringify(h));
+        deps.claude.messages.stream = op; p2.ws.close();
+      }
+    }
     // 話題のページ：ハタボがパートナーやMyハタボの話をしたら、そのページを出す
     { const o3 = deps.claude.messages.stream;
       deps.claude.messages.stream = p => ({ async *[Symbol.asyncIterator]() { for (const ch of ['紹介パートナーのランクは、', 'Myハタボのメモ・議事録でも見られます。']) yield { type: 'content_block_delta', delta: { type: 'text_delta', text: ch } }; } });

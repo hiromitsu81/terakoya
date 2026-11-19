@@ -248,6 +248,19 @@ async function myRefFor(owner) {
   return myRefOf(owner);
 }
 const REF_DAYS = 90;   // 紹介の期限：90日のあいだにお試しも契約もなければ切れて、あとから紹介した人が紹介者になる
+/** ヒアリング役の紹介コードを、その人（LINEのID）に結びつけて覚える。公式LINEのメニューやトークのボタンから（紹介コードなしで）開いても、同じヒアリングと相談メモで話せるように */
+const pinMem = new Map();
+const pinId = owner => crypto.createHash('sha256').update('pin:' + owner).digest('hex').slice(0, 32);
+async function getPin(owner) {
+  if (!owner) return '';
+  try { if (deps.db) { const d = await deps.db.collection('refpins').doc(pinId(owner)).get(); return d.exists ? String(d.data().ref || '') : ''; } } catch (e) {}
+  return pinMem.get(owner) || '';
+}
+async function setPin(owner, ref) {
+  if (!owner) return;
+  try { if (deps.db) return void await (ref ? deps.db.collection('refpins').doc(pinId(owner)).set({ ref, at: Date.now() }) : deps.db.collection('refpins').doc(pinId(owner)).delete()); } catch (e) {}
+  if (ref) pinMem.set(owner, ref); else pinMem.delete(owner);
+}
 async function getRef(code) {
   if (!code) return null;
   try { if (deps.db) { const d = await deps.db.collection('refs').doc(code).get(); return d.exists ? d.data() : null; } } catch (e) {}
@@ -2282,6 +2295,20 @@ function session(ws) {
           // GASが読めないときも切らずに話す（家族の記録なし）。三人モードなどはページから受けとる
           S.system = MIN_PERSONA + SELF; S.brainAt = Date.now() - 9 * 60 * 1000;
           send({ type: 'notice', why: 'brain', detail: 'GASが読めないので、記録なしで話しています' });
+        }
+        // ヒアリング役の人：紹介コード付きで来たら覚える。メニューやトークのボタン（コードなし）から来たら、覚えたコードで開きなおす
+        if (S.guest && S.owner && !S.peek && !S.visit && !S.asGuest) {
+          if (S.ref && isHearingRole(S.role)) await setPin(S.owner, S.ref);
+          else if (!S.ref || S.agent === 'service') {
+            const pinned = await getPin(S.owner);
+            if (pinned) {
+              const was = { ref: S.ref, agent: S.agent };
+              S.ref = pinned; S.agent = '';
+              try { await loadBrain(); } catch (e) { S.ref = was.ref; S.agent = was.agent; await loadBrain().catch(() => {}); }
+              if (!isHearingRole(S.role)) { await setPin(S.owner, ''); S.ref = was.ref; S.agent = was.agent; await loadBrain().catch(() => {}); }   // もうヒアリング役でなければ、覚えたコードを消して元どおり
+              else console.log('ref pin', pinned);
+            }
+          }
         }
         // ハタボのミニアプリで家族（ヒロさん）が開いたとき：中身は家族のまま、声と話し方はハタボ
         if (S.app === 'komugi' && !S.guest) {
