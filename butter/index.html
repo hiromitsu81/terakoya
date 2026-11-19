@@ -2686,7 +2686,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
       case 'friends': HBP.friends = m; if (!$('hbPage').hidden && (HBP.page === 'friends' || HBP.page === 'social')) hbpRender(); break;
       case 'goen': HBP.goen = m; if (!$('hbPage').hidden && HBP.page === 'goen') hbpRender(); break;
       case 'limit': HBP.limitHit = m.why || 'plan'; setTimeout(() => hbpOpen('ticket'), 1800); break;
-      case 'mypage': if (m.driveMsg) toast(m.driveMsg); if (m.ticketOk || m.ticketNg) { HBP.tMsg = m.ticketOk || m.ticketNg; toast(HBP.tMsg); if (m.ticketOk) HBP.limitHit = ''; } HBP.data = m; if (!$('hbPage').hidden) hbpRender(); break;
+      case 'mypage': if (m.driveMsg) toast(m.driveMsg); if (m.ticketOk || m.ticketNg) { HBP.tMsg = m.ticketOk || m.ticketNg; toast(HBP.tMsg); if (m.ticketOk) HBP.limitHit = ''; } HBP.data = m; try { store.set('hbpData', Object.assign({}, m, { notes: (m.notes || []).slice(0, 20), driveMsg: '', ticketOk: '', ticketNg: '' })); } catch (e) {} if (!$('hbPage').hidden) hbpRender(); break;
       case 'note_saved': toast({ minutes: '議事録を残したよ', memo: 'メモしたよ', doc: '書いた文章を残したよ', dengon: '伝言をとどけたよ' }[m.kind] || '残したよ'); if (!$('hbPage').hidden) jrSend({ type: 'mypage' }); break;
       case 'ready':
         document.body.classList.remove('connecting');
@@ -3509,6 +3509,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
   // ピン留めのおすすめ：ハタボのアプリで、まだ「とじる」していない人に、2回目に開いたときから3回まで
   if (HATABO_APP) { try { const n = Number(localStorage.getItem('pinSeen') || 0) + 1; localStorage.setItem('pinSeen', String(n)); if (!localStorage.getItem('pinDone') && n >= 2 && n <= 4) setTimeout(() => { $('pinBar').hidden = false; }, 6000); } catch (e) {} }
   function hbpOpen(p) {
+    if (!HBP.data) { try { const c = store.get('hbpData', null); if (c && c.type === 'mypage') HBP.data = c; } catch (e) {} }   // 前回の内容をすぐ出して、届いたら新しくする
     HBP.page = p || 'my'; $('hbPage').hidden = false; hbpRender(); if (HBS.friend === null) hbpFriend();
     if (J.ready) jrSend({ type: 'mypage' });
   }
