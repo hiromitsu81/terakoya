@@ -847,7 +847,7 @@ const ownerSelfBlock = who => MAC_SELF_BLOCK
   .replace('育ち、紹介先で話すコムギにも、親の指示としてそのまま引きつがれる', '育つ（紹介先のコムギに引きつがれるのは、馬越さんが教えたことだけ）')
   .replace('「馬越さんに伝えます」とも言わない', '「' + who + 'さんに伝えます」とも言わない')
   .replace('馬越さんのいちばん近い相棒', who + 'さんのいちばん近い相棒')
-  .replace('コムギ通信は、馬越さんが', 'コムギ通信は、持ち主（' + who + 'さんか馬越さん）が')
+  .replace(/コムギ通信は、馬越さんが[^。]*。/, 'コムギ通信（紹介の人に届く速報）を入れられるのは馬越さんだけ。' + who + 'さんに頼まれたら、下書きを手伝い、馬越さんから入れてもらうよう伝える。')
   .replace('親（馬越さん）のもとでは', '持ち主のもとでは')
   .replace('マー君がPCやプロジェクター', who + 'さんがPCやプロジェクター')
   .replace(/馬越 雅哉さんの相棒/, who + 'さんの相棒')
@@ -1756,7 +1756,7 @@ function session(ws) {
     if (S.app && FEEDBACK_RE.test(text)) feedbackNote(text).catch(e => console.error('feedback', String(e.message).slice(0, 120)));   // 仕様変更・不具合・改善・機能・企画の声は、ハタボ事務局へ（返事はふつうに続ける）
     if ((!S.guest || S.asGuest || S.macSelf) && LEARN_RE.test(text)) return learn(text);
     if ((!S.guest || S.asGuest || S.macSelf) && FORGET_RE.test(text)) { S.lessons = []; S.learned = []; savePrefs(S.asGuest ? GUEST_COMMON : S.owner, { lessons: [], learned: [] }); return speakOnly('がってんだ、教わったことはきれいさっぱり忘れたぜ。', 'smile'); }
-    if (S.macSelf && NEWS_SET_RE.test(text)) return setKomugiNews(text);
+    if (S.macSelf && isMac(S.owner) && NEWS_SET_RE.test(text)) return setKomugiNews(text);   // コムギ通信を入れられるのは馬越さんだけ（「馬越さんより」として紹介の人に届くので）
     if (MINUTES_RE.test(text)) return minutes(PDF_RE.test(text) && !S.guest);
     if (MEMO_RE.test(text)) return memo(text);
     if (S.myRef && DENGON_RE.test(text) && await dengon(text)) return;
