@@ -5,7 +5,8 @@ const mock = http.createServer((req, res) => {
   let b = ''; req.on('data', c => b += c); req.on('end', () => {
     calls.push({ url: req.url, body: b, auth: req.headers.authorization });
     res.setHeader('Content-Type', 'application/json');
-    if (req.url.startsWith('/v1/prices')) return res.end(JSON.stringify({ data: /ris_Z_m/.test(decodeURIComponent(req.url)) ? [{ id: 'price_risZm' }] : [] }));
+    if (req.url.startsWith('/v1/prices') && /lookup_keys/.test(req.url)) return res.end(JSON.stringify({ data: /ris_Z_m/.test(decodeURIComponent(req.url)) ? [{ id: 'price_risZm' }] : [] }));
+    if (req.url.startsWith('/v1/prices')) return res.end(JSON.stringify({ data: [{ id: 'price_boraGy', recurring: { interval: 'year' }, product: { name: 'ハタボーラ G（会社の愛棒・1席）', active: true } }, { id: 'price_boraGm', recurring: { interval: 'month' }, product: { name: 'ハタボーラ G（会社の愛棒・1席）', active: true } }] }));
     if (req.url.startsWith('/v1/checkout/sessions')) return res.end(JSON.stringify({ id: 'cs_1', url: 'https://checkout.stripe.test/cs_1' }));
     res.statusCode = 404; res.end('{}');
   });
@@ -46,7 +47,9 @@ mock.listen(0, async () => {
     const cs = calls.find(c => c.url.startsWith('/v1/checkout/sessions'));
     assert.ok(/price_risZm/.test(cs.body) && /trial_end/.test(decodeURIComponent(cs.body)) && /client_reference_id=tst2/.test(cs.body) && cs.auth === 'Bearer sk_test_x', '支払いページの中身 ' + decodeURIComponent(cs.body).slice(0, 300));
     assert.strictEqual(await srv.checkoutFor({ myRef: 'x' }, {}, { lineup: 'box', grade: 'G', pay: 'm' }), null, '価格がないプランは支払いページなし');
-    console.log('OK：署名・契約・二重の知らせ・お試し中の支払い登録・支払いの失敗・解約・支払いページ');
+    assert.ok(await srv.checkoutFor({ myRef: 'x', avatar: 'hatabo' }, {}, { lineup: 'bora', grade: 'G', pay: 'y' }), '商品名でさがす');
+    assert.ok(calls.some(c => /price_boraGy/.test(c.body)), '年払いの価格を選ぶ');
+    console.log('OK：商品名・署名・契約・二重の知らせ・お試し中の支払い登録・支払いの失敗・解約・支払いページ');
     process.exit(0);
   } catch (e) { console.error('NG', e); process.exit(1); }
 });
