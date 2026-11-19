@@ -1230,13 +1230,14 @@ async function synthEL(text, voiceId, emo, rate) {
   if (!r.ok) throw new Error('elevenlabs ' + r.status + ' ' + (await r.text().catch(() => '')).slice(0, 120));
   return Buffer.from(await r.arrayBuffer()).toString('base64');
 }
+let elDownUntil = 0;   // ElevenLabsが落ちている・払っていないとき、10分は試さない
 async function synth1(text, name, emo, tv, rate) {
   text = readFix(text);   // 読み方辞書（声だけ）
   if (/^el:/.test(name)) {
     const back = name === ENV.HATABO_VOICE ? 'ja-JP-Chirp3-HD-Puck' : 'ja-JP-Chirp3-HD-Leda';   // うまくいかないときは、いつもの Google の声で（ハタボは男の子の声）
-    if (!ENV.EL_KEY) name = back;
+    if (!ENV.EL_KEY || Date.now() < elDownUntil) name = back;   // ElevenLabsにつながらないあいだは、待たずにGoogleの声で
     else try { const a = await synthEL(String(text).replace(/……|…/g, '、'), name.slice(3), emo, (name === ENV.KOMUGI_VOICE ? ENV.KOMUGI_RATE : 1) * (rate || 1)); if (tv) tv.voice = 'elevenlabs'; return a; }
-    catch (e) { console.error('elevenlabs ng', String(e.message).slice(0, 160)); name = back; if (tv) tv.elErr = String(e.message).slice(0, 40); }
+    catch (e) { console.error('elevenlabs ng', String(e.message).slice(0, 160)); if (/fetch failed|ENOTFOUND|ECONN|timeout|401|402|quota/i.test(String(e.message))) elDownUntil = Date.now() + 10 * 60000; name = back; if (tv) tv.elErr = String(e.message).slice(0, 40); }
   }
   const audioConfig = { audioEncoding: 'MP3', speakingRate: Math.max(0.5, Math.min(2, (name === ENV.KOMUGI_VOICE ? ENV.KOMUGI_RATE : ENV.TTS_RATE) * (EMO_RATE[emo] || 1) * (rate || 1))) };
   text = String(text).replace(/……|…/g, '、、');   // 「……」は、ひと呼吸の間にする
