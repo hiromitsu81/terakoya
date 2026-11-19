@@ -112,9 +112,9 @@ function client(port, hello) {
   assert.ok(/キャラ設定/.test(sysText(fp2.system)) && rs.as === 'ピヨ', 'キャラ設定が会話に入る');
   // 呼び名を最初に聞いて覚える
   const nn = await client(port, { type: 'hello', idToken: 'guest-y', greet: true });
-  await nn.until(m => m.type === 'reply_end' && /なんて呼べば/.test(m.text || ''));
+  await nn.until(m => m.type === 'reply_end' && /(なんて呼べば|なんとお呼びすれば)/.test(m.text || ''));
   nn.ws.send(JSON.stringify({ type: 'text', text: 'ユウって呼んで' }));
-  await nn.until(m => m.type === 'reply_end' && /ユウ、だね/.test(m.text || ''));
+  await nn.until(m => m.type === 'reply_end' && /ユウ、(だ|です)ね/.test(m.text || ''));
   nn.ws.send(JSON.stringify({ type: 'custom_get' }));
   const cg = await nn.until(m => m.type === 'custom');
   assert.strictEqual(cg.c.callMe, 'ユウ', '呼び名を覚える');
