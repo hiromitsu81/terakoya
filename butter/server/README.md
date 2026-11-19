@@ -54,6 +54,31 @@ gcloud run deploy butter-junior --source terakoya/butter/server --region asia-no
 gcloud run services update butter-junior --region asia-northeast1 --min-instances 1
 ```
 
+## GPT-Live-1 の検証（ハタリス）
+
+話すのは GPT-Live-1、むずかしい質問・調べものは Claude（SMART_MODEL）が考えて渡す。検証ページは `butter/live.html`（GitHub Pages）。
+
+1. Cloud Shell で、OpenAI のキーと検証ページの合言葉を入れる（画面にもチャットにも残らない）。
+
+```
+read -s -p "OpenAIのキー: " K; echo; printf '%s' "$K" | gcloud secrets create openai-key --data-file=- ; unset K
+PN=$(gcloud projects describe $(gcloud config get-value project) --format='value(projectNumber)')
+gcloud secrets add-iam-policy-binding openai-key --member=serviceAccount:$PN-compute@developer.gserviceaccount.com --role=roles/secretmanager.secretAccessor
+read -s -p "検証ページの合言葉: " L; echo
+gcloud run services update butter-junior --region asia-northeast1 --update-secrets OPENAI_API_KEY=openai-key:latest --update-env-vars LIVE_KEY=$L ; unset L
+```
+
+2. スマホで `https://hiromitsu81.github.io/terakoya/butter/live.html` を開き、合言葉を入れて「話しはじめる」。
+3. 見ること：日本語の自然さ、あいづちと割りこみ、聞きまちがい、むずかしい質問への答え（ログの `live delegate` に Claude の待ち時間）、1回の費用（`live closed`）。
+
+| 名前 | ふだん |
+|---|---|
+| LIVE_VOICE | marin（GPT-Live-1 の声） |
+| LIVE_DAILY | 40（1日に始められる回数、ぜんぶで） |
+| LIVE_MAX_MIN | 15（1回の上限、分） |
+
+費用の目安：声が1分約0.05ドル（約7.5円）＋Claude の分。
+
 ## 直したあと
 
 ```
