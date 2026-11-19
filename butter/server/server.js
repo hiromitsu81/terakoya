@@ -1225,7 +1225,7 @@ async function synth(text, voice, emo, tv, rate) {
 /** ElevenLabs で声を作る（name が「el:声のID」のとき） */
 async function synthEL(text, voiceId, emo, rate) {
   const st = { excited: 0.35, laugh: 0.35, surprise: 0.4, sad: 0.6, shy: 0.55, think: 0.55 }[emo] || 0.5;   // 気持ちが大きいときは、安定度を下げて表情を出す
-  const r = await fetch('https://api.elevenlabs.io/v1/text-to-speech/' + encodeURIComponent(voiceId) + '?output_format=' + ENV.EL_FORMAT, { method: 'POST',
+  const r = await fetch('https://api.elevenlabs.io/v1/text-to-speech/' + encodeURIComponent(voiceId) + '?output_format=' + ENV.EL_FORMAT, { method: 'POST', signal: AbortSignal.timeout(5000),   // 5秒で返ってこなければ、Googleの声にする
     headers: { 'xi-api-key': ENV.EL_KEY, 'Content-Type': 'application/json', Accept: 'audio/mpeg' },
     body: JSON.stringify({ text, model_id: ENV.EL_MODEL, language_code: /flash|turbo/.test(ENV.EL_MODEL) ? 'ja' : undefined, voice_settings: { stability: st, similarity_boost: 0.8, style: 0.3, speed: Math.max(0.8, Math.min(1.2, (rate || 1) * (EMO_RATE[emo] || 1))) } }) });
   if (!r.ok) throw new Error('elevenlabs ' + r.status + ' ' + (await r.text().catch(() => '')).slice(0, 120));
@@ -1238,7 +1238,7 @@ async function synth1(text, name, emo, tv, rate) {
     const back = name === ENV.HATABO_VOICE ? 'ja-JP-Chirp3-HD-Puck' : 'ja-JP-Chirp3-HD-Leda';   // うまくいかないときは、いつもの Google の声で（ハタボは男の子の声）
     if (!ENV.EL_KEY || Date.now() < elDownUntil) name = back;   // ElevenLabsにつながらないあいだは、待たずにGoogleの声で
     else try { const a = await synthEL(String(text).replace(/……|…/g, '、'), name.slice(3), emo, (name === ENV.KOMUGI_VOICE ? ENV.KOMUGI_RATE : 1) * (rate || 1)); if (tv) tv.voice = 'elevenlabs'; return a; }
-    catch (e) { console.error('elevenlabs ng', String(e.message).slice(0, 160)); if (/fetch failed|ENOTFOUND|ECONN|timeout|401|402|quota/i.test(String(e.message))) elDownUntil = Date.now() + 10 * 60000; name = back; if (tv) tv.elErr = String(e.message).slice(0, 40); }
+    catch (e) { console.error('elevenlabs ng', String(e.message).slice(0, 160)); if (/fetch failed|ENOTFOUND|ECONN|timeout|abort|401|402|quota/i.test(String(e.message))) elDownUntil = Date.now() + 10 * 60000; name = back; if (tv) tv.elErr = String(e.message).slice(0, 40); }
   }
   const audioConfig = { audioEncoding: 'MP3', speakingRate: Math.max(0.5, Math.min(2, (name === ENV.KOMUGI_VOICE ? ENV.KOMUGI_RATE : ENV.TTS_RATE) * (EMO_RATE[emo] || 1) * (rate || 1))) };
   text = String(text).replace(/……|…/g, '、、');   // 「……」は、ひと呼吸の間にする
