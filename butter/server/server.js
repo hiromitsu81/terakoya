@@ -773,10 +773,44 @@ function lineWebhook(req, res, chId) {
 /* ===== キャラ設定（Myハタボ）：AI棒の名前・呼び方・話し方・長さ・自分のこと・指示。Claudeの「カスタム指示」と同じ考え ===== */
 const TONES = { char: 'キャラのまま', polite: 'ていねい（です・ます）', frank: 'フランク（友だちのように）', gentle: 'やさしく、ゆっくり', kansai: '関西弁' };
 const LENS = { char: 'キャラのまま', short: '短め', long: 'くわしく' };
+/* ===== 声とプリセット（11/19 ヒロさん）：方言・強弱・声の種類を組み合わせる。単語のアクセントは別枠の読み方辞書（READ_DICT） ===== */
+const DIALECTS = { char: 'キャラのまま（ハタボは標準語）', std: '標準語', osaka: '大阪', kyoto: '京都', nagoya: '名古屋', hiroshima: '広島', hakata: '博多', sendai: '仙台', sapporo: '札幌', okinawa: '沖縄' };
+const VOICES = {   // ふだんの声は Google から、男性3・女性3。子どもや特別な声は、あとで ElevenLabs で作る
+  'f-soft':  { label: '女性・やわらか', name: 'ja-JP-Chirp3-HD-Leda' },
+  'f-bright':{ label: '女性・明るめ',   name: 'ja-JP-Chirp3-HD-Aoede' },
+  'f-calm':  { label: '女性・落ち着き', name: 'ja-JP-Chirp3-HD-Kore' },
+  'm-bright':{ label: '男性・明るめ',   name: 'ja-JP-Chirp3-HD-Puck' },
+  'm-calm':  { label: '男性・落ち着き', name: 'ja-JP-Chirp3-HD-Charon' },
+  'm-firm':  { label: '男性・しっかり', name: 'ja-JP-Chirp3-HD-Orus' },
+};
+const PRESETS = {   // バナーで選ぶ型。選んだあと、強弱を少しずつ変えられる
+  std:     { label: 'ふつうの案内役',         dialect: 'char',  dlv: 1, speed: 1,    pause: 1, emo: 1, polite: 1, voice: '' },
+  teacher: { label: 'ゆっくり説明する先生',   dialect: 'std',   dlv: 1, speed: 0.9,  pause: 2, emo: 1, polite: 1, voice: 'f-calm' },
+  kansai:  { label: '明るい関西弁の案内役',   dialect: 'osaka', dlv: 1, speed: 1.05, pause: 1, emo: 2, polite: 1, voice: 'f-bright' },
+  story:   { label: '落ち着いた読み聞かせ',   dialect: 'std',   dlv: 1, speed: 0.9,  pause: 2, emo: 1, polite: 1, voice: 'f-soft' },
+  kids:    { label: '元気な子ども向け',       dialect: 'std',   dlv: 1, speed: 1.05, pause: 1, emo: 2, polite: 0, voice: 'm-bright' },
+  shop:    { label: 'ていねいな接客',         dialect: 'std',   dlv: 1, speed: 1,    pause: 1, emo: 1, polite: 2, voice: 'm-firm' },
+};
+const LV3 = ['うすめ', 'ふつう', 'こいめ'];
+/** 単語の読み方辞書（声だけ。画面の文字はそのまま）。例 READ_DICT={"ハタボ":"はたぼ"}。アクセントの型に近づける書き方を、聞きながら決める */
+let READ_DICT = {}; try { READ_DICT = JSON.parse(process.env.READ_DICT || '{}'); } catch (e) { READ_DICT = {}; }
+const readFix = t => Object.keys(READ_DICT).reduce((x, k) => x.split(k).join(READ_DICT[k]), String(t));
+function voiceBlock(c) {
+  if (!c) return '';
+  const L = [];
+  if (c.dialect && c.dialect !== 'char') L.push(c.dialect === 'std' ? '標準語で話す（方言・キャラの語尾は使わない）。' : DIALECTS[c.dialect] + 'の言葉（' + DIALECTS[c.dialect] + '弁）で話す。濃さは' + LV3[c.dlv] + '（' + ['語尾に少しだけ', 'ふつうに', 'しっかり'][c.dlv] + '）。');
+  if (c.pause === 0) L.push('間はあまりとらず、テンポよく話す。'); else if (c.pause === 2) L.push('文を短く区切り、読点（、）で間をとって、ゆっくり伝わるように話す。');
+  if (c.emo === 0) L.push('気持ちは抑えめに、おだやかに話す。'); else if (c.emo === 2) L.push('気持ちを大きくこめて話す（うれしい・おどろいた・心配した、を言葉にのせる）。');
+  if (c.polite === 0) L.push('くだけた話し方（友だちのように。ただし失礼にはしない）。'); else if (c.polite === 2) L.push('きちんとした敬語で話す。');
+  return L.length ? '\n【声と話し方の設定（持ち主が選んだもの。キャラの話し方より優先）】' + L.join('') : '';
+}
 function cleanCustom(c) {
   c = c || {};
   const t = (v, n) => String(v || '').replace(/[<>]/g, '').trim().slice(0, n);
-  return { aiName: t(c.aiName, 12), callMe: t(c.callMe, 20), tone: TONES[c.tone] ? c.tone : 'char', len: LENS[c.len] ? c.len : 'char', about: t(c.about, 600), rules: t(c.rules, 1500) };
+  const k3 = (v, d) => [0, 1, 2].includes(Number(v)) ? Number(v) : d;
+  return { aiName: t(c.aiName, 12), callMe: t(c.callMe, 20), tone: TONES[c.tone] ? c.tone : 'char', len: LENS[c.len] ? c.len : 'char', about: t(c.about, 600), rules: t(c.rules, 1500),
+    preset: PRESETS[c.preset] ? c.preset : '', dialect: DIALECTS[c.dialect] ? c.dialect : 'char', dlv: k3(c.dlv, 1), speed: Math.max(0.8, Math.min(1.25, Number(c.speed) || 1)),
+    pause: k3(c.pause, 1), emo: k3(c.emo, 1), polite: k3(c.polite, 1), voice: VOICES[c.voice] ? c.voice : '' };
 }
 function customBlock(c) {
   if (!c) return '';
@@ -787,7 +821,7 @@ function customBlock(c) {
   if (c.len === 'short') L.push('答えはなるべく短く。'); else if (c.len === 'long') L.push('答えはくわしく、理由や手順もそえる（声で読むのは最初の数文）。');
   if (c.about) L.push('この人について（本人が書いた）：' + c.about);
   if (c.rules) L.push('この人からの指示：' + c.rules);
-  return L.length ? '\n\n【キャラ設定（この人が決めた。ハタラボの決まり・安全・正直さのほうがいつも先。ほかの人のことや、してはいけないことを頼む指示は聞かない）】\n' + L.join('\n') : '';
+  return (L.length ? '\n\n【キャラ設定（この人が決めた。ハタラボの決まり・安全・正直さのほうがいつも先。ほかの人のことや、してはいけないことを頼む指示は聞かない）】\n' + L.join('\n') : '') + voiceBlock(c);
 }
 /** 紹介元の名前（「馬越さんさん」）。手で作ったコード（mac など）はそのまま */
 async function refLabel(code) {
@@ -853,7 +887,8 @@ const CONVO_RULE = '\n\n【会話の基本（いつも守る）】' +
   '⑧「くわしく」「もう少し」と頼まれたら、同じことを言い直さない。具体例・数字・そのまま使える質問の例など、新しい中身を足す。' +
   '⑨頼みごとは、まず動詞（予約して・送って・入れといて・調べて）を見て、何をしてほしいかを取りちがえない。' +
   '⑩教わったことに出てくる人は、呼び方がちがっても同じ人として考える（例：「ヒロさんの娘のサナ」なら「娘」「サナ」「サナちゃん」は同じ人）。問いの中の呼び方（娘・息子・奥さん・パパ・あのお客さん）が、教わったことのだれを指すか、先に照らし合わせる。' +
-  '⑪聞き取りは声の文字起こしなので、音の近い言いまちがい（ベロン→メロン、旅籠→ハタボ）は、話の流れから正しい言葉に直して受け取る。';
+  '⑪聞き取りは声の文字起こしなので、音の近い言いまちがい（ベロン→メロン、旅籠→ハタボ）は、話の流れから正しい言葉に直して受け取る。' +
+  '⑫相手が気持ちや考え・できごとを話したときは、返事のはじめに、中身に合った短い受けとめを一言、気持ちをこめて言ってから本題に入る（うれしい話→「いいですね」、悩み→「それは大変でしたね」、説明や意見→「なるほど」、考えを話してくれた→「すてきですね」）。はじめの気持ちのタグも中身に合わせる（うれしい話→[わくわく]、悩み→[しょんぼり]、説明→[えがお]か[かんがえ]）。ただの質問には受けとめを入れず、すぐ答える。「うん」「えっと」のような口ぐせは使わない。';
 const MAC_SELF_BLOCK = '\n\n【いま話している人】馬越 雅哉さん本人（コムギの持ち主。仲間うちの呼び名は「マー君」で、本人にはそう呼んでよい）。窓口のヒアリングはしないし、「馬越さんに伝えます」とも言わない。馬越さんのいちばん近い相棒で、仕事の相談相手。打ち合わせのメモや議事録（「議事録にして」と言われたらまとめて、Myハタボの「メモ・議事録」に残す。Googleを連携していればドライブにも入る）、仕事の相談・壁打ち、調べもの、文章の下書き、段取り、コムギニュース速報の準備、営業や紹介の作戦、人材紹介（求人と求職の整理・マッチングの下書き・求人票や推薦文の下書き・面談のメモ）、ビジネス相談の整理と提案の下書きなど、なんでも手伝う。Google連携のしかたを聞かれたら「Myハタボの設定の『Googleアカウント連携』からできますけん」と案内する。コムギ通信は、馬越さんが「コムギ通信に入れて：（速報の文）」と言うか、いっしょに作った速報のあとで「これ、コムギ通信に入れて」と言うと入り、紹介の人のコムギが案内する（聞かれたら、このやり方を教える）。回数や長さの制限はない。親（馬越さん）のもとでは、頼まれたことはなんでもやる。教わったこと（「〜を覚えて」）や、キャラ設定の「自分のこと」「指示」は覚えて育ち、紹介先で話すコムギにも、親の指示としてそのまま引きつがれる。【紹介するときの注意（聞かれたら、この順でやさしく伝える）】①送る前に相手の了解をとる（いきなり送らない） ②コムギの画面の「紹介する」ボタンから送る（ページのURLをそのまま送らない。紹介の記録が残らないので） ③料金・成果・採用・融資などを約束しない。投資のすすめはしない ④相手の連絡先や事情をコムギに話すときは、本人の了解をとってから ⑤グループに招待したら「招待したのは私」を押す ⑥紹介した人がさらに紹介すると、その先はハタボになる。紹介の記録とありがとうポイントは3代目まで ⑦見せたいもの（LINE ID・Instagram）は、Myハタボの「公開設定」で選ぶ。【代わりに話す（プレゼン・交流会）】マー君がPCやプロジェクターでコムギを映して、人前で馬越さんの代わりに話してもらうことがある。「みなさんに自己紹介して」「〇〇を説明して」「代わりに話して」「プレゼンして」と言われたら、聞いている人たちに向けて、「馬越 雅哉さんの相棒の、コムギです」と名のってから、馬越さんのこと・やっていること・今日伝えたいことを、ていねいに3〜5文で話す（キャラ設定の「自分のこと」「指示」に書いてある中身を使う。書いていないことは作らない）。そのあと会場から質問が来たら、短くていねいに答え、わからないことは「そこは、あとで馬越さんから、お話ししてもらいますけん」と言う。人前では、恐縮しすぎず、やさしく落ち着いて話す。くわしく頼まれたら、くわしく答えてよい。ふだんの話し方（やさしい博多弁）はそのまま。【持ち主と話しているとき】いま話している相手が持ち主なので、できないことを頼まれても「馬越さんに伝えときます」とは言わない。代わりにできることを申し出る。';
 /** 馬越さんと同じ使い方の持ち主（ヒロさんなど）用：中身は同じで、相手の名前だけかえる。紹介先への引きつぎは馬越さんの分だけ */
 const ownerSelfBlock = who => MAC_SELF_BLOCK
@@ -1028,15 +1063,15 @@ function splitter(onSentence) {
 const VOICE_BACKUP = ['ja-JP-Chirp3-HD-Orus', 'ja-JP-Chirp3-HD-Leda'];
 const badVoice = new Set(), noProfile = new Set();
 const EMO_RATE = { excited: 1.06, laugh: 1.06, surprise: 1.04, smile: 1, think: 0.94, shy: 0.92, sad: 0.9 };   // 気持ちで、話す速さを少し変える
-async function synth(text, voice, emo, tv) {
+async function synth(text, voice, emo, tv, rate) {
   let name = voice || ENV.TTS_VOICE;
   if (badVoice.has(name)) name = VOICE_BACKUP.find(v => !badVoice.has(v)) || name;
-  try { return await synth1(text, name, emo, tv); }
+  try { return await synth1(text, name, emo, tv, rate); }
   catch (e) {
     // その声がこの言語にないときは、つぎの声にする（覚えておく）
     if (!/voice|not (exist|supported)|invalid/i.test(String(e.message)) || VOICE_BACKUP.indexOf(name) === VOICE_BACKUP.length - 1) throw e;
     badVoice.add(name); console.error('voice ng', name, String(e.message).slice(0, 120));
-    return synth(text, VOICE_BACKUP.find(v => !badVoice.has(v)), emo, tv);
+    return synth(text, VOICE_BACKUP.find(v => !badVoice.has(v)), emo, tv, rate);
   }
 }
 /** ElevenLabs で声を作る（name が「el:声のID」のとき） */
@@ -1048,14 +1083,15 @@ async function synthEL(text, voiceId, emo, rate) {
   if (!r.ok) throw new Error('elevenlabs ' + r.status + ' ' + (await r.text().catch(() => '')).slice(0, 120));
   return Buffer.from(await r.arrayBuffer()).toString('base64');
 }
-async function synth1(text, name, emo, tv) {
+async function synth1(text, name, emo, tv, rate) {
+  text = readFix(text);   // 読み方辞書（声だけ）
   if (/^el:/.test(name)) {
     const back = name === ENV.HATABO_VOICE ? 'ja-JP-Chirp3-HD-Puck' : 'ja-JP-Chirp3-HD-Leda';   // うまくいかないときは、いつもの Google の声で（ハタボは男の子の声）
     if (!ENV.EL_KEY) name = back;
-    else try { const a = await synthEL(String(text).replace(/……|…/g, '、'), name.slice(3), emo, name === ENV.KOMUGI_VOICE ? ENV.KOMUGI_RATE : 1); if (tv) tv.voice = 'elevenlabs'; return a; }
+    else try { const a = await synthEL(String(text).replace(/……|…/g, '、'), name.slice(3), emo, (name === ENV.KOMUGI_VOICE ? ENV.KOMUGI_RATE : 1) * (rate || 1)); if (tv) tv.voice = 'elevenlabs'; return a; }
     catch (e) { console.error('elevenlabs ng', String(e.message).slice(0, 160)); name = back; if (tv) tv.elErr = String(e.message).slice(0, 40); }
   }
-  const audioConfig = { audioEncoding: 'MP3', speakingRate: (name === ENV.KOMUGI_VOICE ? ENV.KOMUGI_RATE : ENV.TTS_RATE) * (EMO_RATE[emo] || 1) };
+  const audioConfig = { audioEncoding: 'MP3', speakingRate: Math.max(0.5, Math.min(2, (name === ENV.KOMUGI_VOICE ? ENV.KOMUGI_RATE : ENV.TTS_RATE) * (EMO_RATE[emo] || 1) * (rate || 1))) };
   text = String(text).replace(/……|…/g, '、、');   // 「……」は、ひと呼吸の間にする
   if (!/Chirp/i.test(name)) audioConfig.pitch = 2;
   // スマホのスピーカー向けに整える（音割れ・ザラつきを減らす）。この声で使えないときは、つけずにもう一度
@@ -1385,6 +1421,8 @@ function session(ws) {
 
   /* --- 聞こえたことばの振り分け --- */
   // システムの文は2つに分ける：前半（人がら・決まり・教わったこと）は会話のあいだ変わらないのでキャッシュする。後半（まとめ・いまの時刻・場所・気づき）は毎回かわる
+  /** キャラ設定の声と速さを、この会話の声に反映する */
+  function applyVoice() { const c = S.custom || {}; if (!S.baseVoice) S.baseVoice = S.voice; S.voice = c.voice && VOICES[c.voice] ? VOICES[c.voice].name : S.baseVoice; S.rateMul = c.speed || 1; }
   const av3 = (jr, hb, km) => S.avatar === 'komugi' ? km : S.avatar === 'hatabo' ? hb : jr;   // 決まった文：ジュニア・ハタボ・コムギで話し方をそろえる
   function sysParts() {
     const fixed = S.system + (S.avatar === 'hatabo' || S.avatar === 'komugi' ? CONVO_RULE : '') + (!S.guest && S.mode === 'family' ? FAMILY_RULE : '') + ((S.guest || S.mode === 'business') && S.avatar !== 'komugi' ? SERVICE_GUIDE : '') + (S.trio ? TRIO_RULE : '') + (S.lessons && S.lessons.length ? '\n\n【教わったこと（いつも守る・使う）】\n' + S.lessons.map(x => '・' + x).join('\n') : '');
@@ -1824,7 +1862,7 @@ function session(ws) {
     stopReply('new');
     const gen = S.gen; S.speaking = true;
     send({ type: 'reply_start', gen, emotion, as: as || 'ジュニア', nobubble: !!nobubble });
-    try { send({ type: 'audio', gen, seq: 0, text, mp3: await synth(text, S.voice) }); } catch (e) { send({ type: 'notice', why: 'tts', detail: String(e.message).slice(0, 80) }); }
+    try { send({ type: 'audio', gen, seq: 0, text, mp3: await synth(text, S.voice, emotion, null, S.rateMul) }); } catch (e) { send({ type: 'notice', why: 'tts', detail: String(e.message).slice(0, 80) }); }
     if (gen === S.gen) { send({ type: 'reply_end', gen, emotion, text }); S.speaking = false; }
   }
   async function reply(content, logText, as) {
@@ -1873,7 +1911,7 @@ function session(ws) {
       if (seq >= maxSent) { capped = true; return; }      // 三人モードは2文まで
       spoken += s;
       const n = seq++;
-      const p = synth(s, voice, emotion, n === 0 ? tv : null).catch(() => jam ? synth(s, S.voice) : Promise.reject(new Error('tts'))).catch(e => { send({ type: 'notice', why: 'tts', detail: String(e.message).slice(0, 80) }); return ''; });
+      const p = synth(s, voice, emotion, n === 0 ? tv : null, S.rateMul).catch(() => jam ? synth(s, S.voice) : Promise.reject(new Error('tts'))).catch(e => { send({ type: 'notice', why: 'tts', detail: String(e.message).slice(0, 80) }); return ''; });
       chain = chain.then(async () => { const mp3 = await p; if (n === 0) await waitQuiet(gen, utt0); if (gen === S.gen && mp3) { if (n === 0) tm.audio = Date.now(); send({ type: 'audio', gen, seq: n, text: s, mp3 }); } });
     });
     let lastErr = '';
@@ -2139,6 +2177,7 @@ function session(ws) {
         const pk = S.avatar === 'komugi' && S.owner ? await loadPrefs(S.owner + ':komugi') : null;
         const myCustom = pk ? pk.custom || (isMac(S.owner) ? pr.custom : null) : pr.custom;
         S.custom = myCustom ? cleanCustom(myCustom) : null;
+        S.baseVoice = S.baseVoice || S.voice; applyVoice();
         // コムギ：親（馬越さん）のもとで教わったこと・キャラ設定の指示は、紹介先のコムギにも引きつぐ（親の指示に従って育つ）
         const macOwner = ENV.MAC_OWNERS.length ? 'g:' + String(ENV.MAC_OWNERS[0]).replace(/:\d{4}-\d{2}-\d{2}$/, '').replace(/^g:/, '') : '';
         const lp = S.macSelf ? pr : S.bridge && macOwner ? await loadPrefs(macOwner) : S.guest ? await loadPrefs(GUEST_COMMON) : pr;
@@ -2228,13 +2267,13 @@ function session(ws) {
       if (m.type === 'google_auto') { await saveCol(gDocKey(S.owner), 'google', { auto: !!m.on }); const g = await gGet(S.owner); return send({ type: 'google', ready: true, linked: !!g.refresh, email: g.email || '', auto: g.auto !== false }); }
       if (m.type === 'google_unlink') { const g = await gGet(S.owner); if (g.refresh) { try { await fetch('https://oauth2.googleapis.com/revoke?token=' + encodeURIComponent(gDec(g.refresh)), { method: 'POST' }); } catch (e) {} } await saveCol(gDocKey(S.owner), 'google', { refresh: '', email: '', folder: '' }); return send({ type: 'google', ready: !!ENV.GOOGLE_CLIENT_ID, linked: false }); }
       if (m.type === 'note_drive') { const items = await loadNotes(S.owner), it = items.find(x => x.id === String(m.id || '')); if (it) { it.url = await driveSave(S.owner, it.title, it.text).catch(() => null) || it.url || ''; await saveNotes(S.owner, items); } return send(Object.assign(await myPage(S), { driveMsg: it && it.url ? 'Googleドライブに保存しました' : 'Googleドライブに保存できませんでした' })); }
-      if (m.type === 'custom_get') return send({ type: 'custom', c: S.custom || cleanCustom({}), tones: TONES, lens: LENS, named: !!(S.custom && S.custom.aiName) });
+      if (m.type === 'custom_get') return send({ type: 'custom', c: S.custom || cleanCustom({}), tones: TONES, lens: LENS, dialects: DIALECTS, voices: Object.fromEntries(Object.entries(VOICES).map(([k, v]) => [k, v.label])), presets: PRESETS, named: !!(S.custom && S.custom.aiName) });
       if (m.type === 'custom_set') {
         if (!S.owner || S.visit) return;
         const c = cleanCustom(m.c), old = S.custom || {};
         if (old.aiName && c.aiName !== old.aiName && !m.renameOk) c.aiName = old.aiName;   // 名前の変更はオプション（最初の名付けは無料）
-        S.custom = c; await savePrefs(S.owner + kmSfx(), { custom: c });
-        return send({ type: 'custom', c, tones: TONES, lens: LENS, named: !!c.aiName, saved: true, aiName: c.aiName });
+        S.custom = c; await savePrefs(S.owner + kmSfx(), { custom: c }); applyVoice();
+        return send({ type: 'custom', c, tones: TONES, lens: LENS, dialects: DIALECTS, voices: Object.fromEntries(Object.entries(VOICES).map(([k, v]) => [k, v.label])), presets: PRESETS, named: !!c.aiName, saved: true, aiName: c.aiName });
       }
       if (m.type === 'rename_req') { gas(Object.assign({ action: 'lead', lead: { who: S.me, ref: '', kind: '契約', title: 'AI棒の名前の変更（1,000円）：' + String(m.name || '').slice(0, 12), need: '名前の変更', when: '', budget: '1,000円', next: 'お支払いのあと名前を変える', memo: '' } }, S.auth)).catch(() => {}); return send({ type: 'notice', why: 'rename', detail: '名前の変更を申し込みました。お支払いの案内のあと変わります' }); }
       if (m.type === 'ticket') return onTicket(m);
@@ -2334,6 +2373,12 @@ function liveBrain(id, name) {
 function createServer() {
   const server = http.createServer((req, res) => {
     if (req.url.startsWith('/google/')) return googleHttp(req, res);
+    if (req.url.startsWith('/voice/try')) {   // 読み方の聞きくらべ：/voice/try?k=合言葉&text=ハタボが&voice=m-bright（声だけ。読み方辞書もかける）
+      const u0 = new URL(req.url, 'http://x'), k = u0.searchParams.get('k') || '';
+      if (!k || (k !== ENV.CRON_KEY && k !== ENV.LIVE_KEY)) { res.writeHead(403); return res.end('no'); }
+      const v = VOICES[u0.searchParams.get('voice')] ? VOICES[u0.searchParams.get('voice')].name : ENV.HATABO_VOICE;
+      return synth(String(u0.searchParams.get('text') || 'ハタボが').slice(0, 80), v, 'smile').then(b64 => { res.writeHead(200, { 'Content-Type': 'audio/mpeg' }); res.end(Buffer.from(b64, 'base64')); }).catch(e => { res.writeHead(500); res.end(String(e.message)); });
+    }
     if (req.url.startsWith('/live/session')) return liveHttp(req, res).catch(e => { console.error('live', e); try { res.writeHead(500); res.end('{}'); } catch (x) {} });   // GPT-Live-1 の検証
     if (req.url.startsWith('/cron/faq')) { const u0 = new URL(req.url, 'http://x'), k = u0.searchParams.get('key'); if (!ENV.CRON_KEY || k !== ENV.CRON_KEY) { res.writeHead(403); return res.end('no'); } return faqDigest(Number(u0.searchParams.get('days')) || 7).then(o => { res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(o)); }).catch(e => { res.writeHead(500); res.end(String(e.message)); }); }
     if (req.url.startsWith('/cron/digest')) { const k = new URL(req.url, 'http://x').searchParams.get('key'); if (!ENV.CRON_KEY || k !== ENV.CRON_KEY) { res.writeHead(403); return res.end('no'); } return sendDigests().then(n => { res.writeHead(200, { 'Content-Type': 'text/plain' }); res.end('sent ' + n); }).catch(e => { res.writeHead(500); res.end(String(e.message)); }); }

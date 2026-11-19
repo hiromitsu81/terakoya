@@ -762,7 +762,7 @@ body.svc .svcnote { display: block; }
 .fh { display: flex; gap: 10px; align-items: center; } .fh b { display: block; font: 800 15px var(--display); } .fh span { font-size: 12px; color: #5E6B85; }
 .fsoc { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; } .fsoc a { font-size: 12.5px; color: #16233F; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: #EEF1F6; text-decoration: none; }
 .hbsw { display: flex; gap: 10px; align-items: center; padding: 8px 0; font-size: 14px; font-weight: 700; } .hbsw input { width: 20px; height: 20px; accent-color: #16233F; }
-.hbin { width: 100%; font: inherit; font-size: 15px; padding: 10px 12px; border-radius: 12px; border: 1.5px solid #DCE2EC; margin-bottom: 4px; }
+.hbin { width: 100%; font: inherit; font-size: 16px; padding: 10px 12px; border-radius: 12px; border: 1.5px solid #DCE2EC; margin-bottom: 4px; }
 
 .hbl { display: block; font: 800 12px var(--display); color: #5E6B85; margin: 10px 0 4px; }
 textarea.hbin { resize: vertical; line-height: 1.6; }
@@ -805,7 +805,7 @@ body.chatview .chatv{display:flex}
 .chatv .cv-m a{color:#2B4C8C}
 .chatv .cv-bot{border-top:1px solid #E6EAF2;padding:8px 12px calc(10px + env(safe-area-inset-bottom));background:#fff}
 .chatv .cv-in{display:flex;gap:8px;align-items:center;border:1px solid #DCE2EC;border-radius:24px;padding:4px 4px 4px 14px}
-.chatv .cv-in input{flex:1;border:0;outline:0;font:16px inherit;color:#16233F;background:transparent;min-width:0}
+.chatv .cv-in input{flex:1;border:0;outline:0;font-family:inherit;font-size:16px;color:#16233F;background:transparent;min-width:0}
 .chatv .cv-in button{border:0;background:#16233F;color:#fff;border-radius:50%;width:36px;height:36px;font:800 16px inherit}
 .chatv .cv-row{display:flex;align-items:center;justify-content:space-between;margin-top:10px}
 .chatv .cv-row .cv-s{width:96px;display:flex}
@@ -929,6 +929,12 @@ body.av-hatabo .vsw, body.av-komugi .vsw { display: inline-flex; justify-self: c
 body.av-hatabo .hbonly, body.av-komugi .hbonly { display: inline-flex; align-items: center; justify-content: center; }
 body.av-hatabo .cvfab, body.av-komugi .cvfab { display: none !important; }
 .chatv .cv-top #cvSpk[aria-pressed="false"] { opacity: .6; }
+/* iPhone：文字の入力欄が16px未満だと、押したときに画面が拡大して左に寄る。入力欄はいつも16px以上 */
+@supports (-webkit-touch-callout: none) { input:not([type=range]):not([type=checkbox]):not([type=radio]), textarea, select { font-size: max(16px, 1em) !important; } }
+.vpre{display:flex;gap:8px;overflow-x:auto;padding:4px 0 10px;scrollbar-width:none}.vpre::-webkit-scrollbar{display:none}
+.vpre button{flex:0 0 auto;border:1px solid #DCE2EC;background:#fff;color:#16233F;border-radius:14px;padding:10px 14px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer}
+.vpre button.on{background:#16233F;color:#fff;border-color:#16233F}
+.hbr{width:100%;accent-color:#16233F;margin:2px 0 6px}
 .chatv .cv-top #cvScr.on { background: #d9483b; border-color: #d9483b; color: #fff; }
 :is(html.kmapp, body.av-komugi) .vsw { background: rgba(22,18,31,.9); border: 1px solid #332B45; }
 :is(html.kmapp, body.av-komugi) .vsw button { color: #A9A2BC; }
@@ -3129,7 +3135,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
       body.querySelectorAll('[data-copy]').forEach(b => b.onclick = async () => { const n = list.find(x => x.id === b.dataset.copy); try { await navigator.clipboard.writeText(n.title + '\n\n' + n.text); toast('コピーしたよ'); } catch (e) { toast('コピーできなかった'); } });
       body.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { if (confirmDel(b)) jrSend({ type: 'note_del', id: b.dataset.del }); });
     } else if (p === 'settings') {
-      const rows = [['custom', 'キャラ設定', '名前・呼び方・話し方・長さ・いつもの指示'], ['google', 'Googleアカウント連携', KOMUGI_APP ? 'コムギとの会話・議事録・メモを、自分のGoogleドライブへ' : '議事録やメモをGoogleドライブへ'], ['social', '公開設定', 'ガチャに出る・LINE ID・Instagram'], ...(J.mac ? [['docs', '資料フォルダ', 'ドライブの資料をコムギに読ませる・紹介先で使うかを選ぶ']] : J.bridge ? [['docs', '共有された資料', '馬越さんが共有した資料。自分のドライブにも入れられます']] : []), ...(J.office ? [['reqs', '事務局への声', '要望・不具合・問い合わせの一覧と採用']] : []), ['plan', 'プラン・支払い', 'お試し・お支払い'], ['ticket', '追加チケット', '回数をこえたときのチケット'], ['share', '紹介する', 'ハタボのカードを友だちに'], ['times', 'ハタボタイムズ', 'お知らせ・使い方'], ['oa', '公式LINEのトークへ', 'トークをピン留めしておくと、いつでもすぐ開けます'], ['pc', 'PCで使う', 'PCのブラウザでも、同じハタボと話せます']];
+      const rows = [['custom', 'キャラ設定', '名前・呼び方・声と方言・話し方・長さ・いつもの指示'], ['google', 'Googleアカウント連携', KOMUGI_APP ? 'コムギとの会話・議事録・メモを、自分のGoogleドライブへ' : '議事録やメモをGoogleドライブへ'], ['social', '公開設定', 'ガチャに出る・LINE ID・Instagram'], ...(J.mac ? [['docs', '資料フォルダ', 'ドライブの資料をコムギに読ませる・紹介先で使うかを選ぶ']] : J.bridge ? [['docs', '共有された資料', '馬越さんが共有した資料。自分のドライブにも入れられます']] : []), ...(J.office ? [['reqs', '事務局への声', '要望・不具合・問い合わせの一覧と採用']] : []), ['plan', 'プラン・支払い', 'お試し・お支払い'], ['ticket', '追加チケット', '回数をこえたときのチケット'], ['share', '紹介する', 'ハタボのカードを友だちに'], ['times', 'ハタボタイムズ', 'お知らせ・使い方'], ['oa', '公式LINEのトークへ', 'トークをピン留めしておくと、いつでもすぐ開けます'], ['pc', 'PCで使う', 'PCのブラウザでも、同じハタボと話せます']];
       const curG = store.get('jrPlan2', J.canPlan ? 'super' : 'std');
       const GR = [['std', 'X', 'ふだん使い。速くて手軽'], ['high', 'G', '賢いモデルで、少しくわしく'], ['super', 'Z', 'Claudeと同じ精度で、最後まで']];
       const gradeCard = `<div class="hbc"><div class="k">GRADE</div><h3>グレード</h3>${J.canPlan ? `<p>いまのグレードを切りかえられます。お試しのあいだは、3つを使いくらべてみてね。</p><div class="hbgr">${GR.map(([k, n, d0]) => `<button type="button" class="hbgrb${k === curG ? ' on' : ''}" data-grade="${k}"><b>${n}</b><span>${d0}</span></button>`).join('')}</div>` : `<p>いまのグレード：<b>${PLAN_NAME[curG] || 'X'}</b>。グレードを上げるときは「プラン・支払い」からどうぞ。</p>`}</div>`;
@@ -3181,11 +3187,28 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
           <label class="hbl">あなたの呼び方</label><input class="hbin" id="cuCall" maxlength="20" placeholder="例：ヒロさん" value="${esc(c.callMe)}">
           <label class="hbl">話し方</label><select class="hbin" id="cuTone">${opt(C.tones || {}, c.tone)}</select>
           <label class="hbl">答えの長さ</label><select class="hbin" id="cuLen">${opt(C.lens || {}, c.len)}</select></div>
+        <div class="hbc"><div class="k">VOICE</div><h3>声と話し方</h3><p>型を選んでから、気になるところだけ強弱で調整できます。</p>
+          <div class="vpre" id="cuPre">${Object.entries(C.presets || {}).map(([k, v]) => `<button type="button" data-pre="${k}" class="${k === c.preset ? 'on' : ''}">${esc(v.label)}</button>`).join('')}</div>
+          <label class="hbl">声</label><select class="hbin" id="cuVoice"><option value="">キャラのまま</option>${opt(C.voices || {}, c.voice)}</select>
+          <label class="hbl">方言</label><select class="hbin" id="cuDia">${opt(C.dialects || {}, c.dialect || 'char')}</select>
+          <label class="hbl">方言の濃さ <span id="cuDlvT"></span></label><input type="range" class="hbr" id="cuDlv" min="0" max="2" step="1" value="${c.dlv ?? 1}">
+          <label class="hbl">話す速さ <span id="cuSpdT"></span></label><input type="range" class="hbr" id="cuSpd" min="0.8" max="1.25" step="0.05" value="${c.speed || 1}">
+          <label class="hbl">間のとり方 <span id="cuPauT"></span></label><input type="range" class="hbr" id="cuPau" min="0" max="2" step="1" value="${c.pause ?? 1}">
+          <label class="hbl">気持ちの強さ <span id="cuEmoT"></span></label><input type="range" class="hbr" id="cuEmo" min="0" max="2" step="1" value="${c.emo ?? 1}">
+          <label class="hbl">ていねいさ <span id="cuPolT"></span></label><input type="range" class="hbr" id="cuPol" min="0" max="2" step="1" value="${c.polite ?? 1}">
+          <p style="font-size:11.5px">保存すると、次の返事から変わります。子どもの声や特別な声は、これから追加します。</p></div>
         <div class="hbc"><div class="k">ABOUT ME</div><h3>あなたのこと</h3><textarea class="hbin" id="cuAbout" rows="4" maxlength="600" placeholder="例：川崎で、お祭りの企画やお店のDXをしています。子どもが4人います。">${esc(c.about)}</textarea></div>
         <div class="hbc"><div class="k">INSTRUCTIONS</div><h3>いつもの指示</h3><textarea class="hbin" id="cuRules" rows="6" maxlength="1500" placeholder="例：結論から先に。むずかしい言葉は使わない。予定の話のときは、前の日に知らせて。">${esc(c.rules)}</textarea>
           <p style="font-size:11.5px">ハタラボの決まり・安全・正直さのほうが先です。ほかの人のことや、してはいけないことを頼む指示は使われません。</p>
           <button type="button" class="hbbtn" id="cuSave">保存する</button></div>`;
-      $('cuSave').onclick = () => { jrSend({ type: 'custom_set', c: { aiName: $('cuName').value, callMe: $('cuCall').value, tone: $('cuTone').value, len: $('cuLen').value, about: $('cuAbout').value, rules: $('cuRules').value } }); };
+      const VT = { cuDlv: ['うすめ', 'ふつう', 'こいめ'], cuPau: ['テンポよく', 'ふつう', 'ゆったり'], cuEmo: ['おだやか', 'ふつう', 'ゆたか'], cuPol: ['くだけた', 'ていねい', '敬語'] };
+      let pre = c.preset || '';
+      const vShow = () => { Object.keys(VT).forEach(id => { $(id + 'T').textContent = '：' + VT[id][Number($(id).value)]; }); $('cuSpdT').textContent = '：' + Number($('cuSpd').value).toFixed(2) + '倍'; $('cuDlv').disabled = ['char', 'std'].includes($('cuDia').value); };
+      const vSet = v => { $('cuVoice').value = v.voice || ''; $('cuDia').value = v.dialect; $('cuDlv').value = v.dlv; $('cuSpd').value = v.speed; $('cuPau').value = v.pause; $('cuEmo').value = v.emo; $('cuPol').value = v.polite; vShow(); };
+      $('cuPre').querySelectorAll('[data-pre]').forEach(b => b.onclick = () => { pre = b.dataset.pre; $('cuPre').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); vSet((C.presets || {})[pre]); });
+      ['cuVoice', 'cuDia', 'cuDlv', 'cuSpd', 'cuPau', 'cuEmo', 'cuPol'].forEach(id => $(id).addEventListener('input', vShow)); vShow();
+      $('cuSave').onclick = () => { jrSend({ type: 'custom_set', c: { aiName: $('cuName').value, callMe: $('cuCall').value, tone: $('cuTone').value, len: $('cuLen').value, about: $('cuAbout').value, rules: $('cuRules').value,
+        preset: pre, voice: $('cuVoice').value, dialect: $('cuDia').value, dlv: Number($('cuDlv').value), speed: Number($('cuSpd').value), pause: Number($('cuPau').value), emo: Number($('cuEmo').value), polite: Number($('cuPol').value) } }); };
       const rn = document.getElementById('cuRename'); if (rn) rn.onclick = () => { const nm = prompt('新しい名前（12文字まで）'); if (nm) jrSend({ type: 'rename_req', name: nm }); };
     } else if (p === 'ticket') {
       const packs = d.ticketPacks || [];
