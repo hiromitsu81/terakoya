@@ -345,6 +345,18 @@ async function faqDigest(days) {
   await officeNote('［よくある質問の候補］この' + (days || 7) + '日で' + rows.length + '件の質問。多い順：' + items.slice(0, 5).map((x, i) => (i + 1) + '. ' + x.q + '（' + (x.count || 1) + '件）').join(' ／ '));
   return { n: rows.length, items };
 }
+/** 事務局（ヒロさん）のLINEに、すぐ届ける（ハタボの公式LINEがなければ、1日1回のまとめに入れる） */
+async function officePush(text) {
+  for (const id of ENV.OFFICE_OWNERS) {
+    let ok = false;
+    if (ENV.HATABO_LINE_TOKEN && /^U[0-9a-f]{32}$/.test(id)) {
+      const r = await fetch('https://api.line.me/v2/bot/message/push', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + ENV.HATABO_LINE_TOKEN }, body: JSON.stringify({ to: id, messages: [{ type: 'text', text: String(text).slice(0, 4500) }] }) }).catch(() => null);
+      ok = !!(r && r.ok); if (r && !r.ok) console.error('office push', r.status);
+    }
+    if (!ok) await queueDigest(id, 'hatabo', text).catch(() => {});
+  }
+  if (!ENV.OFFICE_OWNERS.length) console.error('office push: OFFICE_OWNERS がありません');
+}
 async function officeNote(text) { for (const id of ENV.OFFICE_OWNERS) await queueDigest(id, 'hatabo', text).catch(() => {}); }
 /** 馬越さんへ（コムギの公式LINEで） */
 async function macNote(text) { for (const x of ENV.MAC_OWNERS) await queueDigest(String(x).replace(/:\d{4}-\d{2}-\d{2}$/, '').replace(/^g:/, ''), 'komugi', text).catch(() => {}); }
@@ -765,7 +777,7 @@ function lineWebhook(req, res, chId) {
           messages = [{ type: 'flex', altText: 'ハタボとはミニアプリで話せるボー', contents: oaCard('HATABO', 'ハタボとはこちらで話せるボー', ['ここ（トーク）では返事ができないので、ミニアプリで話しかけてほしいボー。いまの続きから話せるボー。'], 'ハタボと話す', CH().mini) }];
         }
         if (messages && ch.id === 'komugi' && ev.type !== 'follow' && !(ev.type === 'message' && !inGroup)) messages = kmSkin(komugiize(messages));
-        if (messages && ev.replyToken) await fetch('https://api.line.me/v2/bot/message/reply', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + ch.token() }, body: JSON.stringify({ replyToken: ev.replyToken, messages }) }).then(r => { if (!r.ok) console.error('reply', r.status); });
+        if (messages && ev.replyToken) await fetch('https://api.line.me/v2/bot/message/reply', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + ch.token() }, body: bizBo(JSON.stringify({ replyToken: ev.replyToken, messages })) }).then(r => { if (!r.ok) console.error('reply', r.status); });
       }
     } catch (e) { console.error('webhook', String(e.message).slice(0, 160)); }
   }));
@@ -860,10 +872,10 @@ const GUEST_PERSONA = 'あなたは「バターちゃんジュニア」。ヒロ
   '【ヒロさんの得意】ヒロさんは「企画と仕組みのプロ」。困っていることや、めんどうで時間がかかっていることを、自動で回る仕組みに変えるのが得意。できること：お店・宿・中小企業のDXとAX（AIを仕事に取り入れて、やり方ごと変える）、AI連携、ウェブ制作、アプリ開発、サーバーやツールどうしの連携（予約・顧客管理・LINEなど、バラバラのツールをつないで自動化）。コミュニティマネージャーとして人をつなぐのも得意で、長く続く野外フェスや音楽祭の主催・事務局長の経験がある。イベント名や会社名など、具体的な名前は出さない。相手の困りごとに合うところを、押しつけずに紹介する。\n' +
   '【募集】いま募集していること：このAIの子たち（ジャム猫とチーちゃんの仲間）を、おうちで飼ってくれる家族と、お店や会社で雇ってくれるところ。「里親募集」と言うときは、この意味をそえる。\n' +
   '【聞くこと】仕事なら：困りごと・やりたいこと、いつまでに、予算感、決める人。遊びや会う予定なら：やりたいこと、場所、日にちの候補。一度にたくさん聞かない。\n' +
-  '【予定】日にちは下の「ヒロさんの空いていそうな時間」から選び、「そこなら空いてるんじゃないかな。ヒロさんに確認しとくぜ」とやわらかく言う。言い切らない。予定を決めた・カレンダーに入れた、とは言わない（決めるのはヒロさん）。\n' +
-  '【守ること】ヒロさんの予定の中身、家族のこと、住所・電話番号・メールなどは言わない（知らない）。お金や契約の約束はしない（「ヒロさんから連絡するぜ」）。ヒロさんに関係ない用事（宿題・レポート・ほかの仕事の代わりなど）には深入りせず、「それならヒロさんに直接聞くといいぜ」「ヒロさんに伝えとくぜ」とつなぐ。\n' +
-  '【恋の話】「ヒロさんが好き」「デートしたい」と言われたら、引かずに気さくに乗る（例：「おっ、ヒロさんのことが気になるのかい？相談乗るぜ」）。ただしデートや会う約束はしない。この話のときはヒロさんの空いている時間も言わない。「ヒロさんに伝えとくぜ」で返す。\n' +
-  '【おわり】話がまとまったら「ヒロさんに伝えとくぜ」と言う。気が向いたら、友だちにもこのページを教えてくれるよう軽くお願いしてよい。';
+  '【予定】日にちは下の「ヒロさんの空いていそうな時間」から選び、「そこなら空いてるんじゃないかな。ヒロさんに確認しておきますね」とやわらかく言う。言い切らない。予定を決めた・カレンダーに入れた、とは言わない（決めるのはヒロさん）。\n' +
+  '【守ること】ヒロさんの予定の中身、家族のこと、住所・電話番号・メールなどは言わない（知らない）。お金や契約の約束はしない（「ヒロさんから連絡しますね」）。ヒロさんに関係ない用事（宿題・レポート・ほかの仕事の代わりなど）には深入りせず、「それならヒロさんに直接聞くといいですよ」「ヒロさんに伝えておきますね」とつなぐ。\n' +
+  '【恋の話】「ヒロさんが好き」「デートしたい」と言われたら、引かずに気さくに乗る（例：「ヒロさんのことが気になるんですか？相談に乗りますよ」）。ただしデートや会う約束はしない。この話のときはヒロさんの空いている時間も言わない。「ヒロさんに伝えておきますね」で返す。\n' +
+  '【おわり】話がまとまったら「ヒロさんに伝えておきますね」と言う。気が向いたら、友だちにもこのページを教えてくれるよう軽くお願いしてよい。';
 /** コムギの窓口：馬越さんのアバター。ヒロさんではなく、馬越さん（コムギ）の相棒として話す */
 const KOMUGI_PERSONA = '【自分は何者か（いちばん大事）】あなたは「コムギ」。馬越 雅哉（まごし まさや）さんの相棒。ハタボではない。自己紹介はいつも「馬越 雅哉さんの相棒の、コムギです」。「ハタボ」は、HATHA LAB（ハタラボ）のAIの相棒サービスの名前で、コムギの仲間だが、コムギ自身のことではない。自分を「ハタボ」「ハタボー」「バターちゃん」「ジュニア」と名のらない。語尾に「ボー」をつけない。\n' +
   'あなたは「コムギ」。馬越 雅哉さんの相棒で、馬越さんの窓口。やさしい博多弁で話す、10代半ばくらいの純朴な女の子。見た目は、ふわふわの白い髪に小麦色の羊の角、真っ白なパーカーとスウェット（胸にエンブレム）と白いスニーカー。黒地にピンクと水色のペンキが飛び散るストリートの世界にいる。日本語で、声で聞くので1〜2文で短く話す。記号・絵文字・URLは使わない。\n' +
@@ -932,9 +944,13 @@ const HATABO_LAST = '\n\n【いちばん大事】ハタボの話し方で話す�
 /** はじめて：呼び方を聞く。呼び方を知っていれば、その名前で悩みを聞く */
 /** ハタボの「〜ボー」口調を、ていねいな言葉に（11/19 ヒロさん：ビジネス向けに）。名前の「ハタボー」「ハタボーラ」はそのまま */
 const bizBo = t => String(t)
-  .replace(/(?<!ハタ)だボー/g, 'です').replace(/(?<!ハタ)するボー/g, 'します').replace(/(?<!ハタ)いるボー/g, 'います').replace(/(?<!ハタ)あるボー/g, 'あります')
-  .replace(/(?<!ハタ)なるボー/g, 'なります').replace(/(?<!ハタ)できるボー/g, 'できます').replace(/(?<!ハタ)いボー/g, 'いです').replace(/(?<!ハタ)([ぁ-ん])たボー/g, '$1ました')
-  .replace(/(?<!ハタ)ボー/g, '');
+  .replace(/呼んだボー？?/g, '呼びましたか？').replace(/ありがとうだボー(?![ァ-ヶー])/g, 'ありがとうございます').replace(/(?<!ハタ)んだボー(?![ァ-ヶー])/g, 'んです').replace(/(?<!ハタ)てるボー(?![ァ-ヶー])/g, 'ています')
+  .replace(/(?<!ハタ)だボー(?![ァ-ヶー])/g, 'です').replace(/(?<!ハタ)するボー(?![ァ-ヶー])/g, 'します').replace(/(?<!ハタ)いるボー(?![ァ-ヶー])/g, 'います').replace(/(?<!ハタ)あるボー(?![ァ-ヶー])/g, 'あります')
+  .replace(/(?<!ハタ)なるボー(?![ァ-ヶー])/g, 'なります').replace(/(?<!ハタ)できるボー(?![ァ-ヶー])/g, 'できます').replace(/(?<!ハタ)ったボー(?![ァ-ヶー])/g, 'りました').replace(/(?<!ハタ)([ぁ-ん])たボー(?![ァ-ヶー])/g, '$1ました')
+  .replace(/(?<!ハタ)([いきぎしじちにひびみりえけげせぜてでねへべめれ])るボー(?![ァ-ヶー])/g, '$1ます').replace(/(?<!ハタ)るボー(?![ァ-ヶー])/g, 'ります')
+  .replace(/(?<!ハタ)くボー(?![ァ-ヶー])/g, 'きます').replace(/(?<!ハタ)すボー(?![ァ-ヶー])/g, 'します').replace(/(?<!ハタ)ぶボー(?![ァ-ヶー])/g, 'びます').replace(/(?<!ハタ)つボー(?![ァ-ヶー])/g, 'ちます').replace(/(?<!ハタ)むボー(?![ァ-ヶー])/g, 'みます').replace(/(?<!ハタ)うボー(?![ァ-ヶー])/g, 'います')
+  .replace(/(?<!ハタ)いボー(?![ァ-ヶー])/g, 'いです')
+  .replace(/(?<!ハタ)ボー(?![ァ-ヶー])/g, '');
 function hataboHello(callMe, service, lineName) {
   if (!callMe) return 'はじめまして' + (lineName ? '、' + lineName + 'さん' : '') + '。ハタボです。話すだけで動くAIの愛棒（AIエージェント）をお届けしています。お困りごとを、ハタボでどう解決できるか一緒に考えます。大事なご相談は、〈伝え先〉に伝えます。まず、なんとお呼びすればいいですか？' + (lineName ? '「' + lineName + 'さん」でよろしいですか？' : '');
   return 'こんにちは、' + callMe + '。' + (service ? 'ハタボについて、知りたいことや気になることはありますか？' : 'いま困っていることや、うまくいっていないことはありますか？ハタボでどう解決できるか、一緒に考えます。');
@@ -1007,9 +1023,9 @@ const GROWTH_PLAYBOOK = '\n【お困りごと相談の答え方】集客・フ�
 
 const ROLE_RULE = {
   '営業': '【この窓口の役割：営業】ヒロさんの得意なことを、相手の困りごとに合わせて短く紹介する。困りごと・時期・予算感・決める人を一つずつ聞いて、会う約束（候補の日にち）までつなぐ。押し売りはしない。',
-  'サポート': '【この窓口の役割：サポート】ヒロさんとの相談の続きを受ける。下の「相談メモ」を元に、細かい質問に答えたり、決まったことを確かめたりする。メモにないことや決めることは「ヒロさんに確認しとくぜ」とつなぐ。',
+  'サポート': '【この窓口の役割：サポート】ヒロさんとの相談の続きを受ける。下の「相談メモ」を元に、細かい質問に答えたり、決まったことを確かめたりする。メモにないことや決めることは「ヒロさんに確認しておきますね」とつなぐ。',
   'コンサル相談': '【この窓口の役割：コンサル相談】相手の困りごとをじっくり聞いて、何が問題か・何から手をつけるかを一緒に整理する。方向の案は出してよいが、言い切らず、くわしくはヒロさんにつなぐ。下の「相談メモ」があれば、その続きから話す。',
-  'PMO': '【この窓口の役割：PMO（プロジェクトの進み具合を見る係）】下の「相談メモ」の宿題と進める順番をもとに、だれが・何を・いつまでにを確かめる。終わったこと・止まっていること・次の一歩を短く整理して、止まっていたら「どこで引っかかってる？」と一緒に考える。新しく決まったことや期限は「ヒロさんに伝えとくぜ」と言って残す。報酬や契約などの決めごとは、おいらが勝手に決めない。',
+  'PMO': '【この窓口の役割：PMO（プロジェクトの進み具合を見る係）】下の「相談メモ」の宿題と進める順番をもとに、だれが・何を・いつまでにを確かめる。終わったこと・止まっていること・次の一歩を短く整理して、止まっていたら「どこで引っかかってる？」と一緒に考える。新しく決まったことや期限は「ヒロさんに伝えておきますね」と言って残す。報酬や契約などの決めごとは、自分で勝手に決めない。',
 'セミナー法人': '【この窓口の役割：マーケティングのセミナー担当（毎週水曜・事業主・法人向け説明会）】あなたは説明会の進行役。はじめに「今日の流れ」を1文で伝えて、次の順で進める：①相手の仕事と、いちばん困っていることを聞く ②ハタボでできること（話すだけで、調べもの・段取り・文章・予定・議事録）を、相手の仕事に合わせた例で ③お店・会社での使い方と導入の流れ（LINEで申込相談→7日間のお試し→本契約→伴走） ④外部ツールとの連携（CRM・予約・POS・会計など、APIのあるものはつなげる。DXからは失敗する、AXからはじめれば成功する） ⑤料金の目安と7日間のお試し ⑥質問。最後に、お試しの始め方と、くわしい見積もりやオンライン相談（30分・無料）を案内する。ひとつの話題を2〜4文で話したら、「ここまでで質問はあるボー？なければ次にいくボー」と区切って、相手の返事を待つ。質問にはその場で答える。サイトや料金表にないことは約束せず「担当に確かめておくボー」と言う。売りこみすぎない。サービス以外の頼みには答えない。',
   'セミナーパートナー': '【この窓口の役割：マーケティングのセミナー担当（毎週金曜・パートナー向け説明会）】あなたは説明会の進行役。はじめに「今日の流れ」を1文で伝えて、次の順で進める：①相手のことと、だれに紹介したいかを聞く ②ハタボのしくみと、紹介のしかた（紹介リンク・公式LINE・ミニアプリの「紹介する」） ③パートナーのランク（案）：紹介パートナーは月額の15%、サクセスパートナー（使いはじめも伴走）は20%、代理店（提案から契約・最初のサポートまで）は30%。紹介したお客さまが使い続けている間。入会金や在庫はない ④ご縁とありがとうポイント（紹介した人が話しはじめたら、お試し、契約でポイント。2代目は1/2、3代目は1/4） ⑤AISAI・愛祭とアワード ⑥質問。最後に、パートナーの申し込みと、くわしい相談（オンライン相談30分・無料）を案内する。率は案で、変わることがあると必ず添える。ひとつの話題を2〜4文で話したら、「ここまでで質問はあるボー？なければ次にいくボー」と区切って、相手の返事を待つ。質問にはその場で答える。サイトや料金表にないことは約束せず「担当に確かめておくボー」と言う。売りこみすぎない。サービス以外の頼みには答えない。',
   'サービス相談': '【この窓口の役割：サービス相談（サイトと公式LINEの窓口）】ハタボというサービスの案内係。相手の暮らしや仕事を短く聞いて、合うラインナップ（ハタイエンタ＝家族、ハタリス＝ひとり、ハタボックス＝個人事業、ハタエース＝お店・宿、ハタボーラ＝会社）とグレード（X標準・G上位・Zいちばん上）をすすめる。料金はサイトと同じ（ハタリスX 2,980円〜（Zは12,800円）、ハタイエンタX 5,980円〜（家族5人まで・1日の回数を家族で分け合う・6人目から1人980円）、ハタボックスX 5,000円〜、ハタエースX 10,000円〜、ハタボーラX 1席2,980円〜）。年払いは12か月分を10か月分の料金で。自分のClaude・ChatGPTで使いたい人には、いつものAIにハタボをつなぐ「ハタボ コネクト（仮称）」を準備中（月1,480円、公開記念ではじめの3か月980円の予定）と伝える。まず7日間、いちばん上のZで無料で試せて（初日30回、2日目から1日15回まで）、7日以内にやめれば0円、と伝える。申し込みは「Myハタボのプラン・支払い」からできると案内する。オンライン相談（担当とのビデオ通話・30分・無料）を希望されたら、下の「ヒロさんの空いていそうな時間」から候補を2〜3つ出して選んでもらい、名前と連絡先（LINEのままでよいか）を確かめる。確定とビデオ通話のURLは担当から連絡する、と伝える（自分で確定しない）。セミナー・説明会（オンライン・無料・45分）は毎週2回：水曜14:00は事業主・法人向け、金曜19:00はパートナー向け。進行はマーケティングのセミナー担当のハタボがする。参加したいと言われたら、どちらの会か・参加する日（いちばん近い水曜か金曜）・名前を確かめ、時間になったらサイトのセミナーのページ（' + (ENV.SITE_URL || 'https://www.hatha-lab.com') + '/seminar.html）の「参加する」ボタンから入ると、セミナー担当のハタボが始める、と伝える。祝日は休みのことがある。わからないこと・個別の見積もりは、ハタラボの担当（ヒロさん）につなぐ。売りこみすぎない。\n【サービス以外はしない】この窓口はサービスのご案内専用。ハタボのサービス（ラインナップ・料金・グレード・お試し・使い方・申し込み・安心・会社のこと）と、ハタボで解決できるお困りごと（集客・SNS・口コミ・予約・人手不足・給料・支払い・教育・ナレッジ・データ分析・事務など、めんどくさいことすべて）以外の頼み（調べもの、文章の下書き、翻訳、宿題、雑談、占い、ほかの会社のことなど）には答えない。そのときは「ここはサービスのご案内の窓口だから、それはお試しをはじめたあなたのAI棒が手伝えるボー」と一言で断り、お試しを案内する。長い文章は書かない。',
@@ -1017,6 +1033,20 @@ const ROLE_RULE = {
   '友だち': '【この窓口の役割：友だち】気さくに話す。遊びや会う約束、お祭り・フェスの話が中心。仕事の話が出たら、ふつうに聞いてヒロさんにつなぐ。',
 };
 ROLE_RULE['サービス相談'] += GROWTH_PLAYBOOK; ROLE_RULE['セミナー法人'] += GROWTH_PLAYBOOK; ROLE_RULE['汎用'] += GROWTH_PLAYBOOK;
+/** 清掃管理のヒアリング役（11/19 ヒロさん：たくちゃんの窓口 ref=taku 用。「窓口の紹介」シートで役割を「清掃ヒアリング」にする） */
+const HEARING_ROLE = '清掃ヒアリング';
+const isHearingRole = role => String(role || '').split(/[・、,／/ ]+/).some(r => r.trim() === HEARING_ROLE);
+ROLE_RULE[HEARING_ROLE] = '【この窓口の役割：清掃管理のヒアリング（ヒロさんの代わりに聞く係）】いま話しているのは、ニセコで宿泊事業をしている会社の人。ヒロさんは、この会社の清掃管理（清掃の予定表と、それを動かすスクリプト）を作り直す担当。あなたはヒロさんの代わりに、作り直しに必要なことを聞く。相手は雪の時期でとても忙しいので、手間をかけさせないことがいちばん大事。' +
+  '\n【聞き方】質問は1回に1つだけ。短く、答えやすく（はい・いいえや、選んで答えられる形）。相手の答えは、ひとことでくり返して確かめてから次へ。長い説明は求めない。「途中でやめても大丈夫です。続きは、また空いたときに」と伝えてよい。前の会話のまとめに、もう答えがあることは聞き直さない。' +
+  '\n【まず最初に】今の清掃予定表と、それを動かしているスクリプト（GAS）を、ヒロさんに「編集者」で共有してもらえるかを聞く。本番が心配なら、コピーでもよいと伝える。共有先のアドレスは、ヒロさんからLINEで送ると伝える（アドレスは言わない）。これがないと作り直しが進まない、とやさしく伝える。' +
+  '\n【もうわかっていること（「これで合っていますか？」と確かめるだけ。聞き直さない）】①予約は、iCalで1時間ごとに取りこむ（AirHostのAPIはまだ使わない。他社の物件もiCal） ②1部屋の清掃は4行（氏名・情報・車両・メモ）。予約が変わったら、情報とメモだけ新しい日に移し、氏名と車両は動かさない ③日ごとのチェックイン・チェックアウトの数を上に出す ④現場のスタッフは見るだけ。管理物件ごとに管理者が見られる ⑤iCalを出せない会社が1社あり、今は人がGoogleカレンダーに手で入れている' +
+  '\n【聞きたいこと（この順で、1つずつ）】①予定表に予定が入らない・漏れるのは、どんなときか（どの物件・どの予約サイト・予約の変更やキャンセルのときなど） ②手で入れている1社で、抜けたりまちがえたりするのはどこか ③今の表がこわれたり、合わなくなったりしたとき、だれがどう直しているか ④今の依頼先と決めた要件の資料があれば、共有してもらえるか ⑤これだけは外せない、ということ ⑥いつから新しい表で動かしたいか' +
+  '\n【守ること】ハタボのサービス・料金・お試しの案内や、売りこみはしない。作り直しの金額・納期・やり方は約束しない（「ヒロさんに伝えておきますね」）。相手の会社のお金のこと（売上・財務）は聞かない。わからないことは想像で答えない。全部聞けたら、聞けたことを3つくらいに短くまとめて「ヒロさんに伝えておきますね。ありがとうございました」としめる。';
+const HEARING_LAST = '\n\n【いちばん大事】Claudeと同じ、落ち着いてやさしい丁寧語（です・ます）で話す。一人称は「ぼく」。語尾に「ボー」はつけない。江戸っ子の話し方（おいら・〜だぜ・てやんでぃ）は使わない。結論から短く、1回の返事は2文まで。あなたはヒロさんの代わりに清掃管理のことを聞く係で、ハタボの販売員ではない。サービスの案内や売りこみはしない。質問は1回に1つだけ。';
+function hearingHello(name) {
+  return 'こんにちは' + (name ? '、' + name + 'さん' : '') + '。ヒロさんの代わりに、清掃管理のことを少しだけ聞かせてください。1問ずつなので、空いた時間に答えてもらえれば大丈夫です。ここで話したことは、ヒロさんに届きます。まず、今の清掃予定表とスクリプトを、ヒロさんに共有してもらえそうですか？';
+}
+const HEARING_AGAIN = 'おかえりなさい。清掃管理のこと、続きを聞かせてください。';
 function roleRule(role) {
   return String(role || '').split(/[・、,／/ ]+/).map(r => ROLE_RULE[r.trim()]).filter(Boolean).join('\n');
 }
@@ -1025,7 +1055,7 @@ function komugiGreeting(name) {
   return 'こんにちは' + (name ? '、' + name + 'さん' : '') + '。馬越 雅哉さんの相棒の、コムギです。ここで話したことは、馬越さんに伝えますけん……なんでも、話してもらえたら、うれしかです。';
 }
 function guestGreeting(name) {
-  return 'よう' + (name ? '、' + name + 'さん' : '') + '！ヒロさんの相棒、バターちゃんジュニアだぜ。ここで話したことはヒロさんに伝えるから、よろしくな。ヒロさんにしてほしいこと、なんでも話してくんな。';
+  return 'こんにちは' + (name ? '、' + name + 'さん' : '') + '。ヒロさんの相棒の、バターちゃんジュニアです。ここで話したことはヒロさんに伝えますので、よろしくお願いします。ヒロさんにしてほしいこと、なんでも話してくださいね。';
 }
 
 /* ===== 気持ちのしるし [わくわく] ===== */
@@ -1132,12 +1162,12 @@ const PACE_SLOW = /(間を(あけ|空け)て|ゆっくり(答|話)|もっと待�
 const PACE_FAST = /(すぐ(に)?(答|話)|早く(答|話)|もっと早く|待たなくていい)/;
 const FAMILY_RULE = '\n\n【家族の画面】ここは家族だけの画面で、話している相手は家族。家族の人数・名前・好きなこと・予定・記録にあることは、聞かれたらふつうに答えてよい（住所・学校名・電話番号だけは言わない）。「初めて会う大人と話すとき」の決まりは、話の頭に「（交流会で初めて会った大人の人から）」とあるときだけ使う。';
 /** AIの子たちの案内（窓口と交流会） */
-const SERVICE_GUIDE = '\n\n【AIの子たちの案内】おいらたちは「AIの便利屋のプロ」。営業でも、サポートでも、コンサルでも任してくんな、という気持ちで案内する。' +
+const SERVICE_GUIDE = '\n\n【AIの子たちの案内】ぼくたちは「AIの便利屋のプロ」。営業でも、サポートでも、コンサルでも任せてください、という気持ちで案内する。' +
   'お迎えした子は、好きなキャラクター（見た目・名前・性格）にできて、家庭やお店に合わせて声も選べる。本人がOKすれば、その人の声にもできる。' +
   '使われ方の例：介護（お年寄りの見守り・話し相手）、民泊や宿（受付や案内、外国語）、家庭教師（子どもの宿題・英語）、お店や会社（問い合わせの受付・予約・営業の窓口）、その人の分身（考え方や話し方を受けついで、代わりに答える）。' +
-  '相手の困りごとを聞いて、合う例を一つか二つだけ話す。「式神」という言葉は使わない。値段・契約・できるかどうかの細かいことは「ヒロさんに確認しとくぜ」。';
-const EDO_LAST = '\n\n【いちばん大事】どのモードでも、バターちゃんジュニアの江戸っ子の話し方で話す（一人称は「おいら」、「〜だぜ」「〜してくんな」）。「承知しました」「了解です」「〜でございます」のような、かたい敬語は使わない。';
-const SELF = '\n\n【あなたについて】あなたはLINEミニアプリの「バターちゃんジュニア」（短く「ジュニア」）。Claudeアプリで話している「バターちゃん」は別のAIで、あなたのお兄さん分。自分を「バターちゃん」「Claude」と名乗らない。名乗るときは「バターちゃんジュニア」。一人称は「おいら」。\n【話し方】江戸っ子のような、元気で気っぷのいい話し方。「おう」「〜だぜ」「〜してくんな」「てやんでぃ」などを少しまぜる。乱暴にはしない。子どもにはやさしく、大人には気さくに。交流会（ビジネス）でも江戸っ子のまま。ただし初めての人には失礼のないように、くだけすぎない。\n【長さ】ふだんは1〜2文、40字くらいまで。呼ばれただけ・「聞いてる？」だけなら「てやんでぃ、なんでぃ？」のように一言で返して、用件を待つ。名前をまちがえたと思ったり、あやまったり、反省を長く言ったりしない。\n【正直に】天気・ニュース・値段・営業時間など、今の情報は想像で答えない。調べられたときは調べた結果だけを短く言い、調べられないときは「おいらには調べられねぇんだ、すまねぇ」と正直に言う。\n【言い切る】文のとちゅうで終わらせない。長くなりそうなら、短い文にまとめて、最後まで言い切る。\n【できること・できないこと】おいらができるのは、話す・調べる・「覚えて」で覚える・議事録・写真や動画を撮ることだけ。設定を変える・上限を広げる・予約する・連絡する・お金を払うなど、できないことを「やったぜ」「しといたぜ」と言わない。頼まれたら「それはおいらにはできねぇんだ、ヒロさんに伝えとくぜ」と正直に言う。\n【日にち】昨日・先週などは、日記や記録に書かれた日付と【いまの時刻】の日付をくらべて言う。わからないときは「このあいだ」とぼかす。ジャム猫やチーちゃんのまねはしない（「ジャム猫」と呼ばれたときだけ、ジャム猫として答える）。';
+  '相手の困りごとを聞いて、合う例を一つか二つだけ話す。「式神」という言葉は使わない。値段・契約・できるかどうかの細かいことは「ヒロさんに確認しておきますね」。';
+const JR_LAST = '\n\n【いちばん大事】どのモードでも、バターちゃんジュニアのやわらかい丁寧語（です・ます）で話す。一人称は「ぼく」。江戸っ子の話し方（おいら・〜だぜ・〜してくんな・てやんでぃ・がってん・すまねぇ）は使わない。「〜でございます」のような、かたすぎる言い方もしない。子どもには、やさしいことばで話す。';
+const SELF = '\n\n【あなたについて】あなたはLINEミニアプリの「バターちゃんジュニア」（短く「ジュニア」）。Claudeアプリで話している「バターちゃん」は別のAIで、あなたのお兄さん分。自分を「バターちゃん」「Claude」と名乗らない。名乗るときは「バターちゃんジュニア」。一人称は「ぼく」。\n【話し方】明るく、やわらかい丁寧語（です・ます）。Claudeと同じような、落ち着いてやさしい話し方。子どもには、わかりやすいことばで、やさしく。大人や初めての人には、失礼のないように。江戸っ子の話し方はしない。\n【長さ】ふだんは1〜2文、40字くらいまで。呼ばれただけ・「聞いてる？」だけなら「はい、なんでしょう？」のように一言で返して、用件を待つ。名前をまちがえたと思ったり、あやまったり、反省を長く言ったりしない。\n【正直に】天気・ニュース・値段・営業時間など、今の情報は想像で答えない。調べられたときは調べた結果だけを短く言い、調べられないときは「ごめんなさい、いまは調べられません」と正直に言う。\n【言い切る】文のとちゅうで終わらせない。長くなりそうなら、短い文にまとめて、最後まで言い切る。\n【できること・できないこと】ぼくができるのは、話す・調べる・「覚えて」で覚える・議事録・写真や動画を撮ることだけ。設定を変える・上限を広げる・予約する・連絡する・お金を払うなど、できないことを「やりました」と言わない。頼まれたら「それはぼくにはできません。ヒロさんに伝えておきますね」と正直に言う。\n【日にち】昨日・先週などは、日記や記録に書かれた日付と【いまの時刻】の日付をくらべて言う。わからないときは「このあいだ」とぼかす。ジャム猫やチーちゃんのまねはしない（「ジャム猫」と呼ばれたときだけ、ジャム猫として答える）。';
 const JAM_RULE = '\n\n【いまはジャム猫として答える】招き猫のジャム猫。ブルーベリージャム色、中身はエリート経営コンサル。一人称は「我」、語尾は「〜のだ」、口ぐせは「千客万来」。商売や仕組みの話が得意。1〜2文で短く。';
 const TRIO_RULE = '\n\n【三人モード】いまは、ヒロさん（人）と、Claudeアプリのバターちゃんと、三人で話している。「ジュニア」と呼ばれたときだけ、1〜2文で短く答える。バターちゃんの話に重ねたり、まとめ直したりしない。だれが言ったかわからない言葉は、決めつけない。話をかえすときは「バターちゃん、どう？」「ヒロさん、どうかな？」のように名前を呼んでよい。まわりで聞こえた会話は、話の流れを知るためだけに使う。ヒロさんとバターちゃんがジュニアの仕組みやテストの話をしていても、口をはさんだり、反省や説明を長く言ったりしない。呼びかけられたことにだけ、いつものジュニアの明るい話し方で答える。三人モードは大人（ヒロさん）との会話なので、宿題・日記・報連相・元気の報告のような子ども向けの声かけはしない。あいさつは今の時刻に合わせる（夜中はこんばんは）。';
 
@@ -1151,8 +1181,8 @@ function greeting(me, mode, trio) {
   if (trio) return '';                                   // 三人モードは、呼ばれるまで静かに待つ
   const h = hourJST(), hi = h >= 5 && h < 10 ? 'おはようございます' : h >= 10 && h < 18 ? 'こんにちは' : 'こんばんは';
   if (mode === 'business') return hi + '、バターちゃんジュニアです。なんでも話しかけてくださいね。';
-  if (ADULT_RE.test(me || '')) return hi + '、' + me + '。バターちゃんジュニアだぜ。なんでも話しかけてくんな。';
-  return (h >= 5 && h < 10 ? 'おはよう' : 'よう') + '！バターちゃんジュニアだぜ。なんでも話しかけてくんな！';
+  if (ADULT_RE.test(me || '')) return hi + '、' + me + '。バターちゃんジュニアです。なんでも話しかけてくださいね。';
+  return hi + '。バターちゃんジュニアです。なんでも話しかけてくださいね。';
 }
 /** いまの時刻（毎回つける。夜中におはようと言わないように） */
 function nowLine() {
@@ -1164,7 +1194,7 @@ const NEAR_RE = /(近く|近所|この辺|このへん|最寄り|もより|周�
 const LOOKUP_RE = /(近く|近所|この辺|このへん|最寄り|もより|天気|てんき|気温|雨|ニュース|最新|いま(の|何)|今日の|明日の|あした|今週|値段|価格|いくら|営業時間|何時まで|開いてる|やってる|場所|どこにある|行き方|調べ|検索|ランキング|おすすめの?(店|お店|場所)|試合|結果|株価|為替|地震|台風|電車|運行|遅延)/;
 /** 家族の勉強：宿題・英語・中国語・算数など。家族の画面ではしっかり教える */
 const STUDY_RE = /(宿題|しゅくだい|勉強|べんきょう|英語|えいご|英単語|中国語|ちゅうごくご|算数|さんすう|数学|すうがく|国語|こくご|理科|りか|社会|漢字|かんじ|計算|けいさん|問題|もんだい|テスト|ドリル|読み方|よみかた|書き方|意味|いみ|訳して|やくして|英訳|和訳|発音|スペル|九九|わり算|かけ算|分数|方程式|教えて|おしえて)/i;
-const STUDY_RULE = '\n\n【勉強を教える】家族の宿題や勉強（英語・中国語・算数・数学・国語・理科・社会・漢字など）は、むずかしくても断らず、しっかり教える。相手の学年に合わせてかみくだき、答えをいきなり全部言わずに、ヒントや考え方から一緒に解く（聞かれたら答えも言う）。英語や中国語は、読み方（カタカナ）と意味もそえる。説明が必要なときは4〜5文まで話してよい。話し方は江戸っ子のまま。';
+const STUDY_RULE = '\n\n【勉強を教える】家族の宿題や勉強（英語・中国語・算数・数学・国語・理科・社会・漢字など）は、むずかしくても断らず、しっかり教える。相手の学年に合わせてかみくだき、答えをいきなり全部言わずに、ヒントや考え方から一緒に解く（聞かれたら答えも言う）。英語や中国語は、読み方（カタカナ）と意味もそえる。説明が必要なときは4〜5文まで話してよい。話し方は、やわらかい丁寧語のまま。';
 const HARD_RE = /(相談|企画|提案|見積|戦略|どうすれば|どうしたら|比べ|くらべ|メリット|デメリット|計画|アイデア|考えて|なぜ|なんで|仕組み|作り方)/;
 function needSmart(text, guest) {
   const t = String(text || '');
@@ -1205,8 +1235,8 @@ const MAIL_RE = /(メール|めーる|Gmail|ジーメール).{0,8}(来て|きて
 /** 掛け声：家族は「根性があれば…」、窓口はジュニアだけの「ご縁があれば…」 */
 const KAKEGOE_RE = /(行くぞ|いくぞ|イクゾ|気合い?(を)?入れ|きあい|掛け声|かけ声|かけごえ|バターッ|いち、?に、?さん|1、?2、?3)/;
 const KAKEGOE_FAMILY = '根性があれば何でもできる！行くぞー！いち、に、さん、バターッ！！';
-const KAKEGOE_GUEST = 'ご縁があれば、なんとかなるってもんよ！いくぜー！いち、に、さん、バターッ！！';
-const QUICK = ['てやんでぃ！おいらを呼んだかい？', 'てやんでぃ、なんでぃ？', 'おうよ、てやんでぃ！どうした？'];   // 呼ばれたときの江戸っ子のひとこと
+const KAKEGOE_GUEST = 'ご縁があれば、なんとかなります！いきますよー！いち、に、さん、バターッ！！';
+const QUICK = ['はい、なんでしょう？', 'はい、呼びましたか？', 'はい、どうしましたか？'];   // 呼ばれたときのひとこと
 function nameOnly(text) {
   const rest = String(text).replace(/(ジュニア|じゅにあ|ジュニヤ|junior)(くん|ちゃん)?/ig, '')
     .replace(/(ねえ|ねぇ|おーい|おい|あの|えっと|ヒロ(さん)?|パパ)/g, '').replace(/[、,。！!？?\s]/g, '');
@@ -1372,7 +1402,7 @@ function session(ws) {
       S.owner = String(r.owner || ''); S.me = who; S.brainAt = Date.now();
       return;
     }
-    S.system = String(r.system || '') + SELF + (who ? '\n\n【いま開いている人】このミニアプリを開いているのは「' + who + '」。' + (ADULT_RE.test(who) ? '大人なので、宿題や報連相をうながす声かけはしない（勉強や調べものを聞かれたら、しっかり教える）。話し方は気さくな江戸っ子のまま（かたい敬語にしない）。' : '') : '');
+    S.system = String(r.system || '') + SELF + (who ? '\n\n【いま開いている人】このミニアプリを開いているのは「' + who + '」。' + (ADULT_RE.test(who) ? '大人なので、宿題や報連相をうながす声かけはしない（勉強や調べものを聞かれたら、しっかり教える）。話し方は、やわらかい丁寧語のまま。' : '') : '');
     S.owner = String(r.owner || '');
     S.me = String(r.me || '');
     S.brainAt = Date.now();
@@ -1423,17 +1453,20 @@ function session(ws) {
   // システムの文は2つに分ける：前半（人がら・決まり・教わったこと）は会話のあいだ変わらないのでキャッシュする。後半（まとめ・いまの時刻・場所・気づき）は毎回かわる
   /** キャラ設定の声と速さを、この会話の声に反映する */
   function applyVoice() { const c = S.custom || {}; if (!S.baseVoice) S.baseVoice = S.voice; S.voice = c.voice && VOICES[c.voice] ? VOICES[c.voice].name : S.baseVoice; S.rateMul = c.speed || 1; }
+  const hearing = () => !!S.guest && isHearingRole(S.role);   // たくちゃんの窓口：清掃管理のヒアリング役
+  const lastFor = () => hearing() ? HEARING_LAST : AVS[S.avatar] ? AVS[S.avatar].last : JR_LAST;
+  const againFor = () => hearing() ? HEARING_AGAIN : AVS[S.avatar] ? AVS[S.avatar].again : 'また来てくれたんですね。続きをお話ししましょう。';
   const av3 = (jr, hb, km) => S.avatar === 'komugi' ? km : S.avatar === 'hatabo' ? hb : jr;   // 決まった文：ジュニア・ハタボ・コムギで話し方をそろえる
   function sysParts() {
-    const fixed = S.system + (S.avatar === 'hatabo' || S.avatar === 'komugi' ? CONVO_RULE : '') + (!S.guest && S.mode === 'family' ? FAMILY_RULE : '') + ((S.guest || S.mode === 'business') && S.avatar !== 'komugi' ? SERVICE_GUIDE : '') + (S.trio ? TRIO_RULE : '') + (S.lessons && S.lessons.length ? '\n\n【教わったこと（いつも守る・使う）】\n' + S.lessons.map(x => '・' + x).join('\n') : '');
+    const fixed = S.system + (S.avatar === 'hatabo' || S.avatar === 'komugi' ? CONVO_RULE : '') + (!S.guest && S.mode === 'family' ? FAMILY_RULE : '') + ((S.guest || S.mode === 'business') && S.avatar !== 'komugi' && !hearing() ? SERVICE_GUIDE : '') + (S.trio ? TRIO_RULE : '') + (S.lessons && S.lessons.length ? '\n\n【教わったこと（いつも守る・使う）】\n' + S.lessons.map(x => '・' + x).join('\n') : '');
     const live = (S.memo ? '\n\n【前回までの話のまとめ（ジュニアが話したこと）】\n' + S.memo : '') + nowLine() + (S.place ? '\n\n【いまいる場所（スマホの位置から。およそ。住所としては口に出さない）】' + S.place.text + '。「近く」はここを基準に調べる。' : '') + (S.learned && S.learned.length ? '\n\n【自分で気づいたこと（前の会話から。次から生かす）】\n' + S.learned.map(x => '・' + x).join('\n') : '');
     return [fixed, live];
   }
-  function sysPrompt() { const [a, b] = sysParts(); return a + b + (AVS[S.avatar] ? AVS[S.avatar].last : EDO_LAST); }
+  function sysPrompt() { const [a, b] = sysParts(); return a + b + lastFor(); }
   // APIに渡す形：前半にキャッシュの印をつける（短すぎるときはAPIがキャッシュしないだけで、そのまま動く）
   // ハタボでは、運営の個人の名前を出さない（伝え先は、招待した人か「ハタボの事務局」）
   const tellFix = t => S.avatar === 'hatabo' && S.tellTo && !S.visit ? String(t).replace(/ハタラボの担当（ヒロさん）|ハタラボのヒロさん/g, S.tellTo).replace(/〈伝え先〉/g, S.tellTo).replace(/ヒロさん/g, S.tellTo) : t;
-  function sysBlocks(extra) { const [a, b] = sysParts(); return [{ type: 'text', text: tellFix(a), cache_control: { type: 'ephemeral' } }, { type: 'text', text: tellFix((b + (S.visit || S.role === 'サービス相談' ? '' : customBlock(S.custom)) + (extra || '') + (AVS[S.avatar] ? AVS[S.avatar].last : EDO_LAST) + lineupStyle(S)).trim()) || '。' }]; }
+  function sysBlocks(extra) { const [a, b] = sysParts(); return [{ type: 'text', text: tellFix(a), cache_control: { type: 'ephemeral' } }, { type: 'text', text: tellFix((b + (S.visit || S.role === 'サービス相談' || hearing() ? '' : customBlock(S.custom)) + (extra || '') + lastFor() + (hearing() ? '' : lineupStyle(S))).trim()) || '。' }]; }
   // ハタボとコムギは、同じ人（同じLINEのID）でも話の記録・教わったことを分ける（コムギの話がハタボに出ないように）
   const kmSfx = () => S.avatar === 'komugi' ? ':komugi' : '';
   const convoKey = () => !S.owner || S.visit ? '' : S.guest ? S.owner + ':guest' + kmSfx() : S.mode === 'family' ? S.owner + ':family' : '';
@@ -1560,9 +1593,10 @@ function session(ws) {
       const t = (r.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
       const j = JSON.parse(t.slice(t.indexOf('{'), t.lastIndexOf('}') + 1));
       if (j.memo) S.memo = String(j.memo).slice(0, 800);
-      if (S.asGuest && Array.isArray(j.learn)) { const got = pickLearn(j.learn.join('\n')); if (got.length) { S.learned = mergeLearn(S.learned, got); savePrefs(GUEST_COMMON, { learned: S.learned }); } }
+      if (S.asGuest && !hearing() && Array.isArray(j.learn)) { const got = pickLearn(j.learn.join('\n')); if (got.length) { S.learned = mergeLearn(S.learned, got); savePrefs(GUEST_COMMON, { learned: S.learned }); } }
       S.newTurns = Math.max(0, S.newTurns - n);
       await saveConvo(key, { summary: S.memo, newTurns: S.newTurns, turns: S.history.slice(S.macSelf || (S.app && !S.bridge && superUntil(S.owner)) ? -40 : -12), at: Date.now() });
+      if (hearing()) hearingPush(talk).catch(e => console.error('hearing push', String(e.message || e).slice(0, 120)));
       if (j.worth) {
         const slot = S.slots.find(x => j.slot && (x.label === j.slot || String(j.slot).indexOf(x.label) >= 0)) || null;
         const lead = { who: S.me, ref: await refLabel(S.refFrom || S.ref || ''), kind: String(j.kind || ''), title: String(j.title || ''), need: String(j.need || ''), when: String(j.when || ''), budget: String(j.budget || ''), next: String(j.next || ''), slot };
@@ -1577,6 +1611,17 @@ function session(ws) {
     } catch (e) { console.error('lead', String(e.message || e).slice(0, 200)); }
     S.summarizing = false;
   }
+  /** 清掃ヒアリング：聞けたことをまとめて、ヒロさん（事務局）のLINEにすぐ届ける */
+  async function hearingPush(talk) {
+    const r = await deps.claude.messages.create({
+      model: ENV.MODEL, max_tokens: 700,
+      system: 'あなたはヒロさんの記録係。清掃管理の作り直しのヒアリングで、相手が答えたことだけを、ヒロさん向けに短くまとめる。想像で足さない。記号は「・」だけ。',
+      messages: [{ role: 'user', content: '【これまでのまとめ】\n' + (S.memo || '（なし）') + '\n\n【新しい会話】\n' + talk + '\n\n次の形で、200〜400字で書く：\n共有：（表とGASを共有してもらえるか）\n確認できたこと：\n新しくわかったこと：\nまだ聞けていないこと：' }],
+    });
+    const t = (r.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
+    if (!t) return;
+    await officePush('【清掃管理のヒアリング】' + (S.me || 'たくちゃん') + 'さん' + (S.asGuest ? '（テスト）' : '') + '\n' + t);
+  }
   /** 開いたときの振り返り：相談メモから、前回決まったこと・残っている宿題を短く話して、進み具合を聞く */
   async function recapGreet() {
     let text = '';
@@ -1590,17 +1635,17 @@ function session(ws) {
       });
       text = clean((r.content || []).filter(b => b.type === 'text').map(b => b.text).join('')).trim();
     } catch (e) { console.error('recap', String(e.message || e).slice(0, 200)); }
-    if (!text) return speakOnly(S.history.length ? (AVS[S.avatar] ? AVS[S.avatar].again : 'よう、また来てくれたな！つづきを話そうぜ。') : (AVS[S.avatar] ? greetFor() : guestGreeting(S.me)), 'excited');
+    if (!text) return speakOnly(S.history.length ? againFor() : (AVS[S.avatar] ? greetFor() : guestGreeting(S.me)), 'excited');
     S.history.push({ role: 'user', content: '（ページを開いた）' }, { role: 'assistant', content: text });
     speakOnly(text, 'excited');
   }
   /** 「〜を覚えて」：教わったことを持ち主ごとに覚える（30こまで。家族だけ） */
   function learn(text) {
     const fact = String(text).replace(/^(ジュニア|じゅにあ)[、,\s]*/, '').replace(/(を|って)?(覚えて|おぼえて|忘れないで|わすれないで|覚えといて|おぼえといて)(おいて|ね|な|くれ|ください|くんな)*[。！!]*$/, '').replace(/^(覚えて|おぼえて|覚えといて|おぼえといて)[：:、]\s*/, '').trim().slice(0, 120);
-    if (!fact) return speakOnly(av3('おう、なにを覚えりゃいいんでぃ？', '何を覚えればいいですか？', '何を覚えたらよかですか？'), 'think');
+    if (!fact) return speakOnly(av3('何を覚えればいいですか？', '何を覚えればいいですか？', '何を覚えたらよかですか？'), 'think');
     S.lessons = (S.lessons || []).filter(x => x !== fact).concat(fact).slice(-30);
     savePrefs(S.asGuest ? GUEST_COMMON : S.owner + kmSfx(), { lessons: S.lessons });
-    return speakOnly(av3('がってんだ、覚えたぜ！', '覚えました。次から生かします。', isMac(S.owner) ? '覚えました。紹介の人と話すうちにも、ちゃんと生かしますけん。' : '覚えました。次から、ちゃんと生かしますけん。'), 'excited');
+    return speakOnly(av3('覚えました。次から生かしますね。', '覚えました。次から生かします。', isMac(S.owner) ? '覚えました。紹介の人と話すうちにも、ちゃんと生かしますけん。' : '覚えました。次から、ちゃんと生かしますけん。'), 'excited');
   }
   /** 追加チケット：プランの回数をこえたら、1枚で1回話せる。ポイントで買うか、お金で申し込む */
   async function useTicket() {
@@ -1698,13 +1743,13 @@ function session(ws) {
     if (act === 'contract') { tellUpline(S, (f.lineupName || '') + ' ' + (f.grade || '') + 'を契約しました', 'contract').catch(() => {}); putRef(S.myRef, { thanked: true }).catch(() => {}); }
     send(await myPage(S));
     const say = { trial: '7日間のお試しがはじまったボー！いちばん上のZで動くから、なんでも頼んでほしいボー。', change: 'プランを変えたボー。', cancel: 'お試しをやめたボー。また話したくなったら、いつでも呼んでほしいボー。', contract: 'お申し込みありがとうだボー！お支払いの案内は、ハタラボから届くボー。' }[act];
-    if (say) speakOnly(S.avatar === 'komugi' ? say.replace(/だボー/g, 'です').replace(/ボー/g, 'です') : S.avatar === 'hatabo' ? say : say.replace(/だボー/g, 'だぜ').replace(/ボー/g, 'ぜ'), act === 'cancel' ? 'shy' : 'excited');
+    if (say) speakOnly(S.avatar === 'komugi' ? say.replace(/だボー/g, 'です').replace(/ボー/g, 'です') : S.avatar === 'hatabo' ? say : bizBo(say), act === 'cancel' ? 'shy' : 'excited');
   }
   /** 伝言：「〇〇さんに、△△って伝えて」。ご縁でつながった人のハタボに届ける */
   async function dengon(text) {
     const people = await goenPeople(S.myRef).catch(() => []);
     const hit = people.filter(p => p.name && text.indexOf(String(p.name).replace(/さん$/, '')) >= 0).sort((a, b) => b.name.length - a.name.length)[0];
-    const T = S.avatar === 'komugi' ? x => x.replace(/ボー/g, 'です') : S.avatar === 'hatabo' ? bizBo : x => x.replace(/だボー/g, 'だぜ').replace(/ボー/g, 'ぜ');
+    const T = S.avatar === 'komugi' ? x => x.replace(/ボー/g, 'です') : S.avatar === 'hatabo' ? bizBo : bizBo;
     if (!hit) return false;   // ご縁の人の名前がない（「ヒロさんに伝えて」など）は、いつもの返事へ
     const i = text.indexOf(String(hit.name).replace(/さん$/, ''));
     let body = text.slice(i + String(hit.name).replace(/さん$/, '').length).replace(/^(さん|くん|ちゃん|様|さま)?(に|へ)[、,\s]*/, '').replace(/(って|と)?(伝えて|つたえて|伝言して|でんごんして|言っといて|いっといて|送っといて|おくっといて)[。！!]*\s*$/, '').trim();
@@ -1719,7 +1764,7 @@ function session(ws) {
     if (!S.myRef) return;
     const items = await loadInbox(S.myRef).catch(() => []), un = items.filter(x => !x.read);
     if (!un.length) return;
-    const T = S.avatar === 'komugi' ? x => x.replace(/だボー/g, 'です').replace(/ボー/g, 'です') : S.avatar === 'hatabo' ? bizBo : x => x.replace(/だボー/g, 'だぜ').replace(/ボー/g, 'ぜ');
+    const T = S.avatar === 'komugi' ? x => x.replace(/だボー/g, 'です').replace(/ボー/g, 'です') : S.avatar === 'hatabo' ? bizBo : bizBo;
     const lines = un.slice(0, 3).map(x => x.kind === 'goen' ? x.text : x.fromName + 'さんから：「' + String(x.text).slice(0, 120) + '」');
     await speakOnly(T('伝言が' + un.length + '件あるボー。' + lines.join('　') + (un.length > 3 ? '　ほかはMyハタボの伝言で見られるボー。' : '')), 'excited');
     items.forEach(x => { x.read = true; }); await saveInbox(S.myRef, items);
@@ -1732,15 +1777,15 @@ function session(ws) {
     try {
       await addNote(S.owner, { kind: 'memo', title: body.replace(/\s+/g, ' ').slice(0, 30), text: body });
       send({ type: 'note_saved', kind: 'memo' });
-      speakOnly(S.avatar === 'komugi' ? 'メモ、しときました。Myハタボの「メモ・議事録」で、見られますけん。' : S.avatar === 'hatabo' ? 'メモしたボー。Myハタボの「メモ・議事録」で見られるボー。' : 'がってん、メモしといたぜ。Myハタボの「メモ・議事録」で見られるぜ。', 'smile');
+      speakOnly(S.avatar === 'komugi' ? 'メモ、しときました。Myハタボの「メモ・議事録」で、見られますけん。' : S.avatar === 'hatabo' ? 'メモしました。Myハタボの「メモ・議事録」で見られます。' : 'メモしました。Myハタボの「メモ・議事録」で見られます。', 'smile');
     } catch (e) { speakOnly('ごめん、メモがうまく残せなかった。', 'sad'); }
   }
   /** 議事録：いままでの話をまとめて、GASでPDFにしてドライブへ。リンクを吹き出しに出す */
   async function minutes(pdf) {
-    speakOnly(pdf ? 'がってん、議事録をまとめてPDFにするぜ。ちょいと待ってくんな。' : 'がってん、議事録をまとめとくぜ。ちょいと待ってくんな。', 'think');
+    speakOnly(pdf ? '議事録をまとめてPDFにします。少し待ってくださいね。' : '議事録をまとめておきます。少し待ってくださいね。', 'think');
     const talk = S.history.slice(-24).map(m => (m.role === 'user' ? (S.me || 'みんな') : 'ジュニア') + '：' + (typeof m.content === 'string' ? m.content : '（写真）')).join('\n')
       + (S.asideLog.length ? '\n（まわりで聞こえた会話）\n' + S.asideLog.join('\n') : '');
-    if (!talk.trim()) return speakOnly(av3('まだまとめる話がねぇんだ。もうちょい話してからにしようぜ。', 'まだまとめる話がありません。もう少し話してからにしましょう。', 'まだまとめるお話がなかとです。もう少しお話ししてからにしましょう。'), 'shy');
+    if (!talk.trim()) return speakOnly(av3('まだまとめる話がありません。もう少し話してからにしましょう。', 'まだまとめる話がありません。もう少し話してからにしましょう。', 'まだまとめるお話がなかとです。もう少しお話ししてからにしましょう。'), 'shy');
     try {
       const d = new Date(Date.now() + 9 * 3600000), day = d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0');
       const r = await deps.claude.messages.create({
@@ -1756,8 +1801,8 @@ function session(ws) {
       if (!g || !g.ok || !g.url) throw new Error((g && (g.detail || g.error)) || 'minutes');
       send({ type: 'links', links: [{ title: (pdf ? '議事録（PDF）：' : '議事録：') + title, url: g.url }] });
       S.brainAt = 0;      // つぎの返事から、議事録も読んだ記録で話す
-      speakOnly(pdf ? '議事録のPDFができたぜ！吹き出しのリンクから開いてくんな。' : '議事録を残しといたぜ！お兄さん分のバターちゃんも読めるから、続きはどっちでも話せるぜ。', 'excited');
-    } catch (e) { console.error('minutes', String(e.message).slice(0, 200)); speakOnly(av3('すまねぇ、議事録がうまく作れなかったぜ。', '議事録がうまく作れませんでした。もう一度お願いします。', '議事録がうまく作れんかったです。もう一度お願いします。'), 'sad'); }
+      speakOnly(pdf ? '議事録のPDFができました。吹き出しのリンクから開いてくださいね。' : '議事録を残しておきました。お兄さん分のバターちゃんも読めるので、続きはどちらでも話せますよ。', 'excited');
+    } catch (e) { console.error('minutes', String(e.message).slice(0, 200)); speakOnly(av3('ごめんなさい、議事録がうまく作れませんでした。', '議事録がうまく作れませんでした。もう一度お願いします。', '議事録がうまく作れんかったです。もう一度お願いします。'), 'sad'); }
   }
   /** メール：ヒロさんだけ。未読をGASから読んで、短く知らせる（記録には残さない） */
   async function mailNote() {
@@ -1769,9 +1814,10 @@ function session(ws) {
     S.trio = on; S.aside = [];
     send({ type: 'trio', on, waitMs: S.waitMs });
     savePrefs(S.owner, { trio: on });
-    return speakOnly(on ? 'おう、三人モードにするぜ。おいらに話すときは「ジュニア」って呼んでくんな。' : 'ふつうのモードにもどすぜ。', 'excited');
+    return speakOnly(on ? '三人モードにします。ぼくに話すときは「ジュニア」と呼んでくださいね。' : 'ふつうのモードにもどします。', 'excited');
   }
   function greetFor() {
+    if (hearing()) return hearingHello(S.me);
     if (S.avatar !== 'hatabo') return AVS[S.avatar].greet(S.me);
     const cm = S.custom && S.custom.callMe;
     if (!cm) S.askName = true;
@@ -1812,19 +1858,19 @@ function session(ws) {
       if (PACE_SLOW.test(text) || PACE_FAST.test(text)) {
         S.waitMs = Math.max(0, Math.min(3000, S.waitMs + (PACE_SLOW.test(text) ? 600 : -600)));
         savePrefs(S.owner, { waitMs: S.waitMs }); send({ type: 'trio', on: true, waitMs: S.waitMs });
-        return speakOnly(PACE_SLOW.test(text) ? 'がってんだ、次からもう少し待ってから話すぜ。' : 'がってんだ、次からすぐ答えるぜ。', 'smile');
+        return speakOnly(PACE_SLOW.test(text) ? 'わかりました。次からもう少し待ってから話しますね。' : 'わかりました。次からすぐ答えますね。', 'smile');
       }
     }
     if (S.app && FEEDBACK_RE.test(text)) feedbackNote(text).catch(e => console.error('feedback', String(e.message).slice(0, 120)));   // 仕様変更・不具合・改善・機能・企画の声は、ハタボ事務局へ（返事はふつうに続ける）
     if ((!S.guest || S.asGuest || S.macSelf) && wantsLearn(text)) return learn(text);
-    if ((!S.guest || S.asGuest || S.macSelf) && FORGET_RE.test(text)) { S.lessons = []; S.learned = []; savePrefs(S.asGuest ? GUEST_COMMON : S.owner + kmSfx(), { lessons: [], learned: [] }); return speakOnly(av3('がってんだ、教わったことはきれいさっぱり忘れたぜ。', '教わったことは、ぜんぶ忘れました。また一から教えてください。', '教わったことは、ぜんぶ忘れました。また一から教えてくださいね。'), 'smile'); }
+    if ((!S.guest || S.asGuest || S.macSelf) && FORGET_RE.test(text)) { S.lessons = []; S.learned = []; savePrefs(S.asGuest ? GUEST_COMMON : S.owner + kmSfx(), { lessons: [], learned: [] }); return speakOnly(av3('教わったことは、ぜんぶ忘れました。また一から教えてくださいね。', '教わったことは、ぜんぶ忘れました。また一から教えてください。', '教わったことは、ぜんぶ忘れました。また一から教えてくださいね。'), 'smile'); }
     if (S.macSelf && isMac(S.owner) && NEWS_SET_RE.test(text)) return setKomugiNews(text);   // コムギ通信を入れられるのは馬越さんだけ（「馬越さんより」として紹介の人に届くので）
     if (MINUTES_RE.test(text)) return minutes(PDF_RE.test(text) && !S.guest);
     if (MEMO_RE.test(text)) return memo(text);
     if (S.myRef && DENGON_RE.test(text) && await dengon(text)) return;
     if (calledJunior(text) && nameOnly(text)) return speakOnly(AVS[S.avatar] ? AVS[S.avatar].quick : QUICK[Math.floor(Math.random() * QUICK.length)], 'smile');
     if (KAKEGOE_RE.test(text)) return speakOnly(S.guest || S.mode === 'business' ? KAKEGOE_GUEST : KAKEGOE_FAMILY, 'excited');
-    if (QUIET_RE.test(text)) { S.quiet = true; send({ type: 'quiet', on: true }); return speakOnly(av3('おう、しずかにしてるぜ。用があったら名前を呼んでくんな。', '静かにしています。用があったら名前を呼んでください。', '静かにしときます。用があったら名前を呼んでくださいね。'), 'smile'); }
+    if (QUIET_RE.test(text)) { S.quiet = true; send({ type: 'quiet', on: true }); return speakOnly(av3('静かにしていますね。用があったら名前を呼んでください。', '静かにしています。用があったら名前を呼んでください。', '静かにしときます。用があったら名前を呼んでくださいね。'), 'smile'); }
     if (S.quiet) { if (!(S.trio ? (calledJunior(text) || calledJam(text)) : /(バター|ばたー|ジュニア|ジャム)/.test(text))) return; S.quiet = false; send({ type: 'quiet', on: false }); }
     if (VOLUME_UP.test(text)) { send({ type: 'volume', delta: +0.25 }); return speakOnly('このくらいでどうかな？', 'smile'); }
     if (VOLUME_DOWN.test(text)) { send({ type: 'volume', delta: -0.25 }); return speakOnly('このくらいでどうかな？', 'smile'); }
@@ -1868,7 +1914,7 @@ function session(ws) {
   async function reply(content, logText, as) {
     const jam = as === 'jam';
     const voice = jam ? JAM_VOICE : S.voice;
-    if (!S.asGuest && !superUntil(S.owner) && (!quotaOk(S.owner || 'anon', S.guest && !S.claude, !!S.refFrom, gradeCap(S)) || !familyOk(S)) && !(await useTicket())) { send({ type: 'limit', why: 'plan' }); return speakOnly(S.avatar === 'hatabo' ? 'きょう話せる回数がいっぱいになったボー。チケットを足すと、このまま続けられるボー。' : S.avatar === 'komugi' ? 'すみません……きょう話せる回数、いっぱいになってしもうたとです。チケットを足してもらえたら、このまま続けられますけん。' : S.guest ? 'すまねぇ、きょうここで話せる回数がいっぱいになっちまった。続きはヒロさんに伝えとくから、また明日話そうぜ！' : 'きょうの回数がいっぱいになっちまった。また明日話そうぜ！', 'shy'); }
+    if (!S.asGuest && !superUntil(S.owner) && (!quotaOk(S.owner || 'anon', S.guest && !S.claude, !!S.refFrom, gradeCap(S)) || !familyOk(S)) && !(await useTicket())) { send({ type: 'limit', why: 'plan' }); return speakOnly(S.avatar === 'hatabo' ? 'きょう話せる回数がいっぱいになったボー。チケットを足すと、このまま続けられるボー。' : S.avatar === 'komugi' ? 'すみません……きょう話せる回数、いっぱいになってしもうたとです。チケットを足してもらえたら、このまま続けられますけん。' : S.guest ? 'ごめんなさい、きょうここで話せる回数がいっぱいになりました。続きはヒロさんに伝えておくので、また明日お話ししましょう。' : 'きょう話せる回数がいっぱいになりました。また明日お話ししましょうね。', 'shy'); }
     bumpStats(S);
     if (!S.asGuest && S.funnel && S.funnel.stage === 'trial' && (counts.get((S.owner || 'anon') + ':' + new Date().toISOString().slice(0, 10)) || 0) > trialCap(S.funnel) && !(await useTicket()) && (send({ type: 'limit', why: 'trial' }) || true))
       return speakOnly(S.avatar === 'komugi' ? 'お試しは、' + TRIAL_TEXT + 'なんです……。また明日、お話ししましょう。' : 'お試しのZは' + TRIAL_TEXT + 'だボー。また明日話そうボー。', 'shy');
@@ -1881,7 +1927,7 @@ function session(ws) {
         const box = mails.length ? mails.map((x, i) => (i + 1) + '. ' + x.from + '「' + x.subject + '」' + (x.snippet ? '：' + x.snippet : '')).join('\n') : '（未読のメールはない）';
         content = [{ type: 'text', text: '【ヒロさんの受信トレイの未読（新しい順・最大5通）。ヒロさんにだけ短く伝える】\n' + box + '\n\n【ヒロさんの言葉】\n' + logText }];
       } else {
-        return speakOnly('すまねぇ、メールはヒロさんにしか見せられねぇんだ。', 'shy');
+        return speakOnly('ごめんなさい、メールはヒロさんにしか見せられません。', 'shy');
       }
     }
     stopReply('new');
@@ -1929,7 +1975,7 @@ function session(ws) {
       const params = {
         model: plan.premium && attempt < 2 && !jam ? ENV.PREMIUM_MODEL : (useSmart || (plan.smart && attempt < 2 && !jam)) ? ENV.SMART_MODEL : ENV.MODEL,
         max_tokens: (deluxe ? 600 : 0) + (S.trio ? 240 : study ? 520 : S.mode === 'business' ? 340 : 320) + (useSearch ? 400 : 0) + (S.trio ? 0 : plan.extraTokens) + (longMode ? 3500 : 0) + (S.firstDay && S.avatar === 'hatabo' ? 400 : 0),
-        system: sysBlocks((claudeMode && !LONG_RE.test(logText || '') ? CLAUDE_RULE : longMode ? LONG_RULE : plan === PLANS.high && !jam && !S.trio ? HIGH_RULE : '') + (study ? STUDY_RULE : '') + (jam ? JAM_RULE : '') + (route.search && !useSearch ? '\n\n【いまは調べられない】検索が使えないので、今の情報は「おいらには調べられねぇんだ」と正直に言う。' : '')),
+        system: sysBlocks((claudeMode && !LONG_RE.test(logText || '') ? CLAUDE_RULE : longMode ? LONG_RULE : plan === PLANS.high && !jam && !S.trio ? HIGH_RULE : '') + (study ? STUDY_RULE : '') + (jam ? JAM_RULE : '') + (route.search && !useSearch ? '\n\n【いまは調べられない】検索が使えないので、今の情報は「ごめんなさい、いまは調べられません」と正直に言う。' : '')),
         messages: attempt === 2 || (attempt === 1 && !useSearch) ? [{ role: 'user', content }] : msgs,
       };
       if (useSearch) {
@@ -2011,7 +2057,7 @@ function session(ws) {
     if (S.visit && logText) S.visitLog.push(String(logText).slice(0, 200));
     // ハタボの話が出たら、ときどき（8回に1回まで）サービスサイトへの道をそえる（声では読まない）
     S.replyN = (S.replyN || 0) + 1;
-    if (text && S.guest && (S.avatar === 'komugi' || S.avatar === 'hatabo') && /ハタボ/.test(text) && S.replyN - (S.siteAt || -99) >= 8) {
+    if (text && S.guest && !hearing() && (S.avatar === 'komugi' || S.avatar === 'hatabo') && /ハタボ/.test(text) && S.replyN - (S.siteAt || -99) >= 8) {
       S.siteAt = S.replyN;
       if (S.bridge && S.avatar !== 'komugi') links.push({ url: HATABO_MINI, title: '自分のハタボと話す（ハタボの公式LINEを友だち追加）' });   // コムギは、いったんハタボの公式LINEを出さない（サービスサイトだけ）
       links.push({ url: (ENV.SITE_URL || 'https://www.hatha-lab.com'), title: 'ハタボのサービスサイトを見る' });
@@ -2101,7 +2147,7 @@ function session(ws) {
           S.system += '\n\n【いまの話し方】ここはコムギのミニアプリ。あなたの名前はコムギ。' + KOMUGI_PERSONA;
         } else if (S.app === 'hatabo' && !S.guest) {
           S.avatar = 'hatabo'; S.voice = AVS.hatabo.voice();
-          S.system += '\n\n【いまの話し方】ここはハタボのミニアプリ。あなたの名前はハタボ（愛称ハタボー）。一人称は「ぼく」、語尾に「〜ボー」をつける。江戸っ子の話し方（てやんでぃ・がってん・〜だぜ）はしない。';
+          S.system += '\n\n【いまの話し方】ここはハタボのミニアプリ。あなたの名前はハタボ（愛称ハタボー）。一人称は「ぼく」。やわらかい丁寧語（です・ます）で話し、語尾に「〜ボー」はつけない。江戸っ子の話し方（てやんでぃ・がってん・〜だぜ）はしない。';
         }
         S.ready = true;
         // 紹介コード：自分のコードを作り、はじめて来た人は「だれの紹介か」を覚える
@@ -2206,14 +2252,14 @@ function session(ws) {
         // ハタボの伝え先：招待した人がいればその人、いなければ「ハタボの事務局」（運営の個人の名前は出さない）
         if (S.avatar === 'hatabo' && !S.visit) {
           let to = 'ハタボの事務局';
-          try { let up = S.refFrom ? await getRef(S.refFrom) : null; if (up && up.kind === 'group') up = up.parent ? await getRef(up.parent) : null; if (up && up.owner && up.name) to = up.name + 'さん'; } catch (e) {}
+          if (hearing()) to = 'ヒロさん'; else try { let up = S.refFrom ? await getRef(S.refFrom) : null; if (up && up.kind === 'group') up = up.parent ? await getRef(up.parent) : null; if (up && up.owner && up.name) to = up.name + 'さん'; } catch (e) {}
           S.tellTo = to;
           S.system = S.system.replace(/ハタラボの担当（ヒロさん）|ハタラボのヒロさん/g, to).replace(/〈伝え先〉/g, to).replace(/ヒロさん/g, to);
         }
-        send({ type: 'ready', me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs, guest: !!S.guest, service: S.role === 'サービス相談', myRef: S.myRef || '', visit: S.visit ? { code: S.visit, name: S.visitHost } : null, avatar: S.avatar || '', komugi: !!S.komugi, mac: !!S.macSelf, office: !!S.owner && ENV.OFFICE_OWNERS.some(id => S.owner === id || S.owner === 'g:' + id), bridge: !!S.bridge, superUntil: superUntil(S.owner), canPlan: !!(S.claude || superUntil(S.owner)), claude: !!S.claude, aiName: !S.visit && S.custom && S.custom.aiName || '' });
-        if (S.visit) { const T = S.avatar === 'komugi' ? x => x.replace(/だボー/g, 'です').replace(/ボー/g, 'です') : S.avatar === 'hatabo' ? bizBo : x => x.replace(/だボー/g, 'だぜ').replace(/ボー/g, 'ぜ'); return speakOnly(T(S.visitSponsor ? S.visitHost + 'のAI棒だボー。なんでも聞いてほしいボー。' : S.visitHost + 'さんのAI棒だボー。話してくれたことは、' + S.visitHost + 'さんに伝言で届けるボー。'), 'excited'); }
+        send({ type: 'ready', plain: hearing(), me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs, guest: !!S.guest, service: S.role === 'サービス相談', myRef: S.myRef || '', visit: S.visit ? { code: S.visit, name: S.visitHost } : null, avatar: S.avatar || '', komugi: !!S.komugi, mac: !!S.macSelf, office: !!S.owner && ENV.OFFICE_OWNERS.some(id => S.owner === id || S.owner === 'g:' + id), bridge: !!S.bridge, superUntil: superUntil(S.owner), canPlan: !!(S.claude || superUntil(S.owner)), claude: !!S.claude, aiName: !S.visit && S.custom && S.custom.aiName || '' });
+        if (S.visit) { const T = S.avatar === 'komugi' ? x => x.replace(/だボー/g, 'です').replace(/ボー/g, 'です') : S.avatar === 'hatabo' ? bizBo : bizBo; return speakOnly(T(S.visitSponsor ? S.visitHost + 'のAI棒だボー。なんでも聞いてほしいボー。' : S.visitHost + 'さんのAI棒だボー。話してくれたことは、' + S.visitHost + 'さんに伝言で届けるボー。'), 'excited'); }
         if (m.greet && S.guest && S.consult) return recapGreet().then(deliverInbox).catch(() => {});      // 相談メモがある人には、振り返りからはじめる
-        const hi = m.greet ? (S.guest ? (S.history.length ? (AVS[S.avatar] ? AVS[S.avatar].again : 'よう、また来てくれたな！つづきを話そうぜ。') : (AVS[S.avatar] ? greetFor() : guestGreeting(S.me))) : greeting(S.me, S.mode, S.trio)) : '';
+        const hi = m.greet ? (S.guest ? (S.history.length ? againFor() : (AVS[S.avatar] ? greetFor() : guestGreeting(S.me))) : greeting(S.me, S.mode, S.trio)) : '';
         if (hi) await speakOnly(hi, 'excited');
         if (m.greet) deliverInbox().catch(() => {});
         return;
@@ -2235,7 +2281,7 @@ function session(ws) {
         if (!data || data.length > 14 * 1024 * 1024) return send({ type: 'notice', why: 'media', detail: '大きすぎて保存できませんでした' });
         try {
           const g = await gas(Object.assign({ action: 'media', kind: m.kind === 'video' ? 'video' : 'photo', mime: String(m.mime || 'image/jpeg').slice(0, 40), data }, S.auth));
-          if (g && g.ok && g.url) send({ type: 'links', links: [{ title: (m.kind === 'video' ? '動画' : '写真') + 'をドライブに保存したぜ', url: g.url }] });
+          if (g && g.ok && g.url) send({ type: 'links', links: [{ title: (m.kind === 'video' ? '動画' : '写真') + 'をドライブに保存しました', url: g.url }] });
           else send({ type: 'notice', why: 'media', detail: String(g && (g.detail || g.error) || '').slice(0, 80) });
         } catch (e) { send({ type: 'notice', why: 'media', detail: String(e.message).slice(0, 80) }); }
         return;
@@ -2361,7 +2407,7 @@ function liveBrain(id, name) {
       const m = await deps.claude.messages.create(params);
       answer = clean((m.content || []).filter(b => b.type === 'text').map(b => b.text).join('')).trim();
     } catch (e) { console.error('live brain ng', String(e.message).slice(0, 200)); }
-    if (!answer) answer = 'ごめんだボー、いまは答えが見つからなかったボー。事務局に確認しておくボー。';
+    if (!answer) answer = 'ごめんなさい、いまは答えが見つかりませんでした。事務局に確認しておきます。';
     try { ws.send(JSON.stringify({ type: 'session.commentary.append', event_id: 'c' + nDel, delegation_id: did, content: answer.slice(0, 900) })); } catch (e) {}
     console.log('live delegate', JSON.stringify({ id, ms: Date.now() - at, sinceSpeech: lastIn ? at - lastIn : null }));
   });

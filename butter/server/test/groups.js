@@ -27,9 +27,9 @@ const post = (port, events, path = '/line/webhook') => new Promise((ok, ng) => {
   await post(port, [{ type: 'message', replyToken: 'r2', source: src, message: { type: 'text', text: 'こんばんは' } }]);
   assert.strictEqual(sent.length, 0, 'ふつうの会話には出てこない');
   await post(port, [{ type: 'message', replyToken: 'r3', source: src, message: { type: 'text', text: 'ハタボって何？' } }]);
-  assert.ok(/呼んだボー/.test(JSON.stringify(sent.pop().body)), '呼ばれたら出る');
+  assert.ok(/呼びましたか/.test(JSON.stringify(sent.pop().body)), '呼ばれたら出る');
   await post(port, [{ type: 'postback', replyToken: 'r4', source: src, postback: { data: 'act=inviter' } }]);
-  assert.ok(/招待した人として覚えた/.test(JSON.stringify(sent.pop().body)), '招待した人を覚える');
+  assert.ok(/招待した人として覚えました/.test(JSON.stringify(sent.pop().body)), '招待した人を覚える');
   await post(port, [{ type: 'postback', replyToken: 'r5', source: Object.assign({}, src, { userId: 'Uother' }), postback: { data: 'act=inviter' } }]);
   assert.ok(/別の人で登録ずみ/.test(JSON.stringify(sent.pop().body)), '2人目は登録しない');
   await post(port, [{ type: 'postback', replyToken: 'r7', source: src, postback: { data: 'act=rec_on' } }]);

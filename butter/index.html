@@ -790,6 +790,8 @@ body.pcweb #talkOaBtn, body.pcweb .pinbar { display: none !important; }
 /* ===== トーク画面（自分用）：Claudeと同じ作り。キャラの画面はプレゼン用。左右のスワイプで切りかえ ===== */
 .chatv{position:fixed;inset:0;z-index:40;display:none;flex-direction:column;background:#fff;color:#16233F;font-family:'Noto Sans JP','Noto Sans CJK JP',sans-serif}
 body.chatview .chatv{display:flex}
+/* キャラを出さない窓口（たくちゃんの清掃ヒアリングなど）：トーク画面だけ */
+body.plain .vsw,body.plain .cvfab,body.plain .shareb,body.plain .gradeb,body.plain .stage,body.plain .meters{display:none!important}
 .chatv .cv-top{display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;border-bottom:1px solid #E6EAF2}
 .chatv .cv-top img{width:38px;height:38px;border-radius:50%;background:#fff;box-shadow:0 0 0 2px #16233F;padding:1px}
 .chatv .cv-top b{font-size:17px;font-weight:800;margin-right:auto}
@@ -1392,7 +1394,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
 
 <div class="pinbar" id="pinBar" hidden><div><b>ハタボのトークをピン留めしよう</b><span>トーク一覧の「ハタボ」を長押し →「ピン留め」で、いつもいちばん上に。メニューからすぐこの画面にもどれます。</span></div><button type="button" id="pinGo">トークを開く</button><button type="button" id="pinX" aria-label="とじる">×</button></div>
 <div class="visitbar" id="visitBar" hidden><img src="award_mark.svg" alt=""><span id="visitName"></span><button type="button" id="visitBack">もどる</button></div>
-<div class="fgate" id="friendGate" hidden><div class="fg-card"><img src="award_mark.svg" alt=""><h2>ハタボを友だち追加してね</h2><p>自分のハタボと話すには、まず公式LINE「ハタボ」を友だち追加してね。追加すると、メモ・議事録・伝言もLINEに届くボー。</p><button type="button" class="fg-add" id="fgAdd">友だち追加する</button><button type="button" class="fg-done" id="fgDone">追加したよ</button><p class="fg-note" id="fgNote" hidden>まだ友だちになっていないみたいだボー。追加してから「追加したよ」を押してね。</p></div></div>
+<div class="fgate" id="friendGate" hidden><div class="fg-card"><img src="award_mark.svg" alt=""><h2>ハタボを友だち追加してね</h2><p>自分のハタボと話すには、まず公式LINE「ハタボ」を友だち追加してね。追加すると、メモ・議事録・伝言もLINEに届きます。</p><button type="button" class="fg-add" id="fgAdd">友だち追加する</button><button type="button" class="fg-done" id="fgDone">追加したよ</button><p class="fg-note" id="fgNote" hidden>まだ友だちになっていないみたいです。追加してから「追加したよ」を押してね。</p></div></div>
 <div class="chatv" id="chatV" aria-label="トーク">
   <div class="cv-top"><img src="award_mark.svg" alt=""><b id="cvName">ハタボ</b><button type="button" id="cvScr" hidden title="パソコンの画面を見せる（見せている間だけ）">画面を見せる</button><button type="button" id="cvSpk" aria-pressed="true">声あり</button><button type="button" id="cvMy">Myハタボ</button></div>
   <div class="cv-list" id="cvList"><p class="cv-empty" id="cvEmpty">下のエンブレムを押して話しかけてね。<br>話したことと返事が、ここに残ります。</p></div>
@@ -2676,7 +2678,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
       case 'ready':
         document.body.classList.remove('connecting');
         J.ready = true; J.tries = 0; J.greeted = true; window.__aiName = m.visit ? '' : m.aiName || ''; setTimeout(() => { try { avText(); const t = document.querySelector('#butterTag text'); if (t && avName()) t.textContent = avName(); } catch (e) {} }, 0); document.body.classList.toggle('svc', !!m.service); { const vb = $('visitBar'); if (m.visit) { vb.hidden = false; $('visitName').textContent = m.visit.name + 'さんのAI棒と話しています'; } else { vb.hidden = true; if (J.visit) { J.visit = ''; toast('つながっていない人のAI棒には入れませんでした'); } } } J.profile = m.profile || null; if (!$('hbPage').hidden) jrSend({ type: 'mypage' }); 
-        J.guest = !!m.guest; J.mac = !!m.mac; J.bridge = !!m.bridge; J.office = !!m.office; J.avatar = KOMUGI_APP ? 'komugi' : m.avatar || ''; document.body.classList.toggle('av-komugi', J.avatar === 'komugi'); if (HATABO_APP && !J.avatar) J.avatar = 'hatabo'; document.body.classList.toggle('av-hatabo', J.avatar === 'hatabo'); { const t = document.querySelector('#butterTag text'), nm = { komugi: 'コムギ', hatabo: 'ハタボ' }[J.avatar]; if (t && nm) t.textContent = nm; }  if (J.avatar) { document.body.classList.remove('hb-hatched'); let was = false; try { was = localStorage.getItem('hatched_' + J.avatar) === '1'; } catch (e) {} if (was) setTimeout(hbHatch, 600); }   // 前にかえった子は、立ち上げのたびに、たまごからかえって出てくる $('goenBtn').hidden = J.guest; J.myRef = m.myRef || ''; J.me = String(m.me || '').replace(/（テスト）$/, ''); $('shareBtn').hidden = false;
+        J.guest = !!m.guest; J.plain = !!m.plain; document.body.classList.toggle('plain', J.plain); if (J.plain) setTimeout(() => { const b = document.querySelector('.vsw button[data-v="chat"]'); if (b) b.click(); }, 0); J.mac = !!m.mac; J.bridge = !!m.bridge; J.office = !!m.office; J.avatar = KOMUGI_APP ? 'komugi' : m.avatar || ''; document.body.classList.toggle('av-komugi', J.avatar === 'komugi'); if (HATABO_APP && !J.avatar) J.avatar = 'hatabo'; document.body.classList.toggle('av-hatabo', J.avatar === 'hatabo'); { const t = document.querySelector('#butterTag text'), nm = { komugi: 'コムギ', hatabo: 'ハタボ' }[J.avatar]; if (t && nm) t.textContent = nm; }  if (J.avatar) { document.body.classList.remove('hb-hatched'); let was = false; try { was = localStorage.getItem('hatched_' + J.avatar) === '1'; } catch (e) {} if (was) setTimeout(hbHatch, 600); }   // 前にかえった子は、立ち上げのたびに、たまごからかえって出てくる $('goenBtn').hidden = J.guest; J.myRef = m.myRef || ''; J.me = String(m.me || '').replace(/（テスト）$/, ''); $('shareBtn').hidden = false;
         document.body.classList.toggle('familyok', !J.guest);
         document.body.classList.toggle('guestmode', J.guest);
         if (J.guest) { $('typedInput').placeholder = J.avatar === 'komugi' ? '馬越さんにしてほしいこと、なんでもどうぞ' : 'ヒロさんにしてほしいこと、なんでもどうぞ'; }
@@ -2689,7 +2691,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
         if (awake.until !== 0) keepAwake(true, 0);
         jrMicStart().catch(() => { hint.textContent = 'マイクが使えません。LINEの設定でマイクを許可してください。'; });
         jrBtn(); if (!J.playing) setState('listening');
-        hint.textContent = J.guest ? (J.avatar === 'komugi' ? '馬越 雅哉さんの相棒の、コムギです……。気軽に、話しかけてもらえたら。' : J.avatar === 'hatabo' ? 'ハタボーだボー。そのまま話しかけてほしいボー。' : 'ヒロさんの相棒、ジュニアだぜ。そのまま話しかけてくんな。') : J.trio ? '三人モード：「ジュニア」と呼んだときだけ答えるよ。' : 'そのまま話しかけてね。話している途中でも、声をかけたら止まって聞くよ。';
+        hint.textContent = J.guest ? (J.avatar === 'komugi' ? '馬越 雅哉さんの相棒の、コムギです……。気軽に、話しかけてもらえたら。' : J.avatar === 'hatabo' ? 'ハタボーです。そのまま話しかけてほしいです。' : 'ヒロさんの相棒の、ジュニアです。そのまま話しかけてくださいね。') : J.trio ? '三人モード：「ジュニア」と呼んだときだけ答えるよ。' : 'そのまま話しかけてね。話している途中でも、声をかけたら止まって聞くよ。';
         break;
       case 'partial':
         if (pickRes && nameIn(m.text)) break;
@@ -2712,7 +2714,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
         break;
       case 'emotion': if (m.gen === J.gen) setEmo(m.emotion); break;
       case 'reply_text': if (m.gen === J.gen && J.out) { J.outText += m.text; J.out.textContent = J.outText; } break;
-      case 'searching': if (m.gen === J.gen) { hint.textContent = J.avatar === 'komugi' ? 'ちょっと、調べよります……' : J.avatar === 'hatabo' ? '調べてるボー…' : 'ちょいと調べてるぜ…'; J.thinkAt = Date.now() + 15000; setEmo('think'); } break;
+      case 'searching': if (m.gen === J.gen) { hint.textContent = J.avatar === 'komugi' ? 'ちょっと、調べよります……' : J.avatar === 'hatabo' ? '調べています…' : '少し調べていますね…'; J.thinkAt = Date.now() + 15000; setEmo('think'); } break;
       case 'waiting': if (m.gen === J.gen) hint.textContent = 'まわりの話がおわるのを待ってから話すよ…'; break;
       case 'audio':
         if (m.gen === J.gen) { J.queue.push(m); jrPump(); }
@@ -2762,7 +2764,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
       case 'notice': if (diag && m.detail) { diag.hidden = false; diag.textContent = '（パパへ：' + m.why + ' ' + m.detail + '）'; } break;
       case 'error':
         document.body.classList.remove('connecting');
-        if (m.code === 'closed') { J.dead = true; hint.textContent = 'いま窓口はお休み中だぜ。また今度話してくんな！'; addBubble('ジュニア', 'いま窓口はお休み中だぜ。ヒロさんには直接連絡してくんな！', 'her'); }
+        if (m.code === 'closed') { J.dead = true; hint.textContent = 'いま窓口はお休み中です。また今度お話ししましょう。'; addBubble('ジュニア', 'いま窓口はお休み中です。ヒロさんには直接ご連絡ください。', 'her'); }
         if (m.code === 'auth') { J.dead = true; J.authFail = true; hint.textContent = 'LINEの確認が切れたよ。まんなかのボタンを押すと開き直すよ。'; }
         // それ以外のエラーでは前の話し方にしない（切れたら、つなぎなおす）
         break;
@@ -3019,7 +3021,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
           const fr = new FileReader();
           fr.onload = () => jrSend({ type: 'save_media', kind: 'video', mime: blob.type, data: fr.result });
           fr.readAsDataURL(blob);
-        } else addBubble('ジュニア', '動画が大きすぎてドライブに送れなかったぜ。「動画を保存」で端末に残してくんな。', 'her');
+        } else addBubble('ジュニア', '動画が大きすぎてドライブに送れませんでした。「動画を保存」で端末に残してください。', 'her');
       }
     }
     jrSend({ type: 'photo', data: frames[0], frames, prompt });
@@ -3065,7 +3067,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
           { type: 'text', text: 'すべての人に、AIの愛棒を。', color: '#C9D0DC', size: 'xxs' }] }] },
       body: { type: 'box', layout: 'vertical', spacing: 'md', paddingAll: '18px', contents: [
         { type: 'text', text: '話すだけで、動く愛棒。', weight: 'bold', size: 'md', color: '#16233F', wrap: true },
-        { type: 'text', text: 'PCとスマホで話すだけ。調べもの・下書き・相談まで、いっしょに動くAIの愛棒だボー。', size: 'sm', color: '#5E6B85', wrap: true },
+        { type: 'text', text: 'PCとスマホで話すだけ。調べもの・下書き・相談まで、いっしょに動くAIの愛棒です。', size: 'sm', color: '#5E6B85', wrap: true },
         { type: 'separator', color: '#DCE2EC' },
         { type: 'text', text: 'はじめると友だち追加の画面が出ます。追加すると、いつものLINEのトークからすぐ話せます', size: 'xs', color: '#5E6B85', wrap: true }] },
       footer: { type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '14px', contents: [
@@ -3077,7 +3079,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
     // コムギの親（馬越さん）はコムギを紹介。紹介された人がさらに紹介するときは、ハタボへ（コムギは馬越さんのHUB）
     const toHatabo = KOMUGI_APP && !J.mac;
     const url = (toHatabo ? 'https://miniapp.line.me/2012676035-yCkx6tBu' : MINI_URL) + (J.myRef ? '?ref=' + encodeURIComponent(J.myRef) : '');
-    const text = KOMUGI_APP && !toHatabo ? '馬越 雅哉さんの相棒「コムギ」です。馬越さんへのご相談は、コムギが先にお聞きしてつなぎます。話しかけてみてください。\n' + url : 'AIの愛棒「ハタボ」だよ。話すだけで、調べもの・下書き・相談までいっしょにやってくれるボー。気軽に話してみて！\n' + url;
+    const text = KOMUGI_APP && !toHatabo ? '馬越 雅哉さんの相棒「コムギ」です。馬越さんへのご相談は、コムギが先にお聞きしてつなぎます。話しかけてみてください。\n' + url : 'AIの愛棒「ハタボ」だよ。話すだけで、調べもの・下書き・相談までいっしょにやってくれます。気軽に話してみて！\n' + url;
     try {
       if (window.liff && liff.isApiAvailable && liff.isApiAvailable('shareTargetPicker')) {
         let r; try { r = await liff.shareTargetPicker([shareCard(url)]); } catch (e) { r = await liff.shareTargetPicker([{ type: 'text', text }]); }
@@ -3102,7 +3104,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
     document.querySelectorAll('#hbpTabs button').forEach(b => b.classList.toggle('on', b.dataset.p === tabOf));
     { const on = document.querySelector('#hbpTabs .on'); if (on) try { on.scrollIntoView({ inline: 'center', block: 'nearest' }); } catch (e) {} }
     const body = $('hbpBody');
-    if (!d && p !== 'times' && p !== 'share' && p !== 'aisai' && p !== 'goen' && p !== 'inbox' && p !== 'gacha' && p !== 'friends' && p !== 'custom' && p !== 'settings' && p !== 'google' && p !== 'social' && p !== 'docs' && p !== 'reqs') { body.innerHTML = '<div class="hbc"><p>よみこみ中だボー…</p></div>'; return; }
+    if (!d && p !== 'times' && p !== 'share' && p !== 'aisai' && p !== 'goen' && p !== 'inbox' && p !== 'gacha' && p !== 'friends' && p !== 'custom' && p !== 'settings' && p !== 'google' && p !== 'social' && p !== 'docs' && p !== 'reqs') { body.innerHTML = '<div class="hbc"><p>よみこみ中です…</p></div>'; return; }
     const n = x => Number(x || 0).toLocaleString('ja-JP');
     if (p === 'my') {
       const left = Math.max(0, d.limit - d.today), pct = Math.min(100, Math.round(d.today / Math.max(1, d.limit) * 100));
@@ -3166,16 +3168,16 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
         (R.items || []).map(x => `<div class="hbc"><span class="hbtag">${esc(x.kind)}</span> <b>${esc(x.title)}</b> <span class="hbtag">${x.count || 1}件</span>${x.status === 'done' ? ' <span class="hbtag gold">採用 ' + (x.pts || 0) + 'pt</span>' : ''}<p>${esc(x.detail || '')}</p><p class="hbmuted" style="font-size:11.5px">${(x.from || []).map((f, i) => esc(f.name || 'だれか') + (i === 0 ? '（最初）' : '')).join('、')}</p>${x.status === 'done' ? '' : `<div class="hbrow"><input class="hbin" style="width:110px" type="number" min="0" step="10" placeholder="ポイント" data-rpts="${esc(x.id)}"><button type="button" class="hbbtn" style="width:auto;margin:0" data-radopt="${esc(x.id)}">採用する</button></div>`}</div>`).join('');
       body.querySelectorAll('[data-radopt]').forEach(b => b.onclick = () => { const v = body.querySelector('[data-rpts="' + b.dataset.radopt + '"]').value; if (!(Number(v) > 0)) return toast('ポイントを入れてください'); b.disabled = true; jrSend({ type: 'req_adopt', id: b.dataset.radopt, pts: Number(v) }); });
     } else if (p === 'google') {
-      body.innerHTML = `<div class="hbc"><div class="k">GOOGLE</div><h3>Googleアカウント連携</h3>${gCard() || '<p>よみこみ中だボー…</p>'}<p style="font-size:11.5px">保存したものは「メモ・議事録」から開けます。</p><button type="button" class="hbbtn w" data-go="notes">メモ・議事録を見る</button></div>`;
+      body.innerHTML = `<div class="hbc"><div class="k">GOOGLE</div><h3>Googleアカウント連携</h3>${gCard() || '<p>よみこみ中です…</p>'}<p style="font-size:11.5px">保存したものは「メモ・議事録」から開けます。</p><button type="button" class="hbbtn w" data-go="notes">メモ・議事録を見る</button></div>`;
       hbpWireGoogle(body);
     } else if (p === 'social') {
       const F = HBP.friends;
-      if (!F) { body.innerHTML = '<div class="hbc"><p>よみこみ中だボー…</p></div>'; if (J.ready) jrSend({ type: 'friends' }); return; }
+      if (!F) { body.innerHTML = '<div class="hbc"><p>よみこみ中です…</p></div>'; if (J.ready) jrSend({ type: 'friends' }); return; }
       body.innerHTML = socialCard(F.me || {});
       hbpWireSocial(body);
     } else if (p === 'custom') {
       const C = HBP.custom;
-      if (!C) { body.innerHTML = '<div class="hbc"><p>よみこみ中だボー…</p></div>'; if (J.ready) jrSend({ type: 'custom_get' }); return; }
+      if (!C) { body.innerHTML = '<div class="hbc"><p>よみこみ中です…</p></div>'; if (J.ready) jrSend({ type: 'custom_get' }); return; }
       const c = C.c || {}, opt = (o, v) => Object.entries(o).map(([k, l]) => `<option value="${k}"${k === v ? ' selected' : ''}>${esc(l)}</option>`).join('');
       body.innerHTML = `
         <div class="hbc"><div class="k">CHARACTER</div><h3>キャラ設定</h3><p>あなたのAI棒の名前・話し方・答えの長さ・あなたのこと・いつもの指示を決められます。Claudeの「カスタム指示」と同じように、毎回の会話で使われます。</p></div>
@@ -3224,7 +3226,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
       body.querySelectorAll('[data-tk]').forEach(b => b.onclick = () => { jrSend({ type: 'ticket', pack: b.dataset.tk, pay: b.dataset.pay }); b.disabled = true; });
     } else if (p === 'gacha') {
       const G = HBP.gacha;
-      if (!G) { body.innerHTML = '<div class="hbc"><p>ガチャを準備中だボー…</p></div>'; if (J.ready) jrSend({ type: 'gacha', peek: true }); return; }
+      if (!G) { body.innerHTML = '<div class="hbc"><p>ガチャを準備中です…</p></div>'; if (J.ready) jrSend({ type: 'gacha', peek: true }); return; }
       const c = G.card, stars = r => '★'.repeat(r || 1);
       const cardHtml = c ? (c.kind === 'sponsor'
         ? `<div class="gcard sp" style="--c:${esc(c.color)}"><span class="hbtag gold">協賛</span>${avSvg('hatabo', 86, true)}<b>${esc(c.name)}</b><span>${esc(c.who || '')}</span><p>${esc(c.catch || '')}</p>${c.sample ? '<small>（協賛枠の見本です）</small>' : ''}
@@ -3245,7 +3247,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
       body.querySelectorAll('[data-freq]').forEach(b => b.onclick = () => { jrSend({ type: 'friend_req', code: b.dataset.freq }); b.disabled = true; b.textContent = '申請しました'; if (c) c.asked = true; });
     } else if (p === 'friends') {
       const F = HBP.friends;
-      if (!F) { body.innerHTML = '<div class="hbc"><p>友だちをよみこみ中だボー…</p></div>'; if (J.ready) jrSend({ type: 'friends' }); return; }
+      if (!F) { body.innerHTML = '<div class="hbc"><p>友だちをよみこみ中です…</p></div>'; if (J.ready) jrSend({ type: 'friends' }); return; }
       const me = F.me || {};
       body.innerHTML = `
         ${(F.inbox || []).length ? `<div class="hbc" style="border-color:#C9A24A"><div class="k">REQUEST</div><h3>友だち申請 ${F.inbox.length}</h3>${F.inbox.map(x => `<div class="hbplan"><div style="display:flex;gap:10px;align-items:center">${avSvg(x.avatar, 40)}<div><b>${esc(x.name)}さん</b><span>${esc((x.lineupName || '') + ' ' + (x.grade || ''))}</span></div></div><div style="display:flex;gap:6px"><button type="button" class="hbtag gold" data-fok="${esc(x.code)}" style="border:0;cursor:pointer">承認</button><button type="button" class="hbtag hbmuted" data-fno="${esc(x.code)}" style="border:0;cursor:pointer">見送る</button></div></div>`).join('')}</div>` : ''}
@@ -3260,7 +3262,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
       hbpWireSocial(body);
     } else if (p === 'inbox') {
       const ib = HBP.inbox;
-      if (!ib) { body.innerHTML = '<div class="hbc"><p>伝言をよみこみ中だボー…</p></div>'; if (J.ready) jrSend({ type: 'inbox' }); return; }
+      if (!ib) { body.innerHTML = '<div class="hbc"><p>伝言をよみこみ中です…</p></div>'; if (J.ready) jrSend({ type: 'inbox' }); return; }
       const ppl = ib.people || [], to = HBP.to || (ppl[0] && ppl[0].code) || '';
       const dt = t => { const x = new Date(t); return (x.getMonth() + 1) + '/' + x.getDate() + ' ' + String(x.getHours()).padStart(2, '0') + ':' + String(x.getMinutes()).padStart(2, '0'); };
       body.innerHTML = `
@@ -3278,7 +3280,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
       if ((ib.items || []).some(x => !x.read) && J.ready) setTimeout(() => jrSend({ type: 'inbox_read' }), 1500);
     } else if (p === 'goen') {
       const g = HBP.goen;
-      if (!g) { body.innerHTML = '<div class="hbc"><p>ご縁をよみこみ中だボー…</p></div>'; if (J.ready) jrSend({ type: 'goen_tree' }); return; }
+      if (!g) { body.innerHTML = '<div class="hbc"><p>ご縁をよみこみ中です…</p></div>'; if (J.ready) jrSend({ type: 'goen_tree' }); return; }
       const ST = { ref: ['紹介', '#7FB0F0'], trial: ['お試し', '#C9A24A'], contract: ['契約', '#16233F'], cancel: ['やめた', '#D5DAE3'] }, ACT = { daily: '毎日話している', active: '元気', new: 'これから', quiet: 'ひと休み', sleep: 'おやすみ' };
       const kids = g.nodes.filter(x => !x.me), d1 = kids.filter(x => x.depth === 1).length, act = kids.filter(x => x.stage === 'trial').length, con = kids.filter(x => x.stage === 'contract').length;
       body.innerHTML = `
@@ -3297,7 +3299,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
       body.innerHTML = `
         <div class="hbc"><div class="k">AISAI ／ 育てた${esc(nm)}</div><h3>うちの${esc(nm)}</h3>
           <div class="big">Lv.${d.lv}<small>いっしょに ${n(d.days)} 日目</small></div>
-          <div class="hbbar"><i style="width:${d.lvPct}%"></i></div><p>次のLvまで ${d.lvPct}%。話すほど、手伝うほど育つボー。</p>
+          <div class="hbbar"><i style="width:${d.lvPct}%"></i></div><p>次のLvまで ${d.lvPct}%。話すほど、手伝うほど育ちます。</p>
           <div class="hbstats"><div><b class="hbmuted">—</b><span>フォロワー</span></div><div><b class="hbmuted">—</b><span>フォロー中</span></div><div><b>${n(d.kids)}</b><span>ご縁（紹介）</span></div></div>
           <button type="button" class="hbbtn w" data-go="goen">ご縁のひろがりを見る</button>
           <p style="font-size:11.5px">ありがとうポイント：紹介した人が話しはじめたら ${n((d.thanks || {}).visit)}pt、お試しで ${n((d.thanks || {}).trial)}pt、契約で ${n((d.thanks || {}).contract)}pt（2代目は1/2、3代目は1/4）。いま ${n(d.pts)}pt。</p>
@@ -3481,7 +3483,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
   (() => {
     const V = $('chatV'), L = $('cvList'), map = new WeakMap();
     const isApp = () => document.body.classList.contains('av-hatabo') || document.body.classList.contains('av-komugi');
-    const setView = v => { document.body.classList.toggle('chatview', v === 'chat' && isApp()); store.set('hbView', v); if (v === 'chat') requestAnimationFrame(() => { L.scrollTop = L.scrollHeight; }); };
+    const setView = v => { if (document.body.classList.contains('plain')) v = 'chat'; document.body.classList.toggle('chatview', v === 'chat' && isApp()); store.set('hbView', v); if (v === 'chat') requestAnimationFrame(() => { L.scrollTop = L.scrollHeight; }); };
     let stick = true;
     L.addEventListener('scroll', () => { stick = L.scrollHeight - L.scrollTop - L.clientHeight < 80; }, { passive: true });
     const sync = () => {
@@ -4063,7 +4065,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
   showMode();
   liffBoot();
   if (HATABO_APP) { const ib = KOMUGI_APP ? addBubble('コムギ', 'はじめまして。馬越 雅哉さんの相棒の、コムギです。気軽に話しかけてくださいね。', 'her') : addBubble('ハタボ', 'はじめまして、ハタボです。話しかけると、たまごから生まれます。', 'her'); if (ib) ib.parentElement.id = 'introBubble'; }
-  else if (LIFF) addBubble('ジュニア', 'よう！バターちゃんジュニアだぜ。となりは柴犬のチーちゃんと、招き猫のジャム猫！', 'her');
+  else if (LIFF) addBubble('ジュニア', 'こんにちは。バターちゃんジュニアです。となりは柴犬のチーちゃんと、招き猫のジャム猫です。', 'her');
   else addBubble('バターちゃん', 'こんにちは！バターちゃんだよ。となりは柴犬のチーちゃん！', 'her');
   setState('idle');
   applyPet(null, false);
