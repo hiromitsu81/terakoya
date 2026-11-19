@@ -43,6 +43,11 @@ const ENV = {
   EL_KEY: process.env.ELEVENLABS_API_KEY || '',   // ElevenLabs のAPIキー。声の名前を「el:声のID」にすると ElevenLabs で話す
   EL_MODEL: process.env.ELEVENLABS_MODEL || 'eleven_flash_v2_5',   // 速さ重視 eleven_flash_v2_5／表現重視 eleven_v3 など
   EL_FORMAT: process.env.ELEVENLABS_FORMAT || 'mp3_44100_128',   // 声の音質。64kbpsだとスマホでザラザラ（ノイズ）に聞こえやすいので128kbps
+  OPENAI_KEY: process.env.OPENAI_API_KEY || '',   // GPT-Live-1 の検証用（ハタリス）。Secret Managerから入れる
+  LIVE_KEY: process.env.LIVE_KEY || '',             // 検証ページの合言葉（ないと使えない）
+  LIVE_VOICE: process.env.LIVE_VOICE || 'marin',    // GPT-Live-1 の声
+  LIVE_DAILY: Number(process.env.LIVE_DAILY || 40),  // 1日に始められる回数（ぜんぶで）
+  LIVE_MAX_MIN: Number(process.env.LIVE_MAX_MIN || 15),   // 1回の長さの上限（分）
   EOU_MS: Number(process.env.EOU_MS ?? 800),   // 話し終わりの見分け：聞き取りの文字がこの時間（ミリ秒）かわらなければ、話し終わりとみなしてすぐ返事を始める（0でGoogleまかせ）
   HATABO_VOICE: process.env.HATABO_VOICE || 'ja-JP-Chirp3-HD-Puck',   // ハタボの声：明るく元気な、ひよこの男の子（ジュニアのガラガラ声とは別）
   KOMUGI_VOICE: process.env.KOMUGI_VOICE || 'ja-JP-Chirp3-HD-Leda',   // コムギの声：やわらかい少女の声
@@ -2182,10 +2187,82 @@ function session(ws) {
   return S;
 }
 
+/* ===== GPT-Live-1 の検証（ハタリス）：話すのは GPT-Live-1、むずかしいこと・調べものは Claude が考えて渡す ===== */
+const LIVE_RULE = '\n\n【声の係として】いまは声だけで話している。日本語で、短く、テンポよく。相手が話している途中でも、あいづちは短く。わからないこと、今の情報（天気・ニュース・値段・営業時間）、料金や契約のくわしいこと、考えるのに時間がかかることは、自分で答えずに、うしろにいる頭（仲間）に任せる。任せたら「ちょっと調べるボー」のように一言だけ言って待ち、もらった答えを自分の言葉で短く伝える。もらっていないことは言わない。';
+const LIVE_BRAIN = '\n\n【いまのあなたの役目】あなたは、声で話しているハタボの「頭」。声の係から任された質問に、調べたり考えたりして答える。返すのは、声の係がそのまま話せる日本語の答え。2〜4文、200字以内。記号・URL・箇条書きは使わない。確かでないことは確かでないと言う。';
+function liveInstructions() {
+  return (HATABO_PERSONA + HATABO_SELF + (LINEUP_STYLE.ris || '') + SERVICE_KNOWLEDGE() + HATABO_LAST).replace(/〈伝え先〉|ハタラボの担当（ヒロさん）|ハタラボのヒロさん|ヒロさん/g, 'ハタボの事務局');
+}
+const liveDay = { day: '', n: 0 };
+function liveCors(req, res) {
+  const o = req.headers.origin || '';
+  if (o && ENV.ALLOWED_ORIGINS.some(a => o === a || o.endsWith('.' + a.replace(/^https?:\/\//, '')))) {
+    res.setHeader('Access-Control-Allow-Origin', o); res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS'); res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  }
+}
+async function liveHttp(req, res) {
+  liveCors(req, res);
+  if (req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
+  const out = (code, o) => { res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(o)); };
+  if (req.method !== 'POST') return out(405, { error: 'post' });
+  let body = '';
+  for await (const c of req) { body += c; if (body.length > 200000) return out(413, { error: 'big' }); }
+  let q; try { q = JSON.parse(body); } catch (e) { return out(400, { error: 'json' }); }
+  if (!ENV.LIVE_KEY || String(q.k || '') !== ENV.LIVE_KEY) return out(403, { error: 'key' });
+  if (!ENV.OPENAI_KEY) return out(503, { error: 'OPENAI_API_KEY がまだ入っていない' });
+  if (!q.sdp) return out(400, { error: 'sdp' });
+  const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+  if (liveDay.day !== today) { liveDay.day = today; liveDay.n = 0; }
+  if (liveDay.n >= ENV.LIVE_DAILY) return out(429, { error: 'きょうの回数がいっぱい' });
+  liveDay.n++;
+  const r = await fetch('https://api.openai.com/v1/live/sessions', { method: 'POST',
+    headers: { Authorization: 'Bearer ' + ENV.OPENAI_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ session: { model: 'gpt-live-1', instructions: (liveInstructions() + LIVE_RULE).slice(0, 40000), audio: { output: { voice: String(q.voice || ENV.LIVE_VOICE) } }, delegation: { type: 'client' } }, transport: { type: 'webrtc', sdp: String(q.sdp) } }) }).catch(e => ({ ok: false, status: 0, text: async () => String(e.message) }));
+  if (!r.ok) { const t = (await r.text()).slice(0, 300); console.error('live ng', r.status, t); return out(502, { error: 'openai ' + r.status, detail: t }); }
+  const j = await r.json();
+  const id = j.session && j.session.id;
+  if (id) liveBrain(id, String(q.name || '').slice(0, 20));
+  out(200, { sdp: j.transport && j.transport.sdp, id });
+}
+/** 横からつないで、聞こえた言葉を覚え、任されたら Claude に考えてもらう */
+function liveBrain(id, name) {
+  const WS = require('ws');
+  const ws = new WS('wss://api.openai.com/v1/live/sessions/' + encodeURIComponent(id) + '/attach', { headers: { Authorization: 'Bearer ' + ENV.OPENAI_KEY } });
+  const turns = [];   // {who:'人'|'ハタボ', text}
+  const add = (who, t) => { if (!t) return; const last = turns[turns.length - 1]; if (last && last.who === who) last.text += t; else turns.push({ who, text: t }); if (turns.length > 30) turns.shift(); };
+  const t0 = Date.now(); let nDel = 0, lastIn = 0;
+  const stop = setTimeout(() => { try { ws.send(JSON.stringify({ type: 'session.close', event_id: 'end' })); } catch (e) {} setTimeout(() => { try { ws.close(); } catch (e) {} }, 3000); }, ENV.LIVE_MAX_MIN * 60000);
+  ws.on('message', async raw => {
+    let ev; try { ev = JSON.parse(String(raw)); } catch (e) { return; }
+    if (ev.type === 'session.input_transcript.delta') { add('人', ev.delta || ev.text || ''); lastIn = Date.now(); return; }
+    if (ev.type === 'session.output_transcript.delta') { add('ハタボ', ev.delta || ev.text || ''); return; }
+    if (ev.type === 'session.closed') { console.log('live closed', JSON.stringify({ id, min: Math.round((Date.now() - t0) / 6000) / 10, delegations: nDel, usage: ev.usage || null })); return; }
+    if (ev.type === 'error') { console.error('live error', JSON.stringify(ev).slice(0, 300)); return; }
+    if (ev.type !== 'session.delegation.created' || !ev.delegation || !ev.delegation.id) return;
+    const did = ev.delegation.id, at = Date.now(); nDel++;
+    const talk = turns.slice(-14).map(x => x.who + '：' + x.text.trim()).join('\n');
+    let answer = '';
+    try {
+      const params = { model: ENV.SMART_MODEL, max_tokens: 700, system: liveInstructions() + LIVE_BRAIN + nowLine(),
+        messages: [{ role: 'user', content: (name ? '（話している人：' + name + 'さん）\n' : '') + 'ここまでの会話：\n' + talk + '\n\n声の係から任された、いちばん新しい「人」の問いに答えて。' }] };
+      if (ENV.WEB_SEARCH) params.tools = [{ type: 'web_search_20250305', name: 'web_search', max_uses: 2, user_location: { type: 'approximate', city: 'Tokyo', country: 'JP', timezone: 'Asia/Tokyo' } }];
+      const m = await deps.claude.messages.create(params);
+      answer = clean((m.content || []).filter(b => b.type === 'text').map(b => b.text).join('')).trim();
+    } catch (e) { console.error('live brain ng', String(e.message).slice(0, 200)); }
+    if (!answer) answer = 'ごめんだボー、いまは答えが見つからなかったボー。事務局に確認しておくボー。';
+    try { ws.send(JSON.stringify({ type: 'session.commentary.append', event_id: 'c' + nDel, delegation_id: did, content: answer.slice(0, 900) })); } catch (e) {}
+    console.log('live delegate', JSON.stringify({ id, ms: Date.now() - at, sinceSpeech: lastIn ? at - lastIn : null }));
+  });
+  ws.on('error', e => console.error('live attach ng', String(e.message).slice(0, 200)));
+  ws.on('close', () => clearTimeout(stop));
+}
+
 /* ===== HTTP と WebSocket ===== */
 function createServer() {
   const server = http.createServer((req, res) => {
     if (req.url.startsWith('/google/')) return googleHttp(req, res);
+    if (req.url.startsWith('/live/session')) return liveHttp(req, res).catch(e => { console.error('live', e); try { res.writeHead(500); res.end('{}'); } catch (x) {} });   // GPT-Live-1 の検証
     if (req.url.startsWith('/cron/faq')) { const u0 = new URL(req.url, 'http://x'), k = u0.searchParams.get('key'); if (!ENV.CRON_KEY || k !== ENV.CRON_KEY) { res.writeHead(403); return res.end('no'); } return faqDigest(Number(u0.searchParams.get('days')) || 7).then(o => { res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(o)); }).catch(e => { res.writeHead(500); res.end(String(e.message)); }); }
     if (req.url.startsWith('/cron/digest')) { const k = new URL(req.url, 'http://x').searchParams.get('key'); if (!ENV.CRON_KEY || k !== ENV.CRON_KEY) { res.writeHead(403); return res.end('no'); } return sendDigests().then(n => { res.writeHead(200, { 'Content-Type': 'text/plain' }); res.end('sent ' + n); }).catch(e => { res.writeHead(500); res.end(String(e.message)); }); }
     if (req.url.startsWith('/line/webhook') && req.method === 'POST') return lineWebhook(req, res, /\/komugi/.test(req.url) ? 'komugi' : 'hatabo');   // /line/webhook/komugi はコムギの公式LINE
