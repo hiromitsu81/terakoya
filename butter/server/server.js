@@ -1386,7 +1386,9 @@ function session(ws) {
   // ハタボでは、運営の個人の名前を出さない（伝え先は、招待した人か「ハタボの事務局」）
   const tellFix = t => S.avatar === 'hatabo' && S.tellTo && !S.visit ? String(t).replace(/ハタラボの担当（ヒロさん）|ハタラボのヒロさん/g, S.tellTo).replace(/〈伝え先〉/g, S.tellTo).replace(/ヒロさん/g, S.tellTo) : t;
   function sysBlocks(extra) { const [a, b] = sysParts(); return [{ type: 'text', text: tellFix(a), cache_control: { type: 'ephemeral' } }, { type: 'text', text: tellFix((b + (S.visit || S.role === 'サービス相談' ? '' : customBlock(S.custom)) + (extra || '') + (AVS[S.avatar] ? AVS[S.avatar].last : EDO_LAST) + lineupStyle(S)).trim()) || '。' }]; }
-  const convoKey = () => !S.owner || S.visit ? '' : S.guest ? S.owner + ':guest' : S.mode === 'family' ? S.owner + ':family' : '';
+  // ハタボとコムギは、同じ人（同じLINEのID）でも話の記録・教わったことを分ける（コムギの話がハタボに出ないように）
+  const kmSfx = () => S.avatar === 'komugi' ? ':komugi' : '';
+  const convoKey = () => !S.owner || S.visit ? '' : S.guest ? S.owner + ':guest' + kmSfx() : S.mode === 'family' ? S.owner + ':family' : '';
   /** 会話をまとめる：次の会話用の「まとめ」と、アプリのバターちゃんが読む「ジュニア日記」 */
   async function summarize() {
     const key = convoKey();
@@ -1406,7 +1408,7 @@ function session(ws) {
       const memo = (t.split('===まとめ===')[1] || '').split('===日記===')[0].trim();
       const diary = (t.split('===日記===')[1] || '').split('===学び===')[0].trim();
       const got = pickLearn(t.split('===学び===')[1]);
-      if (got.length) { S.learned = mergeLearn(S.learned, got); savePrefs(S.owner, { learned: S.learned }); }
+      if (got.length) { S.learned = mergeLearn(S.learned, got); savePrefs(S.owner + kmSfx(), { learned: S.learned }); }
       if (memo) S.memo = memo.slice(0, 1200);
       S.newTurns = Math.max(0, S.newTurns - n); S.asideLog = [];
       await saveConvo(key, { summary: S.memo, newTurns: S.newTurns, turns: S.history.slice(S.macSelf || (S.app && !S.bridge && superUntil(S.owner)) ? -40 : -12), at: Date.now() });
@@ -1549,7 +1551,7 @@ function session(ws) {
     const fact = String(text).replace(/^(ジュニア|じゅにあ)[、,\s]*/, '').replace(/(を|って)?(覚えて|おぼえて|忘れないで|わすれないで|覚えといて|おぼえといて)(おいて|ね|な|くれ|ください|くんな)*[。！!]*$/, '').replace(/^(覚えて|おぼえて|覚えといて|おぼえといて)[：:、]\s*/, '').trim().slice(0, 120);
     if (!fact) return speakOnly(av3('おう、なにを覚えりゃいいんでぃ？', '何を覚えればいいですか？', '何を覚えたらよかですか？'), 'think');
     S.lessons = (S.lessons || []).filter(x => x !== fact).concat(fact).slice(-30);
-    savePrefs(S.asGuest ? GUEST_COMMON : S.owner, { lessons: S.lessons });
+    savePrefs(S.asGuest ? GUEST_COMMON : S.owner + kmSfx(), { lessons: S.lessons });
     return speakOnly(av3('がってんだ、覚えたぜ！', '覚えました。次から生かします。', isMac(S.owner) ? '覚えました。紹介の人と話すうちにも、ちゃんと生かしますけん。' : '覚えました。次から、ちゃんと生かしますけん。'), 'excited');
   }
   /** 追加チケット：プランの回数をこえたら、1枚で1回話せる。ポイントで買うか、お金で申し込む */
@@ -1767,7 +1769,7 @@ function session(ws) {
     }
     if (S.app && FEEDBACK_RE.test(text)) feedbackNote(text).catch(e => console.error('feedback', String(e.message).slice(0, 120)));   // 仕様変更・不具合・改善・機能・企画の声は、ハタボ事務局へ（返事はふつうに続ける）
     if ((!S.guest || S.asGuest || S.macSelf) && wantsLearn(text)) return learn(text);
-    if ((!S.guest || S.asGuest || S.macSelf) && FORGET_RE.test(text)) { S.lessons = []; S.learned = []; savePrefs(S.asGuest ? GUEST_COMMON : S.owner, { lessons: [], learned: [] }); return speakOnly(av3('がってんだ、教わったことはきれいさっぱり忘れたぜ。', '教わったことは、ぜんぶ忘れました。また一から教えてください。', '教わったことは、ぜんぶ忘れました。また一から教えてくださいね。'), 'smile'); }
+    if ((!S.guest || S.asGuest || S.macSelf) && FORGET_RE.test(text)) { S.lessons = []; S.learned = []; savePrefs(S.asGuest ? GUEST_COMMON : S.owner + kmSfx(), { lessons: [], learned: [] }); return speakOnly(av3('がってんだ、教わったことはきれいさっぱり忘れたぜ。', '教わったことは、ぜんぶ忘れました。また一から教えてください。', '教わったことは、ぜんぶ忘れました。また一から教えてくださいね。'), 'smile'); }
     if (S.macSelf && isMac(S.owner) && NEWS_SET_RE.test(text)) return setKomugiNews(text);   // コムギ通信を入れられるのは馬越さんだけ（「馬越さんより」として紹介の人に届くので）
     if (MINUTES_RE.test(text)) return minutes(PDF_RE.test(text) && !S.guest);
     if (MEMO_RE.test(text)) return memo(text);
@@ -2115,8 +2117,12 @@ function session(ws) {
         const macOwner = ENV.MAC_OWNERS.length ? 'g:' + String(ENV.MAC_OWNERS[0]).replace(/:\d{4}-\d{2}-\d{2}$/, '').replace(/^g:/, '') : '';
         const lp = S.macSelf ? pr : S.bridge && macOwner ? await loadPrefs(macOwner) : S.guest ? await loadPrefs(GUEST_COMMON) : pr;
         if (S.bridge && lp.custom) { const pc = cleanCustom(lp.custom); if (pc.about || pc.rules) S.system += '\n\n【親（馬越さん）からの指示。いつもこれに従う。ただしハタラボの決まり・安全・正直さが先】' + (pc.about ? '\n馬越さんのこと（本人が書いた）：' + pc.about : '') + (pc.rules ? '\n指示：' + pc.rules : ''); }      // 窓口は、ヒロさんがテストで教えたことをみんなで使う
-        S.lessons = Array.isArray(lp.lessons) ? lp.lessons.slice(-30) : [];
-        S.learned = Array.isArray(lp.learned) ? lp.learned.slice(-20) : [];
+        // コムギの教わったことは「持ち主:komugi」に置く（ハタボと分ける）。馬越さんの前からの分は、まだ分けていなければそのまま使う
+        let lq = lp;
+        { const ko = S.avatar === 'komugi' ? (S.macSelf ? S.owner : S.bridge && macOwner ? macOwner : '') : '';
+          if (ko) { const kp = await loadPrefs(ko + ':komugi'); lq = Array.isArray(kp.lessons) || Array.isArray(kp.learned) ? kp : isMac(ko) ? lp : {}; } }
+        S.lessons = Array.isArray(lq.lessons) ? lq.lessons.slice(-30) : [];
+        S.learned = Array.isArray(lq.learned) ? lq.learned.slice(-20) : [];
         S.trio = S.guest ? false : typeof m.trio === 'boolean' ? m.trio : !!pr.trio;
         if (typeof pr.waitMs === 'number') S.waitMs = pr.waitMs;
         if (convoKey() && !S.asGuest) {      // テスト（&test=guest）は毎回まっさらから（前のテストの話を混ぜない）
