@@ -8,12 +8,12 @@ const gasLeads = [];
 const gasSrv = http.createServer((req, res) => {
   let b = ''; req.on('data', c => b += c); req.on('end', () => {
     const j = JSON.parse(b); res.setHeader('Content-Type', 'application/json'); if (j.action === 'lead') gasLeads.push(j.lead || {});
-    if (j.action === 'brain') return res.end(JSON.stringify({ ok: true, guest: true, owner: 'g:' + (j.idToken === 'mac' ? 'Umac' : 'U' + j.idToken), me: j.idToken === 'mac' ? 'マー君' : j.idToken === 'hiro' ? 'ヒロ' : 'アヤ', role: '汎用', slots: [] }));
+    if (j.action === 'brain') return res.end(JSON.stringify({ ok: true, guest: true, owner: 'g:' + (j.idToken === 'mac' ? 'Umac' : 'U' + j.idToken), me: j.idToken === 'mac' ? 'マー君' : j.idToken === 'hiro' ? 'HiRo-Shibuya' : 'アヤ', role: '汎用', slots: [] }));
     res.end(JSON.stringify({ ok: true }));
   });
 }).listen(0);
 process.env.GAS_URL = 'http://127.0.0.1:' + gasSrv.address().port;
-process.env.MAC_OWNERS = 'Umac'; process.env.KOMUGI_OWNERS = 'Uhiro';
+process.env.MAC_OWNERS = 'Umac'; process.env.KOMUGI_OWNERS = 'Uhiro=ヒロ';
 process.env.OFFICE_OWNERS = 'Uoffice';
 process.env.CRON_KEY = 'k';
 process.env.BRIDGE_DAILY = '2';
