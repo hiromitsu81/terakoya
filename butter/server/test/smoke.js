@@ -391,6 +391,24 @@ function client(port, hello) {
     deps.claude.messages.stream = o;
     [f, h, t].forEach(x => x.ws.close());
   }
-  console.log('OK：開いたら振り返り（相談メモだけ）・自分で学ぶ・切れた文は読まない・家族の画面は家族の話をする・窓口の事例案内・区切られた返事の続き・空の返事のやり直し・家族は勉強を教える・覚える・メールはヒロさんだけ・議事録（文字とPDF）・窓口の役割と相談メモ・写真の保存・調べた先のリンク・質問のあとの続き・会話・気持ち・一文ずつの声・写真・記録の分け方・ご縁つなぎ・割りこみ・三人モード・呼ばれただけ・会話のつづき・ジュニア日記・やりなおし・窓口と案件メモ・紹介のつながり・窓口のお休み・いいとこ取りと検索・近くの場所・プランのおためし');
+  // IDの決まり：持ち主×キャラ。同じ家族（fam）でも、コムギのミニアプリで話したことは、ハタボの記録に入らない
+  {
+    let km = null; const ok0 = deps.claude.messages.stream;
+    const k = await client(port, { type: 'hello', pass: 'ok', mode: 'family', app: 'komugi' });
+    await k.until(m => m.type === 'ready');
+    const kn = k.msgs.filter(m => m.type === 'reply_end').length;
+    k.ws.send(JSON.stringify({ type: 'text', text: 'コムギのひみつの合言葉はミカン' }));
+    await k.until(() => k.msgs.filter(m => m.type === 'reply_end').length > kn, 8000);
+    await new Promise(r => setTimeout(r, 300)); k.ws.close(); await new Promise(r => setTimeout(r, 300));
+    deps.claude.messages.stream = p => { km = JSON.stringify(p.messages); return ok0(p); };
+    const hb = await client(port, { type: 'hello', pass: 'ok', mode: 'family', app: 'hatabo' });
+    await hb.until(m => m.type === 'ready');
+    const hn = hb.msgs.filter(m => m.type === 'reply_end').length;
+    hb.ws.send(JSON.stringify({ type: 'text', text: 'こんにちは' }));
+    await hb.until(() => hb.msgs.filter(m => m.type === 'reply_end').length > hn, 8000);
+    assert.ok(km && !/ミカン/.test(km), 'ハタボの記録にコムギの話が入らない');
+    deps.claude.messages.stream = ok0; hb.ws.close();
+  }
+  console.log('OK：持ち主×キャラで記録を分ける・開いたら振り返り（相談メモだけ）・自分で学ぶ・切れた文は読まない・家族の画面は家族の話をする・窓口の事例案内・区切られた返事の続き・空の返事のやり直し・家族は勉強を教える・覚える・メールはヒロさんだけ・議事録（文字とPDF）・窓口の役割と相談メモ・写真の保存・調べた先のリンク・質問のあとの続き・会話・気持ち・一文ずつの声・写真・記録の分け方・ご縁つなぎ・割りこみ・三人モード・呼ばれただけ・会話のつづき・ジュニア日記・やりなおし・窓口と案件メモ・紹介のつながり・窓口のお休み・いいとこ取りと検索・近くの場所・プランのおためし');
   process.exit(0);
 })().catch(e => { console.error('NG', e); process.exit(1); });
