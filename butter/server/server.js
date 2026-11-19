@@ -66,6 +66,10 @@ const ENV = {
   KOMUGI_OWNERS: (process.env.KOMUGI_OWNERS || '').split(/[,\s]+/).map(s => s.trim()).filter(Boolean),   // 馬越さんと同じ使い方でコムギを相棒にする人（ヒロさんなど）のLINEのID。制限なし・自分の資料・紹介カードなし。紹介の手数料や通知は馬越さんのまま
   SUPER_OWNERS: (process.env.SUPER_OWNERS || '').split(',').map(s => s.trim()).filter(Boolean),
   MAC_OWNERS: (process.env.MAC_OWNERS || '').split(/[,\s]+/).map(s => s.trim()).filter(Boolean),   // 馬越さんのLINEのID（「g:」つきでもなしでも。期限は最後に「:YYYY-MM-DD」）。コムギを制限なしで使える・紹介の手数料の受け取り手
+  STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || '',        // Stripeの秘密キー（Cloud Runに直接入れる。チャットに貼らない）
+  STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || '', // Stripeの「支払いが済んだ」知らせの署名（whsec_…）
+  STRIPE_API: process.env.STRIPE_API || 'https://api.stripe.com',
+  STRIPE_PRICES: (() => { try { return JSON.parse(process.env.STRIPE_PRICES || '{}'); } catch (e) { return {}; } })(),   // 予備：{"ris_Z_m":"price_…"}。なければ価格の lookup_key（ris_Z_m など）でさがす
   SITE_URL: process.env.SITE_URL || '',   // ハタボのサービスサイト（公開したらURLを入れる。トーク・カード・Myハタボから、ときどき案内する）
   OFFICE_OWNERS: (process.env.OFFICE_OWNERS || '').split(/[,\s]+/).map(s => s.trim().replace(/^g:/, '')).filter(Boolean),   // ハタボ事務局（ヒロさん）のLINEのID。事務局への声・問い合わせ・友だち追加などを1日1回まとめて届ける
   CRON_KEY: process.env.CRON_KEY || '',   // 1日1回のまとめを送る合図（Cloud Scheduler から /cron/digest?key=…）
@@ -151,14 +155,117 @@ function familyOk(S) {
 }   // ハタボの1日の回数（X・G・Z）。こえたら追加チケット
 /** ありがとうポイント：紹介した人に。2代目のご縁の人には半分 */
 const THANKS = { visit: 100, trial: 300, contract: 1000 };
+/* ===== 決済（Stripe）：支払いページ → 支払いが済んだ知らせ（Webhook）→ 契約 → 本人と事務局に知らせる ===== */
+const stripeOn = () => !!ENV.STRIPE_SECRET_KEY;
+function stripeForm(obj, pre, out) {
+  out = out || [];
+  for (const [k, v] of Object.entries(obj || {})) {
+    if (v === undefined || v === null || v === '') continue;
+    const key = pre ? pre + '[' + k + ']' : k;
+    if (typeof v === 'object') stripeForm(v, key, out); else out.push(encodeURIComponent(key) + '=' + encodeURIComponent(String(v)));
+  }
+  return out.join('&');
+}
+async function stripeCall(path, params, method) {
+  const m = method || (params ? 'POST' : 'GET');
+  const q = params && m === 'GET' ? '?' + stripeForm(params) : '';
+  const r = await fetch(ENV.STRIPE_API + path + q, { method: m, signal: AbortSignal.timeout(10000), headers: { Authorization: 'Bearer ' + ENV.STRIPE_SECRET_KEY, 'Content-Type': 'application/x-www-form-urlencoded' }, body: m === 'POST' ? stripeForm(params) : undefined });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error('stripe ' + r.status + ' ' + String(j.error && j.error.message || '').slice(0, 120));
+  return j;
+}
+const priceCache = new Map();
+/** ラインナップ×グレード×払い方（m・y）の価格ID。価格の lookup_key を「ris_Z_m」の形にしておく */
+async function priceFor(lineup, grade, pay) {
+  const key = lineup + '_' + grade + '_' + (pay === 'y' ? 'y' : 'm');
+  if (ENV.STRIPE_PRICES[key]) return ENV.STRIPE_PRICES[key];
+  if (priceCache.has(key)) return priceCache.get(key);
+  const j = await stripeCall('/v1/prices', { 'lookup_keys[]': key, active: 'true', limit: 1 }, 'GET').catch(e => { console.error('price', key, String(e.message).slice(0, 120)); return {}; });
+  const id = j.data && j.data[0] && j.data[0].id || '';
+  if (id) priceCache.set(key, id);
+  return id;
+}
+/** 支払いページを作る。お試し中なら、お試しが終わるまでは引き落とさない */
+async function checkoutFor(S, r, f) {
+  const price = await priceFor(f.lineup, f.grade, f.pay);
+  if (!price) return null;
+  const back = (S.avatar === 'komugi' ? LINE_CH.komugi.mini : HATABO_MINI) + '?page=plan';
+  const trialEnd = f.stage === 'trial' && (r.trialUntil || 0) > Date.now() + 49 * 3600000 ? Math.floor(r.trialUntil / 1000) : 0;
+  const md = { myRef: S.myRef, lineup: f.lineup, grade: f.grade, pay: f.pay, refFrom: S.refFrom || '', name: String(S.me || '').slice(0, 40) };
+  const ses = await stripeCall('/v1/checkout/sessions', Object.assign({ mode: 'subscription', client_reference_id: S.myRef, success_url: back + '&paid=1', cancel_url: back + '&paid=0', locale: 'ja', 'line_items[0][price]': price, 'line_items[0][quantity]': 1, metadata: md, subscription_data: { metadata: md } },
+    trialEnd ? { 'subscription_data[trial_end]': trialEnd } : {}, r.stripeCustomer ? { customer: r.stripeCustomer } : {}));
+  return ses.url || null;
+}
+async function portalFor(S, r) {
+  if (!r.stripeCustomer) return null;
+  const ses = await stripeCall('/v1/billing_portal/sessions', { customer: r.stripeCustomer, return_url: (S.avatar === 'komugi' ? LINE_CH.komugi.mini : HATABO_MINI) + '?page=plan' });
+  return ses.url || null;
+}
+/** Stripeの署名を確かめる（t=…,v1=… を whsec で HMAC-SHA256。5分以内） */
+function stripeSigOk(raw, header) {
+  if (!ENV.STRIPE_WEBHOOK_SECRET || !header) return false;
+  const parts = Object.fromEntries(String(header).split(',').map(x => x.split('=')).filter(x => x.length === 2).map(([k, v]) => [k.trim(), v]));
+  const t = Number(parts.t || 0), v1s = String(header).split(',').filter(x => x.trim().startsWith('v1=')).map(x => x.trim().slice(3));
+  if (!t || Math.abs(Date.now() / 1000 - t) > 300) return false;
+  const want = crypto.createHmac('sha256', ENV.STRIPE_WEBHOOK_SECRET).update(t + '.' + raw).digest('hex');
+  return v1s.some(v => v.length === want.length && crypto.timingSafeEqual(Buffer.from(v), Buffer.from(want)));
+}
+async function stripeCustRef(cust) {
+  try { if (deps.db && cust) { const d = await deps.db.collection('stripeCustomers').doc(cust).get(); return d.exists ? String(d.data().myRef || '') : ''; } } catch (e) {}
+  return memStripe.get(cust) || '';
+}
+const memStripe = new Map(), memStripeEv = new Set();
+/** 支払いの知らせを、紹介コード（refs）の記録に反映する。同じ知らせは1回だけ */
+async function handleStripeEvent(ev) {
+  if (!ev || !ev.id) return 'skip';
+  try { if (deps.db) { const ref = deps.db.collection('stripeEvents').doc(ev.id); const d = await ref.get(); if (d.exists) return 'dup'; await ref.set({ type: ev.type, at: Date.now() }); } else { if (memStripeEv.has(ev.id)) return 'dup'; memStripeEv.add(ev.id); } } catch (e) {}
+  const o = (ev.data && ev.data.object) || {}, now = Date.now();
+  if (ev.type === 'checkout.session.completed') {
+    const md = o.metadata || {}, code = String(md.myRef || o.client_reference_id || '');
+    if (!code) return 'noref';
+    const r = await getRef(code).catch(() => null) || {};
+    const inTrial = r.stage === 'trial' && (r.trialUntil || 0) > now;
+    const patch = { paidAt: now, payFailAt: 0, stripeCustomer: o.customer || '', stripeSub: o.subscription || '', lineup: md.lineup || r.lineup || '', grade: md.grade || r.grade || '', pay: md.pay || r.pay || 'm' };
+    if (!inTrial) { patch.stage = 'contract'; patch.contractAt = now; }
+    await putRef(code, patch);
+    if (o.customer) { try { if (deps.db) await deps.db.collection('stripeCustomers').doc(o.customer).set({ myRef: code, at: now }); } catch (e) {} memStripe.set(o.customer, code); }
+    const f = funnelOf(Object.assign({}, r, patch)), plan = (f.lineupName || '') + ' ' + (f.grade || '');
+    await postInbox(code, { kind: 'goen', from: 'office', fromName: 'ハタボ事務局', text: inTrial ? 'お支払いの登録が済みました。お試しが終わる' + new Date(r.trialUntil).toLocaleDateString('ja-JP') + 'のあとから、' + plan + 'で続きます。' : 'ご契約ありがとうございます。' + plan + 'がはじまりました。' }).catch(() => {});
+    await officePush('［契約］' + (md.name || r.name || 'だれか') + 'さん：' + plan + (f.pay === 'y' ? '（年払い）' : '（月払い）') + (inTrial ? '・お試し中に支払い登録' : '')).catch(() => {});
+    if (!inTrial && !r.thanked) { await tellUpline({ refFrom: md.refFrom || r.parent || '', me: md.name || r.name || '' }, plan + 'を契約しました', 'contract').catch(() => {}); await putRef(code, { thanked: true }).catch(() => {}); }
+    return 'contract';
+  }
+  const code = await stripeCustRef(o.customer);
+  if (!code) return 'nocust';
+  if (ev.type === 'invoice.paid') { await putRef(code, { payFailAt: 0, paidThrough: (o.lines && o.lines.data && o.lines.data[0] && o.lines.data[0].period && o.lines.data[0].period.end || 0) * 1000 }); return 'paid'; }
+  if (ev.type === 'invoice.payment_failed') {
+    await putRef(code, { payFailAt: now });
+    await postInbox(code, { kind: 'goen', from: 'office', fromName: 'ハタボ事務局', text: 'お支払いができませんでした。Myハタボのプランから、カードを確かめてください。' }).catch(() => {});
+    await officePush('［支払いの失敗］紹介コード ' + code + ' のお支払いができませんでした。').catch(() => {});
+    return 'failed';
+  }
+  if (ev.type === 'customer.subscription.deleted') { await putRef(code, { stage: 'cancel', cancelAt: now }); await officePush('［解約］紹介コード ' + code + ' の契約が終わりました。').catch(() => {}); return 'canceled'; }
+  return 'other';
+}
+function stripeWebhook(req, res) {
+  let raw = ''; req.setEncoding('utf8');
+  req.on('data', c => { raw += c; if (raw.length > 1e6) req.destroy(); });
+  req.on('end', async () => {
+    if (!stripeSigOk(raw, req.headers['stripe-signature'])) { res.writeHead(400); return res.end('sig'); }
+    let ev = null; try { ev = JSON.parse(raw); } catch (e) { res.writeHead(400); return res.end('json'); }
+    const out = await handleStripeEvent(ev).catch(e => { console.error('stripe ev', String(e.message || e).slice(0, 160)); return 'error'; });
+    console.log('stripe', ev.type, out);
+    res.writeHead(out === 'error' ? 500 : 200); res.end(out);
+  });
+}
 /** いまの段階：お試しの7日が過ぎたら、選んだプランの契約に切りかわる */
 function funnelOf(r) {
   r = r || {};
   let stage = r.stage || '';
-  if (stage === 'trial' && Date.now() > (r.trialUntil || 0)) stage = 'contract';
+  if (stage === 'trial' && Date.now() > (r.trialUntil || 0)) stage = r.paidAt || !stripeOn() ? 'contract' : 'expired';   // 決済がつながっていれば、支払いの登録がない人はお試し終了
   const L = LINEUP[r.lineup] || null;
   return { stage, lineup: r.lineup || '', lineupName: L ? L.name : '', grade: r.grade || '', price: L && L.grades[r.grade] || '', pay: r.pay || 'm',
-    trialUntil: r.trialUntil || 0, trialAt: r.trialAt || 0, family: r.family || '', daysLeft: stage === 'trial' ? Math.max(1, Math.ceil(((r.trialUntil || 0) - Date.now()) / 86400000)) : 0 };
+    trialUntil: r.trialUntil || 0, trialAt: r.trialAt || 0, family: r.family || '', paid: !!r.paidAt, payFail: !!r.payFailAt, canPortal: !!r.stripeCustomer, daysLeft: stage === 'trial' ? Math.max(1, Math.ceil(((r.trialUntil || 0) - Date.now()) / 86400000)) : 0 };
 }
 const planOf = S => S && S.claude && !S.planChosen ? PLANS.super : S && S.funnel && S.funnel.stage === 'trial' ? PLANS.super : S && S.funnel && S.funnel.stage === 'contract' && GRADE_PLAN[S.funnel.grade] && S.guest ? PLANS[GRADE_PLAN[S.funnel.grade]] : _planOf(S);
 const _planOf = S => S && S.guest && (!!S.agent || isSanboRole(S.role) || (S.ref && ENV.SUPER_REFS.includes(String(S.ref).toLowerCase()))) ? PLANS.super : S && superUntil(S.owner) ? (PLANS[S.plan] || PLANS.super) : PLANS[S && !S.guest && !S.asGuest && S.mode === 'family' && PLANS[S.plan] ? S.plan : 'std'];
@@ -295,7 +402,7 @@ async function myPage(S) {
     kids: (mine && mine.kids) || 0, myRef: S.myRef || '', from: fromLabel || '',
     pts: (mine && mine.pts) || 0, thanks: THANKS, tickets: (mine && mine.tickets) || 0, ticketPacks: TICKETS,
     unread: (inbox || []).filter(x => !x.read).length,
-    funnel: S.funnel || funnelOf(mine), lineups: LINEUP, trialDays: TRIAL_DAYS, trialDaily: TRIAL_DAILY, trialFirst: TRIAL_FIRST,
+    funnel: S.funnel || funnelOf(mine), payReady: stripeOn(), lineups: LINEUP, trialDays: TRIAL_DAYS, trialDaily: TRIAL_DAILY, trialFirst: TRIAL_FIRST,
     notes: (notes || []).slice(0, 50), summary: String(S.memo || '').slice(0, 3000) };
 }
 /** ご縁の木：自分が紹介した人、その人が紹介した人…（3代まで・合わせて150人まで）。名前は呼び名だけ */
@@ -1924,11 +2031,22 @@ function session(ws) {
     const act = String(m.act || ''), L = LINEUP[m.lineup], g = String(m.grade || ''), pay = m.pay === 'y' ? 'y' : 'm';
     const r = await getRef(S.myRef).catch(() => null) || {}, cur = funnelOf(r), now = Date.now();
     let patch = null, kind = '';
+    // 決済がつながっていれば：契約・支払いの登録は支払いページへ、契約中のプラン変更・カードは Stripe の画面へ
+    if (stripeOn() && (act === 'pay' || act === 'contract' || (act === 'change' && cur.stage === 'contract' && r.stripeCustomer) || act === 'portal')) {
+      try {
+        let url = null;
+        if (act === 'portal' || act === 'change') url = await portalFor(S, r);
+        else { const f0 = act === 'pay' ? cur : Object.assign({}, cur, { lineup: m.lineup, grade: g, pay, stage: cur.stage === 'trial' ? 'trial' : '' }); if (!(LINEUP[f0.lineup] && LINEUP[f0.lineup].grades[f0.grade])) return send({ type: 'notice', why: 'funnel', detail: 'plan' }); url = await checkoutFor(S, r, f0); }
+        if (url) { console.log('checkout', JSON.stringify({ owner: S.owner, act })); return send({ type: 'checkout', url }); }
+        if (act === 'portal') return send({ type: 'notice', why: 'funnel', detail: 'portal' });
+      } catch (e) { console.error('checkout', String(e.message || e).slice(0, 160)); return send({ type: 'notice', why: 'checkout', detail: String(e.message || e).slice(0, 80) }); }
+      // 価格が決まっていない（「担当がご案内」など）ときは、これまでどおり申し込みを受けて事務局から案内
+    }
     if ((act === 'trial' || act === 'change' || act === 'contract') && !(L && L.grades[g])) return send({ type: 'notice', why: 'funnel', detail: 'plan' });
     if (act === 'trial' && !cur.stage) { patch = { stage: 'trial', lineup: m.lineup, grade: g, pay, trialAt: now, trialUntil: now + TRIAL_DAYS * 86400000 }; kind = 'お試しの申し込み'; }
     else if (act === 'change' && (cur.stage === 'trial' || cur.stage === 'contract')) { patch = { lineup: m.lineup, grade: g, pay }; kind = 'プランの変更'; }
     else if (act === 'cancel' && cur.stage === 'trial') { patch = { stage: 'cancel', cancelAt: now }; kind = 'お試しをやめる'; }
-    else if (act === 'contract' && (cur.stage === 'cancel' || !cur.stage)) { patch = { stage: 'contract', lineup: m.lineup, grade: g, pay, contractAt: now }; kind = '契約の申し込み'; }
+    else if (act === 'contract' && (cur.stage === 'cancel' || cur.stage === 'expired' || !cur.stage)) { patch = { stage: 'contract', lineup: m.lineup, grade: g, pay, contractAt: now }; kind = '契約の申し込み'; }
     if (!patch) return send(await myPage(S));
     if (cur.stage === 'trial' && Date.now() > (r.trialUntil || 0)) patch.stage = patch.stage || 'contract';
     if (r.introducer || S.introducer) { patch.introducer = r.introducer || S.introducer; patch.fee = { introducer: patch.introducer, lineup: m.lineup || r.lineup || '', grade: g || r.grade || '', price: (L && L.grades[g]) || '', pay, at: now, act }; }   // 紹介の手数料をあとで数えるための記録
@@ -2657,6 +2775,7 @@ function createServer() {
     if (req.url.startsWith('/live/session')) return liveHttp(req, res).catch(e => { console.error('live', e); try { res.writeHead(500); res.end('{}'); } catch (x) {} });   // GPT-Live-1 の検証
     if (req.url.startsWith('/cron/faq')) { const u0 = new URL(req.url, 'http://x'), k = u0.searchParams.get('key'); if (!ENV.CRON_KEY || k !== ENV.CRON_KEY) { res.writeHead(403); return res.end('no'); } return faqDigest(Number(u0.searchParams.get('days')) || 7).then(o => { res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(o)); }).catch(e => { res.writeHead(500); res.end(String(e.message)); }); }
     if (req.url.startsWith('/cron/digest')) { const k = new URL(req.url, 'http://x').searchParams.get('key'); if (!ENV.CRON_KEY || k !== ENV.CRON_KEY) { res.writeHead(403); return res.end('no'); } return sendDigests().then(async n => { const h = await hearingCheckAll().catch(() => 0); res.writeHead(200, { 'Content-Type': 'text/plain' }); res.end('sent ' + n + (h ? ' / hearing ' + h : '')); }).catch(e => { res.writeHead(500); res.end(String(e.message)); }); }
+    if (req.url.startsWith('/stripe/webhook') && req.method === 'POST') return stripeWebhook(req, res);
     if (req.url.startsWith('/line/webhook') && req.method === 'POST') return lineWebhook(req, res, /\/komugi/.test(req.url) ? 'komugi' : 'hatabo');   // /line/webhook/komugi はコムギの公式LINE
     if (req.url === '/' || req.url.startsWith('/health')) { res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' }); return res.end('バターちゃんジュニア：元気だよ'); }
     res.writeHead(404); res.end();
@@ -2673,4 +2792,4 @@ if (require.main === module) {
   deps.init();
   createServer().listen(ENV.PORT, () => console.log('butter-junior on :' + ENV.PORT));
 }
-module.exports = { createServer, deps, ENV, splitter, takeEmotion, clean, PHOTO_RE, VIDEO_RE, session, calledJunior, calledJam, hearingStart, hearingCheckAll };
+module.exports = { createServer, deps, ENV, splitter, takeEmotion, clean, PHOTO_RE, VIDEO_RE, session, calledJunior, calledJam, hearingStart, hearingCheckAll, handleStripeEvent, stripeSigOk, funnelOf, getRef, putRef, checkoutFor };

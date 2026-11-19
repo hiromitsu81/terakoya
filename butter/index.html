@@ -2679,6 +2679,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
       case 'inbox': HBP.inbox = m; if (m.sent) toast('伝言をとどけたよ'); if (!$('hbPage').hidden && HBP.page === 'inbox') { if (m.sent || !HBP.inboxShown) { HBP.inboxShown = true; hbpRender(); } } break;
       case 'custom': HBP.custom = m; if (m.saved) { toast('キャラ設定を保存したよ'); window.__aiName = m.aiName || ''; avText(); const t = document.querySelector('#butterTag text'); if (t && avName()) t.textContent = avName(); } if (!$('hbPage').hidden && HBP.page === 'custom') hbpRender(); break;
       case 'google': HBP.google = m; if (!$('hbPage').hidden && (HBP.page === 'notes' || HBP.page === 'google')) hbpRender(); break;
+      case 'checkout': toast('お支払いのページを開きます'); try { if (window.liff && liff.openWindow) liff.openWindow({ url: m.url, external: true }); else location.href = m.url; } catch (e) { location.href = m.url; } HBP.paying = true; break;
       case 'google_url': try { if (window.liff && liff.openWindow) liff.openWindow({ url: m.url, external: true }); else window.open(m.url, '_blank'); } catch (e) { location.href = m.url; } toast('ブラウザでGoogleにログインしてね。終わったらLINEにもどってきてね'); setTimeout(() => jrSend({ type: 'google_status' }), 20000); break;
       case 'docs': HBP.docs = m; if (!$('hbPage').hidden && HBP.page === 'docs') hbpRender(); break;
       case 'reqs': HBP.reqs = m; if (!$('hbPage').hidden && HBP.page === 'reqs') hbpRender(); break;
@@ -3369,21 +3370,23 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
           <div class="k" style="margin-top:14px">3 お支払い</div><div class="hbpick g2"><button type="button" data-pay="m" class="${sel.pay === 'm' ? 'on' : ''}"><b>月払い</b><span>いつでも見直せる</span></button><button type="button" data-pay="y" class="${sel.pay === 'y' ? 'on' : ''}"><b>年払い</b><span>2か月分おトク</span></button></div>
           <div class="hbsum"><span>${esc(L.name || '')} ${sel.grade}</span><b>${mo ? (sel.pay === 'y' ? (mo * 10).toLocaleString('ja-JP') + '円／年' : mo.toLocaleString('ja-JP') + '円／月') : esc(gs[sel.grade] || '')}</b></div>
           <button type="button" class="hbbtn" id="hbpGo">${btnLabel}</button>
-          <p style="font-size:11.5px">お支払いの登録（Apple Pay・Google Pay・PayPay）は準備中です。申し込みのあと、ハタラボ（HATHA LAB）からご案内します。</p></div>`;
+          <p style="font-size:11.5px">${d.payReady ? 'お支払いはStripeの安全なページで登録します（カード・Apple Pay・Google Pay）。' : 'お支払いの登録（Apple Pay・Google Pay・PayPay）は準備中です。申し込みのあと、ハタラボ（HATHA LAB）からご案内します。'}</p></div>`;
       };
       let html = `<div class="hbc"><div class="k">PLAN</div><h3>紹介 → お試し → 契約</h3>${stepper}${siteLink}`;
       if (!st) html += `<p>まず7日間、いちばん上の<b>Z</b>で無料で試せます（初日${d.trialFirst || 30}回、2日目から1日${d.trialDaily || 15}回まで）。先に、8日目からのプランを選んでおきます。7日以内にやめれば0円です。</p></div>` + form(`7日間無料ではじめる`);
       else if (st === 'trial') html += `<div class="big" style="margin-top:10px">あと${f.daysLeft}<small>日 お試し中（Z）</small></div><p>8日目（${new Date(f.trialUntil).toLocaleDateString('ja-JP')}のあと）から <b>${cur}</b> に切りかわります。</p>
-          <button type="button" class="hbbtn w" id="hbpChange">プランを変える</button><button type="button" class="hbbtn w" id="hbpCancel" style="border-color:#C9CFDA;color:#5E6B85">お試しをやめる（0円）</button></div>` + (HBP.edit ? form('このプランに変える') : '');
+          ${d.payReady && !f.paid ? '<button type="button" class="hbbtn" id="hbpPay">お支払いを登録する（' + new Date(f.trialUntil).toLocaleDateString('ja-JP') + 'までは0円）</button>' : f.paid ? '<p>お支払いの登録は済んでいます。</p>' : ''}<button type="button" class="hbbtn w" id="hbpChange">プランを変える</button><button type="button" class="hbbtn w" id="hbpCancel" style="border-color:#C9CFDA;color:#5E6B85">お試しをやめる（0円）</button></div>` + (HBP.edit ? form('このプランに変える') : '');
       else if (st === 'contract') html += `<div class="big" style="font-size:24px;margin-top:10px">${cur}</div><p>育てた${esc(nm)}は、プランやグレードを変えてもそのまま引きつぎます。変えると次の更新日から新しい料金です。</p>
-          <button type="button" class="hbbtn w" id="hbpChange">プラン・グレードを変える</button><button type="button" class="hbbtn w" data-ask="解約について相談したい" style="border-color:#C9CFDA;color:#5E6B85">解約の相談</button></div>` + (HBP.edit ? form('このプランに変える') : '');
-      else html += `<p>お試しをやめました。続けたくなったら、ここから申し込めます。</p></div>` + form('この内容で申し込む');
+          ${f.payFail ? '<p style="color:#B3261E"><b>お支払いができていません。</b>カードを確かめてください。</p>' : ''}<button type="button" class="hbbtn w" id="hbpChange">プラン・グレードを変える</button>${d.payReady && f.canPortal ? '<button type="button" class="hbbtn w" id="hbpPortal">お支払い方法・領収書</button>' : ''}<button type="button" class="hbbtn w" data-ask="解約について相談したい" style="border-color:#C9CFDA;color:#5E6B85">解約の相談</button></div>` + (HBP.edit ? form('このプランに変える') : '');
+      else html += `<p>${st === 'expired' ? 'お試しの7日が終わりました。続けるには、お支払いを登録してください。' : 'お試しをやめました。続けたくなったら、ここから申し込めます。'}</p></div>` + form(d.payReady ? 'お支払いへ進む' : 'この内容で申し込む');
       body.innerHTML = html;
       body.querySelectorAll('[data-lu]').forEach(b => b.onclick = () => { sel.lineup = b.dataset.lu; hbpRender(); });
       body.querySelectorAll('[data-gr]').forEach(b => b.onclick = () => { sel.grade = b.dataset.gr; hbpRender(); });
       body.querySelectorAll('[data-pay]').forEach(b => b.onclick = () => { sel.pay = b.dataset.pay; hbpRender(); });
       const go = document.getElementById('hbpGo');
-      if (go) go.onclick = () => { const act = !st ? 'trial' : st === 'cancel' ? 'contract' : 'change'; HBP.edit = false; jrSend(Object.assign({ type: 'funnel', act }, sel)); go.disabled = true; go.textContent = '送っています…'; };
+      const pb = document.getElementById('hbpPay'); if (pb) pb.onclick = () => { pb.disabled = true; pb.textContent = 'お支払いのページを用意しています…'; jrSend({ type: 'funnel', act: 'pay' }); };
+      const pt = document.getElementById('hbpPortal'); if (pt) pt.onclick = () => { jrSend({ type: 'funnel', act: 'portal' }); };
+      if (go) go.onclick = () => { const act = !st ? 'trial' : st === 'cancel' || st === 'expired' ? 'contract' : 'change'; HBP.edit = false; jrSend(Object.assign({ type: 'funnel', act }, sel)); go.disabled = true; go.textContent = '送っています…'; };
       const ch = document.getElementById('hbpChange'); if (ch) ch.onclick = () => { HBP.edit = !HBP.edit; hbpRender(); };
       const cn = document.getElementById('hbpCancel'); if (cn) cn.onclick = () => { if (confirmDel(cn)) jrSend({ type: 'funnel', act: 'cancel' }); };
     } else if (p === 'aisai') {
@@ -3508,6 +3511,9 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
   $('pinX').addEventListener('click', () => { try { localStorage.setItem('pinDone', '1'); } catch (e) {} $('pinBar').hidden = true; });
   // ピン留めのおすすめ：ハタボのアプリで、まだ「とじる」していない人に、2回目に開いたときから3回まで
   if (HATABO_APP) { try { const n = Number(localStorage.getItem('pinSeen') || 0) + 1; localStorage.setItem('pinSeen', String(n)); if (!localStorage.getItem('pinDone') && n >= 2 && n <= 4) setTimeout(() => { $('pinBar').hidden = false; }, 6000); } catch (e) {} }
+  { let pd = ''; try { const q = new URLSearchParams(location.search); pd = q.get('paid') || ''; if (!pd && q.get('liff.state')) pd = new URLSearchParams(decodeURIComponent(q.get('liff.state')).split('?')[1] || '').get('paid') || ''; } catch (e) {}
+    if (pd === '1') setTimeout(() => toast('お支払いの登録を受けつけました。反映まで少しお待ちください'), 1200);
+    else if (pd === '0') setTimeout(() => toast('お支払いはまだ済んでいません'), 1200); }
   function hbpOpen(p) {
     if (!HBP.data) { try { const c = store.get('hbpData', null); if (c && c.type === 'mypage') HBP.data = c; } catch (e) {} }   // 前回の内容をすぐ出して、届いたら新しくする
     HBP.page = p || 'my'; $('hbPage').hidden = false; hbpRender(); if (HBS.friend === null) hbpFriend();
