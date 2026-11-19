@@ -2760,7 +2760,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
         const host = (m.gen === J.gen && J.out && J.out.parentElement) || [...bubbles.querySelectorAll('.bubble.her')].pop();
         if (!host) break;
         const row = document.createElement('div'); row.className = 'links';
-        m.links.forEach(l => { if (!/^https:\/\//.test(l.url || '')) return; const a = document.createElement('a'); a.href = l.url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = l.title || l.url; row.append(a); });
+        m.links.forEach(l => { if (!/^https:\/\//.test(l.url || '')) return; const a = document.createElement('a'); a.href = l.url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = l.title || l.url; if (l.page && (HATABO_APP || KOMUGI_APP)) a.addEventListener('click', e => { e.preventDefault(); try { hbpOpen(l.page); } catch (x) { location.href = l.url; } }); row.append(a); });   // Myハタボのページは、アプリの中でそのまま開く
         if (row.children.length) host.append(row);
         break;
       }
