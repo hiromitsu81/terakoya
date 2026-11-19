@@ -403,3 +403,6 @@ body.hb-peek .hbtop{bottom:180px}
 }
 
 @media(max-width:760px){body.fvon .cw-btn,body.fvon .hbtop{opacity:0;pointer-events:none;transform:translateY(20px)}.cw-btn{transition:opacity .3s,transform .3s}}
+/* 旗のマークを Myハタボ のアイコンに（11/19） */
+.hbh .my:before{content:"";flex:none;width:23px;height:16px;margin-right:6px;background:url(xm.png) center/contain no-repeat}
+@media(max-width:760px){.hbh .brand img{display:none}.hbh .brand b{font-size:22px}.hbh .my{padding:0 12px 0 9px!important}.hbh .my:before{width:21px;height:15px;margin-right:5px}}
