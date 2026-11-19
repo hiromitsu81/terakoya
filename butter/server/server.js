@@ -1453,6 +1453,8 @@ function session(ws) {
   // システムの文は2つに分ける：前半（人がら・決まり・教わったこと）は会話のあいだ変わらないのでキャッシュする。後半（まとめ・いまの時刻・場所・気づき）は毎回かわる
   /** キャラ設定の声と速さを、この会話の声に反映する */
   function applyVoice() { const c = S.custom || {}; if (!S.baseVoice) S.baseVoice = S.voice; S.voice = c.voice && VOICES[c.voice] ? VOICES[c.voice].name : S.baseVoice; S.rateMul = c.speed || 1; }
+  /** 前にまざったコムギの話（同じ家族の記録に入っていた分）は、ハタボ・ジュニアでは使わない */
+  const noKomugi = turns => S.avatar === 'komugi' || !turns.some(t => t.role === 'assistant' && /馬越さんの相棒|うちは|とです|ですけん|ますけん/.test(String(t.content || ''))) ? turns : [];
   const hearing = () => !!S.guest && isHearingRole(S.role);   // たくちゃんの窓口：清掃管理のヒアリング役
   const lastFor = () => hearing() ? HEARING_LAST : AVS[S.avatar] ? AVS[S.avatar].last : JR_LAST;
   const againFor = () => hearing() ? HEARING_AGAIN : AVS[S.avatar] ? AVS[S.avatar].again : 'また来てくれたんですね。続きをお話ししましょう。';
@@ -1469,7 +1471,7 @@ function session(ws) {
   function sysBlocks(extra) { const [a, b] = sysParts(); return [{ type: 'text', text: tellFix(a), cache_control: { type: 'ephemeral' } }, { type: 'text', text: tellFix((b + (S.visit || S.role === 'サービス相談' || hearing() ? '' : customBlock(S.custom)) + (extra || '') + lastFor() + (hearing() ? '' : lineupStyle(S))).trim()) || '。' }]; }
   // ハタボとコムギは、同じ人（同じLINEのID）でも話の記録・教わったことを分ける（コムギの話がハタボに出ないように）
   const kmSfx = () => S.avatar === 'komugi' ? ':komugi' : '';
-  const convoKey = () => !S.owner || S.visit ? '' : S.guest ? S.owner + ':guest' + kmSfx() : S.mode === 'family' ? S.owner + ':family' : '';
+  const convoKey = () => !S.owner || S.visit ? '' : S.guest ? S.owner + ':guest' + kmSfx() : S.mode === 'family' ? S.owner + ':family' + kmSfx() : '';   // コムギのミニアプリの家族の会話は、ハタボ・ジュニアと分ける（11/19：ハタボがコムギの話し方をまねたため）
   /** 会話をまとめる：次の会話用の「まとめ」と、アプリのバターちゃんが読む「ジュニア日記」 */
   async function summarize() {
     const key = convoKey();
@@ -2147,7 +2149,7 @@ function session(ws) {
           S.system += '\n\n【いまの話し方】ここはコムギのミニアプリ。あなたの名前はコムギ。' + KOMUGI_PERSONA;
         } else if (S.app === 'hatabo' && !S.guest) {
           S.avatar = 'hatabo'; S.voice = AVS.hatabo.voice();
-          S.system += '\n\n【いまの話し方】ここはハタボのミニアプリ。あなたの名前はハタボ（愛称ハタボー）。一人称は「ぼく」。やわらかい丁寧語（です・ます）で話し、語尾に「〜ボー」はつけない。江戸っ子の話し方（てやんでぃ・がってん・〜だぜ）はしない。';
+          S.system += '\n\n【いまの話し方】ここはハタボのミニアプリ。あなたの名前はハタボ（愛称ハタボー）。一人称は「ぼく」。やわらかい丁寧語（です・ます）で話し、語尾に「〜ボー」はつけない。江戸っ子の話し方（てやんでぃ・がってん・〜だぜ）はしない。コムギ（馬越さんの相棒・一人称「うち」・博多弁）ではないので、コムギとして名のったり、博多弁（〜けん・〜とです）で話したりしない。';
         }
         S.ready = true;
         // 紹介コード：自分のコードを作り、はじめて来た人は「だれの紹介か」を覚える
@@ -2241,7 +2243,7 @@ function session(ws) {
           const c = await loadConvo(convoKey());
           if (c) {
             S.memo = String(c.summary || '');
-            if (Date.now() - (c.at || 0) < (S.macSelf ? 7 * 24 : 12) * 3600000) S.history = cleanTurns(c.turns);
+            if (Date.now() - (c.at || 0) < (S.macSelf ? 7 * 24 : 12) * 3600000) S.history = noKomugi(cleanTurns(c.turns));
             S.newTurns = Number(c.newTurns || 0);
             if (S.newTurns >= 2) setTimeout(summarize, 3000);       // 前回まとめきれなかった分（強制で切ったときなど）
           }
@@ -2298,7 +2300,7 @@ function session(ws) {
         S.mode = m.mode === 'business' ? 'business' : 'family'; S.history = []; S.memo = ''; S.newTurns = 0;
         await loadBrain();
         const c = convoKey() ? await loadConvo(convoKey()) : null;
-        if (c) { S.memo = String(c.summary || ''); if (Date.now() - (c.at || 0) < (S.macSelf ? 7 * 24 : 12) * 3600000) S.history = cleanTurns(c.turns); }
+        if (c) { S.memo = String(c.summary || ''); if (Date.now() - (c.at || 0) < (S.macSelf ? 7 * 24 : 12) * 3600000) S.history = noKomugi(cleanTurns(c.turns)); }
         return send({ type: 'mode', mode: S.mode });
       }
       if (m.type === 'profile') return onProfile(m);

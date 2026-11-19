@@ -1864,7 +1864,9 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
 
   // 効果音（ブラウザで作る音。著作権のある曲は使わない、オリジナルの短いフレーズ）
   let actx = null;
-  const AC = () => { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); return actx; };
+  // iPhoneのマナーモード（消音スイッチ）でも声が出るように：音の使い方を「再生と録音」にする（対応している端末だけ）
+  try { if (navigator.audioSession) navigator.audioSession.type = 'play-and-record'; } catch (e) {}
+  const AC = () => { try { if (navigator.audioSession && navigator.audioSession.type !== 'play-and-record') navigator.audioSession.type = 'play-and-record'; } catch (e) {} actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); return actx; };
   function tone(f, t0, len, type, vol, slideTo) {
     const a = AC(), o = a.createOscillator(), g = a.createGain();
     o.type = type || 'triangle'; o.frequency.setValueAtTime(f, t0);
