@@ -46,6 +46,8 @@ gcloud run deploy butter-junior --source terakoya/butter/server --region asia-no
 
 ## 返事を速くする（任意）
 
+いまの場所（REGION）は `gcloud run services list` でわかる。asia-northeast1 なら東京なので、そのままでよい。
+
 サーバーを1台起こしたままにすると、最初の返事が速くなる。そのぶん少しお金がかかる（目安で月1,000〜2,000円ほど）。やめるときは `--min-instances 0`。
 
 ```
@@ -70,4 +72,6 @@ gcloud run deploy butter-junior --source terakoya/butter/server --region asia-no
 | TTS_RATE | 1.08 |
 | DAILY_LIMIT | 400（一人1日に答える回数） |
 | SESSION_MAX_MIN | 60（1回つなぎっぱなしにできる分） |
+| EOU_MS | 800（話し終わりの見分け。文字がこのミリ秒かわらなければ返事を始める。切られやすいときは1000、0でGoogleまかせ） |
+| ELEVENLABS_FORMAT | mp3_44100_128（ElevenLabsの声の音質） |
 | ALLOWED_ORIGINS | https://hiromitsu81.github.io ほか |
