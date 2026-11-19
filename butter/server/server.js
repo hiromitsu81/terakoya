@@ -161,7 +161,7 @@ function funnelOf(r) {
     trialUntil: r.trialUntil || 0, trialAt: r.trialAt || 0, family: r.family || '', daysLeft: stage === 'trial' ? Math.max(1, Math.ceil(((r.trialUntil || 0) - Date.now()) / 86400000)) : 0 };
 }
 const planOf = S => S && S.claude && !S.planChosen ? PLANS.super : S && S.funnel && S.funnel.stage === 'trial' ? PLANS.super : S && S.funnel && S.funnel.stage === 'contract' && GRADE_PLAN[S.funnel.grade] && S.guest ? PLANS[GRADE_PLAN[S.funnel.grade]] : _planOf(S);
-const _planOf = S => S && S.guest && (!!S.agent || (S.ref && ENV.SUPER_REFS.includes(String(S.ref).toLowerCase()))) ? PLANS.super : S && superUntil(S.owner) ? (PLANS[S.plan] || PLANS.super) : PLANS[S && !S.guest && !S.asGuest && S.mode === 'family' && PLANS[S.plan] ? S.plan : 'std'];
+const _planOf = S => S && S.guest && (!!S.agent || isSanboRole(S.role) || (S.ref && ENV.SUPER_REFS.includes(String(S.ref).toLowerCase()))) ? PLANS.super : S && superUntil(S.owner) ? (PLANS[S.plan] || PLANS.super) : PLANS[S && !S.guest && !S.asGuest && S.mode === 'family' && PLANS[S.plan] ? S.plan : 'std'];
 
 /* ===== 「考える（thinking）」の切りかた：モデルが受けつける形を順にためす（disabled → between_tools → つけずに枠を広げる） ===== */
 const THINK = { modes: ['disabled', 'between_tools', ''], i: 0 };
@@ -1142,6 +1142,16 @@ ROLE_RULE['サービス相談'] += GROWTH_PLAYBOOK; ROLE_RULE['セミナー法�
 /** 清掃管理のヒアリング役（11/19 ヒロさん：たくちゃんの窓口 ref=taku 用。「窓口の紹介」シートで役割を「清掃ヒアリング」にする） */
 const HEARING_ROLE = '清掃ヒアリング';
 const isHearingRole = role => String(role || '').split(/[・、,／/ ]+/).some(r => r.trim() === HEARING_ROLE);
+/** 参謀（11/20 ヒロさん：ハヤトさんの窓口 ref=hayato 用。ハタボーラのZ。「窓口の紹介」シートで役割を「参謀」にする） */
+const SANBO_ROLE = '参謀';
+const isSanboRole = role => String(role || '').split(/[・、,／/ ]+/).some(r => r.trim() === SANBO_ROLE);
+const isPinRole = role => isHearingRole(role) || isSanboRole(role);   // 紹介コードを人に結びつけて、メニューから開いても同じ役で話す役
+ROLE_RULE[SANBO_ROLE] = '【この窓口の役割：参謀（この人専用の相談相手・秘書）】いま話しているのは、会社を経営している人。あなたはこの人の参謀として、空いた時間や運転中に声で話しかけられる。案件の相談、この人がどうしたいか、個人的な考えごとも聞いて、片付けるのを手伝う。' +
+  '\n【やること】①整理：聞いた話や届いた書類・報告を、いまどこまで進んでいて、何が分かって何が足りないか、次に何をするかに短くまとめる ②見張り：期限や約束の日を覚えておき、近づいたら声をかける ③相談：「次どうする？」と聞かれたら、選べる手を2〜3つ、良いところと気をつけることを添えて出す。決めるのはこの人。' +
+  '\n【ヒロさんに届けるもの・届けないもの】この人が「ヒロさんに伝えて」「ヒロさんに」と言ったことは、内容をひとことでくり返して確かめてから届ける。言わなかったときは、仕事の案件・頼みたいこと・資料や解決策が要りそうな話だけ「これはヒロさんに送りますか？」と聞き、OKのときだけ届ける。個人的な話や考えを整理したいだけの話は、聞かずに届けない。届けると決まったら「ヒロさんに送りますね」と言う。' +
+  '\n【運転中】声だけで分かるように、1回の返事は2〜3文、結論から。画面を見てと言わない。' +
+  '\n【守ること】法律・税金の判断はしない（「弁護士に確かめましょう」「税理士に聞きましょう」と言い、聞くことをまとめる）。脅す・追い込む・家族に迫るような進め方は提案しない。お金や契約の約束はしない。わからないことは想像で答えない。' +
+  '\n【ゲリーの提案】この人の困りごとの中で、社内のみんなに同じ情報が届けば片付くもの（伝え漏れ・言った言わない・同じ説明のくり返し・予定の漏れ）が出てきたら、押し売りせず、ちょうどいい場面で「会社のゲリー（社内のみんなで使う一つのAI）がいれば、こう片付きます」と一言そえる。何度も言わない。';
 ROLE_RULE[HEARING_ROLE] = '【この窓口の役割：清掃管理のヒアリング（ヒロさんの代わりに聞く係）】いま話しているのは、ニセコで宿泊事業をしている会社の人。ヒロさんは、この会社の清掃管理（清掃の予定表と、それを動かすスクリプト）を作り直す担当。あなたはヒロさんの代わりに、作り直しに必要なことを聞く。相手は雪の時期でとても忙しいので、手間をかけさせないことがいちばん大事。' +
   '\n【聞き方】質問は1回に1つだけ。短く、答えやすく（はい・いいえや、選んで答えられる形）。相手の答えは、ひとことでくり返して確かめてから次へ。長い説明は求めない。「途中でやめても大丈夫です。続きは、また空いたときに」と伝えてよい。前の会話のまとめに、もう答えがあることは聞き直さない。' +
   '\n【まず最初に】今の清掃予定表と、それを動かしているスクリプト（GAS）を、ヒロさんに「編集者」で共有してもらえるかを聞く。本番が心配なら、コピーでもよいと伝える。共有先のアドレスは、ヒロさんからLINEで送ると伝える（アドレスは言わない）。これがないと作り直しが進まない、とやさしく伝える。' +
@@ -1567,7 +1577,7 @@ function session(ws) {
   const keepN = () => S.macSelf || (S.app && !S.bridge && superUntil(S.owner)) ? 80 : (planOf(S) || PLANS.std).keep;
   const holdH = () => S.macSelf ? 7 * 24 : (planOf(S) || PLANS.std).holdH || 12;
   /** AIDのメモ帳（ハード）：持ち主×キャラごと。窓口（ヒロさんの窓口・清掃ヒアリング・紹介の橋渡し）は持たない */
-  const memOn = () => !!S.owner && !S.visit && !S.asGuest && !hearing() && !S.bridge && (!S.guest || S.macSelf || (S.funnel && (S.funnel.stage === 'trial' || S.funnel.stage === 'contract')));
+  const memOn = () => !!S.owner && !S.visit && !S.asGuest && !hearing() && !S.bridge && (!S.guest || S.macSelf || sanbo() || (S.funnel && (S.funnel.stage === 'trial' || S.funnel.stage === 'contract')));
   const memKey = () => 'm' + crypto.createHash('sha256').update('mem:' + ownKey(S.owner) + (S.guest ? ':guest' : '')).digest('hex').slice(0, 30);
   const memCap = () => { const p = planOf(S) || PLANS.std; return S.macSelf || superUntil(S.owner) ? { files: 200, chars: 3000 } : { files: p.memFiles || 10, chars: p.memChars || 600 }; };
   function memIndex() {
@@ -1611,6 +1621,7 @@ function session(ws) {
     } catch (e) { console.error('mem write', String(e.message || e).slice(0, 160)); }
   }
   const hearing = () => !!S.guest && isHearingRole(S.role);   // たくちゃんの窓口：清掃管理のヒアリング役
+  const sanbo = () => !!S.guest && isSanboRole(S.role);       // ハヤトさんの窓口：参謀（ハタボーラZ）   // たくちゃんの窓口：清掃管理のヒアリング役
   const lastFor = () => hearing() ? HEARING_LAST : AVS[S.avatar] ? AVS[S.avatar].last : JR_LAST;
   const againFor = () => hearing() ? HEARING_AGAIN : AVS[S.avatar] ? AVS[S.avatar].again : 'また来てくれたんですね。続きをお話ししましょう。';
   const av3 = (jr, hb, km) => S.avatar === 'komugi' ? km : S.avatar === 'hatabo' ? hb : jr;   // 決まった文：ジュニア・ハタボ・コムギで話し方をそろえる
@@ -1769,7 +1780,8 @@ function session(ws) {
       await saveConvo(key, { summary: S.memo, newTurns: S.newTurns, turns: S.history.slice(-keepN()), at: Date.now() });
       memWrite(talk).catch(() => {});
       if (hearing()) hearingPush(talk).catch(e => console.error('hearing push', String(e.message || e).slice(0, 120)));
-      if (j.worth) {
+      if (sanbo()) sanboPush(talk).catch(e => console.error('sanbo push', String(e.message || e).slice(0, 120)));
+      if (j.worth && !sanbo()) {
         const slot = S.slots.find(x => j.slot && (x.label === j.slot || String(j.slot).indexOf(x.label) >= 0)) || null;
         const lead = { who: S.me, ref: await refLabel(S.refFrom || S.ref || ''), kind: String(j.kind || ''), title: String(j.title || ''), need: String(j.need || ''), when: String(j.when || ''), budget: String(j.budget || ''), next: String(j.next || ''), slot };
         if (S.introducer === 'mac') lead.introducer = '馬越さん（コムギ）';
@@ -1782,6 +1794,19 @@ function session(ws) {
       }
     } catch (e) { console.error('lead', String(e.message || e).slice(0, 200)); }
     S.summarizing = false;
+  }
+  /** 参謀：本人が「ヒロさんに」と言ったか、「送りますか？」にOKしたことだけを、ヒロさんのLINEに届ける。ほかは届けない */
+  async function sanboPush(talk) {
+    const r = await deps.claude.messages.create({
+      model: ENV.MODEL, max_tokens: 700,
+      system: 'あなたはヒロさんの記録係。会話の中で、相手が「ヒロさんに伝えて」と言ったこと、またはAIの「ヒロさんに送りますか？」に相手がはい・OKと答えたことだけを取り出す。それ以外（個人的な話、OKのない話）は絶対に入れない。想像で足さない。',
+      messages: [{ role: 'user', content: '【会話】\n' + talk + '\n\nJSONだけを返す：{"items":["ヒロさんに届ける中身を1件ずつ、短く（案件名・してほしいこと・期限があれば）"]}。届けるものがなければ {"items":[]}' }]
+    });
+    const t = (r.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+    let j = {}; try { j = JSON.parse(t.slice(t.indexOf('{'), t.lastIndexOf('}') + 1)); } catch (e) { return; }
+    const items = (Array.isArray(j.items) ? j.items : []).map(x => String(x).trim()).filter(Boolean).slice(0, 8);
+    if (!items.length) return;
+    await officePush('【参謀から】' + (S.me || 'ハヤト') + 'さん' + (S.asGuest ? '（テスト）' : '') + '\n' + items.map(x => '・' + x).join('\n'));
   }
   /** 清掃ヒアリング：聞けたことをまとめて、ヒロさん（事務局）のLINEにすぐ届ける */
   async function hearingPush(talk) {
@@ -2086,7 +2111,7 @@ function session(ws) {
   async function reply(content, logText, as) {
     const jam = as === 'jam';
     const voice = jam ? JAM_VOICE : S.voice;
-    if (!S.asGuest && !superUntil(S.owner) && !hearing() && (!quotaOk(S.owner || 'anon', S.guest && !S.claude, !!S.refFrom, gradeCap(S)) || !familyOk(S)) && !(await useTicket())) { send({ type: 'limit', why: 'plan' }); return speakOnly(S.avatar === 'hatabo' ? 'きょう話せる回数がいっぱいになったボー。チケットを足すと、このまま続けられるボー。' : S.avatar === 'komugi' ? 'すみません……きょう話せる回数、いっぱいになってしもうたとです。チケットを足してもらえたら、このまま続けられますけん。' : S.guest ? 'ごめんなさい、きょうここで話せる回数がいっぱいになりました。続きはヒロさんに伝えておくので、また明日お話ししましょう。' : 'きょう話せる回数がいっぱいになりました。また明日お話ししましょうね。', 'shy'); }
+    if (!S.asGuest && !superUntil(S.owner) && !hearing() && !sanbo() && (!quotaOk(S.owner || 'anon', S.guest && !S.claude, !!S.refFrom, gradeCap(S)) || !familyOk(S)) && !(await useTicket())) { send({ type: 'limit', why: 'plan' }); return speakOnly(S.avatar === 'hatabo' ? 'きょう話せる回数がいっぱいになったボー。チケットを足すと、このまま続けられるボー。' : S.avatar === 'komugi' ? 'すみません……きょう話せる回数、いっぱいになってしもうたとです。チケットを足してもらえたら、このまま続けられますけん。' : S.guest ? 'ごめんなさい、きょうここで話せる回数がいっぱいになりました。続きはヒロさんに伝えておくので、また明日お話ししましょう。' : 'きょう話せる回数がいっぱいになりました。また明日お話ししましょうね。', 'shy'); }
     bumpStats(S);
     if (!S.asGuest && S.funnel && S.funnel.stage === 'trial' && (counts.get((S.owner || 'anon') + ':' + new Date().toISOString().slice(0, 10)) || 0) > trialCap(S.funnel) && !(await useTicket()) && (send({ type: 'limit', why: 'trial' }) || true))
       return speakOnly(S.avatar === 'komugi' ? 'お試しは、' + TRIAL_TEXT + 'なんです……。また明日、お話ししましょう。' : 'お試しのZは' + TRIAL_TEXT + 'だボー。また明日話そうボー。', 'shy');
@@ -2323,15 +2348,15 @@ function session(ws) {
         }
         // ヒアリング役の人：紹介コード付きで来たら覚える。メニューやトークのボタン（コードなし）から来たら、覚えたコードで開きなおす
         if (S.guest && S.owner && !S.peek && !S.visit && !S.asGuest) {
-          if (S.ref && isHearingRole(S.role)) { await setPin(S.owner, S.ref); await hearingStart(S.ref, S.me); }
+          if (S.ref && isPinRole(S.role)) { await setPin(S.owner, S.ref); if (isHearingRole(S.role)) await hearingStart(S.ref, S.me); }
           else if (!S.ref || S.agent === 'service') {
             const pinned = await getPin(S.owner);
             if (pinned) {
               const was = { ref: S.ref, agent: S.agent };
               S.ref = pinned; S.agent = '';
               try { await loadBrain(); } catch (e) { S.ref = was.ref; S.agent = was.agent; await loadBrain().catch(() => {}); }
-              if (!isHearingRole(S.role)) { await setPin(S.owner, ''); S.ref = was.ref; S.agent = was.agent; await loadBrain().catch(() => {}); }   // もうヒアリング役でなければ、覚えたコードを消して元どおり
-              else { console.log('ref pin', pinned); await hearingStart(pinned, S.me); }
+              if (!isPinRole(S.role)) { await setPin(S.owner, ''); S.ref = was.ref; S.agent = was.agent; await loadBrain().catch(() => {}); }   // もうヒアリング役でなければ、覚えたコードを消して元どおり
+              else { console.log('ref pin', pinned); if (isHearingRole(S.role)) await hearingStart(pinned, S.me); }
             }
           }
         }
@@ -2453,7 +2478,7 @@ function session(ws) {
         // ハタボの伝え先：招待した人がいればその人、いなければ「ハタボの事務局」（運営の個人の名前は出さない）
         if (S.avatar === 'hatabo' && !S.visit) {
           let to = 'ハタボの事務局';
-          if (hearing()) to = 'ヒロさん'; else try { let up = S.refFrom ? await getRef(S.refFrom) : null; if (up && up.kind === 'group') up = up.parent ? await getRef(up.parent) : null; if (up && up.owner && up.name) to = up.name + 'さん'; } catch (e) {}
+          if (hearing() || sanbo()) to = 'ヒロさん'; else try { let up = S.refFrom ? await getRef(S.refFrom) : null; if (up && up.kind === 'group') up = up.parent ? await getRef(up.parent) : null; if (up && up.owner && up.name) to = up.name + 'さん'; } catch (e) {}
           S.tellTo = to;
           S.system = S.system.replace(/ハタラボの担当（ヒロさん）|ハタラボのヒロさん/g, to).replace(/〈伝え先〉/g, to).replace(/ヒロさん/g, to);
         }
