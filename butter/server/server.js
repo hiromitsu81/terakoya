@@ -991,15 +991,15 @@ function splitter(onSentence) {
 const VOICE_BACKUP = ['ja-JP-Chirp3-HD-Orus', 'ja-JP-Chirp3-HD-Leda'];
 const badVoice = new Set(), noProfile = new Set();
 const EMO_RATE = { excited: 1.06, laugh: 1.06, surprise: 1.04, smile: 1, think: 0.94, shy: 0.92, sad: 0.9 };   // 気持ちで、話す速さを少し変える
-async function synth(text, voice, emo) {
+async function synth(text, voice, emo, tv) {
   let name = voice || ENV.TTS_VOICE;
   if (badVoice.has(name)) name = VOICE_BACKUP.find(v => !badVoice.has(v)) || name;
-  try { return await synth1(text, name, emo); }
+  try { return await synth1(text, name, emo, tv); }
   catch (e) {
     // その声がこの言語にないときは、つぎの声にする（覚えておく）
     if (!/voice|not (exist|supported)|invalid/i.test(String(e.message)) || VOICE_BACKUP.indexOf(name) === VOICE_BACKUP.length - 1) throw e;
     badVoice.add(name); console.error('voice ng', name, String(e.message).slice(0, 120));
-    return synth(text, VOICE_BACKUP.find(v => !badVoice.has(v)), emo);
+    return synth(text, VOICE_BACKUP.find(v => !badVoice.has(v)), emo, tv);
   }
 }
 /** ElevenLabs で声を作る（name が「el:声のID」のとき） */
@@ -1011,12 +1011,12 @@ async function synthEL(text, voiceId, emo) {
   if (!r.ok) throw new Error('elevenlabs ' + r.status + ' ' + (await r.text().catch(() => '')).slice(0, 120));
   return Buffer.from(await r.arrayBuffer()).toString('base64');
 }
-async function synth1(text, name, emo) {
+async function synth1(text, name, emo, tv) {
   if (/^el:/.test(name)) {
     const back = name === ENV.HATABO_VOICE ? 'ja-JP-Chirp3-HD-Puck' : 'ja-JP-Chirp3-HD-Leda';   // うまくいかないときは、いつもの Google の声で（ハタボは男の子の声）
     if (!ENV.EL_KEY) name = back;
-    else try { return await synthEL(String(text).replace(/……|…/g, '、'), name.slice(3), emo); }
-    catch (e) { console.error('elevenlabs ng', String(e.message).slice(0, 160)); name = back; }
+    else try { const a = await synthEL(String(text).replace(/……|…/g, '、'), name.slice(3), emo); if (tv) tv.voice = 'elevenlabs'; return a; }
+    catch (e) { console.error('elevenlabs ng', String(e.message).slice(0, 160)); name = back; if (tv) tv.elErr = String(e.message).slice(0, 40); }
   }
   const audioConfig = { audioEncoding: 'MP3', speakingRate: (name === ENV.KOMUGI_VOICE ? ENV.KOMUGI_RATE : ENV.TTS_RATE) * (EMO_RATE[emo] || 1) };
   text = String(text).replace(/……|…/g, '、、');   // 「……」は、ひと呼吸の間にする
@@ -1030,6 +1030,7 @@ async function synth1(text, name, emo) {
     noProfile.add(name); delete audioConfig.effectsProfileId; delete audioConfig.sampleRateHertz;
     [r] = await deps.tts.synthesizeSpeech({ input: { text }, voice: { languageCode: 'ja-JP', name }, audioConfig });
   }
+  if (tv && !tv.voice) tv.voice = name;
   return Buffer.from(r.audioContent).toString('base64');
 }
 
@@ -1333,7 +1334,7 @@ function session(ws) {
     });
     st.on('error', e => { clearTimeout(eou); if (S.stt === st) S.stt = null; if (!/Audio Timeout|DEADLINE|exceeded maximum/i.test(String(e.message))) send({ type: 'notice', why: 'stt', detail: String(e.message).slice(0, 80) }); });
     // 聞こえた文はページへ。ページがガチャ・UFO・チーちゃんの芸などを先に見て、話す分だけ {type:'text'} で返してくる
-    st.on('end', () => { clearTimeout(eou); if (S.stt === st) S.stt = null; let t = (finalText.length >= lastAll.length ? finalText : lastAll).trim(); if (S.avatar === 'hatabo' || S.avatar === 'komugi') t = hearFix(t); if (t) send({ type: 'heard', text: t }); });
+    st.on('end', () => { clearTimeout(eou); if (S.stt === st) S.stt = null; S.heardAt = Date.now(); S.eouMs = S.lastPartial ? S.heardAt - S.lastPartial : null; let t = (finalText.length >= lastAll.length ? finalText : lastAll).trim(); if (S.avatar === 'hatabo' || S.avatar === 'komugi') t = hearFix(t); if (t) send({ type: 'heard', text: t }); });
     S.stt = st;
   }
   function onAudio(buf) {
@@ -1810,6 +1811,7 @@ function session(ws) {
     let msgs = cleanTurns(S.history).slice(-(deluxe ? 40 : plan.turns)).concat([{ role: 'user', content }]);
     const use = { model: '', inTok: 0, outTok: 0, cacheTok: 0, searches: 0 };
     let full = '', emotion = 'smile', head = true, seq = 0, chain = Promise.resolve();
+    const tm = { t0: Date.now(), tok: 0, audio: 0 }, tv = {};   // 速さの記録（中身は残さない）
     send({ type: 'reply_start', gen, as: jam ? 'ジャム猫' : !S.visit && S.custom && S.custom.aiName ? S.custom.aiName : AVS[S.avatar] ? AVS[S.avatar].name : 'ジュニア' });
     if (S.placeP) { await S.placeP.catch(() => {}); S.placeP = null; }
     const study = !jam && !S.guest && S.mode === 'family' && STUDY_RE.test(logText || '');
@@ -1826,8 +1828,8 @@ function session(ws) {
       if (seq >= maxSent) { capped = true; return; }      // 三人モードは2文まで
       spoken += s;
       const n = seq++;
-      const p = synth(s, voice, emotion).catch(() => jam ? synth(s, S.voice) : Promise.reject(new Error('tts'))).catch(e => { send({ type: 'notice', why: 'tts', detail: String(e.message).slice(0, 80) }); return ''; });
-      chain = chain.then(async () => { const mp3 = await p; if (n === 0) await waitQuiet(gen, utt0); if (gen === S.gen && mp3) send({ type: 'audio', gen, seq: n, text: s, mp3 }); });
+      const p = synth(s, voice, emotion, n === 0 ? tv : null).catch(() => jam ? synth(s, S.voice) : Promise.reject(new Error('tts'))).catch(e => { send({ type: 'notice', why: 'tts', detail: String(e.message).slice(0, 80) }); return ''; });
+      chain = chain.then(async () => { const mp3 = await p; if (n === 0) await waitQuiet(gen, utt0); if (gen === S.gen && mp3) { if (n === 0) tm.audio = Date.now(); send({ type: 'audio', gen, seq: n, text: s, mp3 }); } });
     });
     let lastErr = '';
     const links = [], seenUrl = new Set();
@@ -1866,6 +1868,7 @@ function session(ws) {
         if (ev.type === 'message_delta' && ev.delta && ev.delta.stop_reason) stopReason = ev.delta.stop_reason;
         if (ev.type !== 'content_block_delta' || !ev.delta || ev.delta.type !== 'text_delta') continue;
         let t = ev.delta.text;
+        if (!tm.tok) tm.tok = Date.now();
         full += t;
         if (head) {                                   // 先頭の [わくわく] を気持ちにして、読み上げない
           const probe = full.trimStart();
@@ -1930,6 +1933,9 @@ function session(ws) {
       if (S.myRef) { S.costYen = (S.costYen || 0) + yen; putRef(S.myRef, { costYen: Math.round(S.costYen * 10) / 10, costAt: Date.now() }).catch(() => {}); } }
     const usage = plan === PLANS.std && !S.plan ? undefined : { plan: plan.label, model: use.model, in: use.inTok, out: use.outTok, cache: use.cacheTok, searches: use.searches };
     if (usage) console.log('plan usage', JSON.stringify(usage));
+    // 1回のやりとりの速さ（ミリ秒）：話し終わり→文字、文字→返事を始める、AIが書きはじめるまで、最初の声まで、ぜんぶ。どの声で鳴ったか
+    { const fromHeard = S.heardAt && tm.t0 - S.heardAt < 20000 ? tm.t0 - S.heardAt : null;
+      console.log('turn', JSON.stringify({ owner: S.owner, name: S.me, avatar: S.avatar, app: S.app || '', model: use.model, eou: fromHeard == null ? null : S.eouMs, page: fromHeard, ai: tm.tok ? tm.tok - tm.t0 : null, voice1: tm.audio ? tm.audio - tm.t0 : null, total: Date.now() - tm.t0, sent: seq, chars: (text || '').length, voice: tv.voice || '', elErr: tv.elErr || '' })); }
     send({ type: 'reply_end', gen, emotion, text, why: text ? undefined : lastErr.slice(0, 120), usage });
     S.speaking = false; S.aborter = null;
     if (S.mode === 'family' && logText && !noRecord) gas(Object.assign({ action: 'log', said: logText, reply: text }, S.auth)).catch(() => {});
