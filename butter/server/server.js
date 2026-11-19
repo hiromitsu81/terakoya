@@ -611,6 +611,50 @@ function welcomeCards(name) {
 }
 /* ===== コムギの公式LINE：黒とネオンのカード。馬越さん本人と、馬越さんの紹介の人で中身を分ける ===== */
 const HATABO_MINI = 'https://miniapp.line.me/2012676035-yCkx6tBu', HATABO_ADD = 'https://line.me/R/ti/p/@024curid';
+/** ハタボ・コムギが話した話題に合わせて、そのページを出す（11/19 ヒロさん：パートナーの話ならパートナーのページ、プランならプランのページ）。上から順に見て、1回の返事で2つまで */
+const SITE_TOPICS = [
+  [/紹介パートナー|パートナー(の方|向け|制度|募集|ランク|プログラム)|サクセスパートナー|代理店/, 'partner.html', 'パートナーの方へ'],
+  [/主要諸元|スペック|記憶の量|メモ帳の(数|量)/, 'plan.html#spec', '主要諸元表（グレードの中身）'],
+  [/お試し|無料で試/, 'plan.html#trial', '7日間の無料お試し'],
+  [/料金|月額|年払い|グレード|追加チケット|見積もり/, 'plan.html', 'プラン・料金'],
+  [/ハタイエンタ/, 'ietna.html', 'ハタイエンタ（家族の愛棒）'],
+  [/ハタリス/, 'ris.html', 'ハタリス（ひとりの愛棒）'],
+  [/ハタボックス/, 'box.html', 'ハタボックス（個人事業の愛棒）'],
+  [/ハタエース/, 'ace.html', 'ハタエース（お店・宿の愛棒）'],
+  [/ハタボーラ/, 'bora.html', 'ハタボーラ（会社の愛棒）'],
+  [/ラインナップ/, 'lineup.html', 'ラインナップ'],
+  [/外部連携|ツール(と|を)(つな|連携)|API/, 'integrations.html', '外部連携サービス'],
+  [/セミナー|説明会/, 'seminar.html', 'セミナー・説明会'],
+  [/導入の流れ|申し込みの流れ|申込の流れ|はじめ方/, 'flow.html', '導入の流れ'],
+  [/オーナーズクラブ|AISAI|愛祭/, 'owners.html', 'オーナーズクラブ AISAI・愛祭'],
+  [/アワード|AWARDS/i, 'awards.html', 'HATABO AWARDS'],
+  [/協賛|タイアップ/, 'sponsor.html', '祭りの協賛・タイアップ'],
+  [/安心|セキュリティ|個人情報の(あつかい|扱い)/, 'safety.html', '安心・セキュリティ'],
+  [/よくある質問/, 'faq.html', 'よくある質問'],
+  [/法人のお客さま|法人向け/, 'business.html', '法人のお客さま'],
+  [/しくみ|仕組み/, 'shikumi.html', 'ハタボのしくみ'],
+  [/会社概要/, 'company.html', '会社概要（HATHA LAB）'],
+];
+/** Myハタボの中のページ（ミニアプリの中なら、そのページを開く） */
+const MY_TOPICS = [
+  [/メモ・議事録|議事録|メモ帳|メモして/, 'notes', 'Myハタボ：メモ・議事録'],
+  [/伝言/, 'inbox', 'Myハタボ：伝言'],
+  [/ガチャ/, 'gacha', 'Myハタボ：ガチャ'],
+  [/ご縁の図|ご縁/, 'goen', 'Myハタボ：ご縁'],
+  [/友だち申請|友だち一覧/, 'friends', 'Myハタボ：友だち'],
+  [/Google連携|ドライブに/, 'google', 'Myハタボ：Google連携'],
+  [/キャラ設定|話し方の設定|声の設定/, 'custom', 'Myハタボ：キャラ設定'],
+  [/プラン(から|を変え|の変更)|設定(から|を開)/, 'settings', 'Myハタボ：設定'],
+];
+function topicLinks(text, mini) {
+  const t = String(text || ''), out = [], site = (ENV.SITE_URL || 'https://www.hatha-lab.com').replace(/\/$/, '');
+  if (/Myハタボ/.test(t)) {
+    const hit = MY_TOPICS.find(([re]) => re.test(t));
+    out.push(hit ? { url: mini + '?page=' + hit[1], page: hit[1], title: hit[2] } : { url: mini + '?page=my', page: 'my', title: 'Myハタボを開く' });
+  }
+  for (const [re, path, title] of SITE_TOPICS) { if (out.length >= 2) break; if (re.test(t) && !out.some(x => x.url.indexOf(path.split('#')[0]) >= 0)) out.push({ url: site + '/' + path, title }); }
+  return out.slice(0, 2);
+}
 const KM_FACE = 'https://hiromitsu81.github.io/terakoya/butter/komugi_face.jpg';
 function kmCard(kicker, title, lines, btn, uri) {
   return { type: 'bubble', size: 'kilo', styles: { header: { backgroundColor: '#0A0810' }, body: { backgroundColor: '#16121F' }, footer: { backgroundColor: '#16121F' } },
@@ -2146,6 +2190,14 @@ function session(ws) {
     if (S.visit && logText) S.visitLog.push(String(logText).slice(0, 200));
     // ハタボの話が出たら、ときどき（8回に1回まで）サービスサイトへの道をそえる（声では読まない）
     S.replyN = (S.replyN || 0) + 1;
+    // 話題のページ：ハタボ・コムギが、サービスのことやMyハタボのことを話したら、そのページを出す（同じページは6回に1回まで）
+    if (text && !hearing() && (S.avatar === 'komugi' || S.avatar === 'hatabo')) {
+      S.topicAt = S.topicAt || {};
+      for (const l of topicLinks(text, S.avatar === 'komugi' ? LINE_CH.komugi.mini : HATABO_MINI)) {
+        if (S.replyN - (S.topicAt[l.url] || -99) < 6) continue;
+        S.topicAt[l.url] = S.replyN; links.push(l); if (!l.page) S.siteAt = S.replyN;
+      }
+    }
     if (text && S.guest && !hearing() && (S.avatar === 'komugi' || S.avatar === 'hatabo') && /ハタボ/.test(text) && S.replyN - (S.siteAt || -99) >= 8) {
       S.siteAt = S.replyN;
       if (S.bridge && S.avatar !== 'komugi') links.push({ url: HATABO_MINI, title: '自分のハタボと話す（ハタボの公式LINEを友だち追加）' });   // コムギは、いったんハタボの公式LINEを出さない（サービスサイトだけ）

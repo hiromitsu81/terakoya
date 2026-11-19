@@ -350,6 +350,15 @@ function client(port, hello) {
     await ht.until(() => ht.msgs.filter(m => m.type === 'reply_end').length > hn, 8000);
     assert.ok(/清掃管理のヒアリング/.test(hs) && /販売員ではない/.test(hs) && !/便利屋/.test(hs) && /ヒロさん/.test(hs), 'ヒアリングの決まり');
     deps.claude.messages.stream = oh; ht.ws.close();
+    // 話題のページ：ハタボがパートナーやMyハタボの話をしたら、そのページを出す
+    { const o3 = deps.claude.messages.stream;
+      deps.claude.messages.stream = p => ({ async *[Symbol.asyncIterator]() { for (const ch of ['紹介パートナーのランクは、', 'Myハタボのメモ・議事録でも見られます。']) yield { type: 'content_block_delta', delta: { type: 'text_delta', text: ch } }; } });
+      const gy = await client(port, { type: 'hello', idToken: 'guest-y' });
+      await gy.until(m => m.type === 'ready');
+      gy.ws.send(JSON.stringify({ type: 'text', text: 'パートナーってどうなってる？' }));
+      const tl = await gy.until(m => m.type === 'links' && m.links.some(x => /partner\.html/.test(x.url)), 8000);
+      assert.ok(tl.links.some(x => x.page === 'notes'), '話題のページ（パートナー・Myハタボ）: ' + JSON.stringify(tl.links));
+      deps.claude.messages.stream = o3; gy.ws.close(); }
     f.ws.send(JSON.stringify({ type: 'save_media', kind: 'photo', mime: 'image/jpeg', data: 'data:image/jpeg;base64,AAAA' }));
     await f.until(m => m.type === 'links' && /写真/.test(m.links[0].title));
     // 調べた先のリンク
