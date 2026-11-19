@@ -406,3 +406,14 @@ body.hb-peek .hbtop{bottom:180px}
 /* 旗のマークを Myハタボ のアイコンに（11/19） */
 .hbh .my:before{content:"";flex:none;width:23px;height:16px;margin-right:6px;background:url(xm.png) center/contain no-repeat}
 @media(max-width:760px){.hbh .brand img{display:none}.hbh .brand b{font-size:22px}.hbh .my{padding:0 12px 0 9px!important}.hbh .my:before{width:21px;height:15px;margin-right:5px}}
+/* 体にやさしい順ランキングもスマホはカルーセル（11/19） */
+@media(max-width:760px){
+ .rk .mcar{margin:12px -14px 0!important;padding:4px 14px 12px!important;scroll-padding:0 14px}
+ .rkl.mcar>li{flex:0 0 78%!important;max-width:78%;display:flex!important;flex-direction:column;align-items:flex-start;gap:10px;padding:18px 18px 20px!important;border-left:0!important;border-top:6px solid var(--vc);min-height:210px}
+ .rkl.mcar>li:hover{transform:none}
+ .rkl.mcar i{font-size:44px!important;line-height:1}
+ .rkl.mcar i:after{content:"位";font-size:16px;margin-left:2px}
+ .rkl.mcar .rkv{padding:6px 18px}
+ .rkl.mcar em{margin-top:auto}
+ .rk .mcbar{margin-top:2px}
+}
