@@ -96,10 +96,12 @@ const macRefs = () => ENV.MAC_OWNERS.map(x => String(x).replace(/:\d{4}-\d{2}-\d
 //   std＝いまのまま（ふだん速いモデル、むずかしい時だけ賢いモデル）
 //   high＝ぜんぶ一番賢いモデル
 //   super＝一番賢いモデル＋長い記憶（会話を倍おぼえる）＋長めの答え＋検索を多めに
+/* 記憶（11/19）：メモリー＝直近の会話（turns：返事に使う数、keep：残す数。どちらも発言の数で、往復はその半分）、holdH＝何時間あとまで続きから話せるか。
+   ハード＝AIDごとのメモ帳（memFiles：ファイルの数、memChars：1ファイルの字数）。話しはじめは目次だけ読み、話題が出たら中身を読む */
 const PLANS = {
-  std:   { label: '標準',       premium: false, turns: 12, keep: 24, extraTokens: 0,   maxUses: 3, extraSent: 0 },
-  high:  { label: '上位',       premium: false, smart: true, turns: 16, keep: 32, extraTokens: 500, maxUses: 3, extraSent: 1 },   // G：賢いモデルで、少し短めに（Zの半分くらいの費用）
-  super: { label: 'スーパー上位', premium: true,  turns: 24, keep: 48, extraTokens: 260, maxUses: 5, extraSent: 1, long: true },   // 長文もClaudeと同じように書ける（声は最初だけ、続きは吹き出しに）
+  std:   { label: '標準',       premium: false, turns: 12, keep: 24, extraTokens: 0,   maxUses: 3, extraSent: 0, holdH: 12, memFiles: 10, memChars: 600 },
+  high:  { label: '上位',       premium: false, smart: true, turns: 16, keep: 32, extraTokens: 500, maxUses: 3, extraSent: 1, holdH: 72, memFiles: 30, memChars: 1200 },   // G：賢いモデルで、少し短めに（Zの半分くらいの費用）
+  super: { label: 'スーパー上位', premium: true,  turns: 24, keep: 48, extraTokens: 260, maxUses: 5, extraSent: 1, long: true, holdH: 168, memFiles: 100, memChars: 2000 },   // 長文もClaudeと同じように書ける（声は最初だけ、続きは吹き出しに）
 };
 /** 長い文章を頼まれたか（スーパー上位だけ、Claudeと同じように最後まで書く） */
 const HIGH_RULE = '\n\n【上位グレード】ふだんの「1〜2文」より少しくわしく、要点を3〜5文で答える。理由や手順が要るときは、短い箇条で3つまで。むだな前置きや最後のあいさつは入れない。';
@@ -144,7 +146,7 @@ function familyOk(S) {
   const f = S && S.funnel;
   if (!f || f.lineup !== 'ietna' || f.stage !== 'contract' || !FAMILY_POOL[f.grade]) return true;
   const k = 'fam:' + (f.family || S.myRef || S.owner || 'anon') + ':' + new Date().toISOString().slice(0, 10), n = (counts.get(k) || 0) + 1;
-  counts.set(k, n);
+  counts.set(k, n); countSave(k);
   return n <= FAMILY_POOL[f.grade];
 }   // ハタボの1日の回数（X・G・Z）。こえたら追加チケット
 /** ありがとうポイント：紹介した人に。2代目のご縁の人には半分 */
@@ -209,20 +211,43 @@ async function gas(payload) {
 
 /* ===== 1日の回数 ===== */
 const counts = new Map();
+/** 回数はメモリーで数えつつ、ハード（counts）にも足していく。サーバーが立ち上げ直されても、話しはじめに読みもどす */
+function countSave(k) {
+  try { if (deps.db) { const { FieldValue } = require('@google-cloud/firestore'); deps.db.collection('counts').doc(k.replace(/\//g, '_')).set({ n: FieldValue.increment(1), at: Date.now() }, { merge: true }).catch(() => {}); } } catch (e) {}
+}
+async function countLoad(keys) {
+  if (!deps.db) return;
+  for (const k of keys) { try { const d = await deps.db.collection('counts').doc(k.replace(/\//g, '_')).get(); if (d.exists) counts.set(k, Math.max(counts.get(k) || 0, Number(d.data().n) || 0)); } catch (e) {} }
+}
 function quotaOk(owner, guest, hasRef, cap) {
   const day = new Date().toISOString().slice(0, 10), k = owner + ':' + day;
   const n = (counts.get(k) || 0) + 1;
-  counts.set(k, n);
+  counts.set(k, n); countSave(k);
   if (counts.size > 5000) counts.clear();
   if (!guest) return n <= ENV.DAILY_LIMIT;
   const tk = '__guests:' + day, t = (counts.get(tk) || 0) + 1;      // 窓口ぜんぶの上限
-  counts.set(tk, t);
+  counts.set(tk, t); countSave(tk);
   return t <= ENV.GUEST_TOTAL_LIMIT && n <= (cap || (hasRef ? ENV.DAILY_LIMIT_GUEST : ENV.DAILY_LIMIT_NOREF));
 }
 
 /* ===== 紹介のつながり：一人ひとりの紹介コード（refs）。だれの紹介で来たかを、最初の1回だけ覚える ===== */
 const memRefs = new Map();
 const myRefOf = owner => Array.from(crypto.createHash('sha256').update('ref:' + owner).digest()).slice(0, 6).map(b => 'abcdefghjkmnpqrstuvwxyz23456789'[b % 31]).join('');
+/** 自分の紹介コード：ふだんは myRefOf と同じ。もう別の人が使っていたら（かぶり）、作り直して覚えておく */
+async function myRefFor(owner) {
+  if (!owner) return '';
+  try { if (deps.db) { const m = await deps.db.collection('refowners').doc(crypto.createHash('sha256').update(owner).digest('hex').slice(0, 32)).get(); if (m.exists && m.data().code) return m.data().code; } } catch (e) {}
+  for (let i = 0; i < 6; i++) {
+    const code = i ? myRefOf(owner + '#' + i) : myRefOf(owner);
+    const r = await getRef(code).catch(() => null);
+    if (!r || !r.owner || r.owner === owner) {
+      if (i) { console.log('ref collision', code); try { if (deps.db) await deps.db.collection('refowners').doc(crypto.createHash('sha256').update(owner).digest('hex').slice(0, 32)).set({ code, at: Date.now() }); } catch (e) {} }
+      return code;
+    }
+  }
+  return myRefOf(owner);
+}
+const REF_DAYS = 90;   // 紹介の期限：90日のあいだにお試しも契約もなければ切れて、あとから紹介した人が紹介者になる
 async function getRef(code) {
   if (!code) return null;
   try { if (deps.db) { const d = await deps.db.collection('refs').doc(code).get(); return d.exists ? d.data() : null; } } catch (e) {}
@@ -1455,13 +1480,60 @@ function session(ws) {
   function applyVoice() { const c = S.custom || {}; if (!S.baseVoice) S.baseVoice = S.voice; S.voice = c.voice && VOICES[c.voice] ? VOICES[c.voice].name : S.baseVoice; S.rateMul = c.speed || 1; }
   /** 前にまざったコムギの話（同じ家族の記録に入っていた分）は、ハタボ・ジュニアでは使わない */
   const noKomugi = turns => S.avatar === 'komugi' || !turns.some(t => t.role === 'assistant' && /馬越さんの相棒|うちは|とです|ですけん|ますけん/.test(String(t.content || ''))) ? turns : [];
+  /** 記憶の量（グレードごと）：残す発言の数・続きから話せる時間 */
+  const keepN = () => S.macSelf || (S.app && !S.bridge && superUntil(S.owner)) ? 80 : (planOf(S) || PLANS.std).keep;
+  const holdH = () => S.macSelf ? 7 * 24 : (planOf(S) || PLANS.std).holdH || 12;
+  /** AIDのメモ帳（ハード）：持ち主×キャラごと。窓口（ヒロさんの窓口・清掃ヒアリング・紹介の橋渡し）は持たない */
+  const memOn = () => !!S.owner && !S.visit && !S.asGuest && !hearing() && !S.bridge && (!S.guest || S.macSelf || (S.funnel && (S.funnel.stage === 'trial' || S.funnel.stage === 'contract')));
+  const memKey = () => 'm' + crypto.createHash('sha256').update('mem:' + ownKey(S.owner) + (S.guest ? ':guest' : '')).digest('hex').slice(0, 30);
+  const memCap = () => { const p = planOf(S) || PLANS.std; return S.macSelf || superUntil(S.owner) ? { files: 200, chars: 3000 } : { files: p.memFiles || 10, chars: p.memChars || 600 }; };
+  function memIndex() {
+    const F = (S.mem && S.mem.files) || []; if (!F.length) return '';
+    return '\n\n【メモ帳の目次（あなたが前に書いたメモ。話題が出たら、中身がこのあとに出る。目次だけで答えを決めつけない）】\n' + F.slice(0, 60).map(f => '・' + f.title + (f.keys && f.keys.length ? '（' + f.keys.slice(0, 5).join('・') + '）' : '')).join('\n');
+  }
+  /** 話題が出たメモだけを読む（目次の名前やキーワードが聞こえたら。「前に話した」なども） */
+  function memPick(text) {
+    const F = (S.mem && S.mem.files) || [], t = String(text || ''); if (!F.length || !t) return '';
+    const past = /(前に|まえに|この前|このまえ|先週|昨日|きのう|覚えてる|おぼえてる|話した|言った|いつもの)/.test(t);
+    const hit = F.map(f => ({ f, n: [f.title].concat(f.keys || []).filter(k => k && k.length >= 2 && t.indexOf(k) >= 0).length })).filter(x => x.n || (past && F.length <= 3)).sort((a, b) => b.n - a.n || (b.f.at || 0) - (a.f.at || 0)).slice(0, 3);
+    if (!hit.length) return '';
+    return '\n\n【メモ帳から読んだこと（この話に関係ありそうな分）】\n' + hit.map(x => '■' + x.f.title + '\n' + x.f.text).join('\n');
+  }
+  async function memLoad() {
+    S.mem = null; if (!memOn()) return;
+    try { S.mem = await loadCol(memKey(), 'aidmem'); if (!Array.isArray(S.mem.files)) S.mem.files = []; } catch (e) { S.mem = { files: [] }; }
+  }
+  /** まとめのたびに、残すべきことをメモ帳に書く（足す・書きかえる）。上限をこえたら、古くて使っていないものから消す */
+  async function memWrite(talk) {
+    if (!memOn() || !talk) return;
+    if (!S.mem) await memLoad();
+    const cap = memCap(), F = (S.mem && S.mem.files) || [];
+    try {
+      const r = await deps.claude.messages.create({ model: ENV.MODEL, max_tokens: 900,
+        system: 'あなたはAIの愛棒のメモ係。会話から、次の会話でも役に立つ「長く使う事実」（人・予定・決まったこと・好み・続いている話題・頼まれたこと）だけを、話題ごとのメモにする。あいさつ・雑談・その場かぎりのことは書かない。想像で足さない。住所・電話番号・カードや口座の番号・体調のくわしいこと・お金のくわしいことは書かない。',
+        messages: [{ role: 'user', content: '【いまのメモ帳】\n' + (F.length ? F.map(f => 'id=' + f.id + '：' + f.title + '（' + (f.keys || []).join('・') + '）\n' + f.text).join('\n') : '（まだない）') + '\n\n【新しい会話】\n' + talk +
+          '\n\nJSONだけを返す：{"ops":[{"op":"add","title":"話題の名前（短く）","keys":["その話題が出たときの言葉（人の名前・ものの名前など3〜5こ）"],"text":"中身（' + cap.chars + '字まで）"},{"op":"update","id":"いまのid","text":"新しい中身（前の中身もふくめて書き直す）","keys":[...]}]}。書くことがなければ {"ops":[]}' }] });
+      const t = (r.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+      const j = JSON.parse(t.slice(t.indexOf('{'), t.lastIndexOf('}') + 1));
+      let changed = false;
+      for (const o of (j.ops || []).slice(0, 5)) {
+        const keys = (Array.isArray(o.keys) ? o.keys : []).map(k => String(k).trim().slice(0, 20)).filter(Boolean).slice(0, 6);
+        if (o.op === 'update' && o.id) { const f = F.find(x => x.id === o.id); if (f && o.text) { f.text = String(o.text).slice(0, cap.chars); if (keys.length) f.keys = keys; f.at = Date.now(); changed = true; } }
+        else if (o.op === 'add' && o.title && o.text) { F.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), title: String(o.title).slice(0, 30), keys, text: String(o.text).slice(0, cap.chars), at: Date.now() }); changed = true; }
+      }
+      if (!changed) return;
+      F.sort((a, b) => (b.at || 0) - (a.at || 0)); F.length = Math.min(F.length, cap.files);
+      S.mem = { files: F };
+      await saveCol(memKey(), 'aidmem', { files: F, at: Date.now(), aid: charOf() });
+    } catch (e) { console.error('mem write', String(e.message || e).slice(0, 160)); }
+  }
   const hearing = () => !!S.guest && isHearingRole(S.role);   // たくちゃんの窓口：清掃管理のヒアリング役
   const lastFor = () => hearing() ? HEARING_LAST : AVS[S.avatar] ? AVS[S.avatar].last : JR_LAST;
   const againFor = () => hearing() ? HEARING_AGAIN : AVS[S.avatar] ? AVS[S.avatar].again : 'また来てくれたんですね。続きをお話ししましょう。';
   const av3 = (jr, hb, km) => S.avatar === 'komugi' ? km : S.avatar === 'hatabo' ? hb : jr;   // 決まった文：ジュニア・ハタボ・コムギで話し方をそろえる
   function sysParts() {
     const fixed = S.system + (S.avatar === 'hatabo' || S.avatar === 'komugi' ? CONVO_RULE : '') + (!S.guest && S.mode === 'family' ? FAMILY_RULE : '') + ((S.guest || S.mode === 'business') && S.avatar !== 'komugi' && !hearing() ? SERVICE_GUIDE : '') + (S.trio ? TRIO_RULE : '') + (S.lessons && S.lessons.length ? '\n\n【教わったこと（いつも守る・使う）】\n' + S.lessons.map(x => '・' + x).join('\n') : '');
-    const live = (S.memo ? '\n\n【前回までの話のまとめ（ジュニアが話したこと）】\n' + S.memo : '') + nowLine() + (S.place ? '\n\n【いまいる場所（スマホの位置から。およそ。住所としては口に出さない）】' + S.place.text + '。「近く」はここを基準に調べる。' : '') + (S.learned && S.learned.length ? '\n\n【自分で気づいたこと（前の会話から。次から生かす）】\n' + S.learned.map(x => '・' + x).join('\n') : '');
+    const live = (S.memo ? '\n\n【前回までの話のまとめ（ジュニアが話したこと）】\n' + S.memo : '') + memIndex() + nowLine() + (S.place ? '\n\n【いまいる場所（スマホの位置から。およそ。住所としては口に出さない）】' + S.place.text + '。「近く」はここを基準に調べる。' : '') + (S.learned && S.learned.length ? '\n\n【自分で気づいたこと（前の会話から。次から生かす）】\n' + S.learned.map(x => '・' + x).join('\n') : '');
     return [fixed, live];
   }
   function sysPrompt() { const [a, b] = sysParts(); return a + b + lastFor(); }
@@ -1506,8 +1578,9 @@ function session(ws) {
       const got = pickLearn(t.split('===学び===')[1]);
       if (got.length) { S.learned = mergeLearn(S.learned, got); savePrefs(ownKey(S.owner), { learned: S.learned }); }
       if (memo) S.memo = memo.slice(0, 1200);
+      memWrite(talk).catch(() => {});
       S.newTurns = Math.max(0, S.newTurns - n); S.asideLog = [];
-      await saveConvo(key, { summary: S.memo, newTurns: S.newTurns, turns: S.history.slice(S.macSelf || (S.app && !S.bridge && superUntil(S.owner)) ? -40 : -12), at: Date.now() });
+      await saveConvo(key, { summary: S.memo, newTurns: S.newTurns, turns: S.history.slice(-keepN()), at: Date.now() });
       if (diary) {
         const d = new Date(Date.now() + 9 * 3600000);
         const head = 'ジュニア日記（' + d.getUTCFullYear() + '-' + (d.getUTCMonth() + 1) + '-' + d.getUTCDate() + ' ' + d.getUTCHours() + ':' + String(d.getUTCMinutes()).padStart(2, '0') + (S.me ? '・' + S.me + 'と' : '') + (S.trio ? '・三人モード' : '') + '）';
@@ -1610,7 +1683,8 @@ function session(ws) {
       if (j.memo) S.memo = String(j.memo).slice(0, 800);
       if (S.asGuest && !hearing() && Array.isArray(j.learn)) { const got = pickLearn(j.learn.join('\n')); if (got.length) { S.learned = mergeLearn(S.learned, got); savePrefs(GUEST_COMMON, { learned: S.learned }); } }
       S.newTurns = Math.max(0, S.newTurns - n);
-      await saveConvo(key, { summary: S.memo, newTurns: S.newTurns, turns: S.history.slice(S.macSelf || (S.app && !S.bridge && superUntil(S.owner)) ? -40 : -12), at: Date.now() });
+      await saveConvo(key, { summary: S.memo, newTurns: S.newTurns, turns: S.history.slice(-keepN()), at: Date.now() });
+      memWrite(talk).catch(() => {});
       if (hearing()) hearingPush(talk).catch(e => console.error('hearing push', String(e.message || e).slice(0, 120)));
       if (j.worth) {
         const slot = S.slots.find(x => j.slot && (x.label === j.slot || String(j.slot).indexOf(x.label) >= 0)) || null;
@@ -1990,7 +2064,7 @@ function session(ws) {
       const params = {
         model: plan.premium && attempt < 2 && !jam ? ENV.PREMIUM_MODEL : (useSmart || (plan.smart && attempt < 2 && !jam)) ? ENV.SMART_MODEL : ENV.MODEL,
         max_tokens: (deluxe ? 600 : 0) + (S.trio ? 240 : study ? 520 : S.mode === 'business' ? 340 : 320) + (useSearch ? 400 : 0) + (S.trio ? 0 : plan.extraTokens) + (longMode ? 3500 : 0) + (S.firstDay && S.avatar === 'hatabo' ? 400 : 0),
-        system: sysBlocks((claudeMode && !LONG_RE.test(logText || '') ? CLAUDE_RULE : longMode ? LONG_RULE : plan === PLANS.high && !jam && !S.trio ? HIGH_RULE : '') + (study ? STUDY_RULE : '') + (jam ? JAM_RULE : '') + (route.search && !useSearch ? '\n\n【いまは調べられない】検索が使えないので、今の情報は「ごめんなさい、いまは調べられません」と正直に言う。' : '')),
+        system: sysBlocks(memPick(logText) + (claudeMode && !LONG_RE.test(logText || '') ? CLAUDE_RULE : longMode ? LONG_RULE : plan === PLANS.high && !jam && !S.trio ? HIGH_RULE : '') + (study ? STUDY_RULE : '') + (jam ? JAM_RULE : '') + (route.search && !useSearch ? '\n\n【いまは調べられない】検索が使えないので、今の情報は「ごめんなさい、いまは調べられません」と正直に言う。' : '')),
         messages: attempt === 2 || (attempt === 1 && !useSearch) ? [{ role: 'user', content }] : msgs,
       };
       if (useSearch) {
@@ -2097,7 +2171,7 @@ function session(ws) {
     if (S.mode === 'family' && logText && !noRecord) gas(Object.assign({ action: 'log', said: logText, reply: text }, S.auth)).catch(() => {});
     if (convoKey() && text && !noRecord) {
       S.newTurns++;
-      saveConvo(convoKey(), { turns: S.history.slice(S.macSelf || (S.app && !S.bridge && superUntil(S.owner)) ? -40 : -12), newTurns: S.newTurns, at: Date.now() });
+      saveConvo(convoKey(), { turns: S.history.slice(-keepN()), newTurns: S.newTurns, at: Date.now() });
       if (S.newTurns >= 6 || (S.guest && TELL_RE.test(logText || '') && S.newTurns >= 2)) summarize();
     }
   }
@@ -2166,14 +2240,18 @@ function session(ws) {
         }
         S.ready = true;
         // 紹介コード：自分のコードを作り、はじめて来た人は「だれの紹介か」を覚える
-        S.myRef = S.owner ? myRefOf(S.owner) : '';
+        S.myRef = S.owner ? await myRefFor(S.owner) : '';
         if (S.myRef && !S.peek) {
           const mine = await getRef(S.myRef);
-          const parent = mine && mine.parent ? mine.parent : (S.ref && S.ref !== S.myRef ? S.ref : '');
+          let parent = mine && mine.parent ? mine.parent : (S.ref && S.ref !== S.myRef ? S.ref : '');
+          let parentAt = mine && mine.parent ? (mine.parentAt || mine.at || Date.now()) : (parent ? Date.now() : 0), reRef = false;
+          // 紹介の期限：前の紹介から90日たっても、お試しも契約もしていなければ、いま紹介してくれた人に切りかえる
+          if (mine && mine.parent && S.ref && S.ref !== mine.parent && S.ref !== S.myRef && !mine.stage && Date.now() - parentAt > REF_DAYS * 86400000) { parent = S.ref; parentAt = Date.now(); reRef = true; console.log('ref renew', S.myRef, mine.parent, '->', parent); }
           S.refFrom = parent;
-          await putRef(S.myRef, { owner: S.owner, name: S.me || (mine && mine.name) || '', parent, at: (mine && mine.at) || Date.now() });
-          // 初めて来た人なら、紹介した人の「ご縁」を1つふやす
-          if (!mine && parent) { const up = await getRef(parent).catch(() => null); await putRef(parent, { kids: ((up && up.kids) || 0) + 1 }).catch(() => {}); }
+          await putRef(S.myRef, { owner: S.owner, name: S.me || (mine && mine.name) || '', parent, parentAt, at: (mine && mine.at) || Date.now() });
+          // 初めて来た人（と、紹介が切りかわった人）なら、紹介した人の「ご縁」を1つふやす
+          if ((!mine || reRef) && parent) { const up = await getRef(parent).catch(() => null); await putRef(parent, { kids: ((up && up.kids) || 0) + 1 }).catch(() => {}); }
+          if (reRef) S.newVisit = true;
           if (!mine && parent) S.newVisit = true;
           S.funnel = funnelOf(mine);
           S.costYen = (mine && mine.costYen) || 0; S.costMon = (mine && mine.costMon) || ''; S.costMonYen = (mine && mine.costMonYen) || 0;
@@ -2257,11 +2335,13 @@ function session(ws) {
           const c = await loadMyConvo();
           if (c) {
             S.memo = String(c.summary || '');
-            if (Date.now() - (c.at || 0) < (S.macSelf ? 7 * 24 : 12) * 3600000) S.history = noKomugi(cleanTurns(c.turns));
+            if (Date.now() - (c.at || 0) < holdH() * 3600000) S.history = noKomugi(cleanTurns(c.turns));
             S.newTurns = Number(c.newTurns || 0);
             if (S.newTurns >= 2) setTimeout(summarize, 3000);       // 前回まとめきれなかった分（強制で切ったときなど）
           }
         }
+        await memLoad();   // AIDのメモ帳（目次だけ使う。中身は話題が出たら）
+        { const day = new Date().toISOString().slice(0, 10); await countLoad([(S.owner || 'anon') + ':' + day, '__guests:' + day]); }   // 回数を、ハードから読みもどす
         // ヒロさんの家族のジュニアと、馬越さんのコムギは、いつもClaudeと同じ（スーパー上位・答えの長さの決まりなし）
         S.claude = !S.visit && ((ENV.CLAUDE_FAMILY && !S.guest && !S.asGuest) || !!superUntil(S.owner));   // 馬越さんの紹介の人のコムギは、橋渡し役（制限つき）
         if ((S.avatar === 'hatabo' || S.avatar === 'komugi' || S.app) && !/【聞き取りのくせ】/.test(S.system)) S.system += HEAR_RULE;
@@ -2313,8 +2393,9 @@ function session(ws) {
         if (S.newTurns >= 2) await summarize();
         S.mode = m.mode === 'business' ? 'business' : 'family'; S.history = []; S.memo = ''; S.newTurns = 0;
         await loadBrain();
+        await memLoad();
         const c = await loadMyConvo();
-        if (c) { S.memo = String(c.summary || ''); if (Date.now() - (c.at || 0) < (S.macSelf ? 7 * 24 : 12) * 3600000) S.history = noKomugi(cleanTurns(c.turns)); }
+        if (c) { S.memo = String(c.summary || ''); if (Date.now() - (c.at || 0) < holdH() * 3600000) S.history = noKomugi(cleanTurns(c.turns)); }
         return send({ type: 'mode', mode: S.mode });
       }
       if (m.type === 'profile') return onProfile(m);
