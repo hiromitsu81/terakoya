@@ -8,12 +8,12 @@ const gasLeads = [];
 const gasSrv = http.createServer((req, res) => {
   let b = ''; req.on('data', c => b += c); req.on('end', () => {
     const j = JSON.parse(b); res.setHeader('Content-Type', 'application/json'); if (j.action === 'lead') gasLeads.push(j.lead || {});
-    if (j.action === 'brain') return res.end(JSON.stringify({ ok: true, guest: true, owner: 'g:' + (j.idToken === 'mac' ? 'Umac' : 'U' + j.idToken), me: j.idToken === 'mac' ? 'マー君' : 'アヤ', role: '汎用', slots: [] }));
+    if (j.action === 'brain') return res.end(JSON.stringify({ ok: true, guest: true, owner: 'g:' + (j.idToken === 'mac' ? 'Umac' : 'U' + j.idToken), me: j.idToken === 'mac' ? 'マー君' : j.idToken === 'hiro' ? 'ヒロ' : 'アヤ', role: '汎用', slots: [] }));
     res.end(JSON.stringify({ ok: true }));
   });
 }).listen(0);
 process.env.GAS_URL = 'http://127.0.0.1:' + gasSrv.address().port;
-process.env.MAC_OWNERS = 'Umac';
+process.env.MAC_OWNERS = 'Umac'; process.env.KOMUGI_OWNERS = 'Uhiro';
 process.env.OFFICE_OWNERS = 'Uoffice';
 process.env.CRON_KEY = 'k';
 process.env.BRIDGE_DAILY = '2';
@@ -49,6 +49,13 @@ function client(port, hello) {
   for (let i = 0; i < 4; i++) { m.ws.send(JSON.stringify({ type: 'text', text: '調べて' + i })); await new Promise(r => setTimeout(r, 300)); }
   require('fs').writeFileSync('/tmp/sys_mac.txt', lastSys); assert(!m.msgs.some(x => x.type === 'limit'), 'マー君は制限なし');
   assert(/馬越 雅哉さん本人/.test(lastSys) && !/HUB役（いちばん大事）/.test(lastSys), 'マー君には相棒の決まり');
+  // ヒロさん（KOMUGI_OWNERS）：マー君と同じ使い方。制限なし・橋渡しなし・相手はヒロさん
+  const h = await client(port, { type: 'hello', idToken: 'hiro', app: 'komugi' });
+  await h.until(x => x.type === 'ready');
+  for (let i = 0; i < 4; i++) { h.ws.send(JSON.stringify({ type: 'text', text: '相談' + i })); await new Promise(r => setTimeout(r, 300)); }
+  assert(!h.msgs.some(x => x.type === 'limit'), 'ヒロさんも制限なし');
+  assert(/ヒロさん本人/.test(lastSys) && !/馬越 雅哉さん本人/.test(lastSys) && !/HUB役（いちばん大事）/.test(lastSys), 'ヒロさんにも相棒の決まり（相手はヒロさん）');
+  h.ws.close();
   // 不具合・要望は、ハタボ事務局へ
   m.ws.send(JSON.stringify({ type: 'text', text: '返事が出ない不具合があるので直してほしい' }));
   await new Promise(r => setTimeout(r, 500));
@@ -72,6 +79,6 @@ function client(port, hello) {
   const bad = await new Promise(r => http.get('http://127.0.0.1:' + port + '/cron/digest?key=x', res => r(res.statusCode)));
   assert.strictEqual(bad, 403, '合図のキーがちがえば送らない');
   a.ws.close(); m.ws.close(); srv.close(); gasSrv.close();
-  console.log('OK：コムギ（マー君は制限なし・紹介の人は橋渡しで制限つき・マー君の入れたコムギ通信を紹介の人に案内）');
+  console.log('OK：コムギ（マー君とヒロさんは制限なし・紹介の人は橋渡しで制限つき・マー君の入れたコムギ通信を紹介の人に案内）');
   process.exit(0);
 })().catch(e => { console.error(e); process.exit(1); });
