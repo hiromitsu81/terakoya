@@ -82,9 +82,11 @@ function idUntil(list, owner) {
   return '';
 }
 /** 期限つきでスーパー上位を使える人か（馬越さんも、検証のあいだは制限なし） */
-const superUntil = owner => idUntil(ENV.SUPER_OWNERS, owner) || idUntil(ENV.MAC_OWNERS, owner) || idUntil(ENV.KOMUGI_OWNERS, owner);
+const superUntil = owner => idUntil(ENV.SUPER_OWNERS, owner) || idUntil(ENV.MAC_OWNERS, owner) || idUntil(ENV.KOMUGI_OWNERS.map(x => String(x).replace(/=[^:]*/, '')), owner);
 /** 馬越さんと同じ使い方のコムギの持ち主か（馬越さん本人はのぞく） */
-const isKomugiOwner = owner => !!owner && ENV.KOMUGI_OWNERS.some(x => { const id = String(x).replace(/:\d{4}-\d{2}-\d{2}$/, '').replace(/^g:/, ''); return id && (owner === id || owner === 'g:' + id); });
+const koId = x => String(x).replace(/=.*$/, '').replace(/:\d{4}-\d{2}-\d{2}$/, '').replace(/^g:/, '');   // 書き方：ID または ID=呼び名（例 Uxxxx=ヒロ）
+const isKomugiOwner = owner => !!owner && ENV.KOMUGI_OWNERS.some(x => { const id = koId(x); return id && (owner === id || owner === 'g:' + id); });
+const komugiOwnerName = owner => { const x = ENV.KOMUGI_OWNERS.find(y => { const id = koId(y); return id && (owner === id || owner === 'g:' + id); }); return x && /=/.test(x) ? String(x).split('=')[1].trim() : ''; };
 /** 馬越さん本人か */
 const isMac = owner => !!owner && ENV.MAC_OWNERS.some(x => { const id = String(x).replace(/:\d{4}-\d{2}-\d{2}$/, '').replace(/^g:/, ''); return id && (owner === id || owner === 'g:' + id); });   // 期限がすぎても馬越さんは馬越さん（制限なしだけが期限まで。そのあとは契約したグレード）
 /** 馬越さんの紹介コード（馬越さんあての伝言・案件・手数料の行き先） */
@@ -2082,7 +2084,7 @@ function session(ws) {
           if (k && !S.komugi && S.avatar === 'komugi') { S.komugi = true; S.system += komugiBlock(await komugiNews()); }
           // コムギ：馬越さん本人なら制限なしの相棒。馬越さんの紹介の人には、馬越さんへの橋渡し役に徹する
           if (S.avatar === 'komugi' && !S.visit) {
-            if (isMac(S.owner) || isKomugiOwner(S.owner)) { S.macSelf = true; const nw = await komugiNews(); S.system += docsBlock(await docsLoad(S.owner).catch(() => ({})), false) + (isMac(S.owner) ? MAC_SELF_BLOCK : ownerSelfBlock(String(S.me || 'ヒロ').replace(/さん$/, ''))) + '\n\n【いま入っているコムギ通信（紹介の人に案内する分）】\n' + (nw || '（まだ入っていない）'); }
+            if (isMac(S.owner) || isKomugiOwner(S.owner)) { S.macSelf = true; const nw = await komugiNews(); S.system += docsBlock(await docsLoad(S.owner).catch(() => ({})), false) + (isMac(S.owner) ? MAC_SELF_BLOCK : ownerSelfBlock(komugiOwnerName(S.owner) || String(S.me || 'ヒロ').replace(/さん$/, ''))) + '\n\n【いま入っているコムギ通信（紹介の人に案内する分）】\n' + (nw || '（まだ入っていない）'); }
             else { S.bridge = true; S.system += KOMUGI_BRIDGE + docsBlock(await docsLoad(macOwnerKey()).catch(() => ({})), true); if (!S.komugi) { S.komugi = true; S.system += komugiBlock(await komugiNews()); } }
           }
           // 紹介の手数料のため：馬越さん（コムギ）経由で来た人に、紹介者「mac」を一度だけしるす（あとで契約を数える）
