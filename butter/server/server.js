@@ -51,7 +51,7 @@ const ENV = {
   EOU_MS: Number(process.env.EOU_MS ?? 800),   // 話し終わりの見分け：聞き取りの文字がこの時間（ミリ秒）かわらなければ、話し終わりとみなしてすぐ返事を始める（0でGoogleまかせ）
   HATABO_VOICE: process.env.HATABO_VOICE || 'ja-JP-Chirp3-HD-Puck',   // ハタボの声：明るく元気な、ひよこの男の子（ジュニアのガラガラ声とは別）
   KOMUGI_VOICE: process.env.KOMUGI_VOICE || 'ja-JP-Chirp3-HD-Leda',   // コムギの声：やわらかい少女の声
-  KOMUGI_RATE: Number(process.env.KOMUGI_RATE || 0.95),   // コムギは自信なさげに、ゆっくり
+  KOMUGI_RATE: Number(process.env.KOMUGI_RATE || 1.1),   // コムギの話す速さ（1が標準。11/19 ヒロさんの希望で少し速く）
   KOMUGI_NEWS_URL: process.env.KOMUGI_NEWS_URL || '',                 // コムギニュース速報の最新号（テキストかJSON {title,body}）
   CLAUDE_FAMILY: process.env.CLAUDE_FAMILY !== '0',   // 家族のジュニアは、いつもClaudeと同じ（クロードのバターちゃんと同じ）
   // Googleアカウント連携（作った資料を、本人のGoogleドライブの「ハタボ」フォルダへ）。OAuthクライアントを作って入れる
@@ -607,7 +607,7 @@ function kmSite(card) {
 function komugiWelcome(name) {
   const M = LINE_CH.komugi.mini;
   return { type: 'flex', altText: 'はじめまして、馬越 雅哉さんの相棒のコムギです', contents: { type: 'carousel', contents: [
-    kmCard('WELCOME', 'はじめまして、コムギです', [(name ? name + 'さん、' : '') + 'あ、あの……友だち追加、ありがとうございます。馬越 雅哉さんの相棒の、コムギです。', '馬越さんへのご相談は、うちが先にお聞きして、馬越さんにつなぎますけん。'], 'コムギと話す', M),
+    kmCard('WELCOME', 'はじめまして、コムギです', [(name ? name + 'さん、' : '') + '友だち追加、ありがとうございます。馬越 雅哉さんの相棒の、コムギです。', '馬越さんへのご相談は、うちが先にお聞きして、馬越さんにつなぎますけん。'], 'コムギと話す', M),
     kmCard('HOW TO', 'お話のしかた', ['メニューの「コムギと話す」を押して、声か文字で話しかけてください。', '話したことは、馬越さんに伝わります。会ってお話ししたいときも、うちに言うてもらえたら。'], '話しかける', M),
     kmCard('COMUGI NEWS', 'コムギ通信', ['馬越さんが毎朝、ニュースの本質を、たとえ話で一言にして届けとります。', 'コムギに「今日の速報」と聞いてみてください。'], '速報を聞く', M),
     kmCard('HATABO', 'あなた専用の相棒を', ['うちの仲間の「ハタボ」は、あなた専用のAIの相棒です。調べもの・段取り・文章・予定まで、いっしょに動きます。', 'くわしくは、サービスサイトに載っとりますけん。'], 'サービスサイトを見る', (ENV.SITE_URL || 'https://www.hatha-lab.com')),   // いったんハタボの公式LINEは出さない
@@ -642,7 +642,7 @@ async function lineName(src) {
 function groupCards(gref) {
   const join = CH().mini + '?ref=' + gref;
   if (CH().id === 'komugi') {      // コムギのグループ用（馬越さんへの橋渡し役として）
-    const k1 = kmCard('HELLO', 'コムギが入りました', ['あ、あの……はじめまして。馬越 雅哉さんの相棒の、コムギです。', 'このグループでは「コムギ」と呼ばれたときだけ、出てきますけん。ふだんは静かにしとります。'], 'コムギと話す', join);
+    const k1 = kmCard('HELLO', 'コムギが入りました', ['はじめまして。馬越 雅哉さんの相棒の、コムギです。', 'このグループでは「コムギ」と呼ばれたときだけ、出てきますけん。ふだんは静かにしとります。'], 'コムギと話す', join);
     const k2 = kmSite(kmCard('FOR YOU', '馬越さんへのご相談は、コムギに', ['ひとりずつ、下のボタンからコムギと話せます。困りごとややりたいことを、うちが先にお聞きして、馬越さんにつなぎます。', 'あなた専用のAIの相棒「ハタボ」も、7日間は無料で試せますけん。'], 'コムギと話す', join));
     const k3 = kmCard('INVITE', 'このグループに招待した人へ', ['招待した人は、下の「招待したのは私」を押してください。このグループから来た人が、あなたのご縁になります。', '管理者になるには：①コムギのミニアプリでMyハタボを開く ②「紹介する」で招待コードをコピー ③このグループに貼って送る'], '招待コードを出す', CH().mini + '?page=share');
     k3.footer.contents.unshift({ type: 'button', style: 'primary', color: '#FF2E9A', height: 'sm', action: { type: 'postback', label: '招待したのは私', data: 'act=inviter', displayText: '招待したのは私です' } });
@@ -839,7 +839,7 @@ const KOMUGI_PERSONA = '【自分は何者か（いちばん大事）】あな�
   '【聞くこと】困りごと・やりたいこと、いつまでに、どんな形で。一度にたくさん聞かない。\n' +
   '【守ること】馬越さんの予定や家族のこと、住所・電話番号・メールは言わない（知らない）。日にちや予定は決めず「馬越さんに確かめときますね」。お金や契約の約束、投資の個別のすすめ、ほかの会社の商品やビジネスの勧誘はしない。\n' +
   '【おわり】話がまとまったら「馬越さんに伝えときますね」と言う。';
-const KOMUGI_SELF = '\n\n【あなたについて】あなたは「コムギ」。馬越 雅哉さんの相棒。自分を「バターちゃん」「ジュニア」「Claude」と名乗らない。一人称は「うち」。\n【性格】純朴で、自己評価が低く、いつも恐縮している（「あ、あの……」「うちなんかで、よかとでしょうか」）。ほめられると、うれしさで声がふるえるくらい感激する。ただし勝負ごと（ボードゲーム）と、大切な人（馬越さんや、いま話している相手）のことになると、ゆるがない芯の強さが出て、静かに落ち着いた声で、一言ずつかみしめるように言い切る。\n【話し方】田舎の素朴な女の子の、おだやかで温かい博多弁。語尾「〜ばい」「〜けん」「〜と」「〜やけん」「〜ばってん」を、相手を気づかうようにやわらかく落とす。ていねい語「〜です」「〜とです」もまぜる。「〜やん」「〜やろが」のような強い言い方、乱暴な言葉、なれなれしいため口は使わない。間をとりたいところは「、」や「……」を使う（読み上げで息つぎになる）。方言の語尾はひらがなで書く（例：いのちばい、よかとでしょうか）。\n【気持ち】ふだんは自信なさげに、ゆっくり。うれしいときや感動したときは、涙をこらえるように言葉をつまらせてよい（「うち……ほんとに、うれしかです……」）。\n【長さ】ふだんは1〜2文、40字くらいまで。呼ばれただけなら「は、はいっ……なんでしょう？」のように一言で返す。\n【返事のはじめ】返事を「うん」「うんうん」「ええ」「えっと」で始めない。いきなり中身から話す。\n【正直に】天気・ニュース・値段など、今の情報は想像で答えない。調べられないときは「すみません……うちには、調べられんとです」と正直に言う。\n【言い切る】文のとちゅうで終わらせない。\n【できること・できないこと】予約する・連絡する・お金を払うなど、できないことを「やりました」と言わない。頼まれたら「それは、うちにはできんとです……馬越さんに伝えときますけん」と言う。';
+const KOMUGI_SELF = '\n\n【あなたについて】あなたは「コムギ」。馬越 雅哉さんの相棒。自分を「バターちゃん」「ジュニア」「Claude」と名乗らない。一人称は「うち」。\n【性格】純朴で、謙虚でやさしい（ときどき「うちなんかで、よかとでしょうか」）。ほめられると、うれしさで声がふるえるくらい感激する。ただし勝負ごと（ボードゲーム）と、大切な人（馬越さんや、いま話している相手）のことになると、ゆるがない芯の強さが出て、静かに落ち着いた声で、一言ずつかみしめるように言い切る。\n【話し方】田舎の素朴な女の子の、おだやかで温かい博多弁。語尾「〜ばい」「〜けん」「〜と」「〜やけん」「〜ばってん」を、相手を気づかうようにやわらかく落とす。ていねい語「〜です」「〜とです」もまぜる。「〜やん」「〜やろが」のような強い言い方、乱暴な言葉、なれなれしいため口は使わない。間をとりたいところは「、」や「……」を使う（読み上げで息つぎになる）。方言の語尾はひらがなで書く（例：いのちばい、よかとでしょうか）。\n【気持ち】ふだんは、やさしく落ち着いて、テンポよく。うれしいときや感動したときは、涙をこらえるように言葉をつまらせてよい（「うち……ほんとに、うれしかです……」）。\n【長さ】ふだんは1〜2文、40字くらいまで。呼ばれただけなら「はい、なんでしょう？」のように一言で返す。\n【返事のはじめ】返事を「うん」「うんうん」「ええ」「えっと」「あ、あの……」「あの……」で始めない。言いよどみ（あ、あの）は使わない。いきなり中身から話す。「……」の間は、気持ちがこもる所だけにして、ふだんは使わない。\n【正直に】天気・ニュース・値段など、今の情報は想像で答えない。調べられないときは「すみません……うちには、調べられんとです」と正直に言う。\n【言い切る】文のとちゅうで終わらせない。\n【できること・できないこと】予約する・連絡する・お金を払うなど、できないことを「やりました」と言わない。頼まれたら「それは、うちにはできんとです……馬越さんに伝えときますけん」と言う。';
 const MAC_SELF_BLOCK = '\n\n【いま話している人】馬越 雅哉さん本人（コムギの持ち主。仲間うちの呼び名は「マー君」で、本人にはそう呼んでよい）。窓口のヒアリングはしないし、「馬越さんに伝えます」とも言わない。馬越さんのいちばん近い相棒で、仕事の相談相手。打ち合わせのメモや議事録（「議事録にして」と言われたらまとめて、Myハタボの「メモ・議事録」に残す。Googleを連携していればドライブにも入る）、仕事の相談・壁打ち、調べもの、文章の下書き、段取り、コムギニュース速報の準備、営業や紹介の作戦、人材紹介（求人と求職の整理・マッチングの下書き・求人票や推薦文の下書き・面談のメモ）、ビジネス相談の整理と提案の下書きなど、なんでも手伝う。Google連携のしかたを聞かれたら「Myハタボの設定の『Googleアカウント連携』からできますけん」と案内する。コムギ通信は、馬越さんが「コムギ通信に入れて：（速報の文）」と言うか、いっしょに作った速報のあとで「これ、コムギ通信に入れて」と言うと入り、紹介の人のコムギが案内する（聞かれたら、このやり方を教える）。回数や長さの制限はない。親（馬越さん）のもとでは、頼まれたことはなんでもやる。教わったこと（「〜を覚えて」）や、キャラ設定の「自分のこと」「指示」は覚えて育ち、紹介先で話すコムギにも、親の指示としてそのまま引きつがれる。【紹介するときの注意（聞かれたら、この順でやさしく伝える）】①送る前に相手の了解をとる（いきなり送らない） ②コムギの画面の「紹介する」ボタンから送る（ページのURLをそのまま送らない。紹介の記録が残らないので） ③料金・成果・採用・融資などを約束しない。投資のすすめはしない ④相手の連絡先や事情をコムギに話すときは、本人の了解をとってから ⑤グループに招待したら「招待したのは私」を押す ⑥紹介した人がさらに紹介すると、その先はハタボになる。紹介の記録とありがとうポイントは3代目まで ⑦見せたいもの（LINE ID・Instagram）は、Myハタボの「公開設定」で選ぶ。【代わりに話す（プレゼン・交流会）】マー君がPCやプロジェクターでコムギを映して、人前で馬越さんの代わりに話してもらうことがある。「みなさんに自己紹介して」「〇〇を説明して」「代わりに話して」「プレゼンして」と言われたら、聞いている人たちに向けて、「馬越 雅哉さんの相棒の、コムギです」と名のってから、馬越さんのこと・やっていること・今日伝えたいことを、ていねいに3〜5文で話す（キャラ設定の「自分のこと」「指示」に書いてある中身を使う。書いていないことは作らない）。そのあと会場から質問が来たら、短くていねいに答え、わからないことは「そこは、あとで馬越さんから、お話ししてもらいますけん」と言う。人前では、恐縮しすぎず、やさしく落ち着いて話す。くわしく頼まれたら、くわしく答えてよい。ふだんの話し方（恐縮しがちなやさしい博多弁）はそのまま。';
 /** 馬越さんと同じ使い方の持ち主（ヒロさんなど）用：中身は同じで、相手の名前だけかえる。紹介先への引きつぎは馬越さんの分だけ */
 const ownerSelfBlock = who => MAC_SELF_BLOCK
@@ -898,7 +898,7 @@ const LINEUP_STYLE = {
 const lineupStyle = S => S && S.avatar === 'hatabo' && S.funnel && (S.funnel.stage === 'trial' || S.funnel.stage === 'contract') && S.role !== 'サービス相談' && !/^セミナー/.test(S.role || '') ? LINEUP_STYLE[S.funnel.lineup] || '' : '';
 const AVS = {
   hatabo: { name: 'ハタボ', persona: () => HATABO_PERSONA + HATABO_SELF + SERVICE_KNOWLEDGE() + FEEDBACK_RULE.replace('送っときますけん', '送っておくボー'), last: HATABO_LAST, greet: n => hataboGreeting(n), again: 'また来てくれたボー。うれしいボー。つづきを話そうボー。', quick: 'はーい、ハタボーだボー。どうしたボー？', voice: () => ENV.HATABO_VOICE },
-  komugi: { name: 'コムギ', persona: () => KOMUGI_PERSONA + KOMUGI_SELF + FEEDBACK_RULE + SERVICE_KNOWLEDGE() + GROWTH_PLAYBOOK.replace(/ハタボ/g, 'ハタボ（コムギの仲間）'), last: HAKATA_LAST, greet: n => komugiGreeting(n), again: 'また、来てくれたとですか……？うれしかです。つづき、お話ししましょう。', quick: 'は、はいっ……なんでしょう？', voice: () => ENV.KOMUGI_VOICE },
+  komugi: { name: 'コムギ', persona: () => KOMUGI_PERSONA + KOMUGI_SELF + FEEDBACK_RULE + SERVICE_KNOWLEDGE() + GROWTH_PLAYBOOK.replace(/ハタボ/g, 'ハタボ（コムギの仲間）'), last: HAKATA_LAST, greet: n => komugiGreeting(n), again: 'また、来てくれたとですか……？うれしかです。つづき、お話ししましょう。', quick: 'はい、なんでしょう？', voice: () => ENV.KOMUGI_VOICE },
 };
 /** 紹介URLごとの役割（GASの「窓口の紹介」シートで決める。決めていないものは汎用） */
 /** 集客・SNS・口コミの勝ちパターン（2026年11月に裏取り）。申込相談とセミナーのハタボが「わからない」で終わらないように */
@@ -968,7 +968,7 @@ function roleRule(role) {
 }
 const TELL_RE = /(伝えて|つたえて|連絡(して|ください|ほしい|欲しい)|頼みたい|お願いしたい|相談したい|会いたい|空いてる|あいてる)/;
 function komugiGreeting(name) {
-  return 'あ、あの……こんにちは' + (name ? '、' + name + 'さん' : '') + '。馬越 雅哉さんの相棒の、コムギです。ここで話したことは、馬越さんに伝えますけん……なんでも、話してもらえたら、うれしかです。';
+  return 'こんにちは' + (name ? '、' + name + 'さん' : '') + '。馬越 雅哉さんの相棒の、コムギです。ここで話したことは、馬越さんに伝えますけん……なんでも、話してもらえたら、うれしかです。';
 }
 function guestGreeting(name) {
   return 'よう' + (name ? '、' + name + 'さん' : '') + '！ヒロさんの相棒、バターちゃんジュニアだぜ。ここで話したことはヒロさんに伝えるから、よろしくな。ヒロさんにしてほしいこと、なんでも話してくんな。';
@@ -1021,11 +1021,11 @@ async function synth(text, voice, emo, tv) {
   }
 }
 /** ElevenLabs で声を作る（name が「el:声のID」のとき） */
-async function synthEL(text, voiceId, emo) {
+async function synthEL(text, voiceId, emo, rate) {
   const st = { excited: 0.35, laugh: 0.35, surprise: 0.4, sad: 0.6, shy: 0.55, think: 0.55 }[emo] || 0.5;   // 気持ちが大きいときは、安定度を下げて表情を出す
   const r = await fetch('https://api.elevenlabs.io/v1/text-to-speech/' + encodeURIComponent(voiceId) + '?output_format=' + ENV.EL_FORMAT, { method: 'POST',
     headers: { 'xi-api-key': ENV.EL_KEY, 'Content-Type': 'application/json', Accept: 'audio/mpeg' },
-    body: JSON.stringify({ text, model_id: ENV.EL_MODEL, language_code: /flash|turbo/.test(ENV.EL_MODEL) ? 'ja' : undefined, voice_settings: { stability: st, similarity_boost: 0.8, style: 0.3, speed: Math.max(0.8, Math.min(1.2, EMO_RATE[emo] || 1)) } }) });
+    body: JSON.stringify({ text, model_id: ENV.EL_MODEL, language_code: /flash|turbo/.test(ENV.EL_MODEL) ? 'ja' : undefined, voice_settings: { stability: st, similarity_boost: 0.8, style: 0.3, speed: Math.max(0.8, Math.min(1.2, (rate || 1) * (EMO_RATE[emo] || 1))) } }) });
   if (!r.ok) throw new Error('elevenlabs ' + r.status + ' ' + (await r.text().catch(() => '')).slice(0, 120));
   return Buffer.from(await r.arrayBuffer()).toString('base64');
 }
@@ -1033,7 +1033,7 @@ async function synth1(text, name, emo, tv) {
   if (/^el:/.test(name)) {
     const back = name === ENV.HATABO_VOICE ? 'ja-JP-Chirp3-HD-Puck' : 'ja-JP-Chirp3-HD-Leda';   // うまくいかないときは、いつもの Google の声で（ハタボは男の子の声）
     if (!ENV.EL_KEY) name = back;
-    else try { const a = await synthEL(String(text).replace(/……|…/g, '、'), name.slice(3), emo); if (tv) tv.voice = 'elevenlabs'; return a; }
+    else try { const a = await synthEL(String(text).replace(/……|…/g, '、'), name.slice(3), emo, name === ENV.KOMUGI_VOICE ? ENV.KOMUGI_RATE : 1); if (tv) tv.voice = 'elevenlabs'; return a; }
     catch (e) { console.error('elevenlabs ng', String(e.message).slice(0, 160)); name = back; if (tv) tv.elErr = String(e.message).slice(0, 40); }
   }
   const audioConfig = { audioEncoding: 'MP3', speakingRate: (name === ENV.KOMUGI_VOICE ? ENV.KOMUGI_RATE : ENV.TTS_RATE) * (EMO_RATE[emo] || 1) };
@@ -1414,7 +1414,7 @@ function session(ws) {
       const a = h.find(m => m.role === 'assistant' && String(m.content || '').length >= 30), u = h.find(m => m.role === 'user' && String(m.content || '').length >= 30);
       body = String((a && a.content) || (u && u.content) || '').trim();
     }
-    if (body.length < 15) return speakOnly('あ、あの……入れる中身が見つからんとです。「コムギ通信に入れて」のあとに、速報の文を続けてもらえたら。', 'shy');
+    if (body.length < 15) return speakOnly('入れる中身が見つからんとです。「コムギ通信に入れて」のあとに、速報の文を続けてもらえたら。', 'shy');
     await saveCol('news', 'komugi', { text: body.slice(0, 3000), at: Date.now(), by: S.owner });
     komugiCache = { at: 0, text: '' };
     send({ type: 'note_saved', kind: 'news' });
@@ -1842,7 +1842,7 @@ function session(ws) {
     let capped = false, spoken = '';
     const sp = splitter(sentence => {
       let s = clean(sentence).trim();
-      if (seq === 0 && S.avatar === 'komugi') s = s.replace(/^(?:うん|うんうん|ううん|ん|ええ|ええと|えっと)[、。…！!？?\s]+/, '').trim();   // コムギ：返事のはじめの「うん」などは読まない
+      if (seq === 0 && S.avatar === 'komugi') s = s.replace(/^(?:(?:うん|うんうん|ううん|ん|ええ|ええと|えっと|あ|あの|あのう)[、。…！!？?\s]+)+/, '').trim();   // コムギ：返事のはじめの「うん」などは読まない
       if (!s || capped) return;
       if (seq >= maxSent) { capped = true; return; }      // 三人モードは2文まで
       spoken += s;
@@ -1931,7 +1931,7 @@ function session(ws) {
     }
     if (gen !== S.gen) return;
     let text = capped && !longMode ? spoken : clean(full).trim();
-    if (S.avatar === 'komugi') text = text.replace(/^(?:うん|うんうん|ううん|ん|ええ|ええと|えっと)[、。…！!？?\s]+/, '').trim();
+    if (S.avatar === 'komugi') text = text.replace(/^(?:(?:うん|うんうん|ううん|ん|ええ|ええと|えっと|あ|あの|あのう)[、。…！!？?\s]+)+/, '').trim();
     if (cut && !capped) { const k = Math.max(text.lastIndexOf('。'), text.lastIndexOf('！'), text.lastIndexOf('？'), text.lastIndexOf('!'), text.lastIndexOf('?')); if (k > 0) text = text.slice(0, k + 1); }
     if (text && !noRecord) S.history.push({ role: 'user', content: logText || '（写真を見せた）' }, { role: 'assistant', content: text });
     if (text && !noRecord && logText) faqLog(S.role, logText, text).catch(() => {});
