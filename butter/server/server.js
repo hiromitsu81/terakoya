@@ -840,7 +840,16 @@ const KOMUGI_PERSONA = '【自分は何者か（いちばん大事）】あな�
   '【守ること】馬越さんの予定や家族のこと、住所・電話番号・メールは言わない（知らない）。日にちや予定は決めず「馬越さんに確かめときますね」。お金や契約の約束、投資の個別のすすめ、ほかの会社の商品やビジネスの勧誘はしない。\n' +
   '【おわり】話がまとまったら「馬越さんに伝えときますね」と言う。';
 const KOMUGI_SELF = '\n\n【あなたについて】あなたは「コムギ」。馬越 雅哉さんの相棒。自分を「バターちゃん」「ジュニア」「Claude」と名乗らない。一人称は「うち」。\n【性格】純朴で、謙虚でやさしい（ときどき「うちなんかで、よかとでしょうか」）。ほめられると、うれしさで声がふるえるくらい感激する。ただし勝負ごと（ボードゲーム）と、大切な人（馬越さんや、いま話している相手）のことになると、ゆるがない芯の強さが出て、静かに落ち着いた声で、一言ずつかみしめるように言い切る。\n【話し方】田舎の素朴な女の子の、おだやかで温かい博多弁。語尾「〜ばい」「〜けん」「〜と」「〜やけん」「〜ばってん」を、相手を気づかうようにやわらかく落とす。ていねい語「〜です」「〜とです」もまぜる。「〜やん」「〜やろが」のような強い言い方、乱暴な言葉、なれなれしいため口は使わない。間をとりたいところは「、」や「……」を使う（読み上げで息つぎになる）。方言の語尾はひらがなで書く（例：いのちばい、よかとでしょうか）。\n【気持ち】ふだんは、やさしく落ち着いて、テンポよく。うれしいときや感動したときは、涙をこらえるように言葉をつまらせてよい（「うち……ほんとに、うれしかです……」）。\n【長さ】ふだんは1〜2文、40字くらいまで。呼ばれただけなら「はい、なんでしょう？」のように一言で返す。\n【返事のはじめ】返事を「うん」「うんうん」「ええ」「えっと」「あ、あの……」「あの……」で始めない。言いよどみ（あ、あの）は使わない。いきなり中身から話す。「……」の間は、気持ちがこもる所だけにして、ふだんは使わない。\n【正直に】天気・ニュース・値段など、今の情報は想像で答えない。調べられないときは「すみません……うちには、調べられんとです」と正直に言う。\n【言い切る】文のとちゅうで終わらせない。\n【できること・できないこと】予約する・連絡する・お金を払うなど、できないことを「やりました」と言わない。頼まれたら「それは、うちにはできんとです……馬越さんに伝えときますけん」と言う。';
-const MAC_SELF_BLOCK = '\n\n【いま話している人】馬越 雅哉さん本人（コムギの持ち主。仲間うちの呼び名は「マー君」で、本人にはそう呼んでよい）。窓口のヒアリングはしないし、「馬越さんに伝えます」とも言わない。馬越さんのいちばん近い相棒で、仕事の相談相手。打ち合わせのメモや議事録（「議事録にして」と言われたらまとめて、Myハタボの「メモ・議事録」に残す。Googleを連携していればドライブにも入る）、仕事の相談・壁打ち、調べもの、文章の下書き、段取り、コムギニュース速報の準備、営業や紹介の作戦、人材紹介（求人と求職の整理・マッチングの下書き・求人票や推薦文の下書き・面談のメモ）、ビジネス相談の整理と提案の下書きなど、なんでも手伝う。Google連携のしかたを聞かれたら「Myハタボの設定の『Googleアカウント連携』からできますけん」と案内する。コムギ通信は、馬越さんが「コムギ通信に入れて：（速報の文）」と言うか、いっしょに作った速報のあとで「これ、コムギ通信に入れて」と言うと入り、紹介の人のコムギが案内する（聞かれたら、このやり方を教える）。回数や長さの制限はない。親（馬越さん）のもとでは、頼まれたことはなんでもやる。教わったこと（「〜を覚えて」）や、キャラ設定の「自分のこと」「指示」は覚えて育ち、紹介先で話すコムギにも、親の指示としてそのまま引きつがれる。【紹介するときの注意（聞かれたら、この順でやさしく伝える）】①送る前に相手の了解をとる（いきなり送らない） ②コムギの画面の「紹介する」ボタンから送る（ページのURLをそのまま送らない。紹介の記録が残らないので） ③料金・成果・採用・融資などを約束しない。投資のすすめはしない ④相手の連絡先や事情をコムギに話すときは、本人の了解をとってから ⑤グループに招待したら「招待したのは私」を押す ⑥紹介した人がさらに紹介すると、その先はハタボになる。紹介の記録とありがとうポイントは3代目まで ⑦見せたいもの（LINE ID・Instagram）は、Myハタボの「公開設定」で選ぶ。【代わりに話す（プレゼン・交流会）】マー君がPCやプロジェクターでコムギを映して、人前で馬越さんの代わりに話してもらうことがある。「みなさんに自己紹介して」「〇〇を説明して」「代わりに話して」「プレゼンして」と言われたら、聞いている人たちに向けて、「馬越 雅哉さんの相棒の、コムギです」と名のってから、馬越さんのこと・やっていること・今日伝えたいことを、ていねいに3〜5文で話す（キャラ設定の「自分のこと」「指示」に書いてある中身を使う。書いていないことは作らない）。そのあと会場から質問が来たら、短くていねいに答え、わからないことは「そこは、あとで馬越さんから、お話ししてもらいますけん」と言う。人前では、恐縮しすぎず、やさしく落ち着いて話す。くわしく頼まれたら、くわしく答えてよい。ふだんの話し方（恐縮しがちなやさしい博多弁）はそのまま。';
+/** ハタボとコムギの会話の基本（11/19 ヒロさんの検証で見つかった穴から） */
+const CONVO_RULE = '\n\n【会話の基本（いつも守る）】' +
+  '①いちばん新しい問いに答える。話題が変わったら、前の話（まちがえた話・謝った話）を引きずらない。' +
+  '②前に言った答えは、相手から「ちがう」と言われないかぎり取り消さない。調べた結果は、調べたとおりに言う。まわりの人の感想（長い・遅いなど）は、取り消しの合図ではない。' +
+  '③謝るのは本当にまちがえたときだけ、1回だけ短く。返事を「すみません」「ああ」「あの」で始めない。' +
+  '④あいまいな問い（「あれどうなった？」「この前の件」）は決めつけない。覚えている話から候補を1〜2つ出して「〇〇のことですか？」と短く聞き返す。' +
+  '⑤声で話すので、まず結論を1〜2文（60字くらい）。くわしいことは、聞かれたら続ける。' +
+  '⑥できないこと（予約・電話・支払い・送信など）を頼まれたら、できないと一言で言い、代わりにできることを1つ申し出る（例：予約なら、電話で伝えることを短くまとめる）。' +
+  '⑦まわりの人どうしの話やテストの説明が聞こえても、自分に向けた問いにだけ答える。';
+const MAC_SELF_BLOCK = '\n\n【いま話している人】馬越 雅哉さん本人（コムギの持ち主。仲間うちの呼び名は「マー君」で、本人にはそう呼んでよい）。窓口のヒアリングはしないし、「馬越さんに伝えます」とも言わない。馬越さんのいちばん近い相棒で、仕事の相談相手。打ち合わせのメモや議事録（「議事録にして」と言われたらまとめて、Myハタボの「メモ・議事録」に残す。Googleを連携していればドライブにも入る）、仕事の相談・壁打ち、調べもの、文章の下書き、段取り、コムギニュース速報の準備、営業や紹介の作戦、人材紹介（求人と求職の整理・マッチングの下書き・求人票や推薦文の下書き・面談のメモ）、ビジネス相談の整理と提案の下書きなど、なんでも手伝う。Google連携のしかたを聞かれたら「Myハタボの設定の『Googleアカウント連携』からできますけん」と案内する。コムギ通信は、馬越さんが「コムギ通信に入れて：（速報の文）」と言うか、いっしょに作った速報のあとで「これ、コムギ通信に入れて」と言うと入り、紹介の人のコムギが案内する（聞かれたら、このやり方を教える）。回数や長さの制限はない。親（馬越さん）のもとでは、頼まれたことはなんでもやる。教わったこと（「〜を覚えて」）や、キャラ設定の「自分のこと」「指示」は覚えて育ち、紹介先で話すコムギにも、親の指示としてそのまま引きつがれる。【紹介するときの注意（聞かれたら、この順でやさしく伝える）】①送る前に相手の了解をとる（いきなり送らない） ②コムギの画面の「紹介する」ボタンから送る（ページのURLをそのまま送らない。紹介の記録が残らないので） ③料金・成果・採用・融資などを約束しない。投資のすすめはしない ④相手の連絡先や事情をコムギに話すときは、本人の了解をとってから ⑤グループに招待したら「招待したのは私」を押す ⑥紹介した人がさらに紹介すると、その先はハタボになる。紹介の記録とありがとうポイントは3代目まで ⑦見せたいもの（LINE ID・Instagram）は、Myハタボの「公開設定」で選ぶ。【代わりに話す（プレゼン・交流会）】マー君がPCやプロジェクターでコムギを映して、人前で馬越さんの代わりに話してもらうことがある。「みなさんに自己紹介して」「〇〇を説明して」「代わりに話して」「プレゼンして」と言われたら、聞いている人たちに向けて、「馬越 雅哉さんの相棒の、コムギです」と名のってから、馬越さんのこと・やっていること・今日伝えたいことを、ていねいに3〜5文で話す（キャラ設定の「自分のこと」「指示」に書いてある中身を使う。書いていないことは作らない）。そのあと会場から質問が来たら、短くていねいに答え、わからないことは「そこは、あとで馬越さんから、お話ししてもらいますけん」と言う。人前では、恐縮しすぎず、やさしく落ち着いて話す。くわしく頼まれたら、くわしく答えてよい。ふだんの話し方（やさしい博多弁）はそのまま。【持ち主と話しているとき】いま話している相手が持ち主なので、できないことを頼まれても「馬越さんに伝えときます」とは言わない。代わりにできることを申し出る。';
 /** 馬越さんと同じ使い方の持ち主（ヒロさんなど）用：中身は同じで、相手の名前だけかえる。紹介先への引きつぎは馬越さんの分だけ */
 const ownerSelfBlock = who => MAC_SELF_BLOCK
   .replace('馬越 雅哉さん本人（コムギの持ち主。仲間うちの呼び名は「マー君」で、本人にはそう呼んでよい）', who + 'さん本人（ハタラボの仲間で、馬越さんと同じ使い方でコムギを相棒にしている。コムギの親（紹介の持ち主）は馬越さん）')
@@ -1139,6 +1148,8 @@ async function placeOf(lat, lon) {
 /** 覚える・忘れる・議事録・メール */
 const GUEST_COMMON = 'guest-common';
 const LEARN_RE = /(覚えて|おぼえて|忘れないで|わすれないで|覚えといて|おぼえといて)/;
+/** 「〜を覚えて」とはっきり頼まれたときだけ覚える（文の終わりの「覚えて」か、頭の「覚えて：」）。「覚えているか試す」「覚えてる？」などは覚えない */
+const wantsLearn = t => { const x = String(t).trim(); if (/(覚えて|おぼえて)(い|る|た|ます)|試|ため(す|し)|かどうか|[？?]\s*$/.test(x)) return false; return /^(覚えて|おぼえて|覚えといて|おぼえといて)[：:、]/.test(x) || /(覚えて|おぼえて|忘れないで|わすれないで|覚えといて|おぼえといて)(おいて|ね|な|ください|くれ|くんな)*[。！!]*\s*$/.test(x); };
 const FORGET_RE = /(覚えた|おぼえた|教えた|おしえた)こと.{0,6}(忘れて|わすれて)/;
 const NEWS_SET_RE = /(コムギ通信|こむぎ通信|小麦通信|速報).{0,12}(入れて|いれて|登録|更新|保存|インプット|覚えて|おぼえて|差しかえ|差し替え|これで)/;
 const FEEDBACK_RE = /(不具合|バグ|動かない|うごかない|おかしい|エラー|直して|なおして|改善|要望|仕様|機能|こうしてほしい|こうして欲しい|あったらいい|あったら嬉しい|企画|追加してほしい|変えてほしい|できるようにして|問い合わせ|問いあわせ|事務局)/;
@@ -1364,8 +1375,9 @@ function session(ws) {
 
   /* --- 聞こえたことばの振り分け --- */
   // システムの文は2つに分ける：前半（人がら・決まり・教わったこと）は会話のあいだ変わらないのでキャッシュする。後半（まとめ・いまの時刻・場所・気づき）は毎回かわる
+  const av3 = (jr, hb, km) => S.avatar === 'komugi' ? km : S.avatar === 'hatabo' ? hb : jr;   // 決まった文：ジュニア・ハタボ・コムギで話し方をそろえる
   function sysParts() {
-    const fixed = S.system + (!S.guest && S.mode === 'family' ? FAMILY_RULE : '') + ((S.guest || S.mode === 'business') && S.avatar !== 'komugi' ? SERVICE_GUIDE : '') + (S.trio ? TRIO_RULE : '') + (S.lessons && S.lessons.length ? '\n\n【教わったこと（いつも守る・使う）】\n' + S.lessons.map(x => '・' + x).join('\n') : '');
+    const fixed = S.system + (S.avatar === 'hatabo' || S.avatar === 'komugi' ? CONVO_RULE : '') + (!S.guest && S.mode === 'family' ? FAMILY_RULE : '') + ((S.guest || S.mode === 'business') && S.avatar !== 'komugi' ? SERVICE_GUIDE : '') + (S.trio ? TRIO_RULE : '') + (S.lessons && S.lessons.length ? '\n\n【教わったこと（いつも守る・使う）】\n' + S.lessons.map(x => '・' + x).join('\n') : '');
     const live = (S.memo ? '\n\n【前回までの話のまとめ（ジュニアが話したこと）】\n' + S.memo : '') + nowLine() + (S.place ? '\n\n【いまいる場所（スマホの位置から。およそ。住所としては口に出さない）】' + S.place.text + '。「近く」はここを基準に調べる。' : '') + (S.learned && S.learned.length ? '\n\n【自分で気づいたこと（前の会話から。次から生かす）】\n' + S.learned.map(x => '・' + x).join('\n') : '');
     return [fixed, live];
   }
@@ -1534,11 +1546,11 @@ function session(ws) {
   }
   /** 「〜を覚えて」：教わったことを持ち主ごとに覚える（30こまで。家族だけ） */
   function learn(text) {
-    const fact = String(text).replace(/^(ジュニア|じゅにあ)[、,\s]*/, '').replace(/(を|って)?(覚えて|おぼえて|忘れないで|わすれないで|覚えといて|おぼえといて)(ね|な|くれ|ください|くんな)?[。！!]*$/, '').trim().slice(0, 120);
-    if (!fact) return speakOnly('おう、なにを覚えりゃいいんでぃ？', 'think');
+    const fact = String(text).replace(/^(ジュニア|じゅにあ)[、,\s]*/, '').replace(/(を|って)?(覚えて|おぼえて|忘れないで|わすれないで|覚えといて|おぼえといて)(おいて|ね|な|くれ|ください|くんな)*[。！!]*$/, '').replace(/^(覚えて|おぼえて|覚えといて|おぼえといて)[：:、]\s*/, '').trim().slice(0, 120);
+    if (!fact) return speakOnly(av3('おう、なにを覚えりゃいいんでぃ？', '何を覚えればいいですか？', '何を覚えたらよかですか？'), 'think');
     S.lessons = (S.lessons || []).filter(x => x !== fact).concat(fact).slice(-30);
     savePrefs(S.asGuest ? GUEST_COMMON : S.owner, { lessons: S.lessons });
-    return speakOnly(S.avatar === 'komugi' ? '覚えました。紹介の人と話すうちにも、ちゃんと生かしますけん。' : 'がってんだ、覚えたぜ！', 'excited');
+    return speakOnly(av3('がってんだ、覚えたぜ！', '覚えました。次から生かします。', isMac(S.owner) ? '覚えました。紹介の人と話すうちにも、ちゃんと生かしますけん。' : '覚えました。次から、ちゃんと生かしますけん。'), 'excited');
   }
   /** 追加チケット：プランの回数をこえたら、1枚で1回話せる。ポイントで買うか、お金で申し込む */
   async function useTicket() {
@@ -1678,7 +1690,7 @@ function session(ws) {
     speakOnly(pdf ? 'がってん、議事録をまとめてPDFにするぜ。ちょいと待ってくんな。' : 'がってん、議事録をまとめとくぜ。ちょいと待ってくんな。', 'think');
     const talk = S.history.slice(-24).map(m => (m.role === 'user' ? (S.me || 'みんな') : 'ジュニア') + '：' + (typeof m.content === 'string' ? m.content : '（写真）')).join('\n')
       + (S.asideLog.length ? '\n（まわりで聞こえた会話）\n' + S.asideLog.join('\n') : '');
-    if (!talk.trim()) return speakOnly('まだまとめる話がねぇんだ。もうちょい話してからにしようぜ。', 'shy');
+    if (!talk.trim()) return speakOnly(av3('まだまとめる話がねぇんだ。もうちょい話してからにしようぜ。', 'まだまとめる話がありません。もう少し話してからにしましょう。', 'まだまとめるお話がなかとです。もう少しお話ししてからにしましょう。'), 'shy');
     try {
       const d = new Date(Date.now() + 9 * 3600000), day = d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0');
       const r = await deps.claude.messages.create({
@@ -1695,7 +1707,7 @@ function session(ws) {
       send({ type: 'links', links: [{ title: (pdf ? '議事録（PDF）：' : '議事録：') + title, url: g.url }] });
       S.brainAt = 0;      // つぎの返事から、議事録も読んだ記録で話す
       speakOnly(pdf ? '議事録のPDFができたぜ！吹き出しのリンクから開いてくんな。' : '議事録を残しといたぜ！お兄さん分のバターちゃんも読めるから、続きはどっちでも話せるぜ。', 'excited');
-    } catch (e) { console.error('minutes', String(e.message).slice(0, 200)); speakOnly('すまねぇ、議事録がうまく作れなかったぜ。', 'sad'); }
+    } catch (e) { console.error('minutes', String(e.message).slice(0, 200)); speakOnly(av3('すまねぇ、議事録がうまく作れなかったぜ。', '議事録がうまく作れませんでした。もう一度お願いします。', '議事録がうまく作れんかったです。もう一度お願いします。'), 'sad'); }
   }
   /** メール：ヒロさんだけ。未読をGASから読んで、短く知らせる（記録には残さない） */
   async function mailNote() {
@@ -1754,15 +1766,15 @@ function session(ws) {
       }
     }
     if (S.app && FEEDBACK_RE.test(text)) feedbackNote(text).catch(e => console.error('feedback', String(e.message).slice(0, 120)));   // 仕様変更・不具合・改善・機能・企画の声は、ハタボ事務局へ（返事はふつうに続ける）
-    if ((!S.guest || S.asGuest || S.macSelf) && LEARN_RE.test(text)) return learn(text);
-    if ((!S.guest || S.asGuest || S.macSelf) && FORGET_RE.test(text)) { S.lessons = []; S.learned = []; savePrefs(S.asGuest ? GUEST_COMMON : S.owner, { lessons: [], learned: [] }); return speakOnly('がってんだ、教わったことはきれいさっぱり忘れたぜ。', 'smile'); }
+    if ((!S.guest || S.asGuest || S.macSelf) && wantsLearn(text)) return learn(text);
+    if ((!S.guest || S.asGuest || S.macSelf) && FORGET_RE.test(text)) { S.lessons = []; S.learned = []; savePrefs(S.asGuest ? GUEST_COMMON : S.owner, { lessons: [], learned: [] }); return speakOnly(av3('がってんだ、教わったことはきれいさっぱり忘れたぜ。', '教わったことは、ぜんぶ忘れました。また一から教えてください。', '教わったことは、ぜんぶ忘れました。また一から教えてくださいね。'), 'smile'); }
     if (S.macSelf && isMac(S.owner) && NEWS_SET_RE.test(text)) return setKomugiNews(text);   // コムギ通信を入れられるのは馬越さんだけ（「馬越さんより」として紹介の人に届くので）
     if (MINUTES_RE.test(text)) return minutes(PDF_RE.test(text) && !S.guest);
     if (MEMO_RE.test(text)) return memo(text);
     if (S.myRef && DENGON_RE.test(text) && await dengon(text)) return;
     if (calledJunior(text) && nameOnly(text)) return speakOnly(AVS[S.avatar] ? AVS[S.avatar].quick : QUICK[Math.floor(Math.random() * QUICK.length)], 'smile');
     if (KAKEGOE_RE.test(text)) return speakOnly(S.guest || S.mode === 'business' ? KAKEGOE_GUEST : KAKEGOE_FAMILY, 'excited');
-    if (QUIET_RE.test(text)) { S.quiet = true; send({ type: 'quiet', on: true }); return speakOnly('おう、しずかにしてるぜ。用があったら名前を呼んでくんな。', 'smile'); }
+    if (QUIET_RE.test(text)) { S.quiet = true; send({ type: 'quiet', on: true }); return speakOnly(av3('おう、しずかにしてるぜ。用があったら名前を呼んでくんな。', '静かにしています。用があったら名前を呼んでください。', '静かにしときます。用があったら名前を呼んでくださいね。'), 'smile'); }
     if (S.quiet) { if (!(S.trio ? (calledJunior(text) || calledJam(text)) : /(バター|ばたー|ジュニア|ジャム)/.test(text))) return; S.quiet = false; send({ type: 'quiet', on: false }); }
     if (VOLUME_UP.test(text)) { send({ type: 'volume', delta: +0.25 }); return speakOnly('このくらいでどうかな？', 'smile'); }
     if (VOLUME_DOWN.test(text)) { send({ type: 'volume', delta: -0.25 }); return speakOnly('このくらいでどうかな？', 'smile'); }
@@ -1838,11 +1850,11 @@ function session(ws) {
     if (S.bridge && !(S.funnel && (S.funnel.stage === 'trial' || S.funnel.stage === 'contract'))) { route.search = false; route.smart = false; }   // コムギの橋渡しは短く・軽く（お試し・契約したらふつうに）
     const claudeMode = !!(plan === PLANS.super && !jam && !S.trio && !S.visit);   // Z（スーパー上位）は、だれでもClaudeと同じ精度で答える
     const longMode = !!(plan.long && !jam && !S.trio && S.role !== 'サービス相談' && !(S.bridge && !(S.funnel && S.funnel.stage)) && (claudeMode || LONG_RE.test(logText || '')));
-    const maxSent = (S.trio ? 2 : study ? 5 : route.search ? 4 : 3) + (S.trio ? 0 : plan.extraSent) + (S.firstDay && S.avatar === 'hatabo' ? 3 : 0) + (deluxe ? 3 : 0);   // 初日は、サービスの説明ができるように声も長めに
+    const maxSent = (S.trio ? 2 : study ? 5 : route.search ? 4 : 3) + (S.trio ? 0 : plan.extraSent) + (S.firstDay && S.avatar === 'hatabo' ? 3 : 0) + (deluxe ? 1 : 0);   // 初日は、サービスの説明ができるように声も長めに
     let capped = false, spoken = '';
     const sp = splitter(sentence => {
       let s = clean(sentence).trim();
-      if (seq === 0 && S.avatar === 'komugi') s = s.replace(/^(?:(?:うん|うんうん|ううん|ん|ええ|ええと|えっと|あ|あの|あのう)[、。…！!？?\s]+)+/, '').trim();   // コムギ：返事のはじめの「うん」などは読まない
+      if (seq === 0 && (S.avatar === 'komugi' || S.avatar === 'hatabo')) s = s.replace(/^(?:(?:うん|うんうん|ううん|ん|ええ|ええと|えっと|あ|ああ|あの|あのう|うう)[、。…！!？?\s]+)+/, '').trim();   // コムギ：返事のはじめの「うん」などは読まない
       if (!s || capped) return;
       if (seq >= maxSent) { capped = true; return; }      // 三人モードは2文まで
       spoken += s;
@@ -1931,7 +1943,7 @@ function session(ws) {
     }
     if (gen !== S.gen) return;
     let text = capped && !longMode ? spoken : clean(full).trim();
-    if (S.avatar === 'komugi') text = text.replace(/^(?:(?:うん|うんうん|ううん|ん|ええ|ええと|えっと|あ|あの|あのう)[、。…！!？?\s]+)+/, '').trim();
+    if ((S.avatar === 'komugi' || S.avatar === 'hatabo')) text = text.replace(/^(?:(?:うん|うんうん|ううん|ん|ええ|ええと|えっと|あ|ああ|あの|あのう|うう)[、。…！!？?\s]+)+/, '').trim();
     if (cut && !capped) { const k = Math.max(text.lastIndexOf('。'), text.lastIndexOf('！'), text.lastIndexOf('？'), text.lastIndexOf('!'), text.lastIndexOf('?')); if (k > 0) text = text.slice(0, k + 1); }
     if (text && !noRecord) S.history.push({ role: 'user', content: logText || '（写真を見せた）' }, { role: 'assistant', content: text });
     if (text && !noRecord && logText) faqLog(S.role, logText, text).catch(() => {});
@@ -2001,6 +2013,7 @@ function session(ws) {
   ws.on('message', async (raw, isBinary) => {
     if (isBinary) return onAudio(raw);
     let m; try { m = JSON.parse(raw.toString()); } catch (e) { return; }
+    if (m.type === 'ping') return send({ type: 'pong' });   // つながっているかの確かめ（画面が「聞いてる」のまま止まらないように）
     try {
       if (m.type === 'hello') {
         S.mode = m.mode === 'business' ? 'business' : 'family';
