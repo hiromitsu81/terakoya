@@ -2730,7 +2730,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
       case 'searching': if (m.gen === J.gen) { hint.textContent = J.avatar === 'komugi' ? 'ちょっと、調べよります……' : J.avatar === 'hatabo' ? '調べています…' : '少し調べていますね…'; J.thinkAt = Date.now() + 15000; setEmo('think'); } break;
       case 'waiting': if (m.gen === J.gen) hint.textContent = 'まわりの話がおわるのを待ってから話すよ…'; break;
       case 'audio':
-        if (m.gen === J.gen) { J.queue.push(m); jrPump(); }
+        if (m.gen === J.gen) { J.audioGen = m.gen; J.queue.push(m); jrPump(); }
         if (J.trio && /待ってから/.test(hint.textContent)) hint.textContent = '三人モード：「ジュニア」と呼んだときだけ答えるよ。';
         break;
       case 'reply_end':
@@ -2739,6 +2739,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
         if (J.out) J.out.textContent = m.text || J.outText || '（うまく答えられなかったよ。もう一回呼んでね）' + (m.why && J.canPlan ? '［原因：' + m.why + '］' : '');   // 制限なしの人（ヒロさん・馬越さん）には原因も出す
         if (m.text && history.length && history[history.length - 1].role === 'user') { history.push({ role: 'assistant', content: m.text }); if (history.length > 12) history = history.slice(-12); }
         J.endEmo = m.emotion || 'smile';
+        if (m.text) { const g = m.gen; setTimeout(() => { if (J.gen === g && J.audioGen !== g) jrDiag('声のデータが届いていません（サーバー側）'); }, 4000); }
         if (m.usage && J.out && J.out.parentElement && !HATABO_APP) { /* ハタボのアプリでは、グレード名・モデル名などを返事の下に出さない */ const u = m.usage, d = document.createElement('div'); d.className = 'usage'; d.textContent = u.plan + '・' + String(u.model || '').replace(/^claude-/, '') + '・入力' + u.in + (u.cache ? '（キャッシュ' + u.cache + '）' : '') + '／出力' + u.out + (u.searches ? '・検索' + u.searches : ''); J.out.parentElement.appendChild(d); }
         jrDrain();
         break;
@@ -2817,18 +2818,43 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
     jrSend({ type: 'text', text });
   }
   document.addEventListener('audiounlocked', () => { try { jrPump(); } catch (e) {} });
+  // 声が出ないときの手がかり：ヒロさん（制限なしの人）にだけ、画面の下に原因を出す
+  function jrDiag(t) { try { console.warn('voice', t); if (J.canPlan && !J['diag_' + t]) { J['diag_' + t] = true; toast('［声］' + t); } } catch (e) {} }
+  // ふつうの音声プレーヤーで1文を鳴らす（音の準備が止められているスマホ向けの予備）。鳴らせたら true
+  function playEl(m) {
+    return new Promise(ok => {
+      let done = false;
+      try {
+        const el = new Audio('data:audio/mpeg;base64,' + m.mp3);
+        el.volume = Math.max(0, Math.min(1, J.vol || 1));
+        el.onended = () => { J.playing = false; J.lastPlayEnd = Date.now(); J.kara = ''; document.dispatchEvent(new Event('cvkara')); jrPump(); jrDrain(); };
+        el.onerror = () => { if (!done) { done = true; jrDiag('プレーヤーでも鳴らせませんでした'); ok(false); } };
+        setState('speaking'); J.kara = m.text || ''; document.dispatchEvent(new Event('cvkara'));
+        el.play().then(() => { if (!done) { done = true; ok(true); } }).catch(() => { if (!done) { done = true; J.kara = ''; jrDiag('スマホが自動再生を止めています'); ok(false); } });
+      } catch (e) { ok(false); }
+    });
+  }
   // 一文ずつ届いた声を、順番に鳴らす。口は声の大きさで動かす
   async function jrPump() {
     if (J.playing || !J.queue.length) return;
     const a = AC();
     // 音がまだ止まっている（画面にふれていない）ときは、声をとっておいて、ふれたら鳴らす
     if (a.state !== 'running') { try { await Promise.race([a.resume(), new Promise(ok => setTimeout(ok, 400))]); } catch (e) {} }
-    if (a.state !== 'running') { if (!J.tapHint) { J.tapHint = true; try { toast('画面にふれると、声が出ます'); } catch (e) {} } return; }
     if (J.playing || !J.queue.length) return;
+    if (J.muted) { if (!J.muteHint) { J.muteHint = true; try { toast('いま「声なし」です。右上で「声あり」にすると話します'); } catch (e) {} } }
+    // 音の準備ができていない（スマホが止めている）ときは、ふつうの音声プレーヤーで鳴らしてみる
+    if (a.state !== 'running' && !J.muted) {
+      const m0 = J.queue[0];
+      if (m0 && m0.gen === J.gen) { J.queue.shift(); J.playing = true; if (await playEl(m0)) return; J.queue.unshift(m0); J.playing = false; }
+      if (!J.tapHint) { J.tapHint = true; try { toast('画面にふれると、声が出ます'); } catch (e) {} }
+      jrDiag('音が止められています（' + a.state + '）');
+      return;
+    }
     const m = J.queue.shift();
     J.playing = true;
     let buf = null;
-    try { const bin = atob(m.mp3), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); buf = await a.decodeAudioData(u8.buffer); } catch (e) {}
+    try { const bin = atob(m.mp3), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); buf = await a.decodeAudioData(u8.buffer); } catch (e) { jrDiag('声のデータを読めませんでした'); }
+    if (!buf && m.gen === J.gen && !J.muted) { if (await playEl(m)) return; }   // 読めなかったときも、ふつうのプレーヤーで鳴らしてみる
     if (!buf || m.gen !== J.gen || J.muted) { J.playing = false; jrPump(); jrDrain(); return; }   // スピーカーを切っているときは鳴らさない
     if (!J.gain) { J.gain = a.createGain(); J.an = a.createAnalyser(); J.an.fftSize = 512; J.gain.connect(J.an); J.an.connect(a.destination); }
     J.gain.gain.value = J.vol * autoVol();
