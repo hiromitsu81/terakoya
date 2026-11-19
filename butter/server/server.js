@@ -42,6 +42,8 @@ const ENV = {
   KOMUGI_REFS: (process.env.KOMUGI_REFS || '').split(',').map(s => s.trim()).filter(Boolean),   // コムギの紹介コード（ここから来た人はコムギ通信つき）
   EL_KEY: process.env.ELEVENLABS_API_KEY || '',   // ElevenLabs のAPIキー。声の名前を「el:声のID」にすると ElevenLabs で話す
   EL_MODEL: process.env.ELEVENLABS_MODEL || 'eleven_flash_v2_5',   // 速さ重視 eleven_flash_v2_5／表現重視 eleven_v3 など
+  EL_FORMAT: process.env.ELEVENLABS_FORMAT || 'mp3_44100_128',   // 声の音質。64kbpsだとスマホでザラザラ（ノイズ）に聞こえやすいので128kbps
+  EOU_MS: Number(process.env.EOU_MS ?? 800),   // 話し終わりの見分け：聞き取りの文字がこの時間（ミリ秒）かわらなければ、話し終わりとみなしてすぐ返事を始める（0でGoogleまかせ）
   HATABO_VOICE: process.env.HATABO_VOICE || 'ja-JP-Chirp3-HD-Puck',   // ハタボの声：明るく元気な、ひよこの男の子（ジュニアのガラガラ声とは別）
   KOMUGI_VOICE: process.env.KOMUGI_VOICE || 'ja-JP-Chirp3-HD-Leda',   // コムギの声：やわらかい少女の声
   KOMUGI_RATE: Number(process.env.KOMUGI_RATE || 0.95),   // コムギは自信なさげに、ゆっくり
@@ -982,7 +984,7 @@ function splitter(onSentence) {
 
 /* ===== 読み上げ ===== */
 const VOICE_BACKUP = ['ja-JP-Chirp3-HD-Orus', 'ja-JP-Chirp3-HD-Leda'];
-const badVoice = new Set();
+const badVoice = new Set(), noProfile = new Set();
 const EMO_RATE = { excited: 1.06, laugh: 1.06, surprise: 1.04, smile: 1, think: 0.94, shy: 0.92, sad: 0.9 };   // 気持ちで、話す速さを少し変える
 async function synth(text, voice, emo) {
   let name = voice || ENV.TTS_VOICE;
@@ -998,7 +1000,7 @@ async function synth(text, voice, emo) {
 /** ElevenLabs で声を作る（name が「el:声のID」のとき） */
 async function synthEL(text, voiceId, emo) {
   const st = { excited: 0.35, laugh: 0.35, surprise: 0.4, sad: 0.6, shy: 0.55, think: 0.55 }[emo] || 0.5;   // 気持ちが大きいときは、安定度を下げて表情を出す
-  const r = await fetch('https://api.elevenlabs.io/v1/text-to-speech/' + encodeURIComponent(voiceId) + '?output_format=mp3_44100_64', { method: 'POST',
+  const r = await fetch('https://api.elevenlabs.io/v1/text-to-speech/' + encodeURIComponent(voiceId) + '?output_format=' + ENV.EL_FORMAT, { method: 'POST',
     headers: { 'xi-api-key': ENV.EL_KEY, 'Content-Type': 'application/json', Accept: 'audio/mpeg' },
     body: JSON.stringify({ text, model_id: ENV.EL_MODEL, language_code: /flash|turbo/.test(ENV.EL_MODEL) ? 'ja' : undefined, voice_settings: { stability: st, similarity_boost: 0.8, style: 0.3, speed: Math.max(0.8, Math.min(1.2, EMO_RATE[emo] || 1)) } }) });
   if (!r.ok) throw new Error('elevenlabs ' + r.status + ' ' + (await r.text().catch(() => '')).slice(0, 120));
@@ -1014,7 +1016,15 @@ async function synth1(text, name, emo) {
   const audioConfig = { audioEncoding: 'MP3', speakingRate: (name === ENV.KOMUGI_VOICE ? ENV.KOMUGI_RATE : ENV.TTS_RATE) * (EMO_RATE[emo] || 1) };
   text = String(text).replace(/……|…/g, '、、');   // 「……」は、ひと呼吸の間にする
   if (!/Chirp/i.test(name)) audioConfig.pitch = 2;
-  const [r] = await deps.tts.synthesizeSpeech({ input: { text }, voice: { languageCode: 'ja-JP', name }, audioConfig });
+  // スマホのスピーカー向けに整える（音割れ・ザラつきを減らす）。この声で使えないときは、つけずにもう一度
+  if (!noProfile.has(name)) Object.assign(audioConfig, { sampleRateHertz: 24000, effectsProfileId: ['handset-class-device'] });
+  let r;
+  try { [r] = await deps.tts.synthesizeSpeech({ input: { text }, voice: { languageCode: 'ja-JP', name }, audioConfig }); }
+  catch (e) {
+    if (!audioConfig.effectsProfileId || !/profile|sample|rate|not supported|invalid/i.test(String(e.message))) throw e;
+    noProfile.add(name); delete audioConfig.effectsProfileId; delete audioConfig.sampleRateHertz;
+    [r] = await deps.tts.synthesizeSpeech({ input: { text }, voice: { languageCode: 'ja-JP', name }, audioConfig });
+  }
   return Buffer.from(r.audioContent).toString('base64');
 }
 
@@ -1297,24 +1307,28 @@ function session(ws) {
       },
       interimResults: true, singleUtterance: true,
     });
-    let finalText = '';
+    let finalText = '', lastAll = '', eou = null;
+    // 話し終わりの見分け：文字が少しのあいだ変わらなければ、Googleの合図を待たずに区切る（三人モードは、まわりの声を待つので使わない）
+    const eouArm = () => { clearTimeout(eou); if (!ENV.EOU_MS || S.trio) return; eou = setTimeout(() => { if (S.stt === st) { S.stt = null; try { st.end(); } catch (e) {} } }, ENV.EOU_MS); };
     st.on('data', d => {
-      if (d.speechEventType === 'END_OF_SINGLE_UTTERANCE') { try { st.end(); } catch (e) {} return; }
+      if (d.speechEventType === 'END_OF_SINGLE_UTTERANCE') { clearTimeout(eou); try { st.end(); } catch (e) {} return; }
       const r = d.results && d.results[0];
       if (!r || !r.alternatives || !r.alternatives[0]) return;
       const t = r.alternatives[0].transcript || '';
       if (r.isFinal) finalText += t;
       else {
         const all = finalText + t;
+        lastAll = all;
         S.lastPartial = Date.now();
         send({ type: 'partial', text: all });
+        if (all.replace(/\s/g, '').length >= 2) eouArm();
         // 三人モードでは、名前か「待って」のときだけ止まる（バターちゃんの声で止まらない）
         if (S.speaking && all.length >= 2 && (!S.trio || calledJunior(all) || calledJam(all) || STOP_RE.test(all))) stopReply('barge');
       }
     });
-    st.on('error', e => { if (S.stt === st) S.stt = null; if (!/Audio Timeout|DEADLINE|exceeded maximum/i.test(String(e.message))) send({ type: 'notice', why: 'stt', detail: String(e.message).slice(0, 80) }); });
+    st.on('error', e => { clearTimeout(eou); if (S.stt === st) S.stt = null; if (!/Audio Timeout|DEADLINE|exceeded maximum/i.test(String(e.message))) send({ type: 'notice', why: 'stt', detail: String(e.message).slice(0, 80) }); });
     // 聞こえた文はページへ。ページがガチャ・UFO・チーちゃんの芸などを先に見て、話す分だけ {type:'text'} で返してくる
-    st.on('end', () => { if (S.stt === st) S.stt = null; let t = finalText.trim(); if (S.avatar === 'hatabo' || S.avatar === 'komugi') t = hearFix(t); if (t) send({ type: 'heard', text: t }); });
+    st.on('end', () => { clearTimeout(eou); if (S.stt === st) S.stt = null; let t = (finalText.length >= lastAll.length ? finalText : lastAll).trim(); if (S.avatar === 'hatabo' || S.avatar === 'komugi') t = hearFix(t); if (t) send({ type: 'heard', text: t }); });
     S.stt = st;
   }
   function onAudio(buf) {
