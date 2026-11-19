@@ -1870,6 +1870,14 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
   // iPhoneのマナーモード（消音スイッチ）でも声が出るように：音の使い方を「再生と録音」にする（対応している端末だけ）
   try { if (navigator.audioSession) navigator.audioSession.type = 'play-and-record'; } catch (e) {}
   const AC = () => { try { if (navigator.audioSession && navigator.audioSession.type !== 'play-and-record') navigator.audioSession.type = 'play-and-record'; } catch (e) {} actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); return actx; };
+  // 声の鍵あけ：スマホは、画面に一度ふれるまで声を出させてくれない。最初にふれたときに音の準備をして、待っている声を鳴らす
+  const audioUnlock = () => {
+    try { const a = AC(); if (a.state !== 'running') a.resume().catch(() => {});
+      const b = a.createBuffer(1, 1, 22050), s0 = a.createBufferSource(); s0.buffer = b; s0.connect(a.destination); s0.start(0);
+    } catch (e) {}
+    setTimeout(() => { if (actx && actx.state === 'running') document.dispatchEvent(new Event('audiounlocked')); }, 60);
+  };
+  ['pointerdown', 'touchend', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, audioUnlock, { capture: true, passive: true }));
   function tone(f, t0, len, type, vol, slideTo) {
     const a = AC(), o = a.createOscillator(), g = a.createGain();
     o.type = type || 'triangle'; o.frequency.setValueAtTime(f, t0);
@@ -2808,12 +2816,17 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
     }
     jrSend({ type: 'text', text });
   }
+  document.addEventListener('audiounlocked', () => { try { jrPump(); } catch (e) {} });
   // 一文ずつ届いた声を、順番に鳴らす。口は声の大きさで動かす
   async function jrPump() {
     if (J.playing || !J.queue.length) return;
+    const a = AC();
+    // 音がまだ止まっている（画面にふれていない）ときは、声をとっておいて、ふれたら鳴らす
+    if (a.state !== 'running') { try { await Promise.race([a.resume(), new Promise(ok => setTimeout(ok, 400))]); } catch (e) {} }
+    if (a.state !== 'running') { if (!J.tapHint) { J.tapHint = true; try { toast('画面にふれると、声が出ます'); } catch (e) {} } return; }
+    if (J.playing || !J.queue.length) return;
     const m = J.queue.shift();
     J.playing = true;
-    const a = AC();
     let buf = null;
     try { const bin = atob(m.mp3), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); buf = await a.decodeAudioData(u8.buffer); } catch (e) {}
     if (!buf || m.gen !== J.gen || J.muted) { J.playing = false; jrPump(); jrDrain(); return; }   // スピーカーを切っているときは鳴らさない
