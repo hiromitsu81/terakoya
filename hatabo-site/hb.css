@@ -423,3 +423,5 @@ body.hb-peek .hbtop{bottom:180px}
  .fvsl{height:calc(100svh - 99px - 58px);min-height:520px;overflow:hidden}
 }
 @media(max-width:760px) and (max-height:760px){.fvi{width:66%}.fvsl{gap:12px;padding-top:14px;padding-bottom:16px}.fvh{font-size:22px}}
+/* カルーセルの下の線は出さない。矢印と枚数だけ（11/19） */
+@media(max-width:760px){.mcbar i{display:none}.mcbar{justify-content:flex-end;gap:8px}.mcbar span{min-width:0;text-align:center;order:2}.mcbar .pv{order:1}.mcbar .nx{order:3}}
