@@ -1744,7 +1744,7 @@ function session(ws) {
       const yes = /^(うん|はい|いいよ|それで(いい|OK)|OK|オッケー|おっけー|大丈夫|だいじょうぶ|そう)[。！!、\s]*(だよ|です|よ)?[。！!]*$/i.test(String(text).trim());
       const nm = yes && S.me ? S.me + 'さん' : pickCallName(text);
       if (nm && S.owner) {
-        S.custom = Object.assign(cleanCustom(S.custom || {}), { callMe: nm }); savePrefs(S.owner, { custom: S.custom }).catch(() => {});
+        S.custom = Object.assign(cleanCustom(S.custom || {}), { callMe: nm }); savePrefs(S.owner + kmSfx(), { custom: S.custom }).catch(() => {});
         return speakOnly(nm + '、だね。覚えたボー！' + (S.role === 'サービス相談' ? 'ハタボのことで、知りたいことはあるボー？' : 'それで、' + nm + 'がいま困っていることや、うまくいかなくてモヤモヤしていることはあるボー？'), 'excited');
       }
     }
@@ -2112,10 +2112,14 @@ function session(ws) {
           }
         }
         const pr = await loadPrefs(S.owner);
-        S.custom = pr.custom ? cleanCustom(pr.custom) : null;
+        // キャラ設定もハタボとコムギで分ける（コムギは「持ち主:komugi」）。馬越さんの前からの設定は、分けた場所がまだ空ならそのまま使う
+        const pk = S.avatar === 'komugi' && S.owner ? await loadPrefs(S.owner + ':komugi') : null;
+        const myCustom = pk ? pk.custom || (isMac(S.owner) ? pr.custom : null) : pr.custom;
+        S.custom = myCustom ? cleanCustom(myCustom) : null;
         // コムギ：親（馬越さん）のもとで教わったこと・キャラ設定の指示は、紹介先のコムギにも引きつぐ（親の指示に従って育つ）
         const macOwner = ENV.MAC_OWNERS.length ? 'g:' + String(ENV.MAC_OWNERS[0]).replace(/:\d{4}-\d{2}-\d{2}$/, '').replace(/^g:/, '') : '';
         const lp = S.macSelf ? pr : S.bridge && macOwner ? await loadPrefs(macOwner) : S.guest ? await loadPrefs(GUEST_COMMON) : pr;
+        if (S.bridge && macOwner) { const mk = await loadPrefs(macOwner + ':komugi'); if (mk.custom) lp.custom = mk.custom; }   // 親（馬越さん）のコムギのキャラ設定
         if (S.bridge && lp.custom) { const pc = cleanCustom(lp.custom); if (pc.about || pc.rules) S.system += '\n\n【親（馬越さん）からの指示。いつもこれに従う。ただしハタラボの決まり・安全・正直さが先】' + (pc.about ? '\n馬越さんのこと（本人が書いた）：' + pc.about : '') + (pc.rules ? '\n指示：' + pc.rules : ''); }      // 窓口は、ヒロさんがテストで教えたことをみんなで使う
         // コムギの教わったことは「持ち主:komugi」に置く（ハタボと分ける）。馬越さんの前からの分は、まだ分けていなければそのまま使う
         let lq = lp;
@@ -2206,7 +2210,7 @@ function session(ws) {
         if (!S.owner || S.visit) return;
         const c = cleanCustom(m.c), old = S.custom || {};
         if (old.aiName && c.aiName !== old.aiName && !m.renameOk) c.aiName = old.aiName;   // 名前の変更はオプション（最初の名付けは無料）
-        S.custom = c; await savePrefs(S.owner, { custom: c });
+        S.custom = c; await savePrefs(S.owner + kmSfx(), { custom: c });
         return send({ type: 'custom', c, tones: TONES, lens: LENS, named: !!c.aiName, saved: true, aiName: c.aiName });
       }
       if (m.type === 'rename_req') { gas(Object.assign({ action: 'lead', lead: { who: S.me, ref: '', kind: '契約', title: 'AI棒の名前の変更（1,000円）：' + String(m.name || '').slice(0, 12), need: '名前の変更', when: '', budget: '1,000円', next: 'お支払いのあと名前を変える', memo: '' } }, S.auth)).catch(() => {}); return send({ type: 'notice', why: 'rename', detail: '名前の変更を申し込みました。お支払いの案内のあと変わります' }); }
