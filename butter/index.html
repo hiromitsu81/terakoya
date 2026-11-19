@@ -2763,7 +2763,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
         if (row.children.length) host.append(row);
         break;
       }
-      case 'notice': if (diag && m.detail) { diag.hidden = false; diag.textContent = '（パパへ：' + m.why + ' ' + m.detail + '）'; } break;
+      case 'notice': if (diag && m.detail) { diag.hidden = false; diag.textContent = '（パパへ：' + m.why + ' ' + m.detail + '）'; const L = $('cvList'); if (L && document.body.classList.contains('chatview') && J.canPlan) { const n = document.createElement('p'); n.className = 'cv-empty'; n.textContent = '（パパへ：' + m.why + ' ' + m.detail + '）'; L.append(n); L.scrollTop = L.scrollHeight; } } break;   // トーク画面でも、声が作れなかった原因を出す（制限なしの人だけ）
       case 'error':
         document.body.classList.remove('connecting');
         if (m.code === 'closed') { J.dead = true; hint.textContent = 'いま窓口はお休み中です。また今度お話ししましょう。'; addBubble('ジュニア', 'いま窓口はお休み中です。ヒロさんには直接ご連絡ください。', 'her'); }
