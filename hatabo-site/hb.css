@@ -403,9 +403,6 @@ body.hb-peek .hbtop{bottom:180px}
 }
 
 @media(max-width:760px){body.fvon .cw-btn,body.fvon .hbtop{opacity:0;pointer-events:none;transform:translateY(20px)}.cw-btn{transition:opacity .3s,transform .3s}}
-/* 旗のマークを Myハタボ のアイコンに（11/19） */
-.hbh .my:before{content:"";flex:none;width:23px;height:16px;margin-right:6px;background:url(xm.png) center/contain no-repeat}
-@media(max-width:760px){.hbh .brand img{display:none}.hbh .brand b{font-size:22px}.hbh .my{padding:0 12px 0 9px!important}.hbh .my:before{width:21px;height:15px;margin-right:5px}}
 /* 体にやさしい順ランキングもスマホはカルーセル（11/19） */
 @media(max-width:760px){
  .rk .mcar{margin:12px -14px 0!important;padding:4px 14px 12px!important;scroll-padding:0 14px}
@@ -417,3 +414,12 @@ body.hb-peek .hbtop{bottom:180px}
  .rkl.mcar em{margin-top:auto}
  .rk .mcbar{margin-top:2px}
 }
+/* カルーセルは横だけに動かす（上下のガタつきをなくす 11/19） */
+@media(max-width:760px){
+ .mcar,.fvr{overflow-y:hidden!important;overscroll-behavior-x:contain;overscroll-behavior-y:auto}
+ .mcar .hbrv,.mcar.hbrv,.fvr .hbrv{opacity:1!important;translate:none!important;scale:none!important;transition:none!important}
+ .mcar>*,.mcar>*:hover,.mcar .lu:hover,.mcar .scn:hover,.mcar .cd:hover{transform:none!important;translate:none!important}
+ .mcar>*{transition:none!important}
+ .fvsl{height:calc(100svh - 99px - 58px);min-height:520px;overflow:hidden}
+}
+@media(max-width:760px) and (max-height:760px){.fvi{width:66%}.fvsl{gap:12px;padding-top:14px;padding-bottom:16px}.fvh{font-size:22px}}
