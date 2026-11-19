@@ -284,18 +284,19 @@ async function myPage(S) {
   const plan = planOf(S), st = S.stats || {}, day = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
   const used = counts.get((S.owner || 'anon') + ':' + new Date().toISOString().slice(0, 10)) || 0;
   const limit = !S.guest ? ENV.DAILY_LIMIT : gradeCap(S) || (S.refFrom ? ENV.DAILY_LIMIT_GUEST : ENV.DAILY_LIMIT_NOREF);
-  const mine = S.myRef ? await getRef(S.myRef).catch(() => null) : null;
+  // 読みものは同時に（Myハタボを早く出す）
+  const [mine, fromLabel, inbox, notes] = await Promise.all([S.myRef ? getRef(S.myRef).catch(() => null) : null, S.refFrom ? refLabel(S.refFrom).catch(() => '') : '', S.myRef ? loadInbox(S.myRef).catch(() => []) : [], loadNotes(S.owner).catch(() => [])]);
   const tot = st.tot || 0, lv = Math.floor(Math.sqrt(tot / 4)) + 1, base = Math.pow(lv - 1, 2) * 4, next = Math.pow(lv, 2) * 4;
   return { type: 'mypage', site: ENV.SITE_URL, name: S.me || '', avatar: S.avatar || 'hatabo', plan: plan.label, superUntil: superUntil(S.owner) || (plan === PLANS.super && S.guest ? 'サイトからのおためし' : ''),
     unlimited: !!(superUntil(S.owner) || S.macSelf), monthYen: mine && mine.costMon === day.slice(0, 7) ? mine.costMonYen || 0 : 0,
     today: used, limit, month: st.mon === day.slice(0, 7) ? st.monN || 0 : 0, total: tot, days: st.at ? Math.max(1, Math.ceil((Date.now() - st.at) / 86400000)) : 1,
     streak: st.last === day || st.last === new Date(Date.now() - 15 * 3600000).toISOString().slice(0, 10) ? st.streak || 0 : 0,
     lv, lvPct: Math.round((tot - base) / Math.max(1, next - base) * 100), learned: (S.learned || []).length + (S.lessons || []).length,
-    kids: (mine && mine.kids) || 0, myRef: S.myRef || '', from: S.refFrom ? await refLabel(S.refFrom) : '',
+    kids: (mine && mine.kids) || 0, myRef: S.myRef || '', from: fromLabel || '',
     pts: (mine && mine.pts) || 0, thanks: THANKS, tickets: (mine && mine.tickets) || 0, ticketPacks: TICKETS,
-    unread: S.myRef ? (await loadInbox(S.myRef).catch(() => [])).filter(x => !x.read).length : 0,
+    unread: (inbox || []).filter(x => !x.read).length,
     funnel: S.funnel || funnelOf(mine), lineups: LINEUP, trialDays: TRIAL_DAYS, trialDaily: TRIAL_DAILY, trialFirst: TRIAL_FIRST,
-    notes: (await loadNotes(S.owner).catch(() => [])).slice(0, 50), summary: String(S.memo || '').slice(0, 3000) };
+    notes: (notes || []).slice(0, 50), summary: String(S.memo || '').slice(0, 3000) };
 }
 /** ご縁の木：自分が紹介した人、その人が紹介した人…（3代まで・合わせて150人まで）。名前は呼び名だけ */
 async function refKids(code) {
