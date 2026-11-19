@@ -181,7 +181,13 @@ async function priceFor(lineup, grade, pay) {
   if (ENV.STRIPE_PRICES[key]) return ENV.STRIPE_PRICES[key];
   if (priceCache.has(key)) return priceCache.get(key);
   const j = await stripeCall('/v1/prices', { 'lookup_keys[]': key, active: 'true', limit: 1 }, 'GET').catch(e => { console.error('price', key, String(e.message).slice(0, 120)); return {}; });
-  const id = j.data && j.data[0] && j.data[0].id || '';
+  let id = j.data && j.data[0] && j.data[0].id || '';
+  if (!id && LINEUP[lineup]) {   // lookup_key がなければ、商品名（「ハタリス Z（…）」）と月払い・年払いでさがす
+    const all = await stripeCall('/v1/prices', { active: 'true', limit: 100, 'expand[]': 'data.product' }, 'GET').catch(() => ({}));
+    const head = LINEUP[lineup].name + ' ' + grade, iv = pay === 'y' ? 'year' : 'month';
+    const hit = (all.data || []).find(p => p.recurring && p.recurring.interval === iv && p.product && typeof p.product === 'object' && p.product.active !== false && String(p.product.name || '').replace(/\s+/g, ' ').startsWith(head));
+    id = hit ? hit.id : '';
+  }
   if (id) priceCache.set(key, id);
   return id;
 }
