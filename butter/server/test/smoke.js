@@ -15,6 +15,7 @@ const gasSrv = http.createServer((req, res) => {
       if (j.pass === 'flaky') return res.end('<html>error</html>');
       if (j.idToken === 'guest-closed') return res.end(JSON.stringify({ ok: true, guest: true, closed: true }));
       if (j.idToken === 'guest-y') return res.end(JSON.stringify({ ok: true, guest: true, owner: 'g:y', me: 'ユウ', slots: [] }));
+      if (j.idToken === 'guest-t') return res.end(JSON.stringify({ ok: true, guest: true, owner: 'g:t', me: 'たく', role: '清掃ヒアリング', slots: [] }));
       if (j.idToken === 'guest-x') return res.end(JSON.stringify({ ok: true, guest: true, owner: 'g:x', me: 'マー君', role: 'サポート・コンサル相談', consult: j.ref === 'macpmo' ? '清掃シートのAirHost連携を来月までに' : '', slots: [{ label: '11/20(木) 19時ごろ', start: '2026-11-20T10:00:00Z', end: '2026-11-20T12:00:00Z' }] }));
       const ok = j.pass === 'ok' || j.idToken === 'tok-' + 'b';
       return res.end(JSON.stringify(ok ? { ok: true, system: 'あなたはバターちゃんジュニア。', owner: j.pass ? 'fam' : 'U-b', me: j.pass ? 'パパ' : 'Bさん' } : { ok: false, error: 'auth' }));
@@ -185,7 +186,7 @@ function client(port, hello) {
   deps.claude.messages.stream = p => { streamed++; sys = sysText(p.system); return os2(p); };
   q.ws.send(JSON.stringify({ type: 'text', text: 'ジュニア、聞いてる？' }));
   const qe = await q.until(m => m.type === 'reply_end');
-  assert.ok(/てやんでぃ/.test(qe.text) && streamed === 0, '名前だけはすぐ返事');
+  assert.ok(/はい、/.test(qe.text) && streamed === 0, '名前だけはすぐ返事');
   q.ws.send(JSON.stringify({ type: 'text', text: '気合い入れていくぞー！' }));
   const kg = await q.until(m => m.type === 'reply_end' && /バターッ/.test(m.text));
   assert.ok(/根性があれば/.test(kg.text), '家族の掛け声');
@@ -193,7 +194,7 @@ function client(port, hello) {
   const qn = q.msgs.filter(m => m.type === 'reply_end').length;
   q.ws.send(JSON.stringify({ type: 'text', text: 'ピョン吉のトレーナー買ったよ' }));
   await q.until(() => q.msgs.filter(m => m.type === 'reply_end').length > qn);
-  assert.ok(/いまの時刻/.test(sys) && /一人称は「おいら」/.test(sys), '時刻と話し方');
+  assert.ok(/いまの時刻/.test(sys) && /一人称は「ぼく」/.test(sys) && !/江戸っ子のような/.test(sys), '時刻と話し方');
   q.ws.send(JSON.stringify({ type: 'text', text: 'こんどスマホを入れるんだ' }));
   await new Promise(r => setTimeout(r, 900));
   q.ws.close();
@@ -294,12 +295,12 @@ function client(port, hello) {
     let sy = ''; const o = deps.claude.messages.stream;
     deps.claude.messages.stream = p => { sy = sysText(p.system); lastMessages = p.messages; return o(p); };
     f.ws.send(JSON.stringify({ type: 'text', text: 'ジュニア、カイトの好きなポケモンはピカチュウって覚えて' }));
-    await f.until(m => m.type === 'reply_end' && /覚えたぜ/.test(m.text || ''));
+    await f.until(m => m.type === 'reply_end' && /覚えました/.test(m.text || ''));
     f.ws.send(JSON.stringify({ type: 'text', text: 'カイトの好きなのは？' }));
-    await f.until(m => m.type === 'reply_end' && !/覚えた/.test(m.text || ''));
+    await f.until(m => m.type === 'reply_end' && !/覚えました/.test(m.text || ''));
     assert.ok(/教わったこと/.test(sy) && /ピカチュウ/.test(sy), '教わったことを使う');
     assert.ok(/自分で気づいたこと/.test(sy) && /家族の人数/.test(sy), '自分で気づいたことを次に生かす');
-    assert.ok(/かたい敬語は使わない/.test(sy), 'いつも江戸っ子');
+    assert.ok(/やわらかい丁寧語/.test(sy) && /江戸っ子の話し方（おいら/.test(sy), 'いつも丁寧語（江戸っ子はやめた）');
     f.ws.send(JSON.stringify({ type: 'text', text: '英語の宿題、りんごってなんて書くの？' }));
     await f.until(m => m.type === 'reply_end' && m.gen > 0 && /勉強を教える/.test(sy));
     f.ws.send(JSON.stringify({ type: 'text', text: 'メール来てる？' }));
@@ -333,10 +334,22 @@ function client(port, hello) {
     deps.claude.messages.create = p => { if (/ページを開いた/.test(JSON.stringify(p.messages))) recapSys = p.system; return oc(p); };
     const gr = await client(port, { type: 'hello', idToken: 'guest-x', ref: 'macpmo', greet: true });
     const rg = await gr.until(m => m.type === 'reply_end' && m.text);
-    assert.ok(!/ヒロさんの相棒、バターちゃんジュニアだぜ/.test(rg.text), '振り返りのあいさつ');
+    assert.ok(!/ヒロさんの相棒の、バターちゃんジュニアです/.test(rg.text), '振り返りのあいさつ');
     assert.ok(/AirHost/.test(recapSys) && !/前回までの話のまとめ/.test(recapSys), '振り返りは相談メモだけ');
     deps.claude.messages.create = oc;
     gr.ws.close();
+    // たくちゃんの窓口：清掃管理のヒアリング役（キャラなし・売りこみなし・丁寧語）
+    let hs = ''; const oh = deps.claude.messages.stream;
+    deps.claude.messages.stream = p => { hs = sysText(p.system); return oh(p); };
+    const ht = await client(port, { type: 'hello', idToken: 'guest-t', ref: 'taku', greet: true });
+    const hr = await ht.until(m => m.type === 'ready');
+    const hg = await ht.until(m => m.type === 'reply_end' && m.text);
+    assert.ok(hr.plain === true && /清掃管理/.test(hg.text) && /共有/.test(hg.text), 'ヒアリングのあいさつとキャラなし: ' + hg.text);
+    const hn = ht.msgs.filter(m => m.type === 'reply_end').length;
+    ht.ws.send(JSON.stringify({ type: 'text', text: '予約が変わると漏れるんだよね' }));
+    await ht.until(() => ht.msgs.filter(m => m.type === 'reply_end').length > hn, 8000);
+    assert.ok(/清掃管理のヒアリング/.test(hs) && /販売員ではない/.test(hs) && !/便利屋/.test(hs) && /ヒロさん/.test(hs), 'ヒアリングの決まり');
+    deps.claude.messages.stream = oh; ht.ws.close();
     f.ws.send(JSON.stringify({ type: 'save_media', kind: 'photo', mime: 'image/jpeg', data: 'data:image/jpeg;base64,AAAA' }));
     await f.until(m => m.type === 'links' && /写真/.test(m.links[0].title));
     // 調べた先のリンク
@@ -365,7 +378,7 @@ function client(port, hello) {
     const cutEnd = await f.until(m => m.type === 'reply_end' && /6人家族/.test(m.text || ''));
     assert.strictEqual(cutEnd.text, '6人家族だぜ。', '切れた文は出さない');
     assert.ok(!f.msgs.some(m => m.type === 'audio' && /子ども/.test(m.text)), '切れた文は読まない');
-    assert.ok(/家族の画面/.test(sy) && /やったぜ/.test(sy) && !/便利屋/.test(sy), '家族の決まり・正直');
+    assert.ok(/家族の画面/.test(sy) && /やりました/.test(sy) && !/便利屋/.test(sy), '家族の決まり・正直');
     // 三人モード：ジュニアが質問したら、つぎの1回は名前がなくても答える
     deps.claude.messages.stream = () => fakeStream('[わくわく]どれが好きなんだい？');
     const t = await client(port, { type: 'hello', pass: 'ok', mode: 'family', trio: true });
