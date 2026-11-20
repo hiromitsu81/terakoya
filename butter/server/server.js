@@ -779,10 +779,14 @@ async function googleLogin(code, res, page, x) {
     const j = await r.json(); let p = {}; try { p = JSON.parse(Buffer.from(String(j.id_token || '').split('.')[1], 'base64url').toString()); } catch (e) {}
     const email = String(p.email || '').toLowerCase();
     if (!email || p.email_verified === false) return page('ログインできませんでした', 'Googleのメールアドレスを確かめられませんでした。もう一度おためしください。');
-    const owner = (await loadCol(gmailKey(email), 'gmail')).owner || '', office = ENV.OFFICE_EMAILS.includes(email) || isOfficeOwner(owner);
+    let owner = (await loadCol(gmailKey(email), 'gmail')).owner || ''; const office = ENV.OFFICE_EMAILS.includes(email) || isOfficeOwner(owner);
     if (x && x.oauth) return owner ? oauthConsent(res, x.oauth, owner, email) : page('まだハタボとつながっていません', email + ' は、まだハタボのアカウントとつながっていません。もどって「LINEでつなぐ」をえらんでください。');
-    if (!owner && !office) return page('まだハタボとつながっていません', email + ' は、まだハタボのアカウントとつながっていません。<br>はじめに「LINEでログイン」で入って、Myハタボの「設定」→「Googleアカウント連携」でこのGoogleをつなぐと、次からGoogleでも入れます。<br><br><a href="' + ENV.APP_URL + '&page=login">LINEでログインする</a>');
-    const t = webSign({ owner, office, email, exp: Date.now() + 12 * 3600000 });
+    let isNew = false;
+    if (!owner && !office) {   // はじめての人：Googleだけで、そのままアカウントをつくる（7日間のお試しから）
+      owner = 'g_' + gmailKey(email).slice(0, 24); isNew = true;
+      await saveCol(gmailKey(email), 'gmail', { owner, email, at: Date.now(), via: 'google' });
+    }
+    const t = webSign({ owner, office, email, nu: isNew ? 1 : 0, exp: Date.now() + 12 * 3600000 });
     if (!t) return page('準備中です', 'ウェブのログインの鍵（WEB_SECRET）がまだ設定されていません。');
     res.writeHead(302, { Location: ENV.APP_URL + '&page=' + (office ? 'admin' : 'my') + '#wt=' + t }); res.end();
   } catch (e) { console.error('google login', String(e.message).slice(0, 160)); page('ログインできませんでした', 'もう一度おためしください。'); }
@@ -2970,6 +2974,9 @@ function session(ws) {
         // 紹介コード：自分のコードを作り、はじめて来た人は「だれの紹介か」を覚える
         S.myRef = S.owner ? await myRefFor(S.owner) : '';
         if (S.web && S.myRef) { const mm = await getRef(S.myRef).catch(() => null); S.me = (mm && mm.name) || ''; }
+        if (S.web && S.myRef && S.web.nu) {   // Googleではじめて来た人：お試し（ハタリスX・7日間）を始め、公式のハタボとつなぐ
+          try { const mm = await getRef(S.myRef).catch(() => null) || {}; const f = funnelOf(mm); if (!f.stage) { const now = Date.now(); await putRef(S.myRef, { owner: S.owner, stage: 'trial', lineup: 'ris', grade: 'X', pay: 'm', trialAt: now, trialUntil: now + TRIAL_DAYS * 86400000, via: 'google', officialGoen: true }); } } catch (e) { console.error('google new', String(e.message).slice(0, 100)); }
+        }
         if (S.myRef && !S.peek) {
           const mine = await getRef(S.myRef);
           let parent = mine && mine.parent ? mine.parent : (S.ref && S.ref !== S.myRef ? S.ref : '');
