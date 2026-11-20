@@ -1915,6 +1915,19 @@ function session(ws) {
   const ownKey = owner => owner + charSfx();          // 持ち主×キャラ
   const convoBase = () => !S.owner || S.visit ? '' : S.guest ? S.owner + ':guest' : S.mode === 'family' ? S.owner + ':family' : '';
   const convoKey = () => { const b = convoBase(); return b ? b + charSfx() : ''; };
+  /** チャット（会話のまとまり）：ChatGPTの「新しいチャット」と一覧。覚えたこと（まとめ）は全部のチャットでつながる */
+  const thrId = () => 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  const thrTitle = turns => { const u = (turns || []).find(m => m.role === 'user' && !/^（/.test(String(m.content || ''))); return u ? String(u.content).replace(/\s+/g, ' ').slice(0, 40) : ''; };
+  async function thrSave() {
+    const key = convoKey(); if (!key || S.visit) return;
+    if (!S.thr) S.thr = thrId();
+    const turns = cleanTurns(S.history).slice(-24).map(m => ({ role: m.role, content: String(m.content).slice(0, 400) }));
+    if (!turns.length) return;
+    const all = Array.isArray(S.threads) ? S.threads : [], old = all.find(t => t.id === S.thr) || {};
+    S.threads = [{ id: S.thr, at: old.at || Date.now(), last: Date.now(), title: old.title || thrTitle(turns) || '会話', turns }].concat(all.filter(t => t.id !== S.thr)).slice(0, 30);
+    await saveConvo(key, { threads: S.threads, thr: S.thr });
+  }
+  const chatsOut = () => ({ type: 'chats', cur: S.thr || '', list: (S.threads || []).map(t => ({ id: t.id, at: t.at, last: t.last, title: t.title })) });
   /** 会話の記録を読む：持ち主×キャラ。ハタボで、まだ分ける前の記録（キャラなしのID）しかないときは、それを引きつぐ（コムギの話はあとでのぞく） */
   async function loadMyConvo() {
     const k = convoKey(); if (!k) return null;
@@ -1946,6 +1959,7 @@ function session(ws) {
       memWrite(talk).catch(() => {});
       S.newTurns = Math.max(0, S.newTurns - n); S.asideLog = [];
       await saveConvo(key, { summary: S.memo, newTurns: S.newTurns, turns: S.history.slice(-keepN()), at: Date.now() });
+      await thrSave().catch(e => console.error('thr', String(e.message || e).slice(0, 120)));
       if (diary) {
         const d = new Date(Date.now() + 9 * 3600000);
         const head = 'ジュニア日記（' + d.getUTCFullYear() + '-' + (d.getUTCMonth() + 1) + '-' + d.getUTCDate() + ' ' + d.getUTCHours() + ':' + String(d.getUTCMinutes()).padStart(2, '0') + (S.me ? '・' + S.me + 'と' : '') + (S.trio ? '・三人モード' : '') + '）';
@@ -2272,6 +2286,7 @@ function session(ws) {
       if (S.asGuest && !hearing() && Array.isArray(j.learn)) { const got = pickLearn(j.learn.join('\n')); if (got.length) { S.learned = mergeLearn(S.learned, got); savePrefs(GUEST_COMMON, { learned: S.learned }); } }
       S.newTurns = Math.max(0, S.newTurns - n);
       await saveConvo(key, { summary: S.memo, newTurns: S.newTurns, turns: S.history.slice(-keepN()), at: Date.now() });
+      await thrSave().catch(e => console.error('thr', String(e.message || e).slice(0, 120)));
       memWrite(talk).catch(() => {});
       if (hearing()) hearingPush(talk).catch(e => console.error('hearing push', String(e.message || e).slice(0, 120)));
       if (sanbo()) sanboPush(talk).catch(e => console.error('sanbo push', String(e.message || e).slice(0, 120)));
@@ -3005,6 +3020,7 @@ function session(ws) {
           if (c) {
             S.memo = String(c.summary || '');
             if (Date.now() - (c.at || 0) < holdH() * 3600000) S.history = noKomugi(cleanTurns(c.turns));
+            S.threads = Array.isArray(c.threads) ? c.threads : []; S.thr = S.history.length && c.thr ? c.thr : thrId();
             S.newTurns = Number(c.newTurns || 0);
             if (S.newTurns >= 2) setTimeout(summarize, 3000);       // 前回まとめきれなかった分（強制で切ったときなど）
           }
@@ -3064,7 +3080,8 @@ function session(ws) {
         await loadBrain();
         await memLoad();
         const c = await loadMyConvo();
-        if (c) { S.memo = String(c.summary || ''); if (Date.now() - (c.at || 0) < holdH() * 3600000) S.history = noKomugi(cleanTurns(c.turns)); }
+        S.threads = []; S.thr = '';
+        if (c) { S.memo = String(c.summary || ''); if (Date.now() - (c.at || 0) < holdH() * 3600000) S.history = noKomugi(cleanTurns(c.turns)); S.threads = Array.isArray(c.threads) ? c.threads : []; S.thr = S.history.length && c.thr ? c.thr : thrId(); }
         return send({ type: 'mode', mode: S.mode });
       }
       if (m.type === 'profile') return onProfile(m);
@@ -3080,6 +3097,26 @@ function session(ws) {
       if (m.type === 'google_auto') { await saveCol(gDocKey(S.owner), 'google', { auto: !!m.on }); const g = await gGet(S.owner); return send({ type: 'google', ready: true, linked: !!g.refresh, email: g.email || '', auto: g.auto !== false }); }
       if (m.type === 'google_unlink') { const g = await gGet(S.owner); if (g.refresh) { try { await fetch('https://oauth2.googleapis.com/revoke?token=' + encodeURIComponent(gDec(g.refresh)), { method: 'POST' }); } catch (e) {} } await saveCol(gDocKey(S.owner), 'google', { refresh: '', email: '', folder: '' }); return send({ type: 'google', ready: !!ENV.GOOGLE_CLIENT_ID, linked: false }); }
       if (m.type === 'note_drive') { const items = await loadNotes(S.owner), it = items.find(x => x.id === String(m.id || '')); if (it) { it.url = await driveSave(S.owner, it.title, it.text).catch(() => null) || it.url || ''; await saveNotes(S.owner, items); } return send(Object.assign(await myPage(S), { driveMsg: it && it.url ? 'Googleドライブに保存しました' : 'Googleドライブに保存できませんでした' })); }
+      if (m.type === 'chats' || m.type === 'chat_new' || m.type === 'chat_open') {
+        const key = convoKey(); if (!key || S.visit) return send({ type: 'chats', cur: '', list: [], off: true });
+        await thrSave().catch(() => {});
+        if (m.type === 'chat_new') {
+          if (S.newTurns >= 2) await summarize();
+          S.history = []; S.thr = thrId(); S.newTurns = 0;
+          await saveConvo(key, { turns: [], thr: S.thr, newTurns: 0, at: Date.now() });
+          send({ type: 'chat_turns', id: S.thr, turns: [] });
+        } else if (m.type === 'chat_open') {
+          const t = (S.threads || []).find(x => x.id === String(m.id || ''));
+          if (t) { if (S.newTurns >= 2) await summarize(); S.history = cleanTurns(t.turns); S.thr = t.id; S.newTurns = 0; await saveConvo(key, { turns: S.history, thr: S.thr, newTurns: 0, at: Date.now() }); send({ type: 'chat_turns', id: t.id, turns: S.history }); }
+        }
+        return send(chatsOut());
+      }
+      if (m.type === 'voice_try') {   // ボイスのページの「試し聞き」：その声で一言だけ
+        const v = VOICES[String(m.voice || '')]; if (!v || S.voiceTrying) return;
+        S.voiceTrying = true; const keep = S.voice; S.voice = v.name;
+        try { await speakOnly('こんにちは。' + v.label.replace('・', 'で、') + 'の声です。この声でお話ししますね。', 'excited', undefined, true); } finally { S.voice = keep; S.voiceTrying = false; }
+        return;
+      }
       if (m.type === 'custom_get') return send({ type: 'custom', c: S.custom || cleanCustom({}), tones: TONES, lens: LENS, dialects: DIALECTS, voices: Object.fromEntries(Object.entries(VOICES).map(([k, v]) => [k, v.label])), presets: PRESETS, named: !!(S.custom && S.custom.aiName) });
       if (m.type === 'custom_set') {
         if (!S.owner || S.visit) return;
