@@ -2843,6 +2843,13 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
       case 'custom': HBP.custom = m; if (m.saved) { toast('キャラ設定を保存したよ'); window.__aiName = m.aiName || ''; avText(); const t = document.querySelector('#butterTag text'); if (t && avName()) t.textContent = avName(); } if (!$('hbPage').hidden && HBP.page === 'custom') hbpRender(); break;
       case 'google': HBP.google = m; if (!$('hbPage').hidden && (HBP.page === 'notes' || HBP.page === 'google')) hbpRender(); break;
       case 'checkout': toast('お支払いのページを開きます'); try { if (window.liff && liff.openWindow) liff.openWindow({ url: m.url, external: true }); else location.href = m.url; } catch (e) { location.href = m.url; } HBP.paying = true; break;
+      case 'oauth': {   // AIアプリの一覧から「LINEでつなぐ」
+        if (m.gone) { addBubble('おしらせ', 'つなぐ時間が切れました。AIアプリから、もう一度つないでください。', 'her'); break; }
+        if (m.error) { toast(m.error); break; }
+        if (m.done) { addBubble('おしらせ', (m.name || 'AIアプリ') + ' とハタボをつなぎました。もとの画面（パソコンなど）にもどってください。自動で進みます。', 'her'); break; }
+        if (confirm((m.name || 'AIアプリ') + ' を、ハタボにつなぎますか？\n\nできること：お店や人の愛棒をさがす、伝言や予約の希望を送る、自分の愛棒を見る・変える。\nLINEのIDや家族の会話は渡しません。')) jrSend({ type: 'oauth_ok', rid: OAUTH_RID });
+        else addBubble('おしらせ', 'つなぐのをやめました。', 'her');
+        break; }
       case 'google_url': try { if (window.liff && liff.openWindow) liff.openWindow({ url: m.url, external: true }); else window.open(m.url, '_blank'); } catch (e) { location.href = m.url; } toast('ブラウザでGoogleにログインしてね。終わったらLINEにもどってきてね'); setTimeout(() => jrSend({ type: 'google_status' }), 20000); break;
       case 'docs': HBP.docs = m; if (!$('hbPage').hidden && HBP.page === 'docs') hbpRender(); break;
       case 'clones': HBP.clones = m; if (m.msg) toast(m.msg); if (!$('hbPage').hidden && HBP.page === 'clones') hbpRender(); break;
@@ -3930,7 +3937,9 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
   const HBP_START = (() => { const g = n => { let v = new URLSearchParams(location.search).get(n) || Q.get(n); if (!v) { try { const st = new URLSearchParams(location.search).get('liff.state'); if (st) v = new URLSearchParams(decodeURIComponent(st).split('?')[1] || '').get(n); } catch (e) {} } return v; }; return String(g('page') || '').replace(/[^a-z]/g, ''); })();
   const HB_START = HBP_START || (() => { try { const v = sessionStorage.getItem('hb.start') || ''; sessionStorage.removeItem('hb.start'); return v; } catch (e) { return ''; } })();
   // サイトの「ログイン」から来たとき：事務局は管理画面、オーナーはMyハタボへ（つながってから分ける）
-  if (HB_START === 'login' || HB_START === 'admin') { hbpOpen('my'); document.addEventListener('jrready', () => { if (J.office) hbpOpen('console'); else if (HB_START === 'admin') toast('管理画面は事務局だけです。Myハタボを開きました'); }, { once: true }); }
+  const OAUTH_RID = (() => { let v = new URLSearchParams(location.search).get('rid') || Q.get('rid'); if (!v) { try { const st = new URLSearchParams(location.search).get('liff.state'); if (st) v = new URLSearchParams(decodeURIComponent(st).split('?')[1] || '').get('rid'); } catch (e) {} } return String(v || '').replace(/[^\w-]/g, '').slice(0, 64); })();
+  if (HB_START === 'oauth') document.addEventListener('jrready', () => { if (OAUTH_RID) jrSend({ type: 'oauth_info', rid: OAUTH_RID }); }, { once: true });
+  else   if (HB_START === 'login' || HB_START === 'admin') { hbpOpen('my'); document.addEventListener('jrready', () => { if (J.office) hbpOpen('console'); else if (HB_START === 'admin') toast('管理画面は事務局だけです。Myハタボを開きました'); }, { once: true }); }
   else if (HB_START && HB_START !== 'talk') hbpOpen(HB_START);
   window.hbpPreview = (d, pg, gn, ib, ex) => { HBP.data = d; if (gn) HBP.goen = gn; if (ib) { HBP.inbox = ib; HBP.inboxShown = true; } if (ex) Object.assign(HBP, ex); hbpOpen(pg); };   // 画面の確認用
   $('trioBtn').addEventListener('click', () => jrSend({ type: 'trio', on: !J.trio }));
