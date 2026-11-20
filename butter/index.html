@@ -2790,7 +2790,11 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
   function trioShow() { const b = $('trioBtn'); b.setAttribute('aria-pressed', String(J.trio)); b.textContent = J.trio ? '三人：オン' : '三人：オフ'; }
   const jrLive = () => !J.dead && J.ready && J.ws && J.ws.readyState === 1;
   let lipLive = false;   // 声の大きさで口を動かしている間は、ランダムの口パクを止める
-  function jrSend(o) { if (J.ws && J.ws.readyState === 1) J.ws.send(typeof o === 'string' || o instanceof ArrayBuffer ? o : JSON.stringify(o)); }
+  function jrSend(o) {
+    if (J.ws && J.ws.readyState === 1 && J.ready) return J.ws.send(typeof o === 'string' || o instanceof ArrayBuffer ? o : JSON.stringify(o));
+    if (o && typeof o === 'object' && !(o instanceof ArrayBuffer) && /^(funnel|mypage)$/.test(o.type)) { J.q = (J.q || []).filter(x => x.type !== o.type).concat([o]); try { jrConnect(); } catch (e) {} }   // つながっていないときのボタンは、つないでから送る
+    else if (J.ws && J.ws.readyState === 1) J.ws.send(typeof o === 'string' || o instanceof ArrayBuffer ? o : JSON.stringify(o));
+  }
   function jrConnect() {
     if (J.dead || (J.ws && J.ws.readyState <= 1)) return;
     const ws = new WebSocket((/^(localhost|127\.)/.test(SRV) ? 'ws://' : 'wss://') + SRV + '/talk');
@@ -2870,7 +2874,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
       case 'note_saved': toast({ minutes: '議事録を残したよ', memo: 'メモしたよ', doc: '書いた文章を残したよ', dengon: '伝言をとどけたよ' }[m.kind] || '残したよ'); if (!$('hbPage').hidden) jrSend({ type: 'mypage' }); break;
       case 'ready':
         document.body.classList.remove('connecting');
-        J.ready = true; J.tries = 0; J.greeted = true; window.__aiName = m.visit ? '' : m.aiName || ''; setTimeout(() => { try { avText(); const t = document.querySelector('#butterTag text'); if (t && avName()) t.textContent = avName(); } catch (e) {} }, 0); document.body.classList.toggle('svc', !!m.service); { const vb = $('visitBar'); if (m.visit) { vb.hidden = false; $('visitName').textContent = m.visit.name + 'さんのAI棒と話しています'; } else { vb.hidden = true; if (J.visit) { J.visit = ''; toast('つながっていない人のAI棒には入れませんでした'); } } } J.profile = m.profile || null; if (!$('hbPage').hidden) jrSend({ type: 'mypage' }); 
+        J.ready = true; J.tries = 0; J.greeted = true; window.__aiName = m.visit ? '' : m.aiName || ''; setTimeout(() => { try { avText(); const t = document.querySelector('#butterTag text'); if (t && avName()) t.textContent = avName(); } catch (e) {} }, 0); document.body.classList.toggle('svc', !!m.service); { const vb = $('visitBar'); if (m.visit) { vb.hidden = false; $('visitName').textContent = m.visit.name + 'さんのAI棒と話しています'; } else { vb.hidden = true; if (J.visit) { J.visit = ''; toast('つながっていない人のAI棒には入れませんでした'); } } } J.profile = m.profile || null; { const q = J.q || []; J.q = []; if (!q.some(x => x.type === 'mypage') && !$('hbPage').hidden) q.unshift({ type: 'mypage' }); q.forEach(x => J.ws.send(JSON.stringify(x))); } 
         setTimeout(() => document.dispatchEvent(new Event('jrready')), 50); J.guest = !!m.guest; J.plain = !!m.plain; document.body.classList.toggle('plain', J.plain); if (J.plain || J.guest) setTimeout(() => { const b = document.querySelector('.vsw button[data-v="chat"]'); if (b) b.click(); }, 0);   // 窓口は、いつもトーク画面から（キャラの画面は切りかえで見られる） J.mac = !!m.mac; J.bridge = !!m.bridge; J.office = !!m.office; J.srv = m.srv || ''; if (m.shopView && !J.shopNoted) { J.shopNoted = true; addBubble('おしらせ', 'この会話はお店の方も見られます。', 'her'); } J.avatar = KOMUGI_APP ? 'komugi' : m.avatar || ''; document.body.classList.toggle('av-komugi', J.avatar === 'komugi'); if (HATABO_APP && !J.avatar) J.avatar = 'hatabo'; document.body.classList.toggle('av-hatabo', J.avatar === 'hatabo'); { const t = document.querySelector('#butterTag text'), nm = { komugi: 'コムギ', hatabo: 'ハタボ' }[J.avatar]; if (t && nm) t.textContent = nm; }  if (J.avatar) { document.body.classList.remove('hb-hatched'); let was = false; try { was = localStorage.getItem('hatched_' + J.avatar) === '1'; } catch (e) {} if (was) setTimeout(hbHatch, 600); }   // 前にかえった子は、立ち上げのたびに、たまごからかえって出てくる $('goenBtn').hidden = J.guest; J.myRef = m.myRef || ''; J.me = String(m.me || '').replace(/（テスト）$/, ''); $('shareBtn').hidden = false;
         document.body.classList.toggle('familyok', !J.guest);
         document.body.classList.toggle('guestmode', J.guest);
@@ -3665,9 +3669,9 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
       body.querySelectorAll('[data-gr]').forEach(b => b.onclick = () => { sel.grade = b.dataset.gr; hbpRender(); });
       body.querySelectorAll('[data-pay]').forEach(b => b.onclick = () => { sel.pay = b.dataset.pay; hbpRender(); });
       const go = document.getElementById('hbpGo');
-      const pb = document.getElementById('hbpPay'); if (pb) pb.onclick = () => { pb.disabled = true; pb.textContent = 'お支払いのページを用意しています…'; jrSend({ type: 'funnel', act: 'pay' }); clearTimeout(HBP.goT); HBP.goT = setTimeout(() => { if (!$('hbPage').hidden) { toast('返事がありません。画面を開きなおして、もう一度押してください'); hbpRender(); } }, 15000); };
+      const pb = document.getElementById('hbpPay'); if (pb) pb.onclick = () => { pb.disabled = true; pb.textContent = 'お支払いのページを用意しています…'; jrSend({ type: 'funnel', act: 'pay' }); clearTimeout(HBP.goT); HBP.goT = setTimeout(() => { if (!$('hbPage').hidden) { toast('返事がありません。画面を開きなおして、もう一度押してください'); hbpRender(); } }, 30000); };
       const pt = document.getElementById('hbpPortal'); if (pt) pt.onclick = () => { jrSend({ type: 'funnel', act: 'portal' }); };
-      if (go) go.onclick = () => { const act = !st ? 'trial' : st === 'cancel' || st === 'expired' ? 'contract' : 'change'; HBP.edit = false; jrSend(Object.assign({ type: 'funnel', act }, sel)); go.disabled = true; go.textContent = '送っています…'; clearTimeout(HBP.goT); HBP.goT = setTimeout(() => { if (!$('hbPage').hidden) { toast('返事がありません。画面を開きなおして、もう一度押してください'); hbpRender(); } }, 15000); };
+      if (go) go.onclick = () => { const act = !st ? 'trial' : st === 'cancel' || st === 'expired' ? 'contract' : 'change'; HBP.edit = false; jrSend(Object.assign({ type: 'funnel', act }, sel)); go.disabled = true; go.textContent = '送っています…'; clearTimeout(HBP.goT); HBP.goT = setTimeout(() => { if (!$('hbPage').hidden) { toast('返事がありません。画面を開きなおして、もう一度押してください'); hbpRender(); } }, 30000); };
       const ch = document.getElementById('hbpChange'); if (ch) ch.onclick = () => { HBP.edit = !HBP.edit; hbpRender(); };
       const cn = document.getElementById('hbpCancel'); if (cn) cn.onclick = () => { if (confirmDel(cn)) jrSend({ type: 'funnel', act: 'cancel' }); };
     } else if (p === 'aisai') {
