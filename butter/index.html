@@ -1125,6 +1125,24 @@ body[data-kemo="shy"] .kmSfx text { stroke: #FF8FC8; }
 body[data-kemo="surprise"] .kmSfx text { stroke: #F2C94C; }
 body[data-kemo="sad"] .kmBody { filter: saturate(.8) brightness(.95); }
 body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: komugiTalk .35s ease-in-out 4 alternate; }
+
+/* ===== Myハタボ：パソコンでは、Claudeの画面のように左にメニュー・右に中身（11/20） ===== */
+@media (min-width: 900px) {
+  .hbpage:not([hidden]) { grid-template-columns: 236px minmax(0, 1fr) !important; grid-template-rows: auto minmax(0, 1fr) !important; }
+  .hbpage .hbp-top { grid-column: 1 / -1; grid-row: 1; }
+  .hbpage .hbp-tabs { grid-column: 1 !important; grid-row: 2 !important; display: flex !important; flex-direction: column; align-items: stretch; gap: 2px !important; padding: 14px 10px !important; overflow-y: auto !important; border-top: 0 !important; border-right: 1px solid var(--cline) !important; background: var(--cnav) !important; }
+  .hbpage .hbp-tabs button { flex-direction: row !important; justify-content: flex-start; gap: 12px !important; padding: 10px 12px !important; border-radius: 10px !important; font: 700 14px var(--display) !important; text-shadow: none !important; }
+  .hbpage .hbp-tabs button svg { width: 20px; height: 20px; filter: none !important; flex: none; }
+  .hbpage .hbp-tabs button:hover { background: var(--csel) !important; color: var(--ctext) !important; }
+  .hbpage .hbp-tabs button.on { background: var(--csel) !important; color: var(--ctext) !important; }
+  .hbpage .hbp-body { grid-column: 2 !important; grid-row: 2 !important; max-width: 880px; padding: 28px 32px 40px !important; }
+  .hbpage .hbp-body.wide { max-width: 1400px; }
+  .hbpage .hbp-body.con { max-width: none; padding: 0 !important; }
+}
+.hbpage .hbp-body, .hbpage .hbp-tabs { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.18) transparent; }
+.hbpage.lt .hbp-body, .hbpage.lt .hbp-tabs { scrollbar-color: rgba(0,0,0,.2) transparent; }
+.hbpage .hbp-body::-webkit-scrollbar { width: 8px; } .hbpage .hbp-body::-webkit-scrollbar-track { background: transparent; } .hbpage .hbp-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,.18); border-radius: 8px; }
+.hbpage.lt .hbp-body::-webkit-scrollbar-thumb { background: rgba(0,0,0,.2); }
 </style>
 </head>
 <body>
