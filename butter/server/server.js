@@ -72,6 +72,10 @@ const ENV = {
   STRIPE_PRICES: (() => { try { return JSON.parse(process.env.STRIPE_PRICES || '{}'); } catch (e) { return {}; } })(),   // 予備：{"ris_Z_m":"price_…"}。なければ価格の lookup_key（ris_Z_m など）でさがす
   SITE_URL: process.env.SITE_URL || '',   // ハタボのサービスサイト（公開したらURLを入れる。トーク・カード・Myハタボから、ときどき案内する）
   OFFICE_OWNERS: (process.env.OFFICE_OWNERS || '').split(/[,\s]+/).map(s => s.trim().replace(/^g:/, '')).filter(Boolean),   // ハタボ事務局（ヒロさん）のLINEのID。事務局への声・問い合わせ・友だち追加などを1日1回まとめて届ける
+  OFFICE_EMAILS: (process.env.OFFICE_EMAILS || '').split(/[,\s]+/).map(s => s.trim().toLowerCase()).filter(Boolean),   // Googleでログインしたら事務局の管理画面に入れるメール
+  WEB_SECRET: process.env.WEB_SECRET || '',   // ウェブのログイン（Google）の印をつくる鍵。Cloud Runに直接入れる（なければGOOGLE_CLIENT_SECRETから作る）
+  APP_URL: process.env.APP_URL || 'https://app.hatha-lab.com/?liff=1&g=AKfycbxe-O1pMup7kUMVKVkmQemYknVSyTSq1ub3bHJqPI8-0QIAYG7o2eXKI_yQIk9tHwPz&liffId=2012676035-yCkx6tBu',   // PCのブラウザで開くハタボ
+  API_PRICE: Object.assign({ free: 100, search: 1, message: 5, reserve: 5, done: 30 }, (() => { try { return JSON.parse(process.env.API_PRICE || '{}'); } catch (e) { return {}; } })()),   // ハタボAPI（MCP）の料金：月の無料回数と、1回あたりの円
   CRON_KEY: process.env.CRON_KEY || '',   // 1日1回のまとめを送る合図（Cloud Scheduler から /cron/digest?key=…）
   BRIDGE_DAILY: Number(process.env.BRIDGE_DAILY || 20),   // 馬越さんの紹介でコムギと話す人の1日の回数（契約したらグレードの回数）
 };
@@ -744,9 +748,38 @@ async function driveSave(owner, title, text) {
   const uj = await u.json().catch(() => ({})); if (!uj.webViewLink) { console.error('drive save', u.status, JSON.stringify(uj).slice(0, 160)); return null; }
   return uj.webViewLink;
 }
+/* ===== ウェブのログイン：Googleでログイン → 印（12時間）をつけて、PCのハタボへ。LINEのIDは印の中だけで、外には出さない ===== */
+const gmailKey = email => crypto.createHash('sha256').update('gmail:' + String(email).toLowerCase()).digest('hex').slice(0, 32);
+const webKey = () => ENV.WEB_SECRET || (ENV.GOOGLE_CLIENT_SECRET ? crypto.createHash('sha256').update('hatabo-web:' + ENV.GOOGLE_CLIENT_SECRET).digest('hex') : '');
+function webSign(p) { const k = webKey(); if (!k) return ''; const b = Buffer.from(JSON.stringify(p)).toString('base64url'); return b + '.' + crypto.createHmac('sha256', k).update(b).digest('base64url'); }
+function webVerify(t) {
+  const k = webKey(), [b, sg] = String(t || '').split('.'); if (!k || !b || !sg) return null;
+  const x = crypto.createHmac('sha256', k).update(b).digest('base64url');
+  if (x.length !== sg.length || !crypto.timingSafeEqual(Buffer.from(x), Buffer.from(sg))) return null;
+  try { const p = JSON.parse(Buffer.from(b, 'base64url').toString()); return p && p.exp > Date.now() ? p : null; } catch (e) { return null; }
+}
+const isOfficeOwner = owner => !!owner && ENV.OFFICE_OWNERS.some(id => owner === id || owner === 'g:' + id);
+async function googleLogin(code, res, page) {
+  try {
+    const r = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ code, client_id: ENV.GOOGLE_CLIENT_ID, client_secret: ENV.GOOGLE_CLIENT_SECRET, redirect_uri: ENV.PUBLIC_URL + '/google/callback', grant_type: 'authorization_code' }) });
+    const j = await r.json(); let p = {}; try { p = JSON.parse(Buffer.from(String(j.id_token || '').split('.')[1], 'base64url').toString()); } catch (e) {}
+    const email = String(p.email || '').toLowerCase();
+    if (!email || p.email_verified === false) return page('ログインできませんでした', 'Googleのメールアドレスを確かめられませんでした。もう一度おためしください。');
+    const owner = (await loadCol(gmailKey(email), 'gmail')).owner || '', office = ENV.OFFICE_EMAILS.includes(email) || isOfficeOwner(owner);
+    if (!owner && !office) return page('まだハタボとつながっていません', email + ' は、まだハタボのアカウントとつながっていません。<br>はじめに「LINEでログイン」で入って、Myハタボの「設定」→「Googleアカウント連携」でこのGoogleをつなぐと、次からGoogleでも入れます。<br><br><a href="' + ENV.APP_URL + '&page=login">LINEでログインする</a>');
+    const t = webSign({ owner, office, email, exp: Date.now() + 12 * 3600000 });
+    if (!t) return page('準備中です', 'ウェブのログインの鍵（WEB_SECRET）がまだ設定されていません。');
+    res.writeHead(302, { Location: ENV.APP_URL + '&page=' + (office ? 'admin' : 'my') + '#wt=' + t }); res.end();
+  } catch (e) { console.error('google login', String(e.message).slice(0, 160)); page('ログインできませんでした', 'もう一度おためしください。'); }
+}
 function googleHttp(req, res) {
   const u = new URL(req.url, ENV.PUBLIC_URL), page = (t, b) => { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); res.end('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font-family:sans-serif;background:#F6F8FC;color:#16233F;display:grid;place-items:center;min-height:90vh;text-align:center;padding:20px"><div><h2>' + t + '</h2><p>' + b + '</p></div>'); };
   if (!ENV.GOOGLE_CLIENT_ID) return page('準備中です', 'Googleアカウント連携は、まだ設定されていません。');
+  if (u.pathname === '/google/login') {   // サイトの「ログイン」→ Googleでログイン（Myハタボ・事務局の管理画面へ）
+    const n = crypto.randomBytes(16).toString('hex'); gNonce.set(n, { login: true, at: Date.now() });
+    res.writeHead(302, { Location: 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({ client_id: ENV.GOOGLE_CLIENT_ID, redirect_uri: ENV.PUBLIC_URL + '/google/callback', response_type: 'code', scope: 'openid email profile', prompt: 'select_account', state: n }) });
+    return res.end();
+  }
   if (u.pathname === '/google/start') {
     const n = u.searchParams.get('n') || ''; if (!gNonce.has(n)) return page('もう一度おねがいします', 'リンクの期限が切れました。ハタボのマイページから、もう一度「Googleと連携する」を押してください。');
     res.writeHead(302, { Location: 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({ client_id: ENV.GOOGLE_CLIENT_ID, redirect_uri: ENV.PUBLIC_URL + '/google/callback', response_type: 'code', scope: 'openid email https://www.googleapis.com/auth/drive.file' + (gNonce.get(n).docs ? ' https://www.googleapis.com/auth/drive.readonly' : ''), access_type: 'offline', prompt: 'consent', state: n }) });
@@ -756,11 +789,13 @@ function googleHttp(req, res) {
     const n = u.searchParams.get('state') || '', x = gNonce.get(n), code = u.searchParams.get('code');
     if (!x || Date.now() - x.at > 15 * 60000 || !code) return page('連携できませんでした', 'もう一度、ハタボのマイページからやりなおしてください。');
     gNonce.delete(n);
+    if (x.login) return googleLogin(code, res, page);
     fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ code, client_id: ENV.GOOGLE_CLIENT_ID, client_secret: ENV.GOOGLE_CLIENT_SECRET, redirect_uri: ENV.PUBLIC_URL + '/google/callback', grant_type: 'authorization_code' }) })
       .then(r => r.json()).then(async j => {
         if (!j.refresh_token) throw new Error(JSON.stringify(j).slice(0, 120));
         let email = ''; try { email = JSON.parse(Buffer.from(String(j.id_token || '').split('.')[1], 'base64url').toString()).email || ''; } catch (e) {}
         await saveCol(gDocKey(x.owner), 'google', { refresh: gEnc(j.refresh_token), email, at: Date.now(), auto: true });
+        if (email) await saveCol(gmailKey(email), 'gmail', { owner: x.owner, at: Date.now() });   // このGoogleでウェブからログインできるように
         page('Googleと連携しました', (email ? email + ' の' : '') + 'Googleドライブの「ハタボ」フォルダに、議事録やメモ、書いた文章が保存されます。<br>LINEにもどってください。');
       }).catch(e => { console.error('google cb', String(e.message).slice(0, 160)); page('連携できませんでした', 'もう一度、ハタボのマイページからやりなおしてください。'); });
     return;
@@ -1195,7 +1230,7 @@ const SERVICE_KNOWLEDGE = () => '\n\n【ハタボのサービス（聞かれた�
   '\nラインナップ（月額・税込み）：' + Object.values(LINEUP).map(L => L.name + '（' + L.who + '）' + Object.entries(L.grades).map(([g, p]) => g + ' ' + p).join('・')).join('／') + '。' +
   '\nグレード：X＝速くて軽いAI、G＝賢いAI（Zの半分くらいの費用）、Z＝いちばん賢いAI（Claudeと同じ精度）。1日に話せる回数は X ' + GRADE_CAP.std + '回・G ' + GRADE_CAP.high + '回・Z ' + GRADE_CAP.super + '回。こえたら追加チケット（' + TICKETS.map(t => t.yen.toLocaleString('ja-JP') + '円で' + t.n + '回').join('、') + '）。ありがとうポイントでもチケットと交換できる（1,000ptで40回など）。' +
   '\nお試し：' + TRIAL_DAYS + '日間、いちばん上のZで無料（' + TRIAL_TEXT + '）。Myハタボの「プラン」から申し込む。' + TRIAL_DAYS + '日以内にやめれば0円。そのまま続けると、選んだプランの契約に切りかわる。' +
-  '\nオプション：見守り報告（家族のLINEへ）月300円、学習モード（英語・中国語）月980円、愛棒の追加（2体目から）1体月980円、LINEでも使う月300円、キャラ・話し方のカスタム月500円、アバターの作成 初期9,800円、オリジナルキャラクター（専用の公式LINE・ミニアプリ・見た目・性格・声）初期10万円から、名前の変更1,000円（最初の名付けは無料）、オリジナルの声 月980円＋初期29,800円、外国語の窓口 月3,000円（お店・宿）、LINE公式アカウント連携 月5,000円（お店・宿・会社）。' +
+  '\nオプション：見守り報告（家族のLINEへ）月300円、学習モード（英語・中国語）月980円、愛棒の追加（2体目から）1体月980円、LINEでも使う月300円、キャラ・話し方のカスタム月500円、アバターの作成 初期9,800円、オリジナルキャラクター（専用の公式LINE・ミニアプリ・見た目・性格・声）初期10万円から、ハタボAPI（MCP。ChatGPT・Gemini・Claude・Grokから愛棒をさがす・伝言・予約の希望。月100回まで無料、さがす1回1円、伝言・予約の希望1回5円、予約の成立1件30円をお店の側で。キーはMyハタボの「もっと」→「AIからつなぐ（API）」）、名前の変更1,000円（最初の名付けは無料）、オリジナルの声 月980円＋初期29,800円、外国語の窓口 月3,000円（お店・宿）、LINE公式アカウント連携 月5,000円（お店・宿・会社）。' +
   '\nできること：話すだけで調べもの・段取り・文章の下書き・予定の整理・メモと議事録（Myハタボの「メモ・議事録」に残る。Googleを連携するとドライブにも）・伝言（ご縁の人のAI棒どうし）・LINEグループの記録と議事録（管理者だけ、30日で消える）。PCでも同じアカウントで使える（設定の「PCで開く」）。' +
   '\nありがとうポイント：紹介した人が話しはじめたら' + THANKS.visit + 'pt、お試しで' + THANKS.trial + 'pt、契約で' + THANKS.contract + 'pt（2代目は1/2、3代目は1/4）。ガチャ（1日1回むりょう、2回目からは' + GACHA.cost + 'pt）とチケットに使える。' +
   '\nMyハタボ：使った量・プラン・メモと議事録・伝言・ご縁の図・ガチャ・友だち・キャラ設定・公開設定・Google連携・設定。公式LINEのメニューからも開ける。' +
@@ -1647,6 +1682,7 @@ function session(ws) {
   const fail = (code, why) => { send({ type: 'error', code, why }); try { ws.close(4000, code); } catch (e) {} };
 
   async function loadBrain(fresh) {
+    if (S.web) return;   // ウェブ（Google）でログインした人：家族の記録は読まない。Myハタボと管理画面のため
     // GASで家族の記録を読むのは数秒かかるので、同じ人・同じモードなら10分は使いまわす（つながるのが速くなる）
     const key = crypto.createHash('sha256').update(JSON.stringify(S.auth) + S.mode + (S.asGuest ? ':guest' : '') + ':' + (S.ref || '')).digest('hex');
     const hit = brainCache.get(key);
@@ -1890,7 +1926,7 @@ function session(ws) {
     S.feedbackSent = (S.feedbackSent || 0) + 1;
   }
   /** 事務局：要件の一覧と、採用したときのポイント（最初に出した人が半分、残りの半分をあとの人で分ける） */
-  const isOffice = () => !!S.owner && ENV.OFFICE_OWNERS.some(id => S.owner === id || S.owner === 'g:' + id);
+  const isOffice = () => !!S.webOffice || isOfficeOwner(S.owner);
   /** 役割つきの愛棒：一覧・作る・変える（止める・期限・役割・キャラ・メモ）。URLは変えずに中身だけ変えられる */
   async function onClones(m) {
     if (!S.myRef) return send({ type: 'clones', denied: true });
@@ -1904,7 +1940,7 @@ function session(ws) {
       else {
         const code = newCloneCode(), days = Math.max(0, Math.min(3650, Math.round(Number(m.days) || 0)));
         const cl = { kind: 'clone', parent: S.myRef, owner: S.owner, ownerName: S.me || me.name || '', name: clean(m.name).slice(0, 30) || '愛棒', role: CLONE_ROLES.includes(m.role) ? m.role : '汎用',
-          label: clean(m.label).slice(0, 60), avatar: AVS[m.avatar] ? m.avatar : S.avatar || 'hatabo', note: clean(m.note).slice(0, 600), price: !!m.price, reserve: !!m.reserve,
+          label: clean(m.label).slice(0, 60), area: clean(m.area).slice(0, 30), listed: !!m.listed, avatar: AVS[m.avatar] ? m.avatar : S.avatar || 'hatabo', note: clean(m.note).slice(0, 600), price: !!m.price, reserve: !!m.reserve,
           until: days ? Date.now() + days * 86400000 : 0, active: true, at: Date.now(), visits: 0, kids: 0 };
         await putRef(code, cl); codes.unshift(code); await saveCol(S.myRef, 'clones', { codes });
         const url = mini + '?ref=' + code; msg = '愛棒「' + cl.name + '」を作りました。';
@@ -1921,11 +1957,34 @@ function session(ws) {
       if ('label' in m) up.label = clean(m.label).slice(0, 60);
       if ('name' in m && clean(m.name)) up.name = clean(m.name).slice(0, 30);
       if ('price' in m) up.price = !!m.price; if ('reserve' in m) up.reserve = !!m.reserve;
+      if ('listed' in m) up.listed = !!m.listed; if ('area' in m) up.area = clean(m.area).slice(0, 30);
       await putRef(String(m.code), up); msg = '変更しました。URLはそのままです。';
     }
     const items = [];
-    for (const c of codes.slice(0, 60)) { const x = await getRef(c).catch(() => null); if (x) items.push({ code: c, url: mini + '?ref=' + c, name: x.name, role: x.role, label: x.label || '', avatar: x.avatar, note: x.note || '', price: !!x.price, reserve: !!x.reserve, until: x.until || 0, active: x.active !== false, open: cloneOpen(x), visits: x.visits || 0, kids: x.kids || 0, at: x.at || 0, lastAt: x.lastAt || 0 }); }
+    for (const c of codes.slice(0, 60)) { const x = await getRef(c).catch(() => null); if (x) items.push({ code: c, url: mini + '?ref=' + c, name: x.name, role: x.role, label: x.label || '', avatar: x.avatar, note: x.note || '', price: !!x.price, reserve: !!x.reserve, listed: !!x.listed, area: x.area || '', until: x.until || 0, active: x.active !== false, open: cloneOpen(x), visits: x.visits || 0, kids: x.kids || 0, at: x.at || 0, lastAt: x.lastAt || 0 }); }
     send({ type: 'clones', items, cap, rank: rk.label, roles: CLONE_ROLES, avatars: Object.keys(AVS).map(k => ({ id: k, name: AVS[k].name })), msg });
+  }
+  /** Myハタボの「AIからつなぐ（API）」：キーを作る・止める、今月の使った分、届いた予約の希望 */
+  async function onApi(m) {
+    if (!S.myRef) return send({ type: 'api', denied: true });
+    const I = await loadCol(S.myRef, 'apikeyidx'); let ids = Array.isArray(I.ids) ? I.ids : [], msg = '', newKey = '';
+    if (m.type === 'api_new') {
+      const act = []; for (const id of ids) { const k = await loadCol(id, 'apikeys'); if (k.active !== false) act.push(id); }
+      if (act.length >= 5) msg = 'APIキーは5つまでです。使わないキーを止めてください。';
+      else {
+        newKey = 'hb_' + crypto.randomBytes(24).toString('hex'); const id = keyId(newKey);
+        await saveCol(id, 'apikeys', { ref: S.myRef, owner: S.owner, name: String(m.name || '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 30) || 'APIキー', tail: newKey.slice(-4), at: Date.now(), active: true, calls: 0, last: 0 });
+        ids = [id].concat(ids).slice(0, 20); await saveCol(S.myRef, 'apikeyidx', { ids }); msg = 'APIキーを作りました。このURLは今だけ表示されます。';
+        officeNote('［API］' + (S.me || 'だれか') + 'さんがAPIキーを作りました').catch(() => {});
+      }
+    } else if (m.type === 'api_stop' && ids.includes(String(m.id))) { await saveCol(String(m.id), 'apikeys', { active: false }); msg = 'APIキーを止めました。'; }
+    else if (m.type === 'api_resv') {
+      const R = await loadCol(S.myRef, 'apireserve'), items = R.items || [], it = items.find(x => x.id === String(m.id));
+      if (it && it.status === 'new' && (m.status === 'done' || m.status === 'no')) { it.status = m.status; it.doneAt = Date.now(); await saveCol(S.myRef, 'apireserve', { items }); if (m.status === 'done') await apiBill(S.myRef, 'done'); msg = m.status === 'done' ? '成立にしました。' : '見送りにしました。'; }
+    }
+    const keys = []; for (const id of ids) { const k = await loadCol(id, 'apikeys'); if (k.ref === S.myRef) keys.push({ id, name: k.name, tail: k.tail, at: k.at, last: k.last || 0, calls: k.calls || 0, active: k.active !== false }); }
+    const base = ENV.PUBLIC_URL + '/mcp/';
+    send({ type: 'api', keys, usage: await apiUsage(S.myRef), price: ENV.API_PRICE, base, newKey, newUrl: newKey ? base + newKey : '', reserves: ((await loadCol(S.myRef, 'apireserve')).items || []).slice(0, 30), msg });
   }
   /** 事務局の管理画面：お客さま（紹介コード）の一覧と、役割・メモ・愛祭の協力の記録。変えたことは記録に残す */
   async function onAdmin(m) {
@@ -1945,11 +2004,12 @@ function session(ws) {
         await saveCol('office', 'audit', { items }); msg = code + ' を変更しました';
       }
     }
-    const refs = await allRefs();
-    const rows = refs.map(r => { const f = funnelOf(r), rk = rankOf(r); return { code: r.code, kind: r.kind || 'person', name: r.name || '', ownerName: r.ownerName || '', parent: r.parent || '', stage: f.stage, lineup: f.lineupName || '', grade: f.grade || '',
+    const refs = await allRefs(), AU = new Map((await allApiUse(monthJ())).map(x => [x.ref, x]));
+    const rows = refs.map(r => { const f = funnelOf(r), rk = rankOf(r), au = AU.get(r.code) || {}; return { api: au.billable || 0, apiYen: au.yen || 0, apiDone: au.done || 0, code: r.code, kind: r.kind || 'person', name: r.name || '', ownerName: r.ownerName || '', parent: r.parent || '', stage: f.stage, lineup: f.lineupName || '', grade: f.grade || '',
       paid: !!r.paidAt, payFail: !!r.payFailAt, rank: rk.label, pts: r.pts || 0, ptsTotal: earned(r), kids: r.kids || 0, visits: r.visits || 0, role: r.role || '', roleNote: r.roleNote || '', aisaiHelp: r.aisaiHelp || 0, adopts: r.adopts || 0,
       at: r.at || 0, lastAt: r.lastAt || 0, active: r.active !== false, until: r.until || 0 }; }).sort((a, b) => (b.at || 0) - (a.at || 0));
     const sum = { people: rows.filter(x => x.kind === 'person').length, trial: rows.filter(x => x.stage === 'trial').length, contract: rows.filter(x => x.stage === 'contract').length, payFail: rows.filter(x => x.payFail).length, clones: rows.filter(x => x.kind === 'clone').length, groups: rows.filter(x => x.kind === 'group').length };
+    sum.api = rows.reduce((n, x) => n + x.api, 0); sum.apiYen = rows.reduce((n, x) => n + x.apiYen, 0);
     send({ type: 'admin', rows, sum, roles: Object.keys(ROLE_RULE), audit: ((await loadCol('office', 'audit')).items || []).slice(0, 30), msg });
   }
   async function onReqs(m) {
@@ -2579,7 +2639,14 @@ function session(ws) {
         S.asGuest = !!m.asGuest;
         S.app = m.app === 'komugi' ? 'komugi' : m.app === 'hatabo' ? 'hatabo' : '';   // どのミニアプリから来たか（コムギのミニアプリなら、いつもコムギ）
         S.peek = !!m.peek;               // 見るだけ（&test=peek）：紹介のつながり・アバターの記録を変えない          // 家族が「窓口の画面」を試すとき（&test=guest）
-        try { await loadBrain(); } catch (e) {
+        const W = m.webToken ? webVerify(m.webToken) : null;
+        if (m.webToken && !W) return fail('auth', 'ログインの期限が切れました。サイトの「ログイン」から入りなおしてください');
+        if (W) {   // PCのブラウザでGoogleログイン：自分のハタボ（ふだんの窓口と同じ形）で、Myハタボと管理画面を使う
+          S.web = W; S.auth = { web: true }; S.owner = String(W.owner || ''); S.webOffice = !!W.office; S.me = '';
+          S.guest = true; S.mode = 'guest'; S.trio = false; S.slots = []; S.role = '汎用'; S.ref = ''; S.visit = ''; S.agent = '';
+          S.avatar = S.app === 'komugi' ? 'komugi' : 'hatabo'; S.voice = AVS[S.avatar].voice();
+          S.system = AVS[S.avatar].persona() + '\n\n【いまの場面】PCのブラウザから、Googleでログインして開いています。Myハタボや管理の相談にのります。'; S.brainAt = Date.now();
+        } else try { await loadBrain(); } catch (e) {
           if (e.code === 'auth' || e.code === 'pass') return fail('auth', String(e.message).slice(0, 80));
           if (e.code === 'closed') return fail('closed', 'いま窓口はお休み中');
           // GASが読めないときも切らずに話す（家族の記録なし）。三人モードなどはページから受けとる
@@ -2599,7 +2666,7 @@ function session(ws) {
           }
         }
         // ヒアリング役の人：紹介コード付きで来たら覚える。メニューやトークのボタン（コードなし）から来たら、覚えたコードで開きなおす
-        if (S.guest && S.owner && !S.peek && !S.visit && !S.asGuest) {
+        if (S.guest && S.owner && !S.peek && !S.visit && !S.asGuest && !S.web) {
           if (S.ref && isPinRole(S.role)) { await setPin(S.owner, S.ref); if (isHearingRole(S.role)) await hearingStart(S.ref, S.me); }
           else if (!S.ref || S.agent === 'service') {
             const pinned = await getPin(S.owner);
@@ -2623,6 +2690,7 @@ function session(ws) {
         S.ready = true;
         // 紹介コード：自分のコードを作り、はじめて来た人は「だれの紹介か」を覚える
         S.myRef = S.owner ? await myRefFor(S.owner) : '';
+        if (S.web && S.myRef) { const mm = await getRef(S.myRef).catch(() => null); S.me = (mm && mm.name) || ''; }
         if (S.myRef && !S.peek) {
           const mine = await getRef(S.myRef);
           let parent = mine && mine.parent ? mine.parent : (S.ref && S.ref !== S.myRef ? S.ref : '');
@@ -2734,7 +2802,7 @@ function session(ws) {
           S.tellTo = to;
           S.system = S.system.replace(/ハタラボの担当（ヒロさん）|ハタラボのヒロさん/g, to).replace(/〈伝え先〉/g, to).replace(/ヒロさん/g, to);
         }
-        send({ type: 'ready', plain: hearing(), me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs, guest: !!S.guest, service: S.role === 'サービス相談', myRef: S.myRef || '', visit: S.visit ? { code: S.visit, name: S.visitHost } : null, avatar: S.avatar || '', komugi: !!S.komugi, mac: !!S.macSelf, office: !!S.owner && ENV.OFFICE_OWNERS.some(id => S.owner === id || S.owner === 'g:' + id), bridge: !!S.bridge, superUntil: superUntil(S.owner), canPlan: !!(S.claude || superUntil(S.owner)), claude: !!S.claude, aiName: !S.visit && S.custom && S.custom.aiName || '' });
+        send({ type: 'ready', plain: hearing(), me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs, guest: !!S.guest, service: S.role === 'サービス相談', myRef: S.myRef || '', visit: S.visit ? { code: S.visit, name: S.visitHost } : null, avatar: S.avatar || '', komugi: !!S.komugi, mac: !!S.macSelf, office: isOffice(), web: !!S.web, bridge: !!S.bridge, superUntil: superUntil(S.owner), canPlan: !!(S.claude || superUntil(S.owner)), claude: !!S.claude, aiName: !S.visit && S.custom && S.custom.aiName || '' });
         if (S.visit) { const T = S.avatar === 'komugi' ? x => x.replace(/だボー/g, 'です').replace(/ボー/g, 'です') : S.avatar === 'hatabo' ? bizBo : bizBo; return speakOnly(T(S.visitSponsor ? S.visitHost + 'のAI棒だボー。なんでも聞いてほしいボー。' : S.visitHost + 'さんのAI棒だボー。話してくれたことは、' + S.visitHost + 'さんに伝言で届けるボー。'), 'excited'); }
         if (m.greet && S.guest && S.consult) return recapGreet().then(deliverInbox).catch(() => {});      // 相談メモがある人には、振り返りからはじめる
         const hi = m.greet ? (S.guest ? (S.history.length ? againFor() : (AVS[S.avatar] ? greetFor() : guestGreeting(S.me))) : greeting(S.me, S.mode, S.trio)) : '';
@@ -2805,6 +2873,7 @@ function session(ws) {
       if (m.type === 'reqs' || m.type === 'req_adopt') return onReqs(m);
       if (m.type === 'clones' || m.type === 'clone_new' || m.type === 'clone_set') return onClones(m);
       if (m.type === 'admin' || m.type === 'admin_set') return onAdmin(m);
+      if (m.type === 'api' || m.type === 'api_new' || m.type === 'api_stop' || m.type === 'api_resv') return onApi(m);
       if (m.type === 'docs' || m.type === 'docs_set' || m.type === 'docs_share' || m.type === 'docs_copy') return onDocs(m);
       if (m.type === 'friends') return send(await friendsView());
       if (m.type === 'friend_req' || m.type === 'friend_ok' || m.type === 'friend_no' || m.type === 'friend_del') return onFriend(m);
@@ -2897,9 +2966,117 @@ function liveBrain(id, name) {
 }
 
 /* ===== HTTP と WebSocket ===== */
+/* ===== ハタボAPI（MCPサーバー）：ChatGPT・Gemini・Claude・Grok から、ハタボのネットワークにつなぐ =====
+ * 住所：PUBLIC_URL/mcp/<APIキー>（または Authorization: Bearer <APIキー>）。キーはMyハタボの「AIからつなぐ（API）」で作る
+ * 相手に見せるのは愛棒の番号（紹介コード）と名前だけ。LINEのIDやグループのIDは出さない。データはハタボ側に置く */
+const monthJ = () => new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 7);
+const keyId = k => crypto.createHash('sha256').update('apikey:' + k).digest('hex').slice(0, 40);
+const apiHits = new Map();
+function apiRate(id, per, ms) { const now = Date.now(), a = (apiHits.get(id) || []).filter(t => now - t < ms); if (a.length >= per) { apiHits.set(id, a); return false; } a.push(now); apiHits.set(id, a); if (apiHits.size > 5000) apiHits.clear(); return true; }
+/** 使った分を記録する（月の無料回数をこえたら、1回ごとの円を足す）。予約の成立はお店の側に、無料回数の外で */
+async function apiBill(ref, kind) {
+  const month = monthJ(), id = ref + '_' + month, u = await loadCol(id, 'apiuse'), P = ENV.API_PRICE;
+  const free = kind !== 'done' && (u.billable || 0) < P.free, yen = free ? 0 : Number(P[kind]) || 0;
+  await saveCol(id, 'apiuse', { ref, month, billable: (u.billable || 0) + (kind === 'done' ? 0 : 1), [kind]: (u[kind] || 0) + 1, yen: (u.yen || 0) + yen, last: Date.now() });
+  return yen;
+}
+async function apiUsage(ref) { const u = await loadCol(ref + '_' + monthJ(), 'apiuse'); return { month: monthJ(), billable: u.billable || 0, search: u.search || 0, message: u.message || 0, reserve: u.reserve || 0, done: u.done || 0, yen: u.yen || 0, free: ENV.API_PRICE.free }; }
+async function allApiUse(month) {
+  try { if (deps.db) return (await deps.db.collection('apiuse').where('month', '==', month).get()).docs.map(d => d.data()); } catch (e) { console.error('apiuse list', String(e.message).slice(0, 120)); }
+  return Array.from(memCol.entries()).filter(([k, v]) => k.startsWith('apiuse:') && v.month === month).map(([, v]) => v);
+}
+const apiClean = (x, n) => String(x == null ? '' : x).replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n);
+const aiboOut = (code, r) => ({ id: code, name: r.name || '愛棒', role: r.role || '汎用', area: r.area || '', about: r.label || '', owner: (r.ownerName || '') + (r.ownerName ? 'さん' : ''), can_message: true, can_reserve: !!r.reserve });
+async function apiAibo(id) { const code = apiClean(id, 20).replace(/[^\w-]/g, ''), r = code ? await getRef(code).catch(() => null) : null; return r && r.kind === 'clone' && r.listed && cloneOpen(r) ? { code, r } : null; }
+const MCP_TOOLS = [
+  { name: 'search_aibo', description: 'ハタボのネットワークで、公開されている愛棒（お店・会社・人のAIの窓口）をさがす。業種・困りごと・地域（区など）のことばで。', inputSchema: { type: 'object', properties: { query: { type: 'string', description: 'さがすことば（例：川崎 そば 予約）' }, area: { type: 'string', description: '地域（例：高津区）' } }, required: ['query'] } },
+  { name: 'send_message', description: '愛棒に伝言を送る。持ち主のLINEに届く。だれからかが分かるように名前を入れる。', inputSchema: { type: 'object', properties: { aibo: { type: 'string', description: 'search_aibo で出た id' }, text: { type: 'string', description: '伝言（500字まで）' }, from_name: { type: 'string', description: '送る人の名前' } }, required: ['aibo', 'text', 'from_name'] } },
+  { name: 'request_reservation', description: '予約の希望を愛棒に伝える（予約を受けつけている愛棒だけ）。確定ではなく、持ち主が確かめて返事をする。', inputSchema: { type: 'object', properties: { aibo: { type: 'string' }, when: { type: 'string', description: '希望の日時（例：12月5日 19時ごろ）' }, people: { type: 'integer', description: '人数' }, name: { type: 'string', description: '予約する人の名前' }, contact: { type: 'string', description: '返事の連絡先（任意）' }, note: { type: 'string', description: 'そのほかの希望（任意）' } }, required: ['aibo', 'when', 'name'] } },
+  { name: 'list_my_aibo', description: '自分の愛棒（役割つき）の一覧と状態を見る。', inputSchema: { type: 'object', properties: {} } },
+  { name: 'update_my_aibo', description: '自分の愛棒の設定を変える（名前・役割・だれ向け・地域・メモ・検索に出すか・受付中か）。変えた内容はMyハタボにもそのまま出る。', inputSchema: { type: 'object', properties: { aibo: { type: 'string' }, name: { type: 'string' }, role: { type: 'string', enum: CLONE_ROLES }, about: { type: 'string' }, area: { type: 'string' }, note: { type: 'string' }, listed: { type: 'boolean' }, active: { type: 'boolean' }, reserve: { type: 'boolean' } }, required: ['aibo'] } },
+  { name: 'get_usage', description: '今月のAPIの使った回数と、料金の見こみを見る。', inputSchema: { type: 'object', properties: {} } },
+];
+async function mcpTool(K, name, a) {
+  const txt = o => ({ content: [{ type: 'text', text: typeof o === 'string' ? o : JSON.stringify(o, null, 1) }], structuredContent: typeof o === 'string' ? undefined : o });
+  const err = t => ({ content: [{ type: 'text', text: t }], isError: true });
+  a = a && typeof a === 'object' ? a : {};
+  if (name === 'search_aibo') {
+    const words = (apiClean(a.query, 100) + ' ' + apiClean(a.area, 30)).split(/[\s　、,]+/).filter(Boolean);
+    const all = (await allRefs()).filter(r => r.kind === 'clone' && r.listed && cloneOpen(r));
+    const hit = all.map(r => { const hay = [r.name, r.role, r.label, r.area, r.ownerName, String(r.note || '').slice(0, 300)].join(' '); return { r, sc: words.reduce((n, w) => n + (hay.includes(w) ? (String(r.area || '').includes(w) || String(r.name || '').includes(w) ? 2 : 1) : 0), 0) }; })
+      .filter(x => !words.length || x.sc > 0).sort((x, y) => y.sc - x.sc).slice(0, 10).map(x => aiboOut(x.r.code, x.r));
+    const yen = await apiBill(K.ref, 'search');
+    return txt({ found: hit.length, aibo: hit, yen, note: hit.length ? '伝言は send_message、予約の希望は request_reservation で。' : 'みつかりませんでした。ことばを変えてためしてください。' });
+  }
+  if (name === 'send_message' || name === 'request_reservation') {
+    const A = await apiAibo(a.aibo); if (!A) return err('その愛棒はみつからないか、いまは受けつけていません。search_aibo の id を使ってください。');
+    if (name === 'request_reservation' && !A.r.reserve) return err('この愛棒は、予約の希望を受けつけていません。send_message で伝言してください。');
+    if (!apiRate('msg:' + K.id, 100, 86400000) || !apiRate('to:' + K.id + ':' + A.code, 10, 86400000)) return err('今日の伝言の回数をこえました。明日またためしてください。');
+    const from = apiClean(a.from_name || a.name, 40) || 'AIの利用者', now = Date.now(), via = 'AI（ハタボAPI）から';
+    let text, item;
+    if (name === 'send_message') {
+      const body = apiClean(a.text, 500); if (!body) return err('伝言のことばが空です。');
+      text = '【' + via + 'の伝言】' + A.r.name + 'あて\n' + from + 'さんより：' + body;
+    } else {
+      item = { id: now.toString(36) + crypto.randomBytes(3).toString('hex'), at: now, aibo: A.code, aiboName: A.r.name || '', from, when: apiClean(a.when, 60), people: Math.max(0, Math.min(999, Math.round(Number(a.people) || 0))), name: apiClean(a.name, 40), contact: apiClean(a.contact, 80), note: apiClean(a.note, 300), status: 'new' };
+      if (!item.when || !item.name) return err('日時と名前を入れてください。');
+      text = '【' + via + '予約の希望】' + A.r.name + 'あて\n' + item.name + 'さん・' + item.when + (item.people ? '・' + item.people + '人' : '') + (item.contact ? '\n連絡先：' + item.contact : '') + (item.note ? '\n' + item.note : '') + '\n成立したら、Myハタボの「AIからつなぐ」で「成立」を押してください。';
+      const R = await loadCol(A.r.parent, 'apireserve'); await saveCol(A.r.parent, 'apireserve', { items: [item].concat(R.items || []).slice(0, 200) });
+    }
+    if (A.r.parent) { const items = await loadInbox(A.r.parent); items.unshift({ id: now.toString(36) + Math.random().toString(36).slice(2, 6), at: now, read: false, kind: 'note', from: 'api', fromName: from + '（AIから）', text: text.replace(/^【[^】]+】/, '') }); await saveInbox(A.r.parent, items); }
+    await ownerPush(A.r.owner, text).catch(() => {});
+    const yen = await apiBill(K.ref, name === 'send_message' ? 'message' : 'reserve');
+    return txt({ ok: true, to: A.r.name, yen, note: name === 'send_message' ? '伝言を届けました。返事は持ち主から直接になります。' : '予約の希望を届けました。まだ確定ではありません。持ち主の返事を待ってください。' });
+  }
+  if (name === 'list_my_aibo' || name === 'update_my_aibo') {
+    const codes = (await loadCol(K.ref, 'clones')).codes || [];
+    if (name === 'update_my_aibo') {
+      const code = apiClean(a.aibo, 20); if (!codes.includes(code)) return err('自分の愛棒の id を入れてください（list_my_aibo で見られます）。');
+      const up = {};
+      if (a.name) up.name = apiClean(a.name, 30); if (a.role && CLONE_ROLES.includes(a.role)) up.role = a.role; if ('about' in a) up.label = apiClean(a.about, 60);
+      if ('area' in a) up.area = apiClean(a.area, 30); if ('note' in a) up.note = apiClean(a.note, 600);
+      ['listed', 'active', 'reserve'].forEach(k => { if (k in a) up[k] = !!a[k]; });
+      await putRef(code, up);
+    }
+    const mini = LINE_CH.hatabo.mini, items = [];
+    for (const c of codes.slice(0, 60)) { const r = await getRef(c).catch(() => null); if (r) items.push(Object.assign(aiboOut(c, r), { url: mini + '?ref=' + c, open: cloneOpen(r), listed: !!r.listed, note: r.note || '' })); }
+    return txt({ aibo: items, note: name === 'update_my_aibo' ? '変えました。Myハタボにも出ています。' : '' });
+  }
+  if (name === 'get_usage') { const u = await apiUsage(K.ref); return txt(Object.assign(u, { price: ENV.API_PRICE, note: '月' + ENV.API_PRICE.free + '回までは無料。こえた分は、さがす' + ENV.API_PRICE.search + '円・伝言' + ENV.API_PRICE.message + '円・予約の希望' + ENV.API_PRICE.reserve + '円（1回）' })); }
+  return err('その道具はありません：' + name);
+}
+async function mcpHttp(req, res) {
+  const H = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Authorization, Content-Type, Mcp-Session-Id, Mcp-Protocol-Version', 'Access-Control-Allow-Methods': 'POST, GET, OPTIONS' };
+  const out = (code, o) => { res.writeHead(code, Object.assign({ 'Content-Type': 'application/json; charset=utf-8' }, H)); res.end(o === undefined ? '' : JSON.stringify(o)); };
+  if (req.method === 'OPTIONS') { res.writeHead(204, H); return res.end(); }
+  if (req.method !== 'POST') return out(405, { error: 'ハタボのMCPサーバーです。POSTで使います。' });
+  const u = new URL(req.url, 'http://x'), auth = String(req.headers.authorization || ''), key = (auth.match(/^Bearer\s+(hb_[\w]+)/) || [])[1] || (u.pathname.match(/^\/mcp\/(hb_[\w]+)/) || [])[1] || '';
+  const K0 = key ? await loadCol(keyId(key), 'apikeys') : {};
+  if (!key || !K0.ref || K0.active === false) return out(401, { jsonrpc: '2.0', id: null, error: { code: -32001, message: 'APIキーが正しくないか、止められています。Myハタボの「AIからつなぐ」で確かめてください。' } });
+  const K = Object.assign({ id: keyId(key) }, K0);
+  if (!apiRate('k:' + K.id, 60, 60000)) return out(429, { jsonrpc: '2.0', id: null, error: { code: -32002, message: '呼び出しが多すぎます。1分ほど待ってください。' } });
+  let body = ''; for await (const c of req) { body += c; if (body.length > 65536) return out(413, { error: 'too large' }); }
+  let msg; try { msg = JSON.parse(body); } catch (e) { return out(400, { jsonrpc: '2.0', id: null, error: { code: -32700, message: 'parse error' } }); }
+  const one = async m => {
+    if (!m || m.jsonrpc !== '2.0' || typeof m.method !== 'string') return { jsonrpc: '2.0', id: m && m.id != null ? m.id : null, error: { code: -32600, message: 'invalid request' } };
+    if (m.id === undefined || m.id === null) return null;   // お知らせ（notifications/initialized など）には返事しない
+    const ok = result => ({ jsonrpc: '2.0', id: m.id, result });
+    if (m.method === 'initialize') return ok({ protocolVersion: (m.params && m.params.protocolVersion) || '2025-06-18', capabilities: { tools: {} }, serverInfo: { name: 'hatabo', title: 'ハタボ（HATHA LAB）', version: '0.1.0' },
+      instructions: 'ハタボは、町のお店・会社・人の「愛棒（AIの窓口）」どうしをつなぐネットワークです。search_aibo でさがして、send_message で伝言、request_reservation で予約の希望を伝えます。LINEのIDなどの個人の情報は返しません。' });
+    if (m.method === 'ping') return ok({});
+    if (m.method === 'tools/list') return ok({ tools: MCP_TOOLS });
+    if (m.method === 'tools/call') { const p = m.params || {}; try { return ok(await mcpTool(K, String(p.name || ''), p.arguments)); } catch (e) { console.error('mcp tool', String(e.message).slice(0, 160)); return ok({ content: [{ type: 'text', text: 'うまくいきませんでした。少しあとでためしてください。' }], isError: true }); } }
+    if (m.method === 'resources/list') return ok({ resources: [] }); if (m.method === 'prompts/list') return ok({ prompts: [] });
+    return { jsonrpc: '2.0', id: m.id, error: { code: -32601, message: 'method not found: ' + m.method } };
+  };
+  saveCol(K.id, 'apikeys', { last: Date.now(), calls: (K.calls || 0) + 1 }).catch(() => {});
+  if (Array.isArray(msg)) { const r = (await Promise.all(msg.slice(0, 20).map(one))).filter(Boolean); return r.length ? out(200, r) : out(202); }
+  const r = await one(msg); return r ? out(200, r) : out(202);
+}
 function createServer() {
   const server = http.createServer((req, res) => {
     if (req.url.startsWith('/google/')) return googleHttp(req, res);
+    if (req.url === '/mcp' || req.url.startsWith('/mcp/') || req.url.startsWith('/mcp?')) return mcpHttp(req, res).catch(e => { console.error('mcp', String(e.message).slice(0, 160)); try { res.writeHead(500); res.end('{}'); } catch (x) {} });
     if (req.url.startsWith('/voice/try')) {   // 読み方の聞きくらべ：/voice/try?k=合言葉&text=ハタボが&voice=m-bright（声だけ。読み方辞書もかける）
       const u0 = new URL(req.url, 'http://x'), k = u0.searchParams.get('k') || '';
       if (!k || (k !== ENV.CRON_KEY && k !== ENV.LIVE_KEY)) { res.writeHead(403); return res.end('no'); }
@@ -2926,4 +3103,4 @@ if (require.main === module) {
   deps.init();
   createServer().listen(ENV.PORT, () => console.log('butter-junior on :' + ENV.PORT));
 }
-module.exports = { cmVideo, brandOut, rankOf, RANKS, cloneRule, cloneOpen, CLONE_CAP, createServer, deps, ENV, splitter, takeEmotion, clean, PHOTO_RE, VIDEO_RE, session, calledJunior, calledJam, hearingStart, hearingCheckAll, handleStripeEvent, stripeSigOk, funnelOf, getRef, putRef, checkoutFor };
+module.exports = { webSign, webVerify, MCP_TOOLS, cmVideo, brandOut, rankOf, RANKS, cloneRule, cloneOpen, CLONE_CAP, createServer, deps, ENV, splitter, takeEmotion, clean, PHOTO_RE, VIDEO_RE, session, calledJunior, calledJam, hearingStart, hearingCheckAll, handleStripeEvent, stripeSigOk, funnelOf, getRef, putRef, checkoutFor };

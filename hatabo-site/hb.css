@@ -553,3 +553,8 @@ body.hb-peek .hbtop{bottom:180px}
 .ftag::before{content:"";display:block;width:54px;height:54px;margin:0 auto 18px;background:url(award_mark.svg) center/contain no-repeat;filter:drop-shadow(0 0 10px rgba(180,210,255,.4))}
 .ftag::after{content:"HATARAKU ／ そばにいる人を、楽にする。";display:block;margin-top:14px;font:700 12px "Noto Sans JP",sans-serif;letter-spacing:.32em;color:#9AA4B8;-webkit-text-fill-color:#9AA4B8}
 .hbf .ftag{border-top:1px solid rgba(255,255,255,.08);border-bottom:1px solid rgba(255,255,255,.08)}
+
+/* ログイン（ヘッダー右上） */
+.hbh .login{color:#C9CFD8;font-size:13px;font-weight:700;text-decoration:none;padding:9px 4px;white-space:nowrap;letter-spacing:.04em}.hbh .login:hover{color:#fff}
+@media(min-width:761px){.hbh .in{gap:18px}.hbh nav{gap:14px}.hbh nav .dd{flex:none}.hbh nav .dd>a{white-space:nowrap}}
+@media(max-width:760px){.hbh .login{order:5;display:flex;align-items:center;height:30px;margin:7px 2px 7px 0;padding:0 6px;font-size:12px}}
