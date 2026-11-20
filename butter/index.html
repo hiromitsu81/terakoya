@@ -934,6 +934,20 @@ html:not(.kmapp) body:not(.av-komugi) .mybtn img[src$="xm_w.png"] { width: auto;
 .ctbl { overflow-x: auto; } .ctbl table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 720px; } .ctbl th { text-align: left; color: var(--cmut); font-weight: 600; font-size: 12px; padding: 8px 10px; }
 .ctbl td { border-top: 1px solid var(--cline); padding: 10px; vertical-align: top; color: var(--ctext); }
 .ctheme { display: flex; gap: 6px; }
+.cacct { margin-top: 12px; position: relative; padding-top: 10px; border-top: 1px solid var(--cline); }
+.cacc-btn { width: 100%; display: flex !important; align-items: center; gap: 10px; }
+.cacc-btn span:nth-child(2) { display: flex; flex-direction: column; min-width: 0; text-align: left; } .cacc-btn small, .cacc-menu small { color: var(--cmut); font-size: 11.5px; font-weight: 500; }
+.cacc-btn i { margin-left: auto; font-style: normal; color: var(--cmut); }
+.cav { width: 30px; height: 30px; border-radius: 50%; flex: none; display: grid; place-items: center; font: 700 13px 'Noto Sans JP', sans-serif; background: var(--cacc); color: var(--cacct); }
+.cacc-menu { position: absolute; left: 0; right: 0; top: calc(100% + 6px); background: var(--ccard); border: 1px solid var(--cline); border-radius: 12px; padding: 6px; box-shadow: 0 12px 30px rgba(0,0,0,.18); display: grid; gap: 2px; z-index: 5; }
+.cacc-menu button { display: flex !important; align-items: center; gap: 10px; width: 100%; }
+.cacc-menu button span:nth-child(2) { display: flex; flex-direction: column; text-align: left; }
+.cacc-menu em { margin-left: auto; font-style: normal; color: #2F6FD6; font-weight: 700; }
+.casbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--cline); font-size: 13px; }
+.casbar span { color: var(--cmut); font-size: 12.5px; } .casbar .cbtn { margin-left: auto; min-height: 34px; padding: 6px 12px; }
+.casbar.off { background: rgba(47,111,214,.10); border-color: rgba(47,111,214,.35); } .casbar.off b { color: #2F6FD6; }
+@media (max-width: 760px) { .cacct { margin-top: 0; border-top: 0; padding-top: 0; flex: none; } .cacc-btn small, .cacc-btn i { display: none; } .cacc-menu { bottom: auto; top: calc(100% + 6px); left: auto; right: 0; width: 260px; } }
+
 html:not(.kmapp) body:not(.av-komugi) .hbpage.lt .hbp-tabs { background: #FFFFFF; border-top: 1px solid #E7E5E1; box-shadow: none; }
 html:not(.kmapp) body:not(.av-komugi) .hbpage.lt .hbp-tabs button { color: #6B6A66; background: transparent; }
 html:not(.kmapp) body:not(.av-komugi) .hbpage.lt .hbp-tabs button.on { color: #16233F; }
@@ -3301,7 +3315,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
     { d: '2026-11-18', t: 'たまごから、ハタボが生まれます', b: 'はじめて話しかけると、エンブレムのたまごが割れて、ハタボが出てきます。' },
   ];
   /* つながる前に開いたページ：つながったら取りなおす */
-  document.addEventListener('jrready', () => { if ($('hbPage') && !$('hbPage').hidden) { const p = HBP.page; if (p === 'clones' && !HBP.clones) jrSend({ type: 'clones' }); if (p === 'admin' && !HBP.admin) jrSend({ type: 'admin' }); if (p === 'api' && !HBP.api) jrSend({ type: 'api' }); if (p === 'console' && !HBP.con) jrSend({ type: 'console' }); if (p === 'reqs' && !HBP.reqs) jrSend({ type: 'reqs' }); } });
+  document.addEventListener('jrready', () => { if ($('hbPage') && !$('hbPage').hidden) { const p = HBP.page; if (p === 'clones' && !HBP.clones) jrSend({ type: 'clones' }); if (p === 'admin' && !HBP.admin) jrSend({ type: 'admin' }); if (p === 'api' && !HBP.api) jrSend({ type: 'api' }); if (p === 'console' && !HBP.con) jrSend({ type: 'console', as: store.get('conAs', 'office') }); if (p === 'reqs' && !HBP.reqs) jrSend({ type: 'reqs' }); } });
   setInterval(() => { try { if (!J.ready || !$('hbPage') || $('hbPage').hidden) return; const p = HBP.page, k = { clones: 'clones', admin: 'admin', reqs: 'reqs', api: 'api', console: 'console' }[p]; if (k && !HBP[k] && Date.now() - (HBP['ask_' + k] || 0) > 4000) { HBP['ask_' + k] = Date.now(); jrSend({ type: k }); } } catch (e) {} }, 1500);
   function hbpRender() {
     const p = HBP.page, d = HBP.data, nm = avName() || 'ハタボ';
@@ -3665,7 +3679,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
       $('hbpShare').onclick = shareHatabo;
     }
     hbpWire();
-    body.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { HBP.page = b.dataset.go; const P = HBP.page; if (J.ready) { if (({ my: 1, plan: 1, ticket: 1, grow: 1, notes: 1 })[P]) jrSend({ type: 'mypage' }); else if (P === 'gacha') jrSend({ type: 'gacha', peek: true }); else if (P === 'friends') jrSend({ type: 'friends' }); else if (P === 'inbox') { HBP.inboxShown = false; jrSend({ type: 'inbox' }); } else if (P === 'goen') jrSend({ type: 'goen_tree' }); else if (P === 'custom') jrSend({ type: 'custom_get' }); else if (P === 'api') { if (HBP.api) HBP.api.newUrl = ''; jrSend({ type: 'api' }); } else if (P === 'console') jrSend({ type: 'console' }); } hbpRender(); });
+    body.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { HBP.page = b.dataset.go; const P = HBP.page; if (J.ready) { if (({ my: 1, plan: 1, ticket: 1, grow: 1, notes: 1 })[P]) jrSend({ type: 'mypage' }); else if (P === 'gacha') jrSend({ type: 'gacha', peek: true }); else if (P === 'friends') jrSend({ type: 'friends' }); else if (P === 'inbox') { HBP.inboxShown = false; jrSend({ type: 'inbox' }); } else if (P === 'goen') jrSend({ type: 'goen_tree' }); else if (P === 'custom') jrSend({ type: 'custom_get' }); else if (P === 'api') { if (HBP.api) HBP.api.newUrl = ''; jrSend({ type: 'api' }); } else if (P === 'console') jrSend({ type: 'console', as: store.get('conAs', 'office') }); } hbpRender(); });
     body.querySelectorAll('[data-ask]').forEach(b => b.onclick = () => { hbpClose(); const t = b.dataset.ask; addBubble('あなた', t, 'me'); jrSend({ type: 'text', text: t }); });
   }
   // ハタボをいつもの場所に：友だち追加・ホーム画面に追加・トークをピン留め（ピン留めはLINEの決まりで本人の操作だけ）
@@ -3789,16 +3803,17 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
   const entH = e => e === 'url' ? '<span class="cent">URLから</span>' : '<span class="cent f">友だち追加</span>';
   const ago = t => { const d = (Date.now() - (t || 0)) / 60000; return d < 1 ? 'いま' : d < 60 ? Math.floor(d) + '分前' : d < 1440 ? Math.floor(d / 60) + '時間前' : new Date(t).toLocaleDateString('ja-JP'); };
   function conBadge() { try { const u = HBP.con && HBP.con.threads ? HBP.con.threads.reduce((n, t) => n + (t.unread || 0), 0) : 0; document.querySelectorAll('[data-conbadge]').forEach(e => { e.textContent = u; e.hidden = !u; }); } catch (e) {} }
-  setInterval(() => { try { if (J.ready && !$('hbPage').hidden && HBP.page === 'console' && document.visibilityState === 'visible' && !(document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))) { jrSend({ type: 'console' }); if (HBP.thr && HBP.cv === 'talks') jrSend({ type: 'thr_open', id: HBP.thr.t.id }); } } catch (e) {} }, 20000);
+  setInterval(() => { try { if (J.ready && !$('hbPage').hidden && HBP.page === 'console' && document.visibilityState === 'visible' && !(document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))) { jrSend({ type: 'console', as: store.get('conAs', 'office') }); if (HBP.thr && HBP.cv === 'talks') jrSend({ type: 'thr_open', id: HBP.thr.t.id }); } } catch (e) {} }, 20000);
   function conRender(body) {
     const C = HBP.con, n = x => Number(x || 0).toLocaleString('ja-JP');
     body.classList.add('wide', 'con');
-    if (!C) { body.innerHTML = '<div class="cn"><div class="cmain"><p class="cmut">よみこみ中…</p></div></div>'; if (J.ready) jrSend({ type: 'console' }); return; }
+    if (!C) { body.innerHTML = '<div class="cn"><div class="cmain"><p class="cmut">よみこみ中…</p></div></div>'; if (J.ready) jrSend({ type: 'console', as: store.get('conAs', 'office') }); return; }
     if (C.denied) { body.innerHTML = '<div class="cn"><div class="cmain"><p>管理画面は、自分のハタボを持っている人と事務局が使えます。</p></div></div>'; return; }
     const cv = HBP.cv = HBP.cv || (C.office ? 'home' : 'talks'), unread = (C.threads || []).reduce((s, t) => s + (t.unread || 0), 0);
     const NAV = [['home', 'ホーム'], ['talks', '会話'], ['aibo', '愛棒'], ['owners', 'オーナー'], ['money', 'お金'], ['win', '窓口'], ['set', '設定']];
     const nav = `<nav class="cnav" aria-label="管理画面のメニュー"><div class="who"><b>${esc(C.me.name || (C.office ? '事務局' : 'オーナー'))}</b>${C.office ? '事務局・すべて見られる' : 'オーナー・自分の分' + ((C.staffOf || []).length ? '（任された店 ' + C.staffOf.length + '）' : '')}</div>` +
-      NAV.map(([k, t]) => `<button type="button" data-cv="${k}" class="${k === cv ? 'on' : ''}">${ico(k)}${t}${k === 'talks' ? `<span class="cbadge" data-conbadge ${unread ? '' : 'hidden'}>${unread}</span>` : ''}</button>`).join('') + '</nav>';
+      NAV.map(([k, t]) => `<button type="button" data-cv="${k}" class="${k === cv ? 'on' : ''}">${ico(k)}${t}${k === 'talks' ? `<span class="cbadge" data-conbadge ${unread ? '' : 'hidden'}>${unread}</span>` : ''}</button>`).join('') +
+      (C.canOffice && C.canSelf ? `<div class="cacct"><button type="button" class="cacc-btn" data-acct aria-expanded="${HBP.acctOpen ? 'true' : 'false'}"><span class="cav">${C.office ? '事' : esc((C.me.name || '自').slice(0, 1))}</span><span><b>${C.office ? 'ハタボ事務局' : esc(C.me.name || '自分')}</b><small>${C.office ? '事務局として見ています' : '自分として見ています'}</small></span><i aria-hidden="true">⌄</i></button>${HBP.acctOpen ? `<div class="cacc-menu" role="menu"><button type="button" role="menuitem" data-as="office" class="${C.office ? 'on' : ''}"><span class="cav">事</span><span><b>ハタボ事務局</b><small>すべての会話・愛棒・オーナー</small></span>${C.office ? '<em>✓</em>' : ''}</button><button type="button" role="menuitem" data-as="self" class="${C.office ? '' : 'on'}"><span class="cav">${esc((C.me.name || '自').slice(0, 1))}</span><span><b>${esc(C.me.name || '自分')}</b><small>自分のハタボと愛棒の分だけ</small></span>${C.office ? '' : '<em>✓</em>'}</button></div>` : ''}</div>` : '') + '</nav>';
     let main = '';
     const S0 = C.sums || {}, T = C.threads || [];
     if (cv === 'home') {
@@ -3861,9 +3876,12 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
           <tr><td>伝言のLINE通知・未読のバッジ</td>${Object.keys(L).map(() => '<td>あり</td>').join('')}</tr></tbody></table><p class="cmut">はじめは${n(C.keepDefault)}日。お試し中はZの表です。</p></div>
         <div class="ccard"><h3>APIキー</h3><button type="button" class="cbtn" data-go="api">AIからつなぐ（API）</button></div>`;
     }
-    body.innerHTML = `<div class="cn">${nav}<div class="cmain">${main}</div></div>`;
+    const asBar = C.canOffice && C.canSelf ? `<div class="casbar ${C.office ? 'off' : 'me'}"><b>${C.office ? '事務局として見ています' : esc(C.me.name || '自分') + 'として見ています'}</b><span>${C.office ? 'すべての会話・愛棒・オーナーが見えます' : '自分のハタボと愛棒の分だけ（ふつうのオーナーと同じ）'}</span><button type="button" class="cbtn" data-as="${C.office ? 'self' : 'office'}">${C.office ? '自分に切りかえる' : '事務局に切りかえる'}</button></div>` : C.office ? '<div class="casbar off"><b>事務局として見ています</b><span>すべての会話・愛棒・オーナーが見えます</span></div>' : '';
+    body.innerHTML = `<div class="cn">${nav}<div class="cmain">${asBar}${main}</div></div>`;
     const on = (sel, fn) => body.querySelectorAll(sel).forEach(e => e.addEventListener('click', ev => fn(e, ev)));
     on('[data-cv]', e => { HBP.cv = e.dataset.cv; hbpRender(); });
+    on('[data-acct]', () => { HBP.acctOpen = !HBP.acctOpen; hbpRender(); });
+    on('[data-as]', e => { const a = e.dataset.as; store.set('conAs', a); HBP.acctOpen = false; HBP.thr = null; HBP.cv = a === 'office' ? 'home' : 'talks'; toast(a === 'office' ? '事務局に切りかえました' : '自分に切りかえました'); jrSend({ type: 'console', as: a }); });
     on('[data-topen]', e => { HBP.cv = 'talks'; HBP.draft = ''; HBP.thr = HBP.thr && HBP.thr.t.id === e.dataset.topen ? HBP.thr : { t: Object.assign({ turns: [] }, (T.find(x => x.id === e.dataset.topen) || {})), panel: {} }; hbpRender(); jrSend({ type: 'thr_open', id: e.dataset.topen }); });
     on('[data-tback]', () => { HBP.thr = null; hbpRender(); });
     on('[data-tf]', e => { HBP.tf = e.dataset.tf; hbpRender(); });
@@ -3894,7 +3912,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
   }
   function hbpOpen(p) {
     if (!HBP.data) { try { const c = store.get('hbpData', null); if (c && c.type === 'mypage') HBP.data = c; } catch (e) {} }   // 前回の内容をすぐ出して、届いたら新しくする
-    HBP.page = p || 'my'; hbTheme(); $('hbPage').hidden = false; hbpRender(); if (HBP.page === 'console' && J.ready) jrSend({ type: 'console' }); if (HBS.friend === null) hbpFriend();
+    HBP.page = p || 'my'; hbTheme(); $('hbPage').hidden = false; hbpRender(); if (HBP.page === 'console' && J.ready) jrSend({ type: 'console', as: store.get('conAs', 'office') }); if (HBS.friend === null) hbpFriend();
     if (J.ready) jrSend({ type: 'mypage' });
   }
   function hbpClose() { $('hbPage').hidden = true; }

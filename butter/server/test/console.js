@@ -63,6 +63,10 @@ const talk = async (c, text) => { c.send({ type: 'text', text }); await c.until(
   const f = await client(port, { type: 'hello', idToken: 'off', app: 'hatabo' }); await f.until(m => m.type === 'ready');
   f.send({ type: 'console' }); const fc = await f.until(m => m.type === 'console' && m.threads);
   const selfT = fc.threads.find(t => t.self); assert.ok(fc.office && fc.threads.length === 2 && selfT && !selfT.body && !/ひとりごと/.test(JSON.stringify(fc)), '事務局はぜんぶ・自分のハタボの会話は件数と日時だけ');
+  f.send({ type: 'console', as: 'self' }); const fs1 = await f.until(m => m.type === 'console' && m.threads && m.as === 'self');
+  assert.ok(!fs1.office && fs1.canOffice && fs1.threads.length === 0, '事務局の人も「自分」にすると、自分の分だけ');
+  f.send({ type: 'console', as: 'office' }); const fs2 = await f.until(m => m.type === 'console' && m.threads && m.as === 'office');
+  assert.ok(fs2.office && fs2.threads.length === 2, '「事務局」にもどすと、ぜんぶ');
   v2.send({ type: 'con_set', shareSelf: true }); await v2.until(m => m.type === 'console' && m.msg);
   f.send({ type: 'console' }); assert.ok((await f.until(m => m.type === 'console' && m.threads && m !== fc)).threads.find(t => t.self).body, '本人が許したら事務局にも中身');
   f.send({ type: 'con_url_new', name: 'セミナー受付', role: 'サービス相談', days: 30 }); const fu = await f.until(m => m.type === 'console' && m.msg === '紹介URLを作りました');
