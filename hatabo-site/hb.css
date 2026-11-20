@@ -481,3 +481,8 @@ body.hb-peek .hbtop{bottom:180px}
 }
 @media(max-width:760px){.hbf ul{grid-template-columns:repeat(2,minmax(0,1fr))}.hbf li{min-width:0}.hbf li a{word-break:normal;overflow-wrap:anywhere}}
 @media(max-width:760px){.hbf li{display:flex}.hbf li a{display:block;flex:1;padding:19px 30px 19px 20px;min-height:0}}
+
+/* ブランド表記：HATHABO（下に小さく読み方） */
+.hbh .brand b{font:700 21px/1 "Noto Serif JP","Hiragino Mincho ProN","Yu Mincho",serif;letter-spacing:.12em;color:#16233F}
+.hbh .brand span small{display:block;font:700 9px/1 "Noto Sans JP";letter-spacing:.42em;color:#7A8296;margin-top:5px}
+@media(max-width:760px){.hbh .brand b{font-size:17px;letter-spacing:.1em}.hbh .brand span small{font-size:8px;margin-top:4px}}
