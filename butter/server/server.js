@@ -948,6 +948,14 @@ async function linkMacMenu(userId) {
 /* ===== LINEグループ：入ったら自己紹介とサービスガイド。招待した人のボタン、グループ専用の紹介コード、招待コードの投稿でグループを登録 ===== */
 const groupRefOf = gid => 'g' + Array.from(crypto.createHash('sha256').update('grp:' + gid).digest()).slice(0, 6).map(b => 'abcdefghjkmnpqrstuvwxyz23456789'[b % 31]).join('');
 const lineApi = (path, body) => fetch('https://api.line.me/v2/bot/' + path, { method: body ? 'POST' : 'GET', headers: Object.assign({ Authorization: 'Bearer ' + CH().token() }, body ? { 'Content-Type': 'application/json' } : {}), body: body ? JSON.stringify(body) : undefined });
+/** LINEのプロフィール写真（トーク一覧のアイコン）。友だちの人だけ取れる。1日ためておく */
+const picCache = new Map();
+async function picOf(visitor) {
+  const uid = (String(visitor || '').match(/U[0-9a-f]{32}/) || [])[0]; if (!uid || !ENV.HATABO_LINE_TOKEN) return '';
+  const c = picCache.get(uid); if (c && Date.now() - c.at < 86400000) return c.v;
+  let v = ''; try { const r = await fetch('https://api.line.me/v2/bot/profile/' + uid, { headers: { Authorization: 'Bearer ' + ENV.HATABO_LINE_TOKEN }, signal: AbortSignal.timeout(2000) }); if (r.ok) v = String((await r.json()).pictureUrl || ''); } catch (e) {}
+  picCache.set(uid, { v, at: Date.now() }); return v;
+}
 async function lineName(src) {
   try {
     const path = src.type === 'group' ? 'group/' + src.groupId + '/member/' + src.userId : src.type === 'room' ? 'room/' + src.roomId + '/member/' + src.userId : 'profile/' + src.userId;
@@ -1008,7 +1016,7 @@ async function groupSeen(src, ch) {
   if (g.name && g.ch === ch.id && now - (g.lastAt || 0) < 5 * 60000) return g;   // 5分に1回だけ書く
   const up = { gid, ch: ch.id, type: src.type, lastAt: now, active: true };
   if (src.type === 'group' && (!g.name || now - (g.nameAt || 0) > 86400000)) {
-    try { const j = await (await lineApi('group/' + gid + '/summary')).json(); if (j.groupName) { up.name = String(j.groupName).slice(0, 60); up.nameAt = now; } } catch (e) {}
+    try { const j = await (await lineApi('group/' + gid + '/summary')).json(); if (j.groupName) { up.name = String(j.groupName).slice(0, 60); up.nameAt = now; } if (j.pictureUrl) up.pic = String(j.pictureUrl); } catch (e) {}
     try { const j = await (await lineApi('group/' + gid + '/members/count')).json(); if (j.count) up.members = j.count; } catch (e) {}
   }
   await saveCol(gid, 'groups', up);
@@ -1019,7 +1027,7 @@ async function allGroups() {
   try { if (deps.db) return (await deps.db.collection('groups').limit(500).get()).docs.map(d => d.data()); } catch (e) { console.error('groups list', String(e.message).slice(0, 120)); }
   return Array.from(memCol.entries()).filter(([k]) => k.startsWith('groups:')).map(([, v]) => v);
 }
-const groupsOut = async () => (await allGroups()).filter(g => g.gid).map(g => ({ gid: g.gid, name: g.name || (g.type === 'room' ? '複数人トーク' : 'LINEグループ'), ch: g.ch || 'hatabo', members: g.members || 0, lastAt: g.lastAt || g.at || 0, active: g.active !== false, admin: !!g.admin, rec: !!g.rec, lastSent: g.lastSent || 0 })).sort((a, b) => b.lastAt - a.lastAt);
+const groupsOut = async () => (await allGroups()).filter(g => g.gid).map(g => ({ gid: g.gid, name: g.name || (g.type === 'room' ? '複数人トーク' : 'LINEグループ'), pic: g.pic || '', ch: g.ch || 'hatabo', members: g.members || 0, lastAt: g.lastAt || g.at || 0, active: g.active !== false, admin: !!g.admin, rec: !!g.rec, lastSent: g.lastSent || 0 })).sort((a, b) => b.lastAt - a.lastAt);
 const quotaCache = new Map();
 /** 公式LINEの今月の送信数の残り（5分ためておく） */
 async function lineQuota(chId) {
@@ -2062,7 +2070,7 @@ function session(ws) {
     const r = await getRef(t.shop).catch(() => null); return !!(r && r.shareSelf);   // 本人が「事務局にも中身を見せる」をオンにしたときだけ
   }
   const conReply = (t, sc) => !t.self && !String(t.visitor || '').startsWith('api:') && (sc.office || t.shop === S.myRef || sc.role[t.shop] === 'reply');
-  const tMeta = (t, body) => ({ id: t.id, shop: t.shop, aibo: t.aibo, aiboName: t.aiboName, self: !!t.self, ch: t.ch, entry: t.entry, vname: t.vname, last: t.last, n: t.n || 0, unread: t.unread || 0, preview: body ? t.preview : '（中身は本人だけが見られます）', body: !!body, days: t.days || KEEP_DEFAULT });
+  const tMeta = (t, body) => ({ id: t.id, pic: t.vpic || '', hasRef: !!t.vref, shop: t.shop, aibo: t.aibo, aiboName: t.aiboName, self: !!t.self, ch: t.ch, entry: t.entry, vname: t.vname, last: t.last, n: t.n || 0, unread: t.unread || 0, preview: body ? t.preview : '（中身は本人だけが見られます）', body: !!body, days: t.days || KEEP_DEFAULT });
   async function onConsole(m) {
     if ('as' in m) S.conAs = m.as === 'self' && S.myRef ? 'self' : 'office';
     if (!S.myRef && !isOffice()) return send({ type: 'console', denied: true });
@@ -2070,6 +2078,14 @@ function session(ws) {
     const clean = (x, n) => String(x == null ? '' : x).replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n);
     const loadT = async id => { const t = await loadCol(String(id || '').replace(/[^\w]/g, '').slice(0, 40), 'threads'); return t && t.id && conSee(t, sc) ? t : null; };
     let msg = '';
+    if (m.type === 'thr_goen') {   // トーク一覧で人を開いたとき：その人がだれから来て、だれにつないだか
+      const t = await loadT(m.id);
+      if (!t || !conSee(t, sc) || !t.vref) return send({ type: 'thr_goen', id: m.id, from: '', to: [] });
+      const r = await getRef(t.vref).catch(() => null) || {};
+      const from = r.parent ? await refLabel(r.parent).catch(() => '') : '';
+      const to = (await refKids(t.vref).catch(() => [])).slice(0, 20).map(k => String(k.name || 'ゲスト').slice(0, 12));
+      return send({ type: 'thr_goen', id: m.id, from, to });
+    }
     if (m.type === 'thr_open' || m.type === 'thr_draft' || m.type === 'thr_send' || m.type === 'consult') {
       const t = await loadT(m.id); if (!t) return send({ type: 'thread', id: m.id, denied: true });
       const body = await conBody(t, sc);
@@ -2166,7 +2182,9 @@ function session(ws) {
     if (m.type === 'con_url_set' && sc.office) { const code = clean(m.code, 20).replace(/[^\w-]/g, ''), r = await getRef(code).catch(() => null); if (r && r.kind === 'url') { await putRef(code, { active: !!m.active }); msg = m.active ? '再開しました' : '止めました'; } }
     // 一覧と数字
     const all = await threadsOf(sc.office ? null : sc.shops), list = [];
-    for (const t of all) if (conSee(t, sc)) list.push(tMeta(t, await conBody(t, sc)));
+    const seen = all.filter(t => conSee(t, sc));
+    await Promise.all(seen.slice(0, 40).map(async t => { t.vpic = await picOf(t.visitor).catch(() => ''); }));
+    for (const t of seen) list.push(tMeta(t, await conBody(t, sc)));
     const day0 = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10), isToday = x => x && new Date(x + 9 * 3600000).toISOString().slice(0, 10) === day0;
     const refs = sc.office ? await allRefs() : [];
     const mine = sc.office ? refs.filter(r => r.kind === 'clone' || r.kind === 'url') : [];
@@ -3131,7 +3149,7 @@ function session(ws) {
       if (m.type === 'clones' || m.type === 'clone_new' || m.type === 'clone_set') return onClones(m);
       if (m.type === 'admin' || m.type === 'admin_set') return onAdmin(m);
       if (m.type === 'api' || m.type === 'api_new' || m.type === 'api_stop' || m.type === 'api_resv') return onApi(m);
-      if (['console', 'thr_open', 'thr_draft', 'thr_send', 'consult', 'mem_set', 'mem_del', 'aibo_set', 'con_set', 'staff_add', 'staff_del', 'con_url_new', 'con_url_set', 'grp_send'].includes(m.type)) return onConsole(m).catch(e => { console.error('console', m.type, String(e && e.stack || e).slice(0, 400)); send({ type: 'console', error: '管理画面の読みこみでエラーがおきました（' + String(e && e.message || e).slice(0, 80) + '）' }); });
+      if (['console', 'thr_goen', 'thr_open', 'thr_draft', 'thr_send', 'consult', 'mem_set', 'mem_del', 'aibo_set', 'con_set', 'staff_add', 'staff_del', 'con_url_new', 'con_url_set', 'grp_send'].includes(m.type)) return onConsole(m).catch(e => { console.error('console', m.type, String(e && e.stack || e).slice(0, 400)); send({ type: 'console', error: '管理画面の読みこみでエラーがおきました（' + String(e && e.message || e).slice(0, 80) + '）' }); });
       if (m.type === 'docs' || m.type === 'docs_set' || m.type === 'docs_share' || m.type === 'docs_copy') return onDocs(m);
       if (m.type === 'friends') return send(await friendsView());
       if (m.type === 'friend_req' || m.type === 'friend_ok' || m.type === 'friend_no' || m.type === 'friend_del') return onFriend(m);
