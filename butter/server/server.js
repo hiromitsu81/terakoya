@@ -155,6 +155,24 @@ function familyOk(S) {
 }   // ハタボの1日の回数（X・G・Z）。こえたら追加チケット
 /** ありがとうポイント：紹介した人に。2代目のご縁の人には半分 */
 const THANKS = { visit: 100, trial: 300, contract: 1000 };
+/* ===== オーナーズクラブのランク：もらったありがとうポイントの合計（使っても減らない）で上がる。払った額ではなく、人の役に立った分で決まる ===== */
+const RANKS = [
+  { key: 'standard', label: 'スタンダード', pt: 0,     months: 0 },
+  { key: 'gold',     label: 'ゴールド',     pt: 1000,  months: 0 },
+  { key: 'platinum', label: 'プラチナ',     pt: 5000,  months: 6 },
+  { key: 'black',    label: 'ブラック',     pt: 20000, months: 12, deed: true },   // 声の採用か、愛祭の協力（事務局が記録）が1回以上
+];
+/** これまでにもらったポイントの合計（記録を始める前の人は、いまの残りを合計とみなす） */
+const earned = r => Math.max((r && r.ptsTotal) || 0, (r && r.pts) || 0);
+function rankOf(r) {
+  r = r || {};
+  const pt = earned(r), months = r.at ? Math.floor((Date.now() - r.at) / (30 * 86400000)) : 0, deed = (r.adopts || 0) + (r.aisaiHelp || 0) > 0;
+  let i = 0;
+  RANKS.forEach((k, j) => { if (pt >= k.pt && months >= k.months && (!k.deed || deed)) i = j; });
+  const cur = RANKS[i], nx = RANKS[i + 1];
+  return { key: cur.key, label: cur.label, pt, months,
+    next: nx ? { label: nx.label, needPt: Math.max(0, nx.pt - pt), needMonths: Math.max(0, nx.months - months), needDeed: !!nx.deed && !deed } : null };
+}
 /* ===== 決済（Stripe）：支払いページ → 支払いが済んだ知らせ（Webhook）→ 契約 → 本人と事務局に知らせる ===== */
 const stripeOn = () => !!ENV.STRIPE_SECRET_KEY;
 function stripeForm(obj, pre, out) {
@@ -406,7 +424,7 @@ async function myPage(S) {
     streak: st.last === day || st.last === new Date(Date.now() - 15 * 3600000).toISOString().slice(0, 10) ? st.streak || 0 : 0,
     lv, lvPct: Math.round((tot - base) / Math.max(1, next - base) * 100), learned: (S.learned || []).length + (S.lessons || []).length,
     kids: (mine && mine.kids) || 0, myRef: S.myRef || '', from: fromLabel || '',
-    pts: (mine && mine.pts) || 0, thanks: THANKS, tickets: (mine && mine.tickets) || 0, ticketPacks: TICKETS,
+    pts: (mine && mine.pts) || 0, rank: rankOf(mine), thanks: THANKS, tickets: (mine && mine.tickets) || 0, ticketPacks: TICKETS,
     unread: (inbox || []).filter(x => !x.read).length,
     funnel: S.funnel || funnelOf(mine), payReady: stripeOn(), lineups: LINEUP, trialDays: TRIAL_DAYS, trialDaily: TRIAL_DAILY, trialFirst: TRIAL_FIRST,
     notes: (notes || []).slice(0, 50), summary: String(S.memo || '').slice(0, 3000) };
@@ -582,7 +600,7 @@ async function tellUpline(S, what, kind) {
     const up = await getRef(c).catch(() => null);
     if (up && up.kind === 'group') { c = up.parent; i--; continue; }   // LINEグループの紹介コードは通りぬけて、招待した人・管理者へ
     const pt = Math.round((THANKS[kind] || 0) / Math.pow(2, i));
-    if (pt) await putRef(c, { pts: ((up && up.pts) || 0) + pt }).catch(() => {});
+    if (pt) await putRef(c, { pts: ((up && up.pts) || 0) + pt, ptsTotal: earned(up) + pt }).catch(() => {});
     const text = (i === 0 ? who + 'さんが、あなたの紹介で' + what + '。' : '（ご縁の' + (i + 1) + '代目）' + who + 'さんが' + what + '。') + (pt ? 'ありがとうポイント +' + pt + 'pt' : '');
     await postInbox(c, { kind: 'goen', from: S.myRef, fromName: who, text, pt }).catch(() => {});
     c = alias(up && up.parent);
@@ -1856,7 +1874,7 @@ function session(ws) {
         for (const [f, pt] of shares) {
           if (!f || !f.ref || !pt) continue;
           const r = await getRef(f.ref).catch(() => null) || {};
-          await putRef(f.ref, { pts: (r.pts || 0) + pt });
+          await putRef(f.ref, { pts: (r.pts || 0) + pt, ptsTotal: earned(r) + pt, adopts: (r.adopts || 0) + 1 });
           await postInbox(f.ref, { kind: 'goen', from: 'office', fromName: 'ハタボ事務局', text: 'あなたの声「' + it.title + '」が採用されました。ありがとうポイント +' + pt + 'pt' });
         }
         it.status = 'done'; it.pts = pts; it.doneAt = Date.now();
@@ -2806,4 +2824,4 @@ if (require.main === module) {
   deps.init();
   createServer().listen(ENV.PORT, () => console.log('butter-junior on :' + ENV.PORT));
 }
-module.exports = { cmVideo, brandOut, createServer, deps, ENV, splitter, takeEmotion, clean, PHOTO_RE, VIDEO_RE, session, calledJunior, calledJam, hearingStart, hearingCheckAll, handleStripeEvent, stripeSigOk, funnelOf, getRef, putRef, checkoutFor };
+module.exports = { cmVideo, brandOut, rankOf, RANKS, createServer, deps, ENV, splitter, takeEmotion, clean, PHOTO_RE, VIDEO_RE, session, calledJunior, calledJam, hearingStart, hearingCheckAll, handleStripeEvent, stripeSigOk, funnelOf, getRef, putRef, checkoutFor };
