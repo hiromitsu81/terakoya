@@ -864,7 +864,7 @@ html:not(.kmapp) body:not(.av-komugi) .mybtn img[src$="xm_w.png"] { width: auto;
 .hbrank.r-black { background: radial-gradient(ellipse at 20% 0%,#1B2338,#0A0D14 75%); color: #E6E9EE; }
 .hbrank.r-black .k, .hbrank.r-black p, .hbrank.r-black small { color: #B9C0CB; }
 .hbrank.r-black h3, .hbrank.r-black .big { color: #F2F4F7; }
-/* 分身と、事務局の管理画面 */
+/* 役割つきの愛棒と、事務局の管理画面 */
 .hburl { display: flex; gap: 8px; align-items: center; } .hburl .hbin { margin: 0; font-size: 13px; } .hburl .hbbtn { width: auto; margin: 0; white-space: nowrap; }
 .hbrow2 { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; } .hbrow2 > * { flex: 1 1 140px; } .hbrow2 label { font-size: 12px; color: var(--soft); }
 .hbclone.off { opacity: .6; }
@@ -1451,7 +1451,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
 <div class="hbpage" id="hbPage" hidden>
   <div class="hbp-top"><img class="flag" src="https://www.hatha-lab.com/xm_w.png" alt=""><b id="hbpTitle">Myハタボ</b><button type="button" id="hbpClose">ハタボと話す</button></div>
   <nav class="hbp-tabs" id="hbpTabs" aria-label="Myハタボのメニュー">
-    <button type="button" data-p="my">Myハタボ</button><button type="button" data-p="notes">メモ・議事録</button><button type="button" data-p="inbox">伝言</button><button type="button" data-p="goen">ご縁</button><button type="button" data-p="clones">分身</button><button type="button" data-p="gacha">ガチャ</button><button type="button" data-p="friends">友だち</button><button type="button" data-p="grow">育てたハタボ</button><button type="button" data-p="aisai">AISAI・愛祭</button><button type="button" data-p="settings">設定</button>
+    <button type="button" data-p="my">Myハタボ</button><button type="button" data-p="notes">メモ・議事録</button><button type="button" data-p="inbox">伝言</button><button type="button" data-p="goen">ご縁</button><button type="button" data-p="clones">愛棒</button><button type="button" data-p="gacha">ガチャ</button><button type="button" data-p="friends">友だち</button><button type="button" data-p="grow">育てたハタボ</button><button type="button" data-p="aisai">AISAI・愛祭</button><button type="button" data-p="settings">設定</button>
   </nav>
   <div class="hbp-body" id="hbpBody"></div>
 </div>
@@ -3182,7 +3182,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
   ];
   function hbpRender() {
     const p = HBP.page, d = HBP.data, nm = avName() || 'ハタボ';
-    $('hbpTitle').textContent = { clones: '分身', admin: '事務局の管理画面', settings: '設定', google: 'Googleアカウント連携', social: '公開設定', custom: 'キャラ設定', ticket: '追加チケット', my: 'Myハタボ', notes: 'メモ・議事録', grow: '育てた' + nm, goen: 'ご縁のひろがり', inbox: '伝言', gacha: 'AI棒ガチャ', friends: '友だち', plan: 'プラン・支払い', aisai: 'AISAI・愛祭', times: 'ハタボタイムズ', share: '紹介する' }[p] || 'Myハタボ';
+    $('hbpTitle').textContent = { clones: '愛棒', admin: '事務局の管理画面', settings: '設定', google: 'Googleアカウント連携', social: '公開設定', custom: 'キャラ設定', ticket: '追加チケット', my: 'Myハタボ', notes: 'メモ・議事録', grow: '育てた' + nm, goen: 'ご縁のひろがり', inbox: '伝言', gacha: 'AI棒ガチャ', friends: '友だち', plan: 'プラン・支払い', aisai: 'AISAI・愛祭', times: 'ハタボタイムズ', share: '紹介する' }[p] || 'Myハタボ';
     const tabOf = { custom: 'settings', google: 'settings', social: 'settings', plan: 'settings', ticket: 'settings', times: 'settings', share: 'settings' }[p] || p;
     document.querySelectorAll('#hbpTabs button').forEach(b => b.classList.toggle('on', b.dataset.p === tabOf));
     { const on = document.querySelector('#hbpTabs .on'); if (on) try { on.scrollIntoView({ inline: 'center', block: 'nearest' }); } catch (e) {} }
@@ -3221,7 +3221,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
       body.querySelectorAll('[data-copy]').forEach(b => b.onclick = async () => { const n = list.find(x => x.id === b.dataset.copy); try { await navigator.clipboard.writeText(n.title + '\n\n' + n.text); toast('コピーしたよ'); } catch (e) { toast('コピーできなかった'); } });
       body.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { if (confirmDel(b)) jrSend({ type: 'note_del', id: b.dataset.del }); });
     } else if (p === 'settings') {
-      const rows = [['custom', 'キャラ設定', '名前・呼び方・声と方言・話し方・長さ・いつもの指示'], ['google', 'Googleアカウント連携', KOMUGI_APP ? 'コムギとの会話・議事録・メモを、自分のGoogleドライブへ' : '議事録やメモをGoogleドライブへ'], ['social', '公開設定', 'ガチャに出る・LINE ID・Instagram'], ...(J.mac ? [['docs', '資料フォルダ', 'ドライブの資料をコムギに読ませる・紹介先で使うかを選ぶ']] : J.bridge ? [['docs', '共有された資料', '馬越さんが共有した資料。自分のドライブにも入れられます']] : []), ...(J.office ? [['admin', '事務局の管理画面', 'お客さま・分身の一覧、役割とメモ、変更の記録'], ['reqs', '事務局への声', '要望・不具合・問い合わせの一覧と採用']] : []), ['plan', 'プラン・支払い', 'お試し・お支払い'], ['ticket', '追加チケット', '回数をこえたときのチケット'], ['share', '紹介する', 'ハタボのカードを友だちに'], ['times', 'ハタボタイムズ', 'お知らせ・使い方'], ['oa', '公式LINEのトークへ', 'トークをピン留めしておくと、いつでもすぐ開けます'], ['pc', 'PCで使う', 'PCのブラウザでも、同じハタボと話せます']];
+      const rows = [['custom', 'キャラ設定', '名前・呼び方・声と方言・話し方・長さ・いつもの指示'], ['google', 'Googleアカウント連携', KOMUGI_APP ? 'コムギとの会話・議事録・メモを、自分のGoogleドライブへ' : '議事録やメモをGoogleドライブへ'], ['social', '公開設定', 'ガチャに出る・LINE ID・Instagram'], ...(J.mac ? [['docs', '資料フォルダ', 'ドライブの資料をコムギに読ませる・紹介先で使うかを選ぶ']] : J.bridge ? [['docs', '共有された資料', '馬越さんが共有した資料。自分のドライブにも入れられます']] : []), ...(J.office ? [['admin', '事務局の管理画面', 'お客さま・役割つきの愛棒の一覧、役割とメモ、変更の記録'], ['reqs', '事務局への声', '要望・不具合・問い合わせの一覧と採用']] : []), ['plan', 'プラン・支払い', 'お試し・お支払い'], ['ticket', '追加チケット', '回数をこえたときのチケット'], ['share', '紹介する', 'ハタボのカードを友だちに'], ['times', 'ハタボタイムズ', 'お知らせ・使い方'], ['oa', '公式LINEのトークへ', 'トークをピン留めしておくと、いつでもすぐ開けます'], ['pc', 'PCで使う', 'PCのブラウザでも、同じハタボと話せます']];
       const curG = store.get('jrPlan2', J.canPlan ? 'super' : 'std');
       const GR = [['std', 'X', 'ふだん使い。速くて手軽'], ['high', 'G', '賢いモデルで、少しくわしく'], ['super', 'Z', 'Claudeと同じ精度で、最後まで']];
       const gradeCard = `<div class="hbc"><div class="k">GRADE</div><h3>グレード</h3>${J.canPlan ? `<p>いまのグレードを切りかえられます。お試しのあいだは、3つを使いくらべてみてね。</p><div class="hbgr">${GR.map(([k, n, d0]) => `<button type="button" class="hbgrb${k === curG ? ' on' : ''}" data-grade="${k}"><b>${n}</b><span>${d0}</span></button>`).join('')}</div>` : `<p>いまのグレード：<b>${PLAN_NAME[curG] || 'X'}</b>。グレードを上げるときは「プラン・支払い」からどうぞ。</p>`}</div>`;
@@ -3247,27 +3247,27 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
     } else if (p === 'clones') {
       const C = HBP.clones;
       if (!C) { body.innerHTML = '<div class="hbc"><p>よみこみ中…</p></div>'; if (J.ready) jrSend({ type: 'clones' }); return; }
-      if (C.denied) { body.innerHTML = '<div class="hbc"><p>分身は、自分のハタボを持っている人が作れます。</p></div>'; return; }
+      if (C.denied) { body.innerHTML = '<div class="hbc"><p>役割つきの愛棒は、自分のハタボを持っている人が作れます。</p></div>'; return; }
       const dt = t => t ? new Date(t).toLocaleDateString('ja-JP') : '';
       const opt = (list, cur) => list.map(x => typeof x === 'string' ? `<option ${x === cur ? 'selected' : ''}>${esc(x)}</option>` : `<option value="${esc(x.id)}" ${x.id === cur ? 'selected' : ''}>${esc(x.name)}</option>`).join('');
       const items = (C.items || []).map(x => `<div class="hbc hbclone ${x.open ? '' : 'off'}"><div class="k">${esc(x.role)}${x.label ? '・' + esc(x.label) + '向け' : ''}</div><h3>${esc(x.name)} <span class="hbtag">${x.open ? '受付中' : x.active ? '期限切れ' : '止めています'}</span></h3>
           <div class="hburl"><input class="hbin" readonly value="${esc(x.url)}"><button type="button" class="hbbtn w" data-ccopy="${esc(x.url)}">コピー</button></div>
-          <p class="hbmuted">開いた回数 ${n(x.visits)}・この分身から来た人 ${n(x.kids)}人${x.until ? '・期限 ' + dt(x.until) : '・期限なし'}${x.lastAt ? '・最後に使われた日 ' + dt(x.lastAt) : ''}</p>
+          <p class="hbmuted">開いた回数 ${n(x.visits)}・この愛棒から来た人 ${n(x.kids)}人${x.until ? '・期限 ' + dt(x.until) : '・期限なし'}${x.lastAt ? '・最後に使われた日 ' + dt(x.lastAt) : ''}</p>
           <div class="hbrow2"><label>役割<select class="hbin" data-crole="${esc(x.code)}">${opt(C.roles || [], x.role)}</select></label><label>キャラ<select class="hbin" data-cav="${esc(x.code)}">${opt(C.avatars || [], x.avatar)}</select></label></div>
           <label class="hbsw"><input type="checkbox" data-cprice="${esc(x.code)}" ${x.price ? 'checked' : ''}><span>料金・値段の話をしてよい</span></label>
           <label class="hbsw"><input type="checkbox" data-creserve="${esc(x.code)}" ${x.reserve ? 'checked' : ''}><span>予約や申しこみの希望を聞いて、わたしに伝える</span></label>
-          <textarea class="hbin" rows="2" data-cnote="${esc(x.code)}" placeholder="この分身へのメモ（定休日、伝えてよいこと・いけないこと など）">${esc(x.note)}</textarea>
+          <textarea class="hbin" rows="2" data-cnote="${esc(x.code)}" placeholder="この愛棒へのメモ（定休日、伝えてよいこと・いけないこと など）">${esc(x.note)}</textarea>
           <div class="hbrow2"><button type="button" class="hbbtn w" data-csave="${esc(x.code)}">メモを保存</button><button type="button" class="hbbtn w" data-cext="${esc(x.code)}">期限を30日のばす</button><button type="button" class="hbbtn ${x.active ? 'w' : ''}" data-cact="${esc(x.code)}" data-on="${x.active ? 0 : 1}">${x.active ? '止める' : 'また受けつける'}</button></div></div>`).join('');
-      body.innerHTML = `<div class="hbc"><div class="k">CLONES</div><h3>分身</h3><p>あなたの愛棒から、受付用・相談役用などの分身を作って、URLを渡せます。渡した人は、自分のハタボを持っていなくても、あなたの分身と話せます。分身から来た人が話しはじめると、ありがとうポイントが届きます。</p><p class="hbmuted">いまのランク：${esc(C.rank)}（作れる分身は${n(C.cap)}つまで・いま${n((C.items || []).length)}つ）</p></div>
-        <div class="hbc"><div class="k">NEW</div><h3>分身を作る</h3>
-          <input class="hbin" id="clName" placeholder="分身の名前（例：受付くん）" maxlength="30">
+      body.innerHTML = `<div class="hbc"><div class="k">AIBO</div><h3>役割つきの愛棒</h3><p>受付・予約係・相談役など、役割ごとに愛棒を増やして、URLを渡せます。渡した人は、自分のハタボを持っていなくても、あなたの愛棒と話せます。その愛棒から来た人が話しはじめると、ありがとうポイントが届きます。</p><p class="hbmuted">いまのランク：${esc(C.rank)}（作れる愛棒は${n(C.cap)}人まで・いま${n((C.items || []).length)}人）</p></div>
+        <div class="hbc"><div class="k">NEW</div><h3>愛棒を増やす</h3>
+          <input class="hbin" id="clName" placeholder="愛棒の名前（例：受付くん）" maxlength="30">
           <div class="hbrow2"><label>役割<select class="hbin" id="clRole">${opt(C.roles || [], '受付')}</select></label><label>キャラ<select class="hbin" id="clAv">${opt(C.avatars || [], 'hatabo')}</select></label></div>
           <input class="hbin" id="clLabel" placeholder="だれに渡す？（例：お店のお客さん、〇〇さん）" maxlength="60">
           <label>期限<select class="hbin" id="clDays"><option value="0">期限なし</option><option value="7">7日</option><option value="30" selected>30日</option><option value="90">90日</option><option value="365">1年</option></select></label>
           <label class="hbsw"><input type="checkbox" id="clPrice"><span>料金・値段の話をしてよい</span></label>
           <label class="hbsw"><input type="checkbox" id="clReserve"><span>予約や申しこみの希望を聞いて、わたしに伝える</span></label>
-          <textarea class="hbin" id="clNote" rows="2" placeholder="この分身へのメモ（あとから変えられます）"></textarea>
-          <button type="button" class="hbbtn" id="clMake">分身を作って、URLをLINEに送る</button></div>${items || ''}`;
+          <textarea class="hbin" id="clNote" rows="2" placeholder="この愛棒へのメモ（あとから変えられます）"></textarea>
+          <button type="button" class="hbbtn" id="clMake">愛棒を作って、URLをLINEに送る</button></div>${items || ''}`;
       body.querySelector('#clMake').onclick = e => { e.target.disabled = true; jrSend({ type: 'clone_new', name: $('clName').value, role: $('clRole').value, avatar: $('clAv').value, label: $('clLabel').value, days: $('clDays').value, price: $('clPrice').checked, reserve: $('clReserve').checked, note: $('clNote').value }); };
       const set = (code, o) => jrSend(Object.assign({ type: 'clone_set', code }, o));
       body.querySelectorAll('[data-ccopy]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(b.dataset.ccopy); toast('コピーしたよ'); } catch (e) { toast('コピーできなかった'); } });
@@ -3283,15 +3283,15 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
       if (!A) { body.innerHTML = '<div class="hbc"><p>よみこみ中…</p></div>'; if (J.ready) jrSend({ type: 'admin' }); return; }
       if (A.denied) { body.innerHTML = '<div class="hbc"><p>事務局だけが見られる画面です。</p></div>'; return; }
       const dt = t => t ? new Date(t).toLocaleDateString('ja-JP') : '';
-      const K = { person: '人', clone: '分身', group: 'グループ' }, ST = { ref: '紹介', trial: 'お試し', contract: '契約', expired: '期限切れ', cancel: '解約' };
+      const K = { person: '人', clone: '役割つき愛棒', group: 'グループ' }, ST = { ref: '紹介', trial: 'お試し', contract: '契約', expired: '期限切れ', cancel: '解約' };
       const q = (HBP.adminQ || '').trim(), kf = HBP.adminK || '';
       const rows = (A.rows || []).filter(r => (!kf || r.kind === kf || (kf === 'pay' && r.payFail)) && (!q || [r.name, r.ownerName, r.code, r.role, r.lineup].join(' ').includes(q)));
       const s = A.sum || {};
       body.classList.add('wide');
-      body.innerHTML = `<div class="hbc"><div class="k">OFFICE</div><h3>事務局の管理画面</h3><p class="hbmuted">人 ${n(s.people)}・お試し ${n(s.trial)}・契約 ${n(s.contract)}・支払いの失敗 ${n(s.payFail)}・分身 ${n(s.clones)}・グループ ${n(s.groups)}</p>
-          <div class="hbrow2"><input class="hbin" id="adQ" placeholder="名前・コード・役割でさがす" value="${esc(q)}"><select class="hbin" id="adK"><option value="">ぜんぶ</option><option value="person" ${kf === 'person' ? 'selected' : ''}>人</option><option value="clone" ${kf === 'clone' ? 'selected' : ''}>分身</option><option value="group" ${kf === 'group' ? 'selected' : ''}>グループ</option><option value="pay" ${kf === 'pay' ? 'selected' : ''}>支払いの失敗</option></select><button type="button" class="hbbtn w" id="adR">読みなおす</button></div></div>
+      body.innerHTML = `<div class="hbc"><div class="k">OFFICE</div><h3>事務局の管理画面</h3><p class="hbmuted">人 ${n(s.people)}・お試し ${n(s.trial)}・契約 ${n(s.contract)}・支払いの失敗 ${n(s.payFail)}・役割つきの愛棒 ${n(s.clones)}・グループ ${n(s.groups)}</p>
+          <div class="hbrow2"><input class="hbin" id="adQ" placeholder="名前・コード・役割でさがす" value="${esc(q)}"><select class="hbin" id="adK"><option value="">ぜんぶ</option><option value="person" ${kf === 'person' ? 'selected' : ''}>人</option><option value="clone" ${kf === 'clone' ? 'selected' : ''}>役割つきの愛棒</option><option value="group" ${kf === 'group' ? 'selected' : ''}>グループ</option><option value="pay" ${kf === 'pay' ? 'selected' : ''}>支払いの失敗</option></select><button type="button" class="hbbtn w" id="adR">読みなおす</button></div></div>
         <div class="hbc adtbl"><table><thead><tr><th>名前</th><th>種類</th><th>状態</th><th>ランク・pt</th><th>ご縁・開いた</th><th>役割（URLごと）</th><th>メモ</th><th>はじめた日</th><th></th></tr></thead><tbody>${rows.slice(0, 300).map(r => `<tr>
-          <td><b>${esc(r.name || r.ownerName || '（名前なし）')}</b><br><small class="hbmuted">${esc(r.code)}${r.kind === 'clone' && r.ownerName ? '・' + esc(r.ownerName) + 'さんの分身' : ''}</small></td>
+          <td><b>${esc(r.name || r.ownerName || '（名前なし）')}</b><br><small class="hbmuted">${esc(r.code)}${r.kind === 'clone' && r.ownerName ? '・' + esc(r.ownerName) + 'さんの愛棒' : ''}</small></td>
           <td>${K[r.kind] || esc(r.kind)}${r.kind === 'clone' ? (r.active ? '' : '（止）') : ''}</td>
           <td>${esc(ST[r.stage] || r.stage || '')}${r.lineup ? '<br><small>' + esc(r.lineup) + ' ' + esc(r.grade) + '</small>' : ''}${r.payFail ? '<br><b style="color:#C0392B">支払い失敗</b>' : ''}</td>
           <td>${esc(r.rank)}<br><small>${n(r.ptsTotal)}pt（残り${n(r.pts)}）${r.adopts ? '・採用' + n(r.adopts) : ''}${r.aisaiHelp ? '・愛祭' + n(r.aisaiHelp) : ''}</small></td>

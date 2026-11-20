@@ -35,7 +35,7 @@ function client(port, hello) { return new Promise((resolve, reject) => {
   v.ws.send(JSON.stringify({ type: 'text', text: 'こんにちは' }));
   await v.until(m => m.type === 'reply_end' || m.type === 'text_end' || m.type === 'end', 6000).catch(() => {});
   await new Promise(r => setTimeout(r, 300));
-  assert.ok(/ヒロさんの愛棒の分身/.test(lastSystem) && /受付/.test(lastSystem) && /定休日は水曜/.test(lastSystem) && /料金・値段の話はしない/.test(lastSystem), '分身の窓口は役割とメモで話す');
+  assert.ok(/ヒロさんの愛棒です（役割つき）/.test(lastSystem) && /受付/.test(lastSystem) && /定休日は水曜/.test(lastSystem) && /料金・値段の話はしない/.test(lastSystem), '分身の窓口は役割とメモで話す');
   v.ws.close();
   o.ws.send(JSON.stringify({ type: 'clone_set', code: cl.code, active: false }));
   await o.until(m => m.type === 'clones' && m.items && m.items[0] && m.items[0].active === false);
@@ -49,6 +49,6 @@ function client(port, hello) { return new Promise((resolve, reject) => {
   assert.ok(ad2.audit.length === 1 && ad2.rows.find(r => r.code === cl.code).aisaiHelp === 1, '変更は記録に残る');
   const vv = await client(port, { type: 'hello', idToken: 'vis', app: 'hatabo' }); await vv.until(m => m.type === 'ready');
   vv.ws.send(JSON.stringify({ type: 'admin' })); const dn = await vv.until(m => m.type === 'admin'); assert.ok(dn.denied, '事務局以外は見られない');
-  console.log('OK：分身（作る・役割とメモで話す・止める）・事務局の管理画面（一覧・変更の記録・事務局だけ）');
+  console.log('OK：役割つきの愛棒（作る・役割とメモで話す・止める）・事務局の管理画面（一覧・変更の記録・事務局だけ）');
   server.close(); process.exit(0);
 })().catch(e => { console.error('NG', e); process.exit(1); });
