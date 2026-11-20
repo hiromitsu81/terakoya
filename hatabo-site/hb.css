@@ -530,3 +530,6 @@ body.hb-peek .hbtop{bottom:180px}
 .fvsl.sv .fvb{background:linear-gradient(180deg,#FFFFFF,#C9CFD8);color:#0A0D14!important;box-shadow:0 0 0 1px rgba(255,255,255,.25),0 14px 28px -12px rgba(0,0,0,.6)}
 .fvsl.sv .fvs2{color:#DCE0E7}.fvsl.sv .fvc span{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.18);color:#DCE0E7}
 .fvsl.sv .fvi{border-color:#1E2536}
+/* Myハタボのしるし：旗 */
+.hb .myflag,.myflag{display:inline-block!important;width:auto;height:18px;vertical-align:-3px;margin-right:2px}
+.myflag.lg{height:.82em;vertical-align:-.04em;margin-right:.18em}

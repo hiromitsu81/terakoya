@@ -548,7 +548,7 @@ async function sendDigests() {
     const km = d.ch === 'komugi', tok = km ? LINE_CH.komugi.token() : ENV.HATABO_LINE_TOKEN;
     const body = (km ? '【コムギから、きょうのまとめ】' : '【ハタボ、きょうのまとめ】') + '\n' + items.map(x => '・' + x.text).join('\n').slice(0, 4300) + '\n\n' + (km ? 'くわしくはコムギで：' + LINE_CH.komugi.mini + '?page=inbox' : 'くわしくはMyハタボで：https://miniapp.line.me/2012676035-yCkx6tBu?page=inbox');
     if (tok && /^U[0-9a-f]{32}$/.test(id)) {
-      const r = await fetch('https://api.line.me/v2/bot/message/push', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: brandOut(JSON.stringify({ to: id, messages: [{ type: 'text', text: body }] })) }).catch(e => ({ ok: false, status: String(e.message) }));
+      const r = await fetch('https://api.line.me/v2/bot/message/push', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ to: id, messages: [{ type: 'text', text: body }] }) }).catch(e => ({ ok: false, status: String(e.message) }));
       if (!r.ok) { console.error('digest push', r.status); continue; }
     }
     await saveCol(id, 'digest', { items: [] }); sent++;
@@ -997,7 +997,7 @@ function lineWebhook(req, res, chId) {
           messages = [{ type: 'flex', altText: 'ハタボとはミニアプリで話せるボー', contents: oaCard('HATABO', 'ハタボとはこちらで話せるボー', ['ここ（トーク）では返事ができないので、ミニアプリで話しかけてほしいボー。いまの続きから話せるボー。'], 'ハタボと話す', CH().mini) }];
         }
         if (messages && ch.id === 'komugi' && ev.type !== 'follow' && !(ev.type === 'message' && !inGroup)) messages = kmSkin(komugiize(messages));
-        if (messages && ev.replyToken) await fetch('https://api.line.me/v2/bot/message/reply', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + ch.token() }, body: brandOut(bizBo(JSON.stringify({ replyToken: ev.replyToken, messages }))) }).then(r => { if (!r.ok) console.error('reply', r.status); });
+        if (messages && ev.replyToken) await fetch('https://api.line.me/v2/bot/message/reply', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + ch.token() }, body: bizBo(JSON.stringify({ replyToken: ev.replyToken, messages })) }).then(r => { if (!r.ok) console.error('reply', r.status); });
       }
     } catch (e) { console.error('webhook', String(e.message).slice(0, 160)); }
   }));
@@ -1177,7 +1177,7 @@ const bizBo = t => String(t)
   .replace(/(?<!ハタ)くボー(?![ァ-ヶー])/g, 'きます').replace(/(?<!ハタ)すボー(?![ァ-ヶー])/g, 'します').replace(/(?<!ハタ)ぶボー(?![ァ-ヶー])/g, 'びます').replace(/(?<!ハタ)つボー(?![ァ-ヶー])/g, 'ちます').replace(/(?<!ハタ)むボー(?![ァ-ヶー])/g, 'みます').replace(/(?<!ハタ)うボー(?![ァ-ヶー])/g, 'います')
   .replace(/(?<!ハタ)いボー(?![ァ-ヶー])/g, 'いです')
   .replace(/(?<!ハタ)ボー(?![ァ-ヶー])/g, '');
-/** 画面とLINEに出す名前の表記：ハタボ → HATHABO（Myハタボ・ハタボーラ・ハタボックスはそのまま）。声は READ_DICT で「ハタボ」と読む */
+/** 名前の表記をHATHABOにしたいときの変換（いまは使っていない。ロゴ以外はカタカナのハタボ）。声は READ_DICT で「ハタボ」と読む */
 const brandOut = t => String(t).replace(/(?<!My)ハタボ(?!ー|ック|ウ)/g, 'HATHABO').replace(/(?<![A-Za-z_./-])HATABO(?![A-Za-z_])/g, 'HATHABO');
 function hataboHello(callMe, service, lineName) {
   if (!callMe) return 'はじめまして' + (lineName ? '、' + lineName + 'さん' : '') + '。ハタボです。話すだけで動くAIの愛棒（AIエージェント）をお届けしています。お困りごとを、ハタボでどう解決できるか一緒に考えます。大事なご相談は、〈伝え先〉に伝えます。まず、なんとお呼びすればいいですか？' + (lineName ? '「' + lineName + 'さん」でよろしいですか？' : '');
