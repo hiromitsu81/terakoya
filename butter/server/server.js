@@ -244,7 +244,7 @@ async function priceFor(lineup, grade, pay) {
 /** 支払いページを作る。お試し中なら、お試しが終わるまでは引き落とさない */
 async function checkoutFor(S, r, f) {
   const price = await priceFor(f.lineup, f.grade, f.pay);
-  if (!price) return null;
+  if (!price) { console.log('checkout noprice', f.lineup + '_' + f.grade + '_' + f.pay); return null; }
   const back = (S.avatar === 'komugi' ? LINE_CH.komugi.mini : HATABO_MINI) + '?page=plan';
   const trialEnd = f.stage === 'trial' && (r.trialUntil || 0) > Date.now() + 49 * 3600000 ? Math.floor(r.trialUntil / 1000) : 0;
   const md = { myRef: S.myRef, lineup: f.lineup, grade: f.grade, pay: f.pay, refFrom: S.refFrom || '', name: String(S.me || '').slice(0, 40) };
@@ -2412,6 +2412,7 @@ function session(ws) {
   }
   /** お試しの申し込み・プランの変更・お試しをやめる・契約。ヒロさんに案件メモで知らせる */
   async function onFunnel(m) {
+    console.log('funnel in', JSON.stringify({ act: m.act, lineup: m.lineup, grade: m.grade, ref: !!S.myRef, owner: S.owner || '', stripe: stripeOn() }));
     if (!S.myRef) return send({ type: 'notice', why: 'funnel', detail: 'no ref' });
     const act = String(m.act || ''), L = LINEUP[m.lineup], g = String(m.grade || ''), pay = m.pay === 'y' ? 'y' : 'm';
     const r = await getRef(S.myRef).catch(() => null) || {}, cur = funnelOf(r), now = Date.now();
@@ -3566,7 +3567,7 @@ function createServer() {
     server, path: '/talk', maxPayload: 16 * 1024 * 1024,
     verifyClient: info => { const o = info.origin || ''; return !o || ENV.ALLOWED_ORIGINS.some(a => o === a || o.endsWith('.' + a.replace(/^https?:\/\//, ''))); },
   });
-  wss.on('connection', ws => session(ws));
+  wss.on('connection', (ws, req) => { console.log('talk open', String(req && req.headers && req.headers.origin || '').slice(0, 60)); session(ws); });
   return server;
 }
 
