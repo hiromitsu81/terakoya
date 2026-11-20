@@ -42,6 +42,9 @@ const talk = async (c, text) => { c.send({ type: 'text', text }); await c.until(
   const th = c1.threads.find(t => t.aibo === cl.code);
   assert.ok(th && th.unread === 1 && th.entry === 'url' && th.body && c1.sums.unread === 1 && c1.threads.length === 1, 'オーナーは自分の愛棒の会話だけ・伝言は未読1');
   assert.ok(!JSON.stringify(c1).includes('Ubbbb'), 'LINEのIDは出さない');
+  o.send({ type: 'thr_goen', id: th.id }); const tg = await o.until(m => m.type === 'thr_goen');
+  assert.ok(tg.id === th.id && Array.isArray(tg.to), 'トーク一覧：その人のご縁');
+  assert.ok('pic' in th && th.hasRef, 'アイコンの欄と、ご縁が見られる印');
   o.send({ type: 'thr_open', id: th.id }); const op = await o.until(m => m.type === 'thread');
   assert.ok(op.t.turns.length === 2 && op.t.canReply && op.panel.editAibo, '開くと中身・返事できる・愛棒を直せる');
   o.send({ type: 'console' }); assert.strictEqual((await o.until(m => m.type === 'console' && m.threads)).sums.unread, 0, '開いたら既読');
