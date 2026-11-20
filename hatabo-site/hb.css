@@ -536,3 +536,7 @@ body.hb-peek .hbtop{bottom:180px}
 /* 文の区切り：広い画面では文ごとに改行、行はなるべく長く */
 .sbr{display:none}
 @media(min-width:761px){.sbr{display:inline}.hb .lead2{max-width:min(100%,64em)}.hb p,.hb figcaption{text-wrap:wrap}}
+/* スクロールしたあとのヘッダーも黒のまま */
+.hbh.scd{background:rgba(10,13,20,.97);box-shadow:0 10px 30px -18px rgba(0,0,0,.7)}
+.hbh .in:after{background:rgba(255,255,255,.08)}
+@media(max-width:760px){.hbh .my{background:transparent;border-color:rgba(255,255,255,.24)!important}}
