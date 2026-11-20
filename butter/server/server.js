@@ -339,6 +339,17 @@ function thinkNext(e) {
   if (/thinking/i.test(t) && /400|invalid|not supported|unsupported/i.test(t) && THINK.i < THINK.modes.length - 1) { THINK.i++; console.error('thinking mode →', THINK.modes[THINK.i] || '(なし)'); return true; }
   return false;
 }
+/** 自分のClaudeのAPIキーで動かす（BYOK）。キーごとに1つだけ作ってためる */
+const byokClients = new Map();
+function byokClient(key) {
+  if (!key) return null;
+  if (byokClients.has(key)) return byokClients.get(key);
+  const Anthropic = require('@anthropic-ai/sdk'), M = new Anthropic({ apiKey: key }).messages;
+  const c = { messages: { stream: p => M.stream(thinkPrep(p)), create: async p => { for (;;) { try { return await M.create(thinkPrep(p)); } catch (e) { if (thinkNext(e)) continue; throw e; } } } } };
+  if (byokClients.size > 200) byokClients.clear();
+  byokClients.set(key, c); return c;
+}
+const BYOK_RE = /^sk-ant-[A-Za-z0-9_-]{20,200}$/;
 /* ===== 外のサービス（テストでは差しかえる） ===== */
 const deps = {
   claude: null, stt: null, tts: null, db: null,
@@ -1041,7 +1052,7 @@ async function allGroups() {
   try { if (deps.db) return (await deps.db.collection('groups').limit(500).get()).docs.map(d => d.data()); } catch (e) { console.error('groups list', String(e.message).slice(0, 120)); }
   return Array.from(memCol.entries()).filter(([k]) => k.startsWith('groups:')).map(([, v]) => v);
 }
-const groupsOut = async () => (await allGroups()).filter(g => g.gid).map(g => ({ gid: g.gid, adminId: g.admin || '', rec: !!g.rec, name: g.name || (g.type === 'room' ? '複数人トーク' : 'LINEグループ'), pic: g.pic || '', ch: g.ch || 'hatabo', members: g.members || 0, lastAt: g.lastAt || g.at || 0, active: g.active !== false, admin: !!g.admin, rec: !!g.rec, lastSent: g.lastSent || 0 })).sort((a, b) => b.lastAt - a.lastAt);
+const groupsOut = async () => (await allGroups()).filter(g => g.gid).map(g => ({ gid: g.gid, ref: g.ref || '', adminId: g.admin || '', rec: !!g.rec, name: g.name || (g.type === 'room' ? '複数人トーク' : 'LINEグループ'), pic: g.pic || '', ch: g.ch || 'hatabo', members: g.members || 0, lastAt: g.lastAt || g.at || 0, active: g.active !== false, admin: !!g.admin, rec: !!g.rec, lastSent: g.lastSent || 0 })).sort((a, b) => b.lastAt - a.lastAt);
 const quotaCache = new Map();
 /** 公式LINEの今月の送信数の残り（5分ためておく） */
 async function lineQuota(chId) {
@@ -2085,7 +2096,7 @@ function session(ws) {
     const r = await getRef(t.shop).catch(() => null); return !!(r && r.shareSelf);   // 本人が「事務局にも中身を見せる」をオンにしたときだけ
   }
   const conReply = (t, sc) => !t.self && !String(t.visitor || '').startsWith('api:') && (sc.office || t.shop === S.myRef || sc.role[t.shop] === 'reply');
-  const tMeta = (t, body) => ({ id: t.id, pic: t.vpic || '', hasRef: !!t.vref, shop: t.shop, aibo: t.aibo, aiboName: t.aiboName, self: !!t.self, ch: t.ch, entry: t.entry, vname: t.vname, last: t.last, n: t.n || 0, unread: t.unread || 0, preview: body ? t.preview : '（中身は本人だけが見られます）', body: !!body, days: t.days || KEEP_DEFAULT });
+  const tMeta = (t, body) => ({ id: t.id, pic: t.vpic || '', hasRef: !!t.vref, vref: t.vref || '', shop: t.shop, aibo: t.aibo, aiboName: t.aiboName, self: !!t.self, ch: t.ch, entry: t.entry, vname: t.vname, last: t.last, n: t.n || 0, unread: t.unread || 0, preview: body ? t.preview : '（中身は本人だけが見られます）', body: !!body, days: t.days || KEEP_DEFAULT });
   async function onConsole(m) {
     if ('as' in m) S.conAs = m.as === 'self' && S.myRef ? 'self' : 'office';
     if (!S.myRef && !isOffice()) return send({ type: 'console', denied: true });
@@ -2735,7 +2746,7 @@ function session(ws) {
           attempt === 0 && !S.guest ? { user_location: { type: 'approximate', city: 'Kawasaki', region: 'Kanagawa', country: 'JP', timezone: 'Asia/Tokyo' } } : {})];
         if (attempt === 0) send({ type: 'searching', gen });
       }
-      const stream = deps.claude.messages.stream(params, { signal: ac.signal });
+      const stream = (S.ai || deps.claude).messages.stream(params, { signal: ac.signal });   // 自分のClaudeのキーを入れた人は、そのキーで
       use.model = params.model;
       for await (const ev of stream) {
         if (gen !== S.gen) break;
@@ -3058,6 +3069,7 @@ function session(ws) {
             if (S.newTurns >= 2) setTimeout(summarize, 3000);       // 前回まとめきれなかった分（強制で切ったときなど）
           }
         }
+        if (S.owner && !S.visit && !S.asGuest) { try { const b = await loadCol(ownKey(S.owner), 'byok'); if (b.enc) S.ai = byokClient(gDec(b.enc)); } catch (e) { console.error('byok load', String(e.message).slice(0, 80)); } }
         await memLoad();   // AIDのメモ帳（目次だけ使う。中身は話題が出たら）
         { const day = new Date().toISOString().slice(0, 10); await countLoad([(S.owner || 'anon') + ':' + day, '__guests:' + day]); }   // 回数を、ハードから読みもどす
         // ヒロさんの家族のジュニアと、馬越さんのコムギは、いつもClaudeと同じ（スーパー上位・答えの長さの決まりなし）
@@ -3130,6 +3142,19 @@ function session(ws) {
       if (m.type === 'google_auto') { await saveCol(gDocKey(S.owner), 'google', { auto: !!m.on }); const g = await gGet(S.owner); return send({ type: 'google', ready: true, linked: !!g.refresh, email: g.email || '', auto: g.auto !== false }); }
       if (m.type === 'google_unlink') { const g = await gGet(S.owner); if (g.refresh) { try { await fetch('https://oauth2.googleapis.com/revoke?token=' + encodeURIComponent(gDec(g.refresh)), { method: 'POST' }); } catch (e) {} } await saveCol(gDocKey(S.owner), 'google', { refresh: '', email: '', folder: '' }); return send({ type: 'google', ready: !!ENV.GOOGLE_CLIENT_ID, linked: false }); }
       if (m.type === 'note_drive') { const items = await loadNotes(S.owner), it = items.find(x => x.id === String(m.id || '')); if (it) { it.url = await driveSave(S.owner, it.title, it.text).catch(() => null) || it.url || ''; await saveNotes(S.owner, items); } return send(Object.assign(await myPage(S), { driveMsg: it && it.url ? 'Googleドライブに保存しました' : 'Googleドライブに保存できませんでした' })); }
+      if (m.type === 'byok_get' || m.type === 'byok_set' || m.type === 'byok_del') {   // 自分のClaudeのAPIキー（画面には出さない。末尾4文字だけ）
+        if (!S.owner || S.visit || S.web && !S.webOffice && !S.myRef) return send({ type: 'byok', denied: true });
+        const k = ownKey(S.owner);
+        if (m.type === 'byok_set') {
+          const key = String(m.key || '').trim();
+          if (!BYOK_RE.test(key)) return send({ type: 'byok', error: 'ClaudeのAPIキーは「sk-ant-」ではじまります。もう一度コピーしてください。' });
+          await saveCol(k, 'byok', { enc: gEnc(key), tail: key.slice(-4), at: Date.now() }); S.ai = byokClient(key);
+          console.log('byok set', JSON.stringify({ owner: S.owner }));
+          return send({ type: 'byok', set: true, tail: key.slice(-4), saved: true });
+        }
+        if (m.type === 'byok_del') { await saveCol(k, 'byok', { enc: '', tail: '', at: Date.now() }); S.ai = null; return send({ type: 'byok', set: false, removed: true }); }
+        const b = await loadCol(k, 'byok'); return send({ type: 'byok', set: !!b.enc, tail: b.tail || '' });
+      }
       if (m.type === 'groups_mine') {   // トーク一覧のグループ（LINEのIDは出さない）
         if (!S.owner || S.visit) return send({ type: 'groups_mine', list: [] });
         return send({ type: 'groups_mine', list: (await groupsFor(S, isOffice())).map(({ adminId, ...g }) => g) });
