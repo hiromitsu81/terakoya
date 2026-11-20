@@ -858,6 +858,12 @@ body.av-hatabo .chatv .cv-top button { background: rgba(255,255,255,.06); color:
 html:not(.kmapp) body:not(.av-komugi) .hbp-top img.flag { width: auto; height: 30px; border-radius: 0; background: none; box-shadow: none; padding: 0; }
 .chatv .cv-top button img.myflag { height: 14px; width: auto; vertical-align: -2px; margin-right: 4px; }
 html:not(.kmapp) body:not(.av-komugi) .mybtn img[src$="xm_w.png"] { width: auto; height: 16px; border-radius: 0; }
+/* オーナーのランクのカード：ゴールド・プラチナ・ブラック */
+.hbrank.r-gold { background: linear-gradient(135deg,#FFF8E6,#F3E1A8); }
+.hbrank.r-platinum { background: linear-gradient(135deg,#F7F8FA,#D9DDE4); }
+.hbrank.r-black { background: radial-gradient(ellipse at 20% 0%,#1B2338,#0A0D14 75%); color: #E6E9EE; }
+.hbrank.r-black .k, .hbrank.r-black p, .hbrank.r-black small { color: #B9C0CB; }
+.hbrank.r-black h3, .hbrank.r-black .big { color: #F2F4F7; }
 /* ===== コムギの世界：黒地に、ピンク・紫・水色のペンキが飛び散るストリート（ハタボの白と紺とは別） ===== */
 html.kmapp body, body.av-komugi {
   --bg: #0A0810; --card: #16121F; --ink: #F4F1FA; --soft: #A9A2BC; --line: #332B45; --tile: #221C30;
@@ -3369,6 +3375,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
           <button type="button" class="hbbtn w" data-go="goen">ご縁のひろがりを見る</button>
           <p style="font-size:11.5px">ありがとうポイント：紹介した人が話しはじめたら ${n((d.thanks || {}).visit)}pt、お試しで ${n((d.thanks || {}).trial)}pt、契約で ${n((d.thanks || {}).contract)}pt（2代目は1/2、3代目は1/4）。いま ${n(d.pts)}pt。</p>
           <p class="hbmuted" style="font-size:11.5px">フォロー・フォロワーは、オーナーどうしのつながりができたら出ます。</p></div>
+        ${d.rank ? `<div class="hbc hbrank r-${esc(d.rank.key)}"><div class="k">OWNERS RANK</div><h3>オーナーのランク：${esc(d.rank.label)}</h3><div class="big">${n(d.rank.pt)}<small>pt（もらったありがとうポイントの合計）</small></div>${d.rank.next ? `<p>${esc(d.rank.next.label)}まで：${[d.rank.next.needPt ? 'あと' + n(d.rank.next.needPt) + 'pt' : '', d.rank.next.needMonths ? 'あと' + n(d.rank.next.needMonths) + 'か月' : '', d.rank.next.needDeed ? '声の採用か愛祭の協力が1回' : ''].filter(Boolean).join('・')}</p>` : '<p>いちばん上のランクです。愛祭を、いっしょに作りましょう。</p>'}<p style="font-size:11.5px">ポイントを使っても、ランクは下がりません。</p></div>` : ''}
         <div class="hbc"><div class="k">STREAK</div><h3>毎日の報連相</h3><div class="big">${n(d.streak)}<small>日連続</small></div>
           <div class="hbring">${marks.map(x => `<i class="${d.streak >= x ? 'on' : ''}">${x === 365 ? '1年' : x + '日'}</i>`).join('')}</div><p>つづけるほど、エンブレムの輪が育ちます。</p></div>
         <div class="hbc"><div class="hbstats"><div><b>${n(d.learned)}</b><span>覚えたこと</span></div><div><b>${n(d.total)}</b><span>話した回数</span></div><div><b>${n(d.pts)}</b><span>ありがとうpt</span></div></div>
