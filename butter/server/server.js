@@ -994,8 +994,22 @@ async function groupLog(gid, item) {
   const items = (L.items || []).filter(x => x.at > cut).concat([item]).slice(-1500);
   await saveCol(gid, 'grouplog', { items });
 }
+/** 音声メッセージを文字に起こす（ElevenLabs）。キーがなければ空 */
+async function voiceToText(mid, ch) {
+  if (!ENV.EL_KEY || !mid) return '';
+  try {
+    const a = await fetch('https://api-data.line.me/v2/bot/message/' + mid + '/content', { headers: { Authorization: 'Bearer ' + ch.token() }, signal: AbortSignal.timeout(8000) });
+    if (!a.ok) return '';
+    const fd = new FormData(); fd.append('model_id', 'scribe_v1'); fd.append('language_code', 'jpn'); fd.append('file', new Blob([Buffer.from(await a.arrayBuffer())], { type: 'audio/m4a' }), 'voice.m4a');
+    const r = await fetch('https://api.elevenlabs.io/v1/speech-to-text', { method: 'POST', headers: { 'xi-api-key': ENV.EL_KEY }, body: fd, signal: AbortSignal.timeout(20000) });
+    if (!r.ok) { console.error('stt file', r.status); return ''; }
+    return String((await r.json()).text || '').trim().slice(0, 2000);
+  } catch (e) { console.error('stt file', String(e.message).slice(0, 100)); return ''; }
+}
+/** Myハタボのトーク一覧に出すグループ：事務局はぜんぶ、ほかの人は自分が管理者のグループだけ */
+async function groupsFor(S, office) { return (await groupsOut()).filter(g => office || (g.adminId && 'g:' + g.adminId === S.owner)); }
 async function groupMinutes(src, g) {
-  const gid = gidOf(src), L = await loadCol(gid, 'grouplog'), items = (L.items || []).filter(x => x.at > Date.now() - 30 * 86400000);
+  const gid = gidOf(src), L = await loadCol(gid, 'grouplog'), items = (L.items || []).filter(x => x.at > Math.max(L.cut || 0, Date.now() - 30 * 86400000) && !x.bot);
   if (!items.length) return 'まだ記録がないボー。「記録をはじめる」を押してから話してね。';
   const owner = 'g:' + g.admin, log = items.map(x => new Date(x.at + 9 * 3600000).toISOString().slice(5, 16).replace('T', ' ') + ' ' + (x.name || '?') + '：' + (x.text || (x.kind === 'image' ? '（写真）' : x.kind === 'file' ? '（ファイル ' + (x.file || '') + '）' : ''))).join('\n');
   let text = '';
@@ -1005,7 +1019,7 @@ async function groupMinutes(src, g) {
   } catch (e) { console.error('group minutes', String(e.message).slice(0, 120)); }
   const day = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
   const it = await addNote(owner, { kind: 'minutes', title: 'グループの議事録 ' + day, text: (text || '（まとめに失敗したので、やりとりをそのまま残したボー）') + '\n\n――やりとり――\n' + log });
-  await saveCol(gid, 'grouplog', { items: [] });
+  await saveCol(gid, 'grouplog', { cut: Date.now() });   // やりとりはMyハタボのトーク一覧で読めるように残す。議事録は次からこのあとの分
   return '議事録をつくったボー！管理者のMyハタボの「メモ・議事録」に入れたボー。' + (it && it.url ? '\nGoogleドライブ：' + it.url : '\nGoogleと連携すると、ドライブにも自動で入るボー（Myハタボ →「設定」→「Googleアカウント連携」）。');
 }
 const gidOf = src => src.groupId || src.roomId || '';
@@ -1027,7 +1041,7 @@ async function allGroups() {
   try { if (deps.db) return (await deps.db.collection('groups').limit(500).get()).docs.map(d => d.data()); } catch (e) { console.error('groups list', String(e.message).slice(0, 120)); }
   return Array.from(memCol.entries()).filter(([k]) => k.startsWith('groups:')).map(([, v]) => v);
 }
-const groupsOut = async () => (await allGroups()).filter(g => g.gid).map(g => ({ gid: g.gid, name: g.name || (g.type === 'room' ? '複数人トーク' : 'LINEグループ'), pic: g.pic || '', ch: g.ch || 'hatabo', members: g.members || 0, lastAt: g.lastAt || g.at || 0, active: g.active !== false, admin: !!g.admin, rec: !!g.rec, lastSent: g.lastSent || 0 })).sort((a, b) => b.lastAt - a.lastAt);
+const groupsOut = async () => (await allGroups()).filter(g => g.gid).map(g => ({ gid: g.gid, adminId: g.admin || '', rec: !!g.rec, name: g.name || (g.type === 'room' ? '複数人トーク' : 'LINEグループ'), pic: g.pic || '', ch: g.ch || 'hatabo', members: g.members || 0, lastAt: g.lastAt || g.at || 0, active: g.active !== false, admin: !!g.admin, rec: !!g.rec, lastSent: g.lastSent || 0 })).sort((a, b) => b.lastAt - a.lastAt);
 const quotaCache = new Map();
 /** 公式LINEの今月の送信数の残り（5分ためておく） */
 async function lineQuota(chId) {
@@ -1061,7 +1075,7 @@ async function adminHttp(req, res) {
   const u = new URL(req.url, 'http://x'), J = (c, o) => { res.writeHead(c, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(o)); };
   const k = String(req.headers['x-hatabo-key'] || u.searchParams.get('key') || '');
   if (!ENV.CRON_KEY || k.length !== ENV.CRON_KEY.length || !crypto.timingSafeEqual(Buffer.from(k), Buffer.from(ENV.CRON_KEY))) return J(403, { error: 'no' });
-  if (u.pathname === '/admin/groups') return J(200, { groups: await groupsOut(), quota: { hatabo: await lineQuota('hatabo'), komugi: await lineQuota('komugi') } });
+  if (u.pathname === '/admin/groups') return J(200, { groups: (await groupsOut()).map(({ adminId, ...g }) => g), quota: { hatabo: await lineQuota('hatabo'), komugi: await lineQuota('komugi') } });
   if (u.pathname === '/admin/group-push' && req.method === 'POST') {
     let b = ''; for await (const c of req) { b += c; if (b.length > 20000) break; }
     let j = {}; try { j = JSON.parse(b); } catch (e) { return J(400, { error: 'json' }); }
@@ -1123,7 +1137,7 @@ function lineWebhook(req, res, chId) {
           else messages = [{ type: 'text', text: await groupMinutes(src, g) }];
         } else if (inGroup && ev.type === 'message') {
           { const g0 = await loadCol(gidOf(src), 'groups');               // 記録中なら、やりとりを残す
-            if (g0.rec) { const m0 = ev.message || {}; await groupLog(gidOf(src), { at: ev.timestamp || Date.now(), uid: src.userId, name: await lineName(src), kind: m0.type, text: m0.type === 'text' ? String(m0.text || '').slice(0, 2000) : '', file: m0.fileName || '', mid: m0.id }); } }
+            if (g0.rec) { const m0 = ev.message || {}; await groupLog(gidOf(src), { at: ev.timestamp || Date.now(), uid: src.userId, name: await lineName(src), kind: m0.type, text: m0.type === 'text' ? String(m0.text || '').slice(0, 2000) : m0.type === 'audio' ? await voiceToText(m0.id, ch) : '', file: m0.fileName || '', mid: m0.id }); } }
           const t = ev.message && ev.message.type === 'text' ? String(ev.message.text || '') : '';
           const mm = t.match(INVITE_RE), code = mm && (mm[1] || mm[2]).toLowerCase();
           const owner = code ? await getRef(code).catch(() => null) : null;
@@ -1148,6 +1162,7 @@ function lineWebhook(req, res, chId) {
           messages = [{ type: 'flex', altText: 'ハタボとはミニアプリで話せるボー', contents: oaCard('HATABO', 'ハタボとはこちらで話せるボー', ['ここ（トーク）では返事ができないので、ミニアプリで話しかけてほしいボー。いまの続きから話せるボー。'], 'ハタボと話す', CH().mini) }];
         }
         if (messages && ch.id === 'komugi' && ev.type !== 'follow' && !(ev.type === 'message' && !inGroup)) messages = kmSkin(komugiize(messages));
+        if (messages && inGroup && ev.type !== 'join') { const g2 = await loadCol(gidOf(src), 'groups').catch(() => ({})); if (g2.rec) await groupLog(gidOf(src), { at: Date.now(), name: ch.name, bot: true, kind: 'text', text: messages.map(x => x.type === 'text' ? x.text : x.altText || '').filter(Boolean).join('\n').slice(0, 2000) }).catch(() => {}); }
         if (messages && ev.replyToken) await fetch('https://api.line.me/v2/bot/message/reply', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + ch.token() }, body: bizBo(JSON.stringify({ replyToken: ev.replyToken, messages })) }).then(r => { if (!r.ok) console.error('reply', r.status); });
       }
     } catch (e) { console.error('webhook', String(e.message).slice(0, 160)); }
@@ -2197,7 +2212,7 @@ function session(ws) {
     send({ type: 'console', office: sc.office, canOffice: isOffice(), canSelf: !!S.myRef, as: sc.office ? 'office' : 'self', me: { name: S.me || me.name || '', ref: S.myRef || '', grade, rank: rankOf(me).label }, table: PLAN_TABLE, keepDefault: KEEP_DEFAULT, limits: lim,
       settings: { keepDays: me.keepDays || KEEP_DEFAULT, shareSelf: !!me.shareSelf, staff: (me.staff || []).map(x => ({ ref: x.ref, name: x.name, role: x.role })) },
       staffOf: sc.shops.filter(x => x !== S.myRef).map(x => ({ shop: x, role: sc.role[x] })),
-      groups: sc.office ? await groupsOut() : [], quota: sc.office ? { hatabo: await lineQuota('hatabo'), komugi: await lineQuota('komugi') } : null,
+      groups: sc.office ? (await groupsOut()).map(({ adminId, ...g }) => g) : [], quota: sc.office ? { hatabo: await lineQuota('hatabo'), komugi: await lineQuota('komugi') } : null,
       threads: list.slice(0, 300), aibos, consultLeft: sc.office ? 99 : Math.max(0, lim.voice - cday),
       sums: { owners: sc.office ? refs.filter(r => !r.kind).length : 1, aibos: aibos.length, today: list.filter(t => isToday(t.last)).length, api: au, voices, unread: list.reduce((n, t) => n + (t.unread || 0), 0), viaUrl: list.filter(t => t.entry === 'url').length, viaFollow: list.filter(t => t.entry === 'follow').length }, msg });
   }
@@ -3115,6 +3130,17 @@ function session(ws) {
       if (m.type === 'google_auto') { await saveCol(gDocKey(S.owner), 'google', { auto: !!m.on }); const g = await gGet(S.owner); return send({ type: 'google', ready: true, linked: !!g.refresh, email: g.email || '', auto: g.auto !== false }); }
       if (m.type === 'google_unlink') { const g = await gGet(S.owner); if (g.refresh) { try { await fetch('https://oauth2.googleapis.com/revoke?token=' + encodeURIComponent(gDec(g.refresh)), { method: 'POST' }); } catch (e) {} } await saveCol(gDocKey(S.owner), 'google', { refresh: '', email: '', folder: '' }); return send({ type: 'google', ready: !!ENV.GOOGLE_CLIENT_ID, linked: false }); }
       if (m.type === 'note_drive') { const items = await loadNotes(S.owner), it = items.find(x => x.id === String(m.id || '')); if (it) { it.url = await driveSave(S.owner, it.title, it.text).catch(() => null) || it.url || ''; await saveNotes(S.owner, items); } return send(Object.assign(await myPage(S), { driveMsg: it && it.url ? 'Googleドライブに保存しました' : 'Googleドライブに保存できませんでした' })); }
+      if (m.type === 'groups_mine') {   // トーク一覧のグループ（LINEのIDは出さない）
+        if (!S.owner || S.visit) return send({ type: 'groups_mine', list: [] });
+        return send({ type: 'groups_mine', list: (await groupsFor(S, isOffice())).map(({ adminId, ...g }) => g) });
+      }
+      if (m.type === 'group_log') {   // グループのやりとり：記録中のぶんだけ、ぜんぶ文字で
+        const g = (await groupsFor(S, isOffice())).find(x => x.gid === String(m.gid || ''));
+        if (!g || !S.owner || S.visit) return send({ type: 'group_log', gid: m.gid, denied: true });
+        const L = await loadCol(g.gid, 'grouplog');
+        const items = (L.items || []).slice(-300).map(x => ({ at: x.at, name: x.name || '', bot: !!x.bot, text: x.text || (x.kind === 'audio' ? '（音声メッセージ）' : x.kind === 'image' ? '（写真）' : x.kind === 'video' ? '（動画）' : x.kind === 'file' ? '（ファイル ' + (x.file || '') + '）' : x.kind === 'sticker' ? '（スタンプ）' : '') }));
+        return send({ type: 'group_log', gid: g.gid, rec: g.rec, items });
+      }
       if (m.type === 'chats' || m.type === 'chat_new' || m.type === 'chat_open') {
         const key = convoKey(); if (!key || S.visit) return send({ type: 'chats', cur: '', list: [], off: true });
         await thrSave().catch(() => {});
@@ -3630,4 +3656,4 @@ if (require.main === module) {
   deps.init();
   createServer().listen(ENV.PORT, () => console.log('butter-junior on :' + ENV.PORT));
 }
-module.exports = { groupSeen, groupPush, groupsOut, PLAN_TABLE, hoursOpen, threadUpsert, webSign, webVerify, MCP_TOOLS, cmVideo, brandOut, rankOf, RANKS, cloneRule, cloneOpen, CLONE_CAP, createServer, deps, ENV, splitter, takeEmotion, clean, PHOTO_RE, VIDEO_RE, session, calledJunior, calledJam, hearingStart, hearingCheckAll, handleStripeEvent, stripeSigOk, funnelOf, getRef, putRef, checkoutFor };
+module.exports = { saveCol, loadCol, groupSeen, groupPush, groupsOut, PLAN_TABLE, hoursOpen, threadUpsert, webSign, webVerify, MCP_TOOLS, cmVideo, brandOut, rankOf, RANKS, cloneRule, cloneOpen, CLONE_CAP, createServer, deps, ENV, splitter, takeEmotion, clean, PHOTO_RE, VIDEO_RE, session, calledJunior, calledJam, hearingStart, hearingCheckAll, handleStripeEvent, stripeSigOk, funnelOf, getRef, putRef, checkoutFor };
