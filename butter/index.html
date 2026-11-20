@@ -4632,6 +4632,10 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   { let sx = 0, sy = 0; $('hbpSide').addEventListener('touchstart', e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
     $('hbpSide').addEventListener('touchend', e => { const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy; if (dx < -70 && Math.abs(dy) < Math.abs(dx) * 0.6) hbpDrawer(false); }, { passive: true });
     $('hbpScrim').addEventListener('touchend', () => hbpDrawer(false), { passive: true }); }
+  function hbpFetchAll() {   // トーク一覧・グループ・会話など（つながる前に開いたときは、つながったらもう一度）
+    if (!J.ready) return; jrSend({ type: 'mypage' }); jrSend({ type: 'chats' }); jrSend({ type: 'groups_mine' }); jrSend({ type: 'inbox' }); jrSend({ type: 'byok_get' }); if (!HBP.con && HBP.page !== 'console') jrSend({ type: 'console', as: J.office ? 'office' : 'self' }); if (!HBP.custom) jrSend({ type: 'custom_get' });
+  }
+  document.addEventListener('jrready', () => { if ($('hbPage') && (!$('hbPage').hidden || document.body.classList.contains('hbshell'))) hbpFetchAll(); });
   function hbpDrawer(on) { $('hbPage').classList.toggle('drawer', !!on); $('hbpScrim').hidden = !on; if (on && J.ready) jrSend({ type: 'chats' }); }
   $('hbpMenu').addEventListener('click', () => hbpDrawer(!$('hbPage').classList.contains('drawer')));
   document.querySelector('#hbPage .hbp-brand').addEventListener('click', () => { if (window.innerWidth < 900) hbpDrawer(!$('hbPage').classList.contains('drawer')); else { const off = $('hbPage').classList.toggle('noside'); try { store.set('hbpSide', off ? 'off' : ''); } catch (e) {} hbpShellW(); } });
@@ -4641,7 +4645,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   function hbpOpen(p) {
     if (!HBP.data) { try { const c = store.get('hbpData', null); if (c && c.type === 'mypage') HBP.data = c; } catch (e) {} }   // 前回の内容をすぐ出して、届いたら新しくする
     HBP.page = p || 'my'; hbTheme(); $('hbPage').hidden = false; document.body.classList.remove('hbshell'); document.body.classList.add('hbp-open'); hbpRender(); hbpChats(); if (HBP.page === 'console' && J.ready) jrSend({ type: 'console', as: store.get('conAs', 'office') }); if (HBS.friend === null) hbpFriend();
-    if (J.ready) { jrSend({ type: 'mypage' }); jrSend({ type: 'chats' }); jrSend({ type: 'groups_mine' }); jrSend({ type: 'inbox' }); jrSend({ type: 'byok_get' }); if (!HBP.con && HBP.page !== 'console') jrSend({ type: 'console', as: J.office ? 'office' : 'self' }); if (!HBP.custom) jrSend({ type: 'custom_get' }); }
+    hbpFetchAll();
   }
   function hbpShellW() { document.body.style.setProperty('--shellw', $('hbPage').classList.contains('noside') ? '96px' : '364px'); }
   function hbpUnshell() { if (document.body.classList.contains('hbshell')) { document.body.classList.remove('hbshell'); document.body.classList.add('hbp-open'); } }
