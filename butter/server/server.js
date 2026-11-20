@@ -1969,7 +1969,8 @@ function session(ws) {
   /* ===== 管理画面（事務局とオーナーで共通）：事務局はぜんぶ、オーナーは自分の分（スタッフは任された店の分）だけ ===== */
   const CH_ORDER = ['mini', 'web', 'api', 'line', 'group'];
   async function conScope() {
-    const office = isOffice(), shops = [], role = {};
+    const office = isOffice() && S.conAs !== 'self', shops = [], role = {};   // 事務局の人も「自分」に切りかえると、ふつうのオーナーと同じ見え方
+
     if (S.myRef) { shops.push(S.myRef); role[S.myRef] = 'owner'; }
     if (S.myRef) for (const x of ((await loadCol(S.myRef, 'staffof')).shops || [])) if (x && x.shop && !role[x.shop]) { shops.push(x.shop); role[x.shop] = x.role === 'reply' ? 'reply' : 'view'; }
     return { office, shops, role };
@@ -1984,6 +1985,7 @@ function session(ws) {
   const conReply = (t, sc) => !t.self && !String(t.visitor || '').startsWith('api:') && (sc.office || t.shop === S.myRef || sc.role[t.shop] === 'reply');
   const tMeta = (t, body) => ({ id: t.id, shop: t.shop, aibo: t.aibo, aiboName: t.aiboName, self: !!t.self, ch: t.ch, entry: t.entry, vname: t.vname, last: t.last, n: t.n || 0, unread: t.unread || 0, preview: body ? t.preview : '（中身は本人だけが見られます）', body: !!body, days: t.days || KEEP_DEFAULT });
   async function onConsole(m) {
+    if ('as' in m) S.conAs = m.as === 'self' && S.myRef ? 'self' : 'office';
     if (!S.myRef && !isOffice()) return send({ type: 'console', denied: true });
     const sc = await conScope(), me = S.myRef ? await getRef(S.myRef).catch(() => null) || {} : {}, grade = sc.office ? 'Z' : gradeOfRef(me), lim = PLAN_TABLE[grade];
     const clean = (x, n) => String(x == null ? '' : x).replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n);
@@ -2094,7 +2096,7 @@ function session(ws) {
     const au = sc.office ? (await allApiUse(monthJ())).reduce((n, x) => n + (x.billable || 0), 0) : (S.myRef ? (await apiUsage(S.myRef)).billable : 0);
     const voices = sc.office ? ((await loadCol('office', 'reqs')).items || []).filter(x => x.status !== 'done').length : 0;
     const cday = (await loadCol((S.myRef || 'office') + '_' + day0, 'consults')).n || 0;
-    send({ type: 'console', office: sc.office, me: { name: S.me || me.name || '', ref: S.myRef || '', grade, rank: rankOf(me).label }, table: PLAN_TABLE, keepDefault: KEEP_DEFAULT, limits: lim,
+    send({ type: 'console', office: sc.office, canOffice: isOffice(), canSelf: !!S.myRef, as: sc.office ? 'office' : 'self', me: { name: S.me || me.name || '', ref: S.myRef || '', grade, rank: rankOf(me).label }, table: PLAN_TABLE, keepDefault: KEEP_DEFAULT, limits: lim,
       settings: { keepDays: me.keepDays || KEEP_DEFAULT, shareSelf: !!me.shareSelf, staff: (me.staff || []).map(x => ({ ref: x.ref, name: x.name, role: x.role })) },
       staffOf: sc.shops.filter(x => x !== S.myRef).map(x => ({ shop: x, role: sc.role[x] })),
       threads: list.slice(0, 300), aibos, consultLeft: sc.office ? 99 : Math.max(0, lim.voice - cday),
