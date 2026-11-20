@@ -2842,7 +2842,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
       case 'inbox': HBP.inbox = m; if (m.sent) toast('伝言をとどけたよ'); if (!$('hbPage').hidden && HBP.page === 'inbox') { if (m.sent || !HBP.inboxShown) { HBP.inboxShown = true; hbpRender(); } } break;
       case 'custom': HBP.custom = m; if (m.saved) { toast('キャラ設定を保存したよ'); window.__aiName = m.aiName || ''; avText(); const t = document.querySelector('#butterTag text'); if (t && avName()) t.textContent = avName(); } if (!$('hbPage').hidden && HBP.page === 'custom') hbpRender(); break;
       case 'google': HBP.google = m; if (!$('hbPage').hidden && (HBP.page === 'notes' || HBP.page === 'google')) hbpRender(); break;
-      case 'checkout': toast('お支払いのページを開きます'); try { if (window.liff && liff.openWindow) liff.openWindow({ url: m.url, external: true }); else location.href = m.url; } catch (e) { location.href = m.url; } HBP.paying = true; break;
+      case 'checkout': clearTimeout(HBP.goT); toast('お支払いのページを開きます'); try { if (window.liff && liff.openWindow) liff.openWindow({ url: m.url, external: true }); else location.href = m.url; } catch (e) { location.href = m.url; } HBP.paying = true; break;
       case 'oauth': {   // AIアプリの一覧から「LINEでつなぐ」
         if (m.gone) { addBubble('おしらせ', 'つなぐ時間が切れました。AIアプリから、もう一度つないでください。', 'her'); break; }
         if (m.error) { toast(m.error); break; }
@@ -2866,7 +2866,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
       case 'friends': HBP.friends = m; if (!$('hbPage').hidden && (HBP.page === 'friends' || HBP.page === 'social')) hbpRender(); break;
       case 'goen': HBP.goen = m; if (!$('hbPage').hidden && HBP.page === 'goen') hbpRender(); break;
       case 'limit': HBP.limitHit = m.why || 'plan'; setTimeout(() => hbpOpen('ticket'), 1800); break;
-      case 'mypage': if (m.driveMsg) toast(m.driveMsg); if (m.ticketOk || m.ticketNg) { HBP.tMsg = m.ticketOk || m.ticketNg; toast(HBP.tMsg); if (m.ticketOk) HBP.limitHit = ''; } HBP.data = m; try { store.set('hbpData', Object.assign({}, m, { notes: (m.notes || []).slice(0, 20), driveMsg: '', ticketOk: '', ticketNg: '' })); } catch (e) {} if (!$('hbPage').hidden) hbpRender(); break;
+      case 'mypage': clearTimeout(HBP.goT); if (m.driveMsg) toast(m.driveMsg); if (m.ticketOk || m.ticketNg) { HBP.tMsg = m.ticketOk || m.ticketNg; toast(HBP.tMsg); if (m.ticketOk) HBP.limitHit = ''; } HBP.data = m; try { store.set('hbpData', Object.assign({}, m, { notes: (m.notes || []).slice(0, 20), driveMsg: '', ticketOk: '', ticketNg: '' })); } catch (e) {} if (!$('hbPage').hidden) hbpRender(); break;
       case 'note_saved': toast({ minutes: '議事録を残したよ', memo: 'メモしたよ', doc: '書いた文章を残したよ', dengon: '伝言をとどけたよ' }[m.kind] || '残したよ'); if (!$('hbPage').hidden) jrSend({ type: 'mypage' }); break;
       case 'ready':
         document.body.classList.remove('connecting');
@@ -2955,7 +2955,8 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
         if (row.children.length) host.append(row);
         break;
       }
-      case 'notice': if (diag && m.detail) { diag.hidden = false; diag.textContent = '（調べ用：' + m.why + ' ' + m.detail + '）'; const L = $('cvList'); if (L && document.body.classList.contains('chatview') && J.canPlan) { const n = document.createElement('p'); n.className = 'cv-empty'; n.textContent = '（調べ用：' + m.why + ' ' + m.detail + '）'; L.append(n); L.scrollTop = L.scrollHeight; } } break;   // トーク画面でも、声が作れなかった原因を出す（制限なしの人だけ）
+      case 'notice': if ((m.why === 'funnel' || m.why === 'checkout') && !$('hbPage').hidden) { clearTimeout(HBP.goT); const W = { 'no ref': 'ログインしなおしてから、もう一度押してください', plan: 'このプランは担当からご案内します。窓口に「申し込みたい」と話してください', portal: 'カードの画面をまだ開けません。少しあとで試してください' }; toast(W[m.detail] || (m.why === 'checkout' ? 'お支払いのページを作れませんでした（' + m.detail + '）' : 'うまく送れませんでした。もう一度押してください')); hbpRender(); }
+      if (diag && m.detail) { diag.hidden = false; diag.textContent = '（調べ用：' + m.why + ' ' + m.detail + '）'; const L = $('cvList'); if (L && document.body.classList.contains('chatview') && J.canPlan) { const n = document.createElement('p'); n.className = 'cv-empty'; n.textContent = '（調べ用：' + m.why + ' ' + m.detail + '）'; L.append(n); L.scrollTop = L.scrollHeight; } } break;   // トーク画面でも、声が作れなかった原因を出す（制限なしの人だけ）
       case 'error':
         document.body.classList.remove('connecting');
         if (m.code === 'closed') { J.dead = true; hint.textContent = 'いま窓口はお休み中です。また今度お話ししましょう。'; addBubble('ジュニア', 'いま窓口はお休み中です。ヒロさんには直接ご連絡ください。', 'her'); }
@@ -3664,9 +3665,9 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
       body.querySelectorAll('[data-gr]').forEach(b => b.onclick = () => { sel.grade = b.dataset.gr; hbpRender(); });
       body.querySelectorAll('[data-pay]').forEach(b => b.onclick = () => { sel.pay = b.dataset.pay; hbpRender(); });
       const go = document.getElementById('hbpGo');
-      const pb = document.getElementById('hbpPay'); if (pb) pb.onclick = () => { pb.disabled = true; pb.textContent = 'お支払いのページを用意しています…'; jrSend({ type: 'funnel', act: 'pay' }); };
+      const pb = document.getElementById('hbpPay'); if (pb) pb.onclick = () => { pb.disabled = true; pb.textContent = 'お支払いのページを用意しています…'; jrSend({ type: 'funnel', act: 'pay' }); clearTimeout(HBP.goT); HBP.goT = setTimeout(() => { if (!$('hbPage').hidden) { toast('返事がありません。画面を開きなおして、もう一度押してください'); hbpRender(); } }, 15000); };
       const pt = document.getElementById('hbpPortal'); if (pt) pt.onclick = () => { jrSend({ type: 'funnel', act: 'portal' }); };
-      if (go) go.onclick = () => { const act = !st ? 'trial' : st === 'cancel' || st === 'expired' ? 'contract' : 'change'; HBP.edit = false; jrSend(Object.assign({ type: 'funnel', act }, sel)); go.disabled = true; go.textContent = '送っています…'; };
+      if (go) go.onclick = () => { const act = !st ? 'trial' : st === 'cancel' || st === 'expired' ? 'contract' : 'change'; HBP.edit = false; jrSend(Object.assign({ type: 'funnel', act }, sel)); go.disabled = true; go.textContent = '送っています…'; clearTimeout(HBP.goT); HBP.goT = setTimeout(() => { if (!$('hbPage').hidden) { toast('返事がありません。画面を開きなおして、もう一度押してください'); hbpRender(); } }, 15000); };
       const ch = document.getElementById('hbpChange'); if (ch) ch.onclick = () => { HBP.edit = !HBP.edit; hbpRender(); };
       const cn = document.getElementById('hbpCancel'); if (cn) cn.onclick = () => { if (confirmDel(cn)) jrSend({ type: 'funnel', act: 'cancel' }); };
     } else if (p === 'aisai') {
