@@ -38,6 +38,11 @@ const talk = async (c, text) => { c.send({ type: 'text', text }); await c.until(
   o.send({ type: 'chat_open', id: a.cur }); const op = await o.until(m => m.type === 'chat_turns' && m.id === a.cur);
   assert.ok(op.turns.length === 2 && /お祭り/.test(op.turns[0].content), '前のチャットの続きが開く');
   o.send({ type: 'voice_try', voice: 'm-calm' }); await o.until(m => m.type === 'audio');
+  o.send({ type: 'byok_set', key: 'abc' }); assert.ok((await o.until(m => m.type === 'byok')).error, 'Claudeのキーでないものはことわる');
+  o.send({ type: 'byok_set', key: 'sk-ant-api03-' + 'x'.repeat(40) + 'WXYZ' }); const bs = await o.until(m => m.type === 'byok' && m.saved);
+  assert.ok(bs.set && bs.tail === 'WXYZ' && !JSON.stringify(bs).includes('xxxx'), '自分のキーをしまう（画面には末尾だけ）');
+  o.send({ type: 'byok_get' }); assert.ok((await o.until(m => m.type === 'byok' && !m.saved)).set, 'しまってある');
+  o.send({ type: 'byok_del' }); assert.ok((await o.until(m => m.type === 'byok' && m.removed)).set === false, '消せる');
   o.ws.close(); server.close(); gasSrv.close();
   console.log('chats ok'); process.exit(0);
 })().catch(e => { console.error(e); process.exit(1); });

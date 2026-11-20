@@ -1456,10 +1456,35 @@ body.av-hatabo:not(.chatview) { background: radial-gradient(120% 80% at 50% 0%, 
   .hbpage .hbp-tabs .hbp-acct.on { color: #F2F4F7; }
   .hbpage .hbp-tabs > button[data-p="goen"] { order: 4; }
 }
+
+/* ===== 11/20 夕方：ロゴのボタン・真ん中はロゴ・上の切りかえと帯をなくす・スマホは下にトーク一覧を敷く ===== */
+.cbrand { display: flex; align-items: center; gap: 8px; padding: 4px 10px 12px; } .cbrand img { height: 30px; width: auto; } .cbrand b { font: 900 16px/1 "Noto Sans JP", sans-serif; letter-spacing: .06em; color: var(--ctext); } .cbrand small { font-size: 11px; color: var(--cmut); margin-left: auto; }
+.hbp-mode[hidden] { display: none !important; }
+#hbpRail { display: none !important; }
+#hbPage .hbp-brand { cursor: pointer; }
+.hbtop #hbTopMenu { display: none; }
+.hbtop-brand { cursor: pointer; }
+.hbtop-tools { margin-left: auto; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.hbtop-tools button { border: 1px solid rgba(255,255,255,.22) !important; background: rgba(255,255,255,.06) !important; color: #E6E9EE !important; border-radius: 999px !important; padding: 5px 10px !important; font: 700 12px var(--display) !important; white-space: nowrap; }
+body:is(.av-hatabo, .av-komugi):not(.plain) .chatv .cv-top { display: none !important; }
+.hbp-voicetab .hbvt-logo { width: 22px; height: 22px; }
+.hbp-body.sw-in { animation: hbswl .24s ease; }
+@media (max-width: 899px) {
+  #hbpMenu { display: none !important; }
+  .hbpage .hbp-tabs .hbp-voicetab .hbvt-logo { width: 34px; height: 34px; padding: 7px; box-sizing: content-box; margin-top: -26px; border-radius: 50%; background: radial-gradient(circle at 50% 35%, #2B3550, #0A0D14); box-shadow: 0 8px 20px -8px rgba(63,163,106,.8), 0 0 0 2px rgba(127,211,158,.6), 0 0 0 5px var(--cnav, #10141E); }
+  .hbpage .hbp-tabs .hbp-voicetab .hbvt-l { font: 800 11px var(--display); }
+  /* トーク一覧を下に敷き、上の画面を右へずらす（Claudeのアプリの形） */
+  .hbp-side { transform: none !important; z-index: 1 !important; width: 84vw !important; transition: none; visibility: hidden; }
+  .hbpage.drawer .hbp-side { visibility: visible; }
+  .hbpage > .hbp-top, .hbpage > .hbp-tabs, .hbpage > .hbp-body { position: relative; z-index: 2; background: var(--cbg, #0B0E15); transition: transform .26s cubic-bezier(.2,.8,.2,1), border-radius .26s, box-shadow .26s; }
+  .hbpage.drawer > .hbp-top, .hbpage.drawer > .hbp-tabs, .hbpage.drawer > .hbp-body { transform: translateX(84vw); box-shadow: -18px 0 40px -18px rgba(0,0,0,.8); }
+  .hbpage.drawer > .hbp-top { border-top-left-radius: 18px; }
+  .hbp-scrim { z-index: 3 !important; left: 84vw !important; background: transparent !important; }
+}
 </style>
 </head>
 <body>
-<div class="hbtop" id="hbTop"><button type="button" id="hbTopMenu" aria-label="メニュー"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg></button><button type="button" class="hbtop-brand" id="hbTopBrand" aria-label="Myハタボのホームへ"><img src="https://www.hatha-lab.com/award_mark.svg" alt=""><b>HATHABO</b></button><div class="hbp-mode hbtop-mode" role="group" aria-label="表示モード"><button type="button" data-mode="chat">トーク</button><button type="button" data-mode="char">キャラ</button></div></div>
+<div class="hbtop" id="hbTop"><button type="button" id="hbTopMenu" aria-label="メニュー"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg></button><button type="button" class="hbtop-brand" id="hbTopBrand" aria-label="Myハタボのホームへ"><img src="https://www.hatha-lab.com/award_mark.svg" alt=""><b>HATHABO</b></button><span class="hbtop-tools" id="hbTopTools"></span><div class="hbp-mode hbtop-mode" hidden role="group" aria-label="表示モード"><button type="button" data-mode="chat">トーク</button><button type="button" data-mode="char">キャラ</button></div></div>
 <div class="app">
   <header>
     <h1>福まねき特戦隊</h1>
@@ -1908,8 +1933,8 @@ body.av-hatabo:not(.chatview) { background: radial-gradient(120% 80% at 50% 0%, 
 <button type="button" class="hbhomefab" id="hbHomeFab" hidden aria-label="Myハタボのホームへ"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>ホーム</button>
 <button type="button" class="cvfab" id="cvFab">トーク ‹</button>
 <div class="hbpage" id="hbPage" hidden>
-  <div class="hbp-top"><button type="button" id="hbpMenu" aria-label="メニューと会話の一覧を開く"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg></button><span class="hbp-brand" aria-label="HATHABO（ハタボ）"><img src="https://www.hatha-lab.com/award_mark.svg" alt=""><b>HATHABO</b></span><img class="flag" src="https://www.hatha-lab.com/xm_w.png" alt=""><b id="hbpTitle">Myハタボ</b><button type="button" id="hbpRail" aria-label="会話の一覧を開く・閉じる" title="会話の一覧を開く・閉じる"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/></svg></button><div class="hbp-mode" id="hbpMode" role="group" aria-label="表示モード"><button type="button" data-mode="chat" title="ふだんの画面（文字で話す）">トーク</button><button type="button" data-mode="char" title="キャラを大きく出す（プロジェクターでのプレゼンや交流会に）">キャラ</button></div><button type="button" id="hbpClose" hidden>ハタボと話す</button></div>
-  <nav class="hbp-tabs" id="hbpTabs" aria-label="Myハタボのメニュー"><button type="button" data-p="my"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span>ホーム</span></button><button type="button" data-p="talk" class="hbp-voicetab" aria-label="自分のハタボと声で話す"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>話す</button><button type="button" data-p="clones"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.2c2.4.2 4.3 1.8 4.9 4.8"/></svg><span>愛棒</span></button><button type="button" data-p="goen"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="6" r="2.6"/><circle cx="18" cy="18" r="2.6"/><path d="M8.3 10.8 15.7 7.2M8.3 13.2l7.4 3.6"/></svg><span>ご縁</span></button><button type="button" data-p="inbox"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg><span>伝言</span></button><button type="button" data-p="more"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>もっと</span></button><button type="button" class="hbp-acct" data-p="acct" id="hbpAcct" aria-label="Myハタボ（アカウントと設定）"><i id="hbpAcctAv">ハ</i><span><b id="hbpAcctName">Myハタボ</b><em id="hbpAcctLeft"></em><small id="hbpAcctSub">アカウントと設定</small></span></button></nav>
+  <div class="hbp-top"><button type="button" id="hbpMenu" aria-label="メニューと会話の一覧を開く"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg></button><span class="hbp-brand" aria-label="HATHABO（ハタボ）"><img src="https://www.hatha-lab.com/award_mark.svg" alt=""><b>HATHABO</b></span><img class="flag" src="https://www.hatha-lab.com/xm_w.png" alt=""><b id="hbpTitle">Myハタボ</b><button type="button" id="hbpRail" aria-label="会話の一覧を開く・閉じる" title="会話の一覧を開く・閉じる"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/></svg></button><div class="hbp-mode" id="hbpMode" hidden role="group" aria-label="表示モード"><button type="button" data-mode="chat" title="ふだんの画面（文字で話す）">トーク</button><button type="button" data-mode="char" title="キャラを大きく出す（プロジェクターでのプレゼンや交流会に）">キャラ</button></div><button type="button" id="hbpClose" hidden>ハタボと話す</button></div>
+  <nav class="hbp-tabs" id="hbpTabs" aria-label="Myハタボのメニュー"><button type="button" data-p="my"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span>ホーム</span></button><button type="button" data-p="talk" class="hbp-voicetab" aria-label="自分のハタボと声で話す"><img class="hbvt-logo" src="https://www.hatha-lab.com/award_mark.svg" alt=""><span class="hbvt-l">話す</span></button><button type="button" data-p="clones"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.2c2.4.2 4.3 1.8 4.9 4.8"/></svg><span>愛棒</span></button><button type="button" data-p="goen"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="6" r="2.6"/><circle cx="18" cy="18" r="2.6"/><path d="M8.3 10.8 15.7 7.2M8.3 13.2l7.4 3.6"/></svg><span>ご縁</span></button><button type="button" data-p="inbox"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg><span>伝言</span></button><button type="button" data-p="more"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>もっと</span></button><button type="button" class="hbp-acct" data-p="acct" id="hbpAcct" aria-label="Myハタボ（アカウントと設定）"><i id="hbpAcctAv">ハ</i><span><b id="hbpAcctName">Myハタボ</b><em id="hbpAcctLeft"></em><small id="hbpAcctSub">アカウントと設定</small></span></button></nav>
   <aside class="hbp-side" id="hbpSide" aria-label="トーク一覧"><div class="hbs-head"><b>HATHABO</b></div><label class="hbs-search"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16 16l5 5"/></svg><input id="hbpSearch" type="search" placeholder="名前・ひとことで探す" aria-label="トーク一覧を探す"></label><button type="button" class="hbs-new" id="hbpNew"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>新しいチャット</button><nav class="hbs-menu" id="hbpSideMenu" aria-label="メニュー"></nav><div class="hbs-k">トーク</div><div class="hbs-list hbs-talks" id="hbpTalks"></div><details class="hbs-mine" id="hbpMine"><summary>ハタボとのチャット</summary><div class="hbs-list" id="hbpChats"></div></details></aside>
   <div class="hbp-scrim" id="hbpScrim" hidden></div>
   <div class="hbp-body" id="hbpBody"></div>
@@ -3148,7 +3173,7 @@ body.av-hatabo:not(.chatview) { background: radial-gradient(120% 80% at 50% 0%, 
     // 紹介コードは、そのとき開いたURLのものだけ送る（前に開いた紹介URLを覚えて使うと、別のアバター（コムギなど）で出てしまう）。だれの紹介かはサーバーが最初の1回で覚えている
     const ref = String(r0 || '').replace(/[^\w-]/g, '').slice(0, 20);
     if (r0) store.set('jrRef', ref);
-    ws.onopen = () => jrSend(Object.assign({ type: 'hello', mode: BIZ() ? 'business' : 'family', greet: !J.greeted, ref, asGuest, peek, agent, visit: J.visit || '', app: KOMUGI_APP ? 'komugi' : HATABO_APP ? 'hatabo' : '' }, typeof tr === 'boolean' ? { trio: tr } : {}, WT ? { webToken: WT } : LIFF ? { idToken: idToken() } : { pass: cfg.pass }));
+    ws.onopen = () => jrSend(Object.assign({ type: 'hello', mode: BIZ() ? 'business' : 'family', greet: !J.greeted && !document.body.classList.contains('av-hatabo') && !document.body.classList.contains('av-komugi'), ref, asGuest, peek, agent, visit: J.visit || '', app: KOMUGI_APP ? 'komugi' : HATABO_APP ? 'hatabo' : '' }, typeof tr === 'boolean' ? { trio: tr } : {}, WT ? { webToken: WT } : LIFF ? { idToken: idToken() } : { pass: cfg.pass }));
     ws.onmessage = ev => { J.lastRx = Date.now(); let m; try { m = JSON.parse(ev.data); } catch (e) { return; } if (m.type === 'pong') return; if (m.type === 'ready') clearTimeout(giveUp); jrOn(m); };
     J.lastRx = Date.now();
     ws.onclose = () => {
@@ -3180,6 +3205,7 @@ body.av-hatabo:not(.chatview) { background: radial-gradient(120% 80% at 50% 0%, 
     switch (m.type) {
       case 'inbox': HBP.inbox = m; try { hbpChats(); } catch (e) {} if (m.sent) toast('伝言をとどけたよ'); if (!$('hbPage').hidden && HBP.page === 'inbox') { if (m.sent || !HBP.inboxShown) { HBP.inboxShown = true; hbpRender(); } } break;
       case 'chats': HBP.chats = m; hbpChats(); break;
+      case 'byok': HBP.byok = m; if (m.saved) toast('キーを保存しました。次の返事から自分のClaudeで動きます'); if (m.removed) toast('キーを消しました'); if (!$('hbPage').hidden && (HBP.page === 'byok' || HBP.page === 'acct')) hbpRender(); break;
       case 'groups_mine': HBP.myGroups = m.list || []; hbpChats(); break;
       case 'group_log': HBP.glog = HBP.glog || {}; HBP.glog[m.gid] = m; if (!$('hbPage').hidden && HBP.page === 'group' && HBP.gid === m.gid) hbpRender(); break;
       case 'chat_turns': if (window.hbCvLoad) window.hbCvLoad(m.turns || []); HBP.chats && (HBP.chats.cur = m.id); hbpChats(); break;
@@ -3671,9 +3697,9 @@ body.av-hatabo:not(.chatview) { background: radial-gradient(120% 80% at 50% 0%, 
   setInterval(() => { try { if (!J.ready || !$('hbPage') || $('hbPage').hidden) return; const p = HBP.page, k = { clones: 'clones', admin: 'admin', reqs: 'reqs', api: 'api', console: 'console' }[p]; if (k && !HBP[k] && Date.now() - (HBP['ask_' + k] || 0) > 4000) { HBP['ask_' + k] = Date.now(); jrSend({ type: k }); } } catch (e) {} }, 1500);
   function hbpRender() {
     const p = HBP.page, d = HBP.data, nm = avName() || 'ハタボ';
-    $('hbpTitle').textContent = { person: 'トーク', group: 'グループ', voice: 'ボイス', acct: 'アカウント', more: 'もっと', console: '管理画面', api: 'AIからつなぐ（API）', clones: '愛棒', admin: '事務局の管理画面', settings: '設定', google: 'Googleアカウント連携', social: '公開設定', custom: 'キャラ設定', ticket: '追加チケット', my: 'Myハタボ', notes: 'メモ・議事録', grow: '育てた' + nm, goen: 'ご縁のひろがり', inbox: '伝言', gacha: 'AI棒ガチャ', friends: '友だち', plan: 'プラン・支払い', aisai: 'AISAI・愛祭', times: 'ハタボタイムズ', share: '紹介する' }[p] || 'Myハタボ';
+    $('hbpTitle').textContent = { byok: '自分のClaudeで動かす', person: 'トーク', group: 'グループ', voice: 'ボイス', acct: 'アカウント', more: 'もっと', console: '管理画面', api: 'AIからつなぐ（API）', clones: '愛棒', admin: '事務局の管理画面', settings: '設定', google: 'Googleアカウント連携', social: '公開設定', custom: 'キャラ設定', ticket: '追加チケット', my: 'Myハタボ', notes: 'メモ・議事録', grow: '育てた' + nm, goen: 'ご縁のひろがり', inbox: '伝言', gacha: 'AI棒ガチャ', friends: '友だち', plan: 'プラン・支払い', aisai: 'AISAI・愛祭', times: 'ハタボタイムズ', share: '紹介する' }[p] || 'Myハタボ';
     const tabOf = ({ my: 'my', clones: 'clones', goen: 'goen', person: '', group: '' })[p] ?? 'acct';
-    const ACCT = { acct: 1, settings: 1, google: 1, plan: 1, api: 1, ticket: 1, voice: 1, custom: 1, more: 1, notes: 1, share: 1, gacha: 1, friends: 1, grow: 1, aisai: 1, times: 1, console: 1, inbox: 1 };
+    const ACCT = { byok: 1, acct: 1, settings: 1, google: 1, plan: 1, api: 1, ticket: 1, voice: 1, custom: 1, more: 1, notes: 1, share: 1, gacha: 1, friends: 1, grow: 1, aisai: 1, times: 1, console: 1, inbox: 1 };
     if (d) { const f = d.funnel || {}, nm0 = String(d.name || (HBP.con && HBP.con.me && HBP.con.me.name) || '').trim(); $('hbpAcctName').textContent = nm0 ? nm0 + 'さん' : 'Myハタボ'; $('hbpAcctAv').textContent = (nm0 || 'ハ').slice(0, 1); $('hbpAcctLeft').textContent = d.unlimited ? '制限なし' : '残り ' + Math.max(0, (d.limit || 0) - (d.today || 0)) + '回'; $('hbpAcctSub').textContent = f.stage === 'trial' ? (f.lineupName || '') + ' ' + (f.grade || '') + '・お試し あと' + f.daysLeft + '日' : f.stage === 'contract' ? (f.lineupName || '') + ' ' + (f.grade || '') : (d.plan || 'アカウントと設定'); }
     $('hbPage').classList.toggle('p-my', p === 'my');
     { const ac = $('hbpAcct'); if (ac) ac.classList.toggle('on', !!ACCT[p]); }
@@ -3683,7 +3709,7 @@ body.av-hatabo:not(.chatview) { background: radial-gradient(120% 80% at 50% 0%, 
     const body = $('hbpBody');
     body.classList.remove('wide'); body.classList.remove('con'); body.classList.remove('chatpg');
     if (p === 'console') return conRender(body);
-    if (!d && p !== 'times' && p !== 'share' && p !== 'aisai' && p !== 'goen' && p !== 'inbox' && p !== 'gacha' && p !== 'friends' && p !== 'custom' && p !== 'settings' && p !== 'google' && p !== 'social' && p !== 'docs' && p !== 'reqs' && p !== 'clones' && p !== 'admin' && p !== 'api' && p !== 'more' && p !== 'voice' && p !== 'person' && p !== 'group') { body.innerHTML = '<div class="hbc"><p>よみこみ中です…</p></div>'; return; }
+    if (!d && p !== 'times' && p !== 'share' && p !== 'aisai' && p !== 'goen' && p !== 'inbox' && p !== 'gacha' && p !== 'friends' && p !== 'custom' && p !== 'settings' && p !== 'google' && p !== 'social' && p !== 'docs' && p !== 'reqs' && p !== 'clones' && p !== 'admin' && p !== 'api' && p !== 'more' && p !== 'voice' && p !== 'person' && p !== 'group' && p !== 'byok') { body.innerHTML = '<div class="hbc"><p>よみこみ中です…</p></div>'; return; }
     const n = x => Number(x || 0).toLocaleString('ja-JP');
     if (p === 'my') {
       const left = Math.max(0, d.limit - d.today), pct = Math.min(100, Math.round(d.today / Math.max(1, d.limit) * 100));
@@ -3740,6 +3766,20 @@ body.av-hatabo:not(.chatview) { background: radial-gradient(120% 80% at 50% 0%, 
       const dl = body.querySelector('#dLink'); if (dl) dl.onclick = () => jrSend({ type: 'google_link', docs: true });
       body.querySelectorAll('[data-dshare]').forEach(c => c.onchange = () => jrSend({ type: 'docs_share', id: c.dataset.dshare, on: c.checked }));
       body.querySelectorAll('[data-dcopy]').forEach(b => b.onclick = () => { b.disabled = true; b.textContent = '入れています…'; jrSend({ type: 'docs_copy', id: b.dataset.dcopy }); });
+    } else if (p === 'byok') {
+      const B = HBP.byok;
+      if (!B) { body.innerHTML = '<div class="hbc"><p>よみこみ中です…</p></div>'; if (J.ready) jrSend({ type: 'byok_get' }); return; }
+      body.innerHTML = `<div class="hbc hbwide"><div class="k">YOUR CLAUDE</div><h3>自分のClaudeで動かす</h3>
+          <p>自分で契約している Claude（Anthropic）の APIキーを入れると、あなたのハタボはそのキーで考えて返事をします。AIの代金は、あなたの Anthropic の請求になります。</p>
+          <p><span class="hbtag${B.set ? ' gold' : ''}">${B.set ? 'いまは自分のClaudeで動いています（キーの末尾 …' + esc(B.tail || '') + '）' : 'いまはハタボのAIで動いています'}</span></p>
+          ${B.error ? `<p style="color:#F2A0A0 !important">${esc(B.error)}</p>` : ''}
+          <label class="hbl" for="byokIn">${B.set ? '新しいキーに入れかえる' : 'ClaudeのAPIキー'}</label>
+          <input class="hbin" id="byokIn" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-…" aria-label="ClaudeのAPIキー">
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="hbbtn" id="byokSave">保存する</button>${B.set ? '<button type="button" class="hbbtn w" id="byokDel">キーを消す（ハタボのAIにもどす）</button>' : ''}</div>
+          <p style="font-size:11.5px">キーはサーバーに暗号化してしまい、画面には末尾の4文字だけ出します。キーは Anthropic のコンソール（console.anthropic.com）の「API Keys」で作れます。ここ以外（LINEのトークやチャット）には貼らないでください。</p></div>
+        <div class="hbc"><div class="k">NOTE</div><h3>ほかのAIからハタボを呼ぶのは別</h3><p>ChatGPT や Claude からハタボを呼ぶためのキーは「AIからつなぐ（API）」で出します。こちらは、ハタボの頭を自分のClaudeにするための入れ口です。</p><button type="button" class="hbbtn w" data-go="api">AIからつなぐ（API）へ</button></div>`;
+      $('byokSave').onclick = () => { const v = $('byokIn').value.trim(); if (!v) return; jrSend({ type: 'byok_set', key: v }); $('byokIn').value = ''; };
+      const bd = document.getElementById('byokDel'); if (bd) bd.onclick = () => { if (confirm('キーを消して、ハタボのAIにもどします。よろしいですか？')) jrSend({ type: 'byok_del' }); };
     } else if (p === 'person') {
       const t = (HBP.thr && HBP.thr.t) || {}, G = HBP.goenOf, turns = (t.turns || []).slice(-14);
       const who = r => r === 'u' ? (t.vname || 'お客さま') : r === 'shop' ? 'お店から' : (t.aiboName || 'ハタボ');
@@ -3783,7 +3823,7 @@ body.av-hatabo:not(.chatview) { background: radial-gradient(120% 80% at 50% 0%, 
     } else if (p === 'acct') {
       const f = d.funnel || {}, nm0 = String(d.name || (HBP.con && HBP.con.me && HBP.con.me.name) || '').trim(), left = Math.max(0, (d.limit || 0) - (d.today || 0));
       const R = [['plan', 'プラン・お支払い', f.stage === 'trial' ? (f.lineupName || '') + ' ' + (f.grade || '') + '・お試し あと' + f.daysLeft + '日' : f.stage === 'contract' ? (f.lineupName || '') + ' ' + (f.grade || '') : '7日間無料で試せます'], ['ticket', '追加チケット', '回数をこえたときのチケット'], ['api', 'APIキー', 'ほかのAIやアプリからハタボにつなぐ'], ['custom', 'キャラ設定', '名前・話し方・あなたのこと・いつもの指示'], ['google', 'Google連携', 'メモと議事録をGoogleドライブに'], ['settings', '設定', 'グレード・表示・マイク']];
-      R.unshift(['voice', 'ボイス', '声を聞きくらべて選ぶ・方言・話す速さ']);
+      R.unshift(['voice', 'ボイス', '声を聞きくらべて選ぶ・方言・話す速さ'], ['byok', '自分のClaudeで動かす', HBP.byok && HBP.byok.set ? 'キーを入れています（…' + HBP.byok.tail + '）' : '自分のClaudeのAPIキーを入れると、そのキーで動きます']);
       R.push(['share', '紹介する', 'ハタボのカードを友だちに。ご縁がひろがります'], ['notes', 'メモ・議事録', '話して残したメモと議事録'], ['inbox', '伝言', 'ご縁の人のハタボと伝言（トーク一覧にも出ます）'], ['gacha', 'AI棒ガチャ', '1日1回むりょう'], ['friends', '友だち', 'ガチャで出会った人・ご縁の人'], ['grow', '育てた' + nm, 'レベル・覚えたこと・引きつぎ'], ['aisai', 'AISAI・愛祭', 'オーナーズクラブ・ランク・アワード'], ['times', 'ハタボタイムズ', 'お知らせ・使い方']);
       R.unshift(['console', J.office ? '管理画面（事務局）' : '管理画面', J.office ? '窓口に届いた会話・オーナー・愛棒・お金・事務局への声' : '会話・愛棒・窓口・お金・設定']);
       body.innerHTML = `<div class="hbc"><div class="hbacct"><i>${esc((nm0 || 'ハ').slice(0, 1))}</i><div><div class="k">MY PAGE</div><h3>${esc(nm0 ? nm0 + 'さん' : 'Myハタボ')}</h3><span class="hbtag">${esc(d.plan || '')}</span></div></div></div>
@@ -4147,7 +4187,12 @@ body.av-hatabo:not(.chatview) { background: radial-gradient(120% 80% at 50% 0%, 
     }).join('');
     svg.innerHTML = html;
     svg.querySelectorAll('.gnode').forEach(el => el.addEventListener('click', () => {
-      const n = by[el.dataset.id], s = ST[n.stage] || ST.ref, info = document.getElementById('goenInfo');
+      const n = by[el.dataset.id];
+      // タップしたら、その人（グループ）とのトークへ。トークがまだない人は、これまでどおりようすを出す
+      if (!n.me) { const T = (HBP.con && HBP.con.threads) || [], t = T.filter(x => x.vref === n.id).sort((a, b) => (b.last || 0) - (a.last || 0))[0]; if (t) return hbpOpenTalk('p:' + t.id);
+        const g = (HBP.myGroups || (HBP.con && HBP.con.groups) || []).find(x => x.ref && x.ref === n.id); if (g) return hbpOpenTalk('g:' + g.gid);
+        if (((HBP.inbox && HBP.inbox.items) || []).some(x => x.from === n.id)) return hbpOpenTalk('d:' + n.id); }
+      const s = ST[n.stage] || ST.ref, info = document.getElementById('goenInfo');
       info.innerHTML = n.me ? `<b>あなた</b> Lv.${n.lv}・紹介した人 ${n.kids}人${n.streak ? '・' + n.streak + '日連続' : ''}`
         : `<b>${esc(n.name)}さん</b><span class="hbtag" style="background:${s[1]};color:#fff">${s[0]}</span><button type="button" class="hbtag" style="border:0;cursor:pointer;margin-left:6px" onclick="hbpTo('${esc(n.id)}')">伝言する</button><button type="button" class="hbtag gold" style="border:0;cursor:pointer;margin-left:6px" onclick="hbpVisit('${esc(n.id)}')">AI棒と話す</button><br>${n.lineupName ? esc(n.lineupName + ' ' + n.grade) + '・' : ''}${ACT[n.st] || ''}・${n.depth}代目のご縁・Lv.${n.lv}${n.streak ? '・' + n.streak + '日連続' : ''}・紹介した人 ${n.kids}人${n.since ? '・' + new Date(n.since).toLocaleDateString('ja-JP') + 'から' : ''}`;
     }));
@@ -4225,7 +4270,7 @@ body.av-hatabo:not(.chatview) { background: radial-gradient(120% 80% at 50% 0%, 
     if (C.denied) { body.innerHTML = '<div class="cn"><div class="cmain"><p>管理画面は、自分のハタボを持っている人と事務局が使えます。</p></div></div>'; return; }
     const cv = HBP.cv = HBP.cv || (C.office ? 'home' : 'talks'), unread = (C.threads || []).reduce((s, t) => s + (t.unread || 0), 0);
     const NAV = [['home', 'ホーム'], ['talks', '会話'], ['aibo', '愛棒'], ['owners', 'オーナー'], ['money', 'お金'], ['win', '窓口'], ['set', '設定']];
-    const nav = `<nav class="cnav" aria-label="管理画面のメニュー"><div class="who"><b>${esc(C.me.name || (C.office ? '事務局' : 'オーナー'))}</b>${C.office ? '事務局・すべて見られる' : 'オーナー・自分の分' + ((C.staffOf || []).length ? '（任された店 ' + C.staffOf.length + '）' : '')}</div>` +
+    const nav = `<nav class="cnav" aria-label="管理画面のメニュー"><div class="cbrand"><img src="https://www.hatha-lab.com/award_mark.svg" alt=""><b>HATHABO</b><small>管理画面</small></div><div class="who"><b>${esc(C.me.name || (C.office ? '事務局' : 'オーナー'))}</b>${C.office ? '事務局・すべて見られる' : 'オーナー・自分の分' + ((C.staffOf || []).length ? '（任された店 ' + C.staffOf.length + '）' : '')}</div>` +
       NAV.map(([k, t]) => `<button type="button" data-cv="${k}" class="${k === cv ? 'on' : ''}">${ico(k)}${t}${k === 'talks' ? `<span class="cbadge" data-conbadge ${unread ? '' : 'hidden'}>${unread}</span>` : ''}</button>`).join('') +
       (C.canOffice && C.canSelf ? `<div class="cacct"><button type="button" class="cacc-btn" data-acct aria-expanded="${HBP.acctOpen ? 'true' : 'false'}"><span class="cav">${C.office ? '事' : esc((C.me.name || '自').slice(0, 1))}</span><span><b>${C.office ? 'ハタボ事務局' : esc(C.me.name || '自分')}</b><small>${C.office ? '事務局として見ています' : '自分として見ています'}</small></span><i aria-hidden="true">⌄</i></button>${HBP.acctOpen ? `<div class="cacc-menu" role="menu"><button type="button" role="menuitem" data-as="office" class="${C.office ? 'on' : ''}"><span class="cav">事</span><span><b>ハタボ事務局</b><small>すべての会話・愛棒・オーナー</small></span>${C.office ? '<em>✓</em>' : ''}</button><button type="button" role="menuitem" data-as="self" class="${C.office ? '' : 'on'}"><span class="cav">${esc((C.me.name || '自').slice(0, 1))}</span><span><b>${esc(C.me.name || '自分')}</b><small>自分のハタボと愛棒の分だけ</small></span>${C.office ? '' : '<em>✓</em>'}</button></div>` : ''}</div>` : '') + '</nav>';
     let main = '';
@@ -4400,6 +4445,7 @@ body.av-hatabo:not(.chatview) { background: radial-gradient(120% 80% at 50% 0%, 
   function hbpOpenTalk(key) {
     const c = key.indexOf(':'), k = key.slice(0, c), id = key.slice(c + 1); hbpDrawer(false);
     if (k === 'me') return hbpTalk('');
+    $('hbpBody').classList.remove('sw-l', 'sw-r', 'sw-in'); void $('hbpBody').offsetWidth; $('hbpBody').classList.add('sw-in');
     if (k === 'p') { HBP.pid = id; HBP.goenOf = null; const T = (HBP.con && HBP.con.threads) || []; HBP.thr = { t: Object.assign({ turns: [] }, T.find(x => x.id === id) || {}), panel: {} }; HBP.page = 'person'; hbpRender(); hbpChats(); if (J.ready) { jrSend({ type: 'thr_open', id }); jrSend({ type: 'thr_goen', id }); } return; }
     if (k === 'd') { HBP.page = 'inbox'; HBP.inboxShown = false; hbpRender(); hbpChats(); if (J.ready) jrSend({ type: 'inbox' }); return; }
     if (k === 'g') { HBP.gid = id; HBP.page = 'group'; hbpRender(); hbpChats(); if (J.ready) jrSend({ type: 'group_log', gid: id }); }
@@ -4415,22 +4461,28 @@ body.av-hatabo:not(.chatview) { background: radial-gradient(120% 80% at 50% 0%, 
   $('hbpChats').addEventListener('click', e => { const b = e.target.closest('[data-chat]'); if (!b) return; jrSend({ type: 'chat_open', id: b.dataset.chat }); hbpDrawer(false); hbpTalk(''); });
   $('hbpNew').addEventListener('click', () => { jrSend({ type: 'chat_new' }); hbpDrawer(false); hbpTalk(''); toast('新しいチャットをはじめました'); });
   // スマホ：左の2列（メニューと会話の一覧）を、左上のボタンで引き出しに
-  $('hbpSideMenu').innerHTML = [...document.querySelectorAll('#hbpTabs > button')].filter(b => !['inbox', 'more'].includes(b.dataset.p)).map(b => `<button type="button" data-p="${b.dataset.p}">${b.querySelector('svg') ? b.querySelector('svg').outerHTML : ''}<span>${esc(b.dataset.p === 'acct' ? 'アカウント' : b.textContent.trim())}</span></button>`).join('');
+  $('hbpSideMenu').innerHTML = [...document.querySelectorAll('#hbpTabs > button')].filter(b => !['inbox', 'more'].includes(b.dataset.p)).map(b => `<button type="button" data-p="${b.dataset.p}">${b.querySelector('svg, img.hbvt-logo') ? b.querySelector('svg, img.hbvt-logo').outerHTML.replace('class="hbvt-logo"', 'class="hbsm-logo" width="20" height="20"') : b.dataset.p === 'acct' ? '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>' : ''}<span>${esc(b.dataset.p === 'acct' ? 'アカウント' : b.dataset.p === 'talk' ? '話す（自分のハタボ）' : b.textContent.trim())}</span></button>`).join('');
   $('hbpSideMenu').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (!b) return; hbpDrawer(false); if (b.dataset.p === 'talk') return hbpTalkVoice(); const t = document.querySelector('#hbpTabs > button[data-p="' + b.dataset.p + '"]'); if (t) t.click(); });
+  { let sx = 0, sy = 0; $('hbpSide').addEventListener('touchstart', e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
+    $('hbpSide').addEventListener('touchend', e => { const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy; if (dx < -70 && Math.abs(dy) < Math.abs(dx) * 0.6) hbpDrawer(false); }, { passive: true });
+    $('hbpScrim').addEventListener('touchend', () => hbpDrawer(false), { passive: true }); }
   function hbpDrawer(on) { $('hbPage').classList.toggle('drawer', !!on); $('hbpScrim').hidden = !on; if (on && J.ready) jrSend({ type: 'chats' }); }
   $('hbpMenu').addEventListener('click', () => hbpDrawer(!$('hbPage').classList.contains('drawer')));
+  document.querySelector('#hbPage .hbp-brand').addEventListener('click', () => { if (window.innerWidth < 900) hbpDrawer(!$('hbPage').classList.contains('drawer')); else { const off = $('hbPage').classList.toggle('noside'); try { store.set('hbpSide', off ? 'off' : ''); } catch (e) {} } });
   $('hbpScrim').addEventListener('click', () => hbpDrawer(false));
   // 右上の表示モード：トーク（文字で話す）／キャラ（キャラを大きく。プロジェクターでのプレゼンや交流会）
   $('hbpMode').addEventListener('click', e => { const b = e.target.closest('[data-mode]'); if (!b) return; hbpClose(); if (window.hbSetView) window.hbSetView(b.dataset.mode); });
   function hbpOpen(p) {
     if (!HBP.data) { try { const c = store.get('hbpData', null); if (c && c.type === 'mypage') HBP.data = c; } catch (e) {} }   // 前回の内容をすぐ出して、届いたら新しくする
     HBP.page = p || 'my'; hbTheme(); $('hbPage').hidden = false; document.body.classList.add('hbp-open'); hbpRender(); hbpChats(); if (HBP.page === 'console' && J.ready) jrSend({ type: 'console', as: store.get('conAs', 'office') }); if (HBS.friend === null) hbpFriend();
-    if (J.ready) { jrSend({ type: 'mypage' }); jrSend({ type: 'chats' }); jrSend({ type: 'groups_mine' }); jrSend({ type: 'inbox' }); if (!HBP.con && HBP.page !== 'console') jrSend({ type: 'console', as: J.office ? 'office' : 'self' }); if (!HBP.custom) jrSend({ type: 'custom_get' }); }
+    if (J.ready) { jrSend({ type: 'mypage' }); jrSend({ type: 'chats' }); jrSend({ type: 'groups_mine' }); jrSend({ type: 'inbox' }); jrSend({ type: 'byok_get' }); if (!HBP.con && HBP.page !== 'console') jrSend({ type: 'console', as: J.office ? 'office' : 'self' }); if (!HBP.custom) jrSend({ type: 'custom_get' }); }
   }
   function hbpClose() { $('hbPage').hidden = true; document.body.classList.remove('hbp-open'); }
   $('hbHomeFab').addEventListener('click', () => hbpOpen('my'));
   $('hbTopBrand').addEventListener('click', () => hbpOpen('my'));
+  ['cvScr', 'cvSpk', 'cvMicSw'].forEach(id => { const b = document.getElementById(id); if (b) $('hbTopTools').append(b); });
   $('hbTopMenu').addEventListener('click', () => { hbpOpen('my'); if (window.innerWidth < 900) setTimeout(() => hbpDrawer(true), 30); });
+  $('hbTopBrand').addEventListener('click', e => { if (window.innerWidth < 900) { e.stopImmediatePropagation(); hbpOpen('my'); setTimeout(() => hbpDrawer(true), 30); } }, true);
   document.querySelector('.hbtop-mode').addEventListener('click', e => { const b = e.target.closest('[data-mode]'); if (b && window.hbSetView) window.hbSetView(b.dataset.mode); });
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !$('hbPage').hidden && (HBP.page === 'notes' || HBP.page === 'google') && J.ready) jrSend({ type: 'google_status' }); });
   $('hbpClose').addEventListener('click', hbpClose);
@@ -4439,9 +4491,10 @@ body.av-hatabo:not(.chatview) { background: radial-gradient(120% 80% at 50% 0%, 
   { const ORDER = ['my', 'clones', 'goen', 'acct']; let x0 = 0, y0 = 0, ok = false;   // スマホ：左右のスワイプで下のタブを順番に
     $('hbpBody').addEventListener('touchstart', e => { const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; ok = !e.target.closest('.hbcar-tr, .hbban, .hbline, input, textarea, select, .hbr, .ctalk, .cmsgs'); }, { passive: true });
     $('hbpBody').addEventListener('touchend', e => { if (!ok || window.innerWidth >= 900) return; const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0; if (Math.abs(dx) < 70 || Math.abs(dy) > Math.abs(dx) * 0.6) return;
-      const cur = ORDER.indexOf(HBP.page), i = cur < 0 ? 0 : (cur + (dx < 0 ? 1 : -1) + ORDER.length) % ORDER.length; const b = document.querySelector('#hbpTabs > button[data-p="' + ORDER[i] + '"]'); if (b) { $('hbpBody').classList.remove('sw-l', 'sw-r'); void $('hbpBody').offsetWidth; $('hbpBody').classList.add(dx < 0 ? 'sw-l' : 'sw-r'); b.click(); } }, { passive: true }); }
+      if (dx > 0 && (HBP.page === 'my' || ORDER.indexOf(HBP.page) <= 0)) return hbpDrawer(true);
+      const cur = ORDER.indexOf(HBP.page), i = cur < 0 ? 0 : Math.max(0, Math.min(ORDER.length - 1, cur + (dx < 0 ? 1 : -1))); const b = document.querySelector('#hbpTabs > button[data-p="' + ORDER[i] + '"]'); if (b) { $('hbpBody').classList.remove('sw-l', 'sw-r'); void $('hbpBody').offsetWidth; $('hbpBody').classList.add(dx < 0 ? 'sw-l' : 'sw-r'); b.click(); } }, { passive: true }); }
   $('hbpTabs').addEventListener('click', e => { const b = e.target.closest('[data-p="talk"]'); if (!b) return; e.stopImmediatePropagation(); hbpTalkVoice(); }, true);
-  function hbpTalkVoice() { hbpDrawer(false); hbpClose(); if (window.hbSetView) window.hbSetView('char'); setTimeout(() => { const t = $('talkBtn'); if (t && !document.body.classList.contains('cv-listen')) t.click(); }, 80); }
+  function hbpTalkVoice() { hbpDrawer(false); hbpClose(); if (window.hbSetView) window.hbSetView('chat'); setTimeout(() => { const t = $('talkBtn'); if (t && !document.body.classList.contains('cv-listen')) t.click(); }, 80); }
   $('hbpTabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; HBP.page = b.dataset.p; if (HBP.page === 'goen') HBP.goen = HBP.goen || null; hbpRender(); if (J.ready) if (HBP.page === 'inbox') HBP.inboxShown = false; jrSend(HBP.page === 'gacha' ? { type: 'gacha', peek: true } : HBP.page === 'custom' ? { type: 'custom_get' } : { type: HBP.page === 'goen' ? 'goen_tree' : HBP.page === 'inbox' ? 'inbox' : HBP.page === 'friends' ? 'friends' : 'mypage' }); });
   $('myBtn').addEventListener('click', () => hbpOpen('my'));
   const HBP_START = (() => { const g = n => { let v = new URLSearchParams(location.search).get(n) || Q.get(n); if (!v) { try { const st = new URLSearchParams(location.search).get('liff.state'); if (st) v = new URLSearchParams(decodeURIComponent(st).split('?')[1] || '').get(n); } catch (e) {} } return v; }; return String(g('page') || '').replace(/[^a-z]/g, ''); })();
