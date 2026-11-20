@@ -240,3 +240,8 @@ cn.forEach(function(e){io2.observe(e)});
 })();
 /* 右上のボタンはひとつ：ログインしていない人には「ログイン」、している人には「Myハタボ」 */
 (function(){try{var a=document.querySelectorAll('.hbh a.my[data-myacct]'),on=!!localStorage.getItem('hbIn');a.forEach(function(x){var l=x.querySelector('.myl');if(on){x.href='mypage.html';if(l)l.textContent='Myハタボ'}else{x.href='login.html';if(l)l.textContent='ログイン'}});document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('a[href^="https://app.hatha-lab.com"],a[href*="liff.line.me"]');if(b)try{localStorage.setItem('hbIn','1')}catch(_){}} ,true);if(/mypage\.html$/.test(location.pathname)&&document.referrer.indexOf('app.hatha-lab.com')>=0)localStorage.setItem('hbIn','1')}catch(e){}})();
+
+/* 画面紹介：見えたら入ってきて、文字が流れるように出る（一度だけ） */
+(function(){var L=document.querySelectorAll('.uiduo,.ui4');if(!L.length)return;L.forEach(function(e){e.classList.add('uianim')});
+function go(e){if(e.classList.contains('on'))return;e.classList.add('on');if(e.classList.contains('uiduo')){e.classList.add('speak');setTimeout(function(){e.classList.remove('speak')},3800)}}
+if(!('IntersectionObserver' in window)){L.forEach(go);return}var io=new IntersectionObserver(function(es){es.forEach(function(x){if(x.isIntersecting){go(x.target);io.unobserve(x.target)}})},{threshold:.28});L.forEach(function(e){io.observe(e)})})();
