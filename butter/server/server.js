@@ -173,6 +173,31 @@ function rankOf(r) {
   return { key: cur.key, label: cur.label, pt, months,
     next: nx ? { label: nx.label, needPt: Math.max(0, nx.pt - pt), needMonths: Math.max(0, nx.months - months), needDeed: !!nx.deed && !deed } : null };
 }
+/* ===== 分身（オーナーが自分の愛棒から作る、役割つきの窓口URL）===== */
+const CLONE_ROLES = ['受付', '相談役', '営業', 'サポート', '友だち', '汎用'];
+const CLONE_CAP = { standard: 3, gold: 5, platinum: 10, black: 30 };   // ランクごとに作れる数
+const newCloneCode = () => 'c' + crypto.randomBytes(5).toString('base64').replace(/[^a-z0-9]/gi, '').toLowerCase().slice(0, 7).padEnd(7, '0');
+function cloneRule(cl) {
+  const L = ['【この窓口は、' + (cl.ownerName || 'オーナー') + 'さんの愛棒の分身です】役割は「' + (cl.role || '汎用') + '」。' + (cl.label ? 'この窓口は「' + cl.label + '」向けに作られました。' : '') +
+    (cl.ownerName || 'オーナー') + 'さん本人ではないので、本人しか決められないことは「' + (cl.ownerName || 'オーナー') + 'さんに伝えておきます」と言う。'];
+  L.push(cl.price ? '料金・値段の話をしてよい（決まっている範囲だけ。わからないことは確かめると言う）。' : '料金・値段の話はしない。聞かれたら「' + (cl.ownerName || 'オーナー') + 'さんから案内します」と言う。');
+  L.push(cl.reserve ? '予約や申しこみの希望は、日時・人数・名前を聞いて、オーナーに伝える（確定はしない）。' : '予約や申しこみは受けない。オーナーにつなぐ。');
+  if (cl.note) L.push('（オーナーからのメモ：' + String(cl.note).slice(0, 600) + '）');
+  return '\n\n' + L.join('');
+}
+const cloneOpen = cl => !!cl && cl.active !== false && !(cl.until && Date.now() > cl.until);
+/** オーナー本人のLINEへ知らせる（ハタボの公式LINE）。失敗しても止めない */
+async function ownerPush(owner, text) {
+  const id = String(owner || '').replace(/^g:/, '');
+  if (!ENV.HATABO_LINE_TOKEN || !/^U[0-9a-f]{32}$/.test(id)) return false;
+  const r = await fetch('https://api.line.me/v2/bot/message/push', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + ENV.HATABO_LINE_TOKEN }, body: JSON.stringify({ to: id, messages: [{ type: 'text', text: String(text).slice(0, 4900) }] }) }).catch(() => null);
+  return !!(r && r.ok);
+}
+/** 事務局の管理画面：紹介コードの一覧（人・分身・グループ） */
+async function allRefs() {
+  try { if (deps.db) return (await deps.db.collection('refs').limit(2000).get()).docs.map(d => Object.assign({ code: d.id }, d.data())); } catch (e) { console.error('refs list', String(e.message).slice(0, 120)); }
+  return Array.from(memRefs.entries()).map(([code, v]) => Object.assign({ code }, v));
+}
 /* ===== 決済（Stripe）：支払いページ → 支払いが済んだ知らせ（Webhook）→ 契約 → 本人と事務局に知らせる ===== */
 const stripeOn = () => !!ENV.STRIPE_SECRET_KEY;
 function stripeForm(obj, pre, out) {
@@ -598,7 +623,7 @@ async function tellUpline(S, what, kind) {
   let c = alias(S.refFrom), who = S.me || 'ご縁の人';
   for (let i = 0, hop = 0; i < 3 && c && hop < 6; i++, hop++) {   // 3代まで：本人の紹介 100%・その上 1/2・さらに上 1/4
     const up = await getRef(c).catch(() => null);
-    if (up && up.kind === 'group') { c = up.parent; i--; continue; }   // LINEグループの紹介コードは通りぬけて、招待した人・管理者へ
+    if (up && (up.kind === 'group' || up.kind === 'clone')) { c = up.parent; i--; continue; }   // LINEグループの紹介コードは通りぬけて、招待した人・管理者へ
     const pt = Math.round((THANKS[kind] || 0) / Math.pow(2, i));
     if (pt) await putRef(c, { pts: ((up && up.pts) || 0) + pt, ptsTotal: earned(up) + pt }).catch(() => {});
     const text = (i === 0 ? who + 'さんが、あなたの紹介で' + what + '。' : '（ご縁の' + (i + 1) + '代目）' + who + 'さんが' + what + '。') + (pt ? 'ありがとうポイント +' + pt + 'pt' : '');
@@ -1276,6 +1301,8 @@ const ROLE_RULE = {
   'セミナーパートナー': '【この窓口の役割：マーケティングのセミナー担当（毎週金曜・パートナー向け説明会）】あなたは説明会の進行役。はじめに「今日の流れ」を1文で伝えて、次の順で進める：①相手のことと、だれに紹介したいかを聞く ②ハタボのしくみと、紹介のしかた（紹介リンク・公式LINE・ミニアプリの「紹介する」） ③パートナーのランク（案）：紹介パートナーは月額の15%、サクセスパートナー（使いはじめも伴走）は20%、代理店（提案から契約・最初のサポートまで）は30%。紹介したお客さまが使い続けている間。入会金や在庫はない ④ご縁とありがとうポイント（紹介した人が話しはじめたら、お試し、契約でポイント。2代目は1/2、3代目は1/4） ⑤AISAI・愛祭とアワード ⑥質問。最後に、パートナーの申し込みと、くわしい相談（オンライン相談30分・無料）を案内する。率は案で、変わることがあると必ず添える。ひとつの話題を2〜4文で話したら、「ここまでで質問はあるボー？なければ次にいくボー」と区切って、相手の返事を待つ。質問にはその場で答える。サイトや料金表にないことは約束せず「担当に確かめておくボー」と言う。売りこみすぎない。サービス以外の頼みには答えない。',
   'サービス相談': '【この窓口の役割：サービス相談（サイトと公式LINEの窓口）】ハタボというサービスの案内係。相手の暮らしや仕事を短く聞いて、合うラインナップ（ハタイエンタ＝家族、ハタリス＝ひとり、ハタボックス＝個人事業、ハタエース＝お店・宿、ハタボーラ＝会社）とグレード（X標準・G上位・Zいちばん上）をすすめる。料金はサイトと同じ（ハタリスX 2,980円〜（Zは12,800円）、ハタイエンタX 5,980円〜（家族5人まで・1日の回数を家族で分け合う・6人目から1人980円）、ハタボックスX 5,000円〜、ハタエースX 10,000円〜、ハタボーラX 1席2,980円〜）。年払いは12か月分を10か月分の料金で。自分のClaude・ChatGPTで使いたい人には、いつものAIにハタボをつなぐ「ハタボ コネクト（仮称）」を準備中（月1,480円、公開記念ではじめの3か月980円の予定）と伝える。まず7日間、いちばん上のZで無料で試せて（初日30回、2日目から1日15回まで）、7日以内にやめれば0円、と伝える。申し込みは「Myハタボのプラン・支払い」からできると案内する。オンライン相談（担当とのビデオ通話・30分・無料）を希望されたら、下の「ヒロさんの空いていそうな時間」から候補を2〜3つ出して選んでもらい、名前と連絡先（LINEのままでよいか）を確かめる。確定とビデオ通話のURLは担当から連絡する、と伝える（自分で確定しない）。セミナー・説明会（オンライン・無料・45分）は毎週2回：水曜14:00は事業主・法人向け、金曜19:00はパートナー向け。進行はマーケティングのセミナー担当のハタボがする。参加したいと言われたら、どちらの会か・参加する日（いちばん近い水曜か金曜）・名前を確かめ、時間になったらサイトのセミナーのページ（' + (ENV.SITE_URL || 'https://www.hatha-lab.com') + '/seminar.html）の「参加する」ボタンから入ると、セミナー担当のハタボが始める、と伝える。祝日は休みのことがある。わからないこと・個別の見積もりは、ハタラボの担当（ヒロさん）につなぐ。売りこみすぎない。\n【サービス以外はしない】この窓口はサービスのご案内専用。ハタボのサービス（ラインナップ・料金・グレード・お試し・使い方・申し込み・安心・会社のこと）と、ハタボで解決できるお困りごと（集客・SNS・口コミ・予約・人手不足・給料・支払い・教育・ナレッジ・データ分析・事務など、めんどくさいことすべて）以外の頼み（文章の下書き、翻訳、宿題、長い調べもの、占い、ほかの会社のことなど）には答えない。そのときは「ここはサービスのご案内の窓口だから、それはお試しをはじめたあなたのAI棒が手伝えるボー」と一言で断り、お試しを案内する。ただし、天気・時刻・道のり・ちょっとした事実のような、すぐ答えられるかんたんな質問は断らず、調べた結果を一言で答える（調べられないときだけ、正直にそう言う）。そのあと無理にお試しへつなげない。聞き取りの言いまちがいらしいとき（「転記」→天気など）は、意味の通るほうで受けとる。長い文章は書かない。',
   '汎用': '【この窓口の役割：ふだんのハタボ（はじめのヒアリング）】まずは相手の悩みや課題を聞いて、いっしょに解決する。はじめての人には、自己紹介は1〜2文で短く。そのあとは質問を1回に1つだけ、相手の言葉をくり返して確かめながら、①いちばん困っていること ②いつまでに・どのくらい急ぐか ③いまどうしているか（だれが・どんな道具で） ④うまくいったらどうなっていたいか、の順に聞く。聞けたら、ハタボができること（調べもの・段取り・文章・予定・報連相・お店や会社の窓口など）で、今日すぐできる一歩を1つ具体的に出して、やってみるかたずねる。決めつけない。むずかしい話や、人の手がいる話は「〈伝え先〉につなぐ」。売りこみはしないが、続けて使いたそうなら7日間の無料お試し（Myハタボのプラン）を一言だけ案内する。',
+  '受付': '【この窓口の役割：受付】お店や事務所の受付として、ていねいに用件を聞く。営業時間・場所・よくある質問に答え、本人の判断が要ることは名前と連絡の希望を聞いて伝える。',
+  '相談役': '【この窓口の役割：相談役】相手の話をよく聞いて、いっしょに考える。答えを押しつけず、選べる道を2〜3つ出す。',
   '友だち': '【この窓口の役割：友だち】気さくに話す。遊びや会う約束、お祭り・フェスの話が中心。仕事の話が出たら、ふつうに聞いてヒロさんにつなぐ。',
 };
 ROLE_RULE['サービス相談'] += GROWTH_PLAYBOOK; ROLE_RULE['セミナー法人'] += GROWTH_PLAYBOOK; ROLE_RULE['汎用'] += GROWTH_PLAYBOOK;
@@ -1864,6 +1891,67 @@ function session(ws) {
   }
   /** 事務局：要件の一覧と、採用したときのポイント（最初に出した人が半分、残りの半分をあとの人で分ける） */
   const isOffice = () => !!S.owner && ENV.OFFICE_OWNERS.some(id => S.owner === id || S.owner === 'g:' + id);
+  /** 分身：一覧・作る・変える（止める・期限・役割・キャラ・メモ）。URLは変えずに中身だけ変えられる */
+  async function onClones(m) {
+    if (!S.myRef) return send({ type: 'clones', denied: true });
+    const me = await getRef(S.myRef).catch(() => null) || {}, rk = rankOf(me), cap = isOffice() ? 999 : CLONE_CAP[rk.key] || 3;
+    const C = await loadCol(S.myRef, 'clones'), codes = Array.isArray(C.codes) ? C.codes : [];
+    const mini = (S.app === 'komugi' ? LINE_CH.komugi : LINE_CH.hatabo).mini;
+    const clean = x => String(x || '').replace(/[\u0000-\u001f]/g, ' ').trim();
+    let msg = '';
+    if (m.type === 'clone_new') {
+      if (codes.length >= cap) msg = 'いまのランク（' + rk.label + '）で作れる分身は' + cap + 'つまでです。';
+      else {
+        const code = newCloneCode(), days = Math.max(0, Math.min(3650, Math.round(Number(m.days) || 0)));
+        const cl = { kind: 'clone', parent: S.myRef, owner: S.owner, ownerName: S.me || me.name || '', name: clean(m.name).slice(0, 30) || '分身', role: CLONE_ROLES.includes(m.role) ? m.role : '汎用',
+          label: clean(m.label).slice(0, 60), avatar: AVS[m.avatar] ? m.avatar : S.avatar || 'hatabo', note: clean(m.note).slice(0, 600), price: !!m.price, reserve: !!m.reserve,
+          until: days ? Date.now() + days * 86400000 : 0, active: true, at: Date.now(), visits: 0, kids: 0 };
+        await putRef(code, cl); codes.unshift(code); await saveCol(S.myRef, 'clones', { codes });
+        const url = mini + '?ref=' + code; msg = '分身「' + cl.name + '」を作りました。';
+        ownerPush(S.owner, '【分身ができました】' + cl.name + '（' + cl.role + (cl.label ? '・' + cl.label + '向け' : '') + '）\n' + url + '\nこのURLを渡した人は、あなたの分身と話せます。止める・期限・役割の変更は、Myハタボの「分身」から。').catch(() => {});
+        officeNote('［分身］' + (S.me || 'だれか') + 'さんが分身「' + cl.name + '」（' + cl.role + '）を作りました').catch(() => {});
+      }
+    } else if (m.type === 'clone_set' && codes.includes(String(m.code))) {
+      const cur = await getRef(String(m.code)).catch(() => null) || {}, up = {};
+      if ('active' in m) up.active = !!m.active;
+      if ('days' in m) { const d0 = Math.max(0, Math.min(3650, Math.round(Number(m.days) || 0))); up.until = d0 ? Math.max(Date.now(), cur.until || 0) + d0 * 86400000 : 0; }
+      if (m.role && CLONE_ROLES.includes(m.role)) up.role = m.role;
+      if (m.avatar && AVS[m.avatar]) up.avatar = m.avatar;
+      if ('note' in m) up.note = clean(m.note).slice(0, 600);
+      if ('label' in m) up.label = clean(m.label).slice(0, 60);
+      if ('name' in m && clean(m.name)) up.name = clean(m.name).slice(0, 30);
+      if ('price' in m) up.price = !!m.price; if ('reserve' in m) up.reserve = !!m.reserve;
+      await putRef(String(m.code), up); msg = '変更しました。URLはそのままです。';
+    }
+    const items = [];
+    for (const c of codes.slice(0, 60)) { const x = await getRef(c).catch(() => null); if (x) items.push({ code: c, url: mini + '?ref=' + c, name: x.name, role: x.role, label: x.label || '', avatar: x.avatar, note: x.note || '', price: !!x.price, reserve: !!x.reserve, until: x.until || 0, active: x.active !== false, open: cloneOpen(x), visits: x.visits || 0, kids: x.kids || 0, at: x.at || 0, lastAt: x.lastAt || 0 }); }
+    send({ type: 'clones', items, cap, rank: rk.label, roles: CLONE_ROLES, avatars: Object.keys(AVS).map(k => ({ id: k, name: AVS[k].name })), msg });
+  }
+  /** 事務局の管理画面：お客さま（紹介コード）の一覧と、役割・メモ・愛祭の協力の記録。変えたことは記録に残す */
+  async function onAdmin(m) {
+    if (!isOffice()) return send({ type: 'admin', denied: true });
+    let msg = '';
+    if (m.type === 'admin_set' && m.code) {
+      const code = String(m.code).replace(/[^\w-]/g, '').slice(0, 20), cur = await getRef(code).catch(() => null);
+      if (cur) {
+        const up = {};
+        if ('role' in m) up.role = String(m.role || '').slice(0, 30);
+        if ('roleNote' in m) up.roleNote = String(m.roleNote || '').slice(0, 300);
+        if (m.aisaiHelp) up.aisaiHelp = (cur.aisaiHelp || 0) + 1;
+        if ('active' in m && cur.kind === 'clone') up.active = !!m.active;
+        await putRef(code, up);
+        const A = await loadCol('office', 'audit'), items = (A.items || []).slice(0, 199);
+        items.unshift({ at: Date.now(), by: S.me || S.owner, code, what: JSON.stringify(up).slice(0, 200) });
+        await saveCol('office', 'audit', { items }); msg = code + ' を変更しました';
+      }
+    }
+    const refs = await allRefs();
+    const rows = refs.map(r => { const f = funnelOf(r), rk = rankOf(r); return { code: r.code, kind: r.kind || 'person', name: r.name || '', ownerName: r.ownerName || '', parent: r.parent || '', stage: f.stage, lineup: f.lineupName || '', grade: f.grade || '',
+      paid: !!r.paidAt, payFail: !!r.payFailAt, rank: rk.label, pts: r.pts || 0, ptsTotal: earned(r), kids: r.kids || 0, visits: r.visits || 0, role: r.role || '', roleNote: r.roleNote || '', aisaiHelp: r.aisaiHelp || 0, adopts: r.adopts || 0,
+      at: r.at || 0, lastAt: r.lastAt || 0, active: r.active !== false, until: r.until || 0 }; }).sort((a, b) => (b.at || 0) - (a.at || 0));
+    const sum = { people: rows.filter(x => x.kind === 'person').length, trial: rows.filter(x => x.stage === 'trial').length, contract: rows.filter(x => x.stage === 'contract').length, payFail: rows.filter(x => x.payFail).length, clones: rows.filter(x => x.kind === 'clone').length, groups: rows.filter(x => x.kind === 'group').length };
+    send({ type: 'admin', rows, sum, roles: Object.keys(ROLE_RULE), audit: ((await loadCol('office', 'audit')).items || []).slice(0, 30), msg });
+  }
   async function onReqs(m) {
     if (!isOffice()) return send({ type: 'reqs', denied: true });
     const R = await loadCol('office', 'reqs'), items = R.items || [];
@@ -2498,6 +2586,18 @@ function session(ws) {
           S.system = MIN_PERSONA + SELF; S.brainAt = Date.now() - 9 * 60 * 1000;
           send({ type: 'notice', why: 'brain', detail: 'GASが読めないので、記録なしで話しています' });
         }
+        // 事務局が管理画面で決めた役割（紹介コードごと）と、オーナーが作った分身
+        if (S.guest && S.ref && !S.agent && !S.visit) {
+          const rd = await getRef(S.ref).catch(() => null);
+          if (rd && rd.kind === 'clone') {
+            if (!cloneOpen(rd)) return fail('closed', 'この窓口はお休み中です');
+            S.clone = Object.assign({ code: S.ref }, rd); S.role = rd.role || '汎用';
+            S.system += (roleRule(S.role) ? '\n\n' + roleRule(S.role) : '') + cloneRule(rd);
+            if (!S.peek) putRef(S.ref, { visits: (rd.visits || 0) + 1, lastAt: Date.now() }).catch(() => {});
+          } else if (rd && rd.role) {
+            S.role = rd.role; S.system += '\n\n【事務局が決めた、この窓口の役割】' + (roleRule(rd.role) || rd.role) + (rd.roleNote ? '\n（メモ：' + String(rd.roleNote).slice(0, 300) + '）' : '');
+          }
+        }
         // ヒアリング役の人：紹介コード付きで来たら覚える。メニューやトークのボタン（コードなし）から来たら、覚えたコードで開きなおす
         if (S.guest && S.owner && !S.peek && !S.visit && !S.asGuest) {
           if (S.ref && isPinRole(S.role)) { await setPin(S.owner, S.ref); if (isHearingRole(S.role)) await hearingStart(S.ref, S.me); }
@@ -2630,7 +2730,7 @@ function session(ws) {
         // ハタボの伝え先：招待した人がいればその人、いなければ「ハタボの事務局」（運営の個人の名前は出さない）
         if (S.avatar === 'hatabo' && !S.visit) {
           let to = 'ハタボの事務局';
-          if (hearing() || sanbo()) to = 'ヒロさん'; else try { let up = S.refFrom ? await getRef(S.refFrom) : null; if (up && up.kind === 'group') up = up.parent ? await getRef(up.parent) : null; if (up && up.owner && up.name) to = up.name + 'さん'; } catch (e) {}
+          if (hearing() || sanbo()) to = 'ヒロさん'; else if (S.clone && S.clone.ownerName) to = S.clone.ownerName + 'さん'; else try { let up = S.refFrom ? await getRef(S.refFrom) : null; if (up && (up.kind === 'group' || up.kind === 'clone')) up = up.parent ? await getRef(up.parent) : null; if (up && up.owner && up.name) to = up.name + 'さん'; } catch (e) {}
           S.tellTo = to;
           S.system = S.system.replace(/ハタラボの担当（ヒロさん）|ハタラボのヒロさん/g, to).replace(/〈伝え先〉/g, to).replace(/ヒロさん/g, to);
         }
@@ -2703,6 +2803,8 @@ function session(ws) {
       if (m.type === 'rename_req') { gas(Object.assign({ action: 'lead', lead: { who: S.me, ref: '', kind: '契約', title: 'AI棒の名前の変更（1,000円）：' + String(m.name || '').slice(0, 12), need: '名前の変更', when: '', budget: '1,000円', next: 'お支払いのあと名前を変える', memo: '' } }, S.auth)).catch(() => {}); return send({ type: 'notice', why: 'rename', detail: '名前の変更を申し込みました。お支払いの案内のあと変わります' }); }
       if (m.type === 'ticket') return onTicket(m);
       if (m.type === 'reqs' || m.type === 'req_adopt') return onReqs(m);
+      if (m.type === 'clones' || m.type === 'clone_new' || m.type === 'clone_set') return onClones(m);
+      if (m.type === 'admin' || m.type === 'admin_set') return onAdmin(m);
       if (m.type === 'docs' || m.type === 'docs_set' || m.type === 'docs_share' || m.type === 'docs_copy') return onDocs(m);
       if (m.type === 'friends') return send(await friendsView());
       if (m.type === 'friend_req' || m.type === 'friend_ok' || m.type === 'friend_no' || m.type === 'friend_del') return onFriend(m);
@@ -2824,4 +2926,4 @@ if (require.main === module) {
   deps.init();
   createServer().listen(ENV.PORT, () => console.log('butter-junior on :' + ENV.PORT));
 }
-module.exports = { cmVideo, brandOut, rankOf, RANKS, createServer, deps, ENV, splitter, takeEmotion, clean, PHOTO_RE, VIDEO_RE, session, calledJunior, calledJam, hearingStart, hearingCheckAll, handleStripeEvent, stripeSigOk, funnelOf, getRef, putRef, checkoutFor };
+module.exports = { cmVideo, brandOut, rankOf, RANKS, cloneRule, cloneOpen, CLONE_CAP, createServer, deps, ENV, splitter, takeEmotion, clean, PHOTO_RE, VIDEO_RE, session, calledJunior, calledJam, hearingStart, hearingCheckAll, handleStripeEvent, stripeSigOk, funnelOf, getRef, putRef, checkoutFor };
