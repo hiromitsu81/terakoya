@@ -102,3 +102,21 @@ gcloud run deploy butter-junior --source terakoya/butter/server --region asia-no
 | EOU_MS | 800（話し終わりの見分け。文字がこのミリ秒かわらなければ返事を始める。切られやすいときは1000、0でGoogleまかせ） |
 | ELEVENLABS_FORMAT | mp3_44100_128（ElevenLabsの声の音質） |
 | ALLOWED_ORIGINS | https://hiromitsu81.github.io ほか |
+
+## ウェブのログインと、ハタボAPI（MCP）
+
+- サイトの「ログイン」（hatabo-site/login.html）
+  - **LINEでログイン**：PCでは app.hatha-lab.com をブラウザで開いて、LINEでログインします。スマホではミニアプリが開きます（`page=login`）。事務局は管理画面へ、オーナーはMyハタボへ、自動で分かれます。
+  - **Googleでログイン**：`/google/login` → 既存の `/google/callback`（新しいリダイレクトURIの登録は不要）。12時間の印（`#wt=`）をつけて app.hatha-lab.com へ戻ります。
+    - オーナー：Myハタボの「設定」→「Googleアカウント連携」でつないだGoogleなら、そのMyハタボへ。※この機能を入れる前につないだ人は、一度つなぎ直すと使えます。
+    - 事務局：`OFFICE_EMAILS` にあるメール、または OFFICE_OWNERS の人がつないだGoogle。
+- ハタボAPI（MCP）：`POST {PUBLIC_URL}/mcp/<APIキー>`（または `Authorization: Bearer <APIキー>`）
+  - 道具：search_aibo・send_message・request_reservation・list_my_aibo・update_my_aibo・get_usage
+  - キーはMyハタボの「もっと」→「AIからつなぐ（API）」で作る（5つまで・作ったときだけ表示）。
+  - 検索に出るのは、オーナーが「AIからの検索に出す」をオンにした役割つきの愛棒だけ。LINEのIDは出さない。
+  - 料金は記録して見こみを出すところまで（請求はまだ）。1分60回・伝言は1日100回までに制限。
+
+Cloud Run に入れる環境変数（チャットに貼らず、Cloud Shell で直接）：
+- `WEB_SECRET`：ウェブのログインの印の鍵（長いランダムな文字。なければ GOOGLE_CLIENT_SECRET から作る）
+- `OFFICE_EMAILS`：Googleで管理画面に入れる事務局のメール（カンマ区切り）
+- `API_PRICE`（任意）：`{"free":100,"search":1,"message":5,"reserve":5,"done":30}`
