@@ -505,7 +505,7 @@ body.hb-peek .hbtop{bottom:180px}
 .hbh .menu{color:#E6E9EE}
 @media(max-width:1080px){.hbh nav.open{background:var(--hb-black2);border-bottom-color:rgba(255,255,255,.08)}.hbh nav.open a,.hbh nav.open .ddm a,.hbh nav.open .ddm a b{color:#DCE0E7}.hbh nav.open .ddm a small{color:#9AA2B0}.hbh nav.open .ddm{background:transparent;box-shadow:none}}
 /* 最初の画面：黒地に光の粒、明朝の見出し */
-.hero2{position:relative;background:radial-gradient(ellipse at 72% 40%,#1B2338 0%,#0E1220 45%,var(--hb-black) 80%);color:var(--hb-silver1)}
+.hero2{position:relative;overflow:hidden;background:radial-gradient(ellipse at 72% 40%,#1B2338 0%,#0E1220 45%,var(--hb-black) 80%);color:var(--hb-silver1)}
 .hero2::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.55;background-image:radial-gradient(1.4px 1.4px at 12% 22%,#BFE2FF 50%,transparent 51%),radial-gradient(1px 1px at 28% 68%,#CFE6FF 50%,transparent 51%),radial-gradient(1.8px 1.8px at 46% 12%,#A9D4FF 50%,transparent 51%),radial-gradient(1px 1px at 58% 82%,#DCEBFF 50%,transparent 51%),radial-gradient(1.4px 1.4px at 66% 30%,#BFE2FF 50%,transparent 51%),radial-gradient(1px 1px at 80% 58%,#CFE6FF 50%,transparent 51%),radial-gradient(2px 2px at 90% 18%,#A9D4FF 50%,transparent 51%),radial-gradient(1px 1px at 8% 86%,#DCEBFF 50%,transparent 51%),radial-gradient(1.2px 1.2px at 38% 44%,#BFE2FF 50%,transparent 51%),radial-gradient(1px 1px at 74% 90%,#CFE6FF 50%,transparent 51%);background-size:420px 420px;animation:hbStars 60s linear infinite}
 @keyframes hbStars{to{background-position:420px -420px}}
 @media(prefers-reduced-motion:reduce){.hero2::before{animation:none}}
@@ -558,3 +558,13 @@ body.hb-peek .hbtop{bottom:180px}
 .hbh .login{color:#C9CFD8;font-size:13px;font-weight:700;text-decoration:none;padding:9px 4px;white-space:nowrap;letter-spacing:.04em}.hbh .login:hover{color:#fff}
 @media(min-width:761px){.hbh .in{gap:18px}.hbh nav{gap:14px}.hbh nav .dd{flex:none}.hbh nav .dd>a{white-space:nowrap}}
 @media(max-width:760px){.hbh .login{order:5;display:flex;align-items:center;height:30px;margin:7px 2px 7px 0;padding:0 6px;font-size:12px}}
+/* 最初の画面（11/20）：光の粒がまわりから真ん中にバーッと集まってくる。2層を半分ずらして、つねに集まりつづける */
+.hero2::before,.hero2::after{transform-origin:72% 40%;will-change:transform,opacity;animation:hbGather 7s cubic-bezier(.4,0,.6,1) infinite}
+.hero2::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;background-image:radial-gradient(1.6px 1.6px at 18% 14%,#E6F2FF 50%,transparent 51%),radial-gradient(1.2px 1.2px at 34% 84%,#BFE2FF 50%,transparent 51%),radial-gradient(2px 2px at 52% 6%,#FFF6D6 50%,transparent 51%),radial-gradient(1.2px 1.2px at 88% 76%,#CFE6FF 50%,transparent 51%),radial-gradient(1.6px 1.6px at 96% 34%,#A9D4FF 50%,transparent 51%),radial-gradient(1px 1px at 6% 52%,#DCEBFF 50%,transparent 51%),radial-gradient(1.8px 1.8px at 62% 94%,#BFE2FF 50%,transparent 51%),radial-gradient(1.2px 1.2px at 40% 40%,#FFF6D6 50%,transparent 51%),radial-gradient(1.4px 1.4px at 78% 8%,#E6F2FF 50%,transparent 51%),radial-gradient(1px 1px at 24% 30%,#CFE6FF 50%,transparent 51%);animation-delay:-3.5s}
+.hero2>.in{z-index:1}
+@keyframes hbGather{0%{transform:scale(2.4);opacity:0}15%{opacity:1}80%{opacity:.85}100%{transform:scale(.12);opacity:0}}
+.hero2::before,.hero2::after{filter:drop-shadow(0 0 2px #CFE6FF) drop-shadow(0 0 6px rgba(169,212,255,.7))}
+.hero2>.wr::before{content:"";position:absolute;left:62%;top:22%;width:240px;height:240px;border-radius:50%;pointer-events:none;background:radial-gradient(circle,rgba(169,212,255,.22),transparent 65%);animation:hbCore 3.5s ease-in-out infinite;z-index:-1}
+@keyframes hbCore{0%,100%{transform:scale(.85);opacity:.5}50%{transform:scale(1.15);opacity:1}}
+@media(prefers-reduced-motion:reduce){.hero2>.wr::before{animation:none}}
+@media(prefers-reduced-motion:reduce){.hero2::before,.hero2::after{animation:none}.hero2::after{display:none}}
