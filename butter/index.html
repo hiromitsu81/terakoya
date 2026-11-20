@@ -1362,6 +1362,16 @@ html:not(.kmapp) body:not(.av-komugi) .hbpage.p-my #hbpTitle { visibility: hidde
   .hbpage .hbp-body > .hbhero, .hbpage .hbp-body > .hbwide { grid-column: 1 / -1; }
   .hbpage .hbp-body > .hbhero { max-width: 1240px; width: 100%; justify-self: center; }
 }
+
+/* グループのやりとり（LINEの流れ） */
+.hbline { display: grid; gap: 10px; max-height: 60vh; overflow-y: auto; padding: 12px; margin: 8px 0 10px; border-radius: 14px; background: rgba(120,140,170,.10); }
+.hbline-d { justify-self: center; font: 600 11.5px var(--display); color: var(--cmut); background: var(--csel); padding: 3px 10px; border-radius: 999px; }
+.hbline-m { display: grid; justify-items: start; gap: 2px; max-width: 78%; }
+.hbline-m small { font-size: 11.5px; color: var(--cmut); padding-left: 4px; }
+.hbline-m p { margin: 0; padding: 9px 13px; border-radius: 4px 18px 18px 18px; background: var(--ccard); border: 1px solid var(--cline); color: var(--ctext); font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+.hbline-m time { font-size: 10.5px; color: var(--cmut); padding-left: 4px; }
+.hbline-m.bot { justify-self: end; justify-items: end; }
+.hbline-m.bot p { border-radius: 18px 4px 18px 18px; background: #2F8A55; border-color: #2F8A55; color: #fff !important; }
 </style>
 </head>
 <body>
@@ -3084,6 +3094,8 @@ html:not(.kmapp) body:not(.av-komugi) .hbpage.p-my #hbpTitle { visibility: hidde
     switch (m.type) {
       case 'inbox': HBP.inbox = m; if (m.sent) toast('伝言をとどけたよ'); if (!$('hbPage').hidden && HBP.page === 'inbox') { if (m.sent || !HBP.inboxShown) { HBP.inboxShown = true; hbpRender(); } } break;
       case 'chats': HBP.chats = m; hbpChats(); break;
+      case 'groups_mine': HBP.myGroups = m.list || []; hbpChats(); break;
+      case 'group_log': HBP.glog = HBP.glog || {}; HBP.glog[m.gid] = m; if (!$('hbPage').hidden && HBP.page === 'group' && HBP.gid === m.gid) hbpRender(); break;
       case 'chat_turns': if (window.hbCvLoad) window.hbCvLoad(m.turns || []); HBP.chats && (HBP.chats.cur = m.id); hbpChats(); break;
       case 'custom': HBP.custom = m; if (m.saved) { toast('キャラ設定を保存したよ'); window.__aiName = m.aiName || ''; avText(); const t = document.querySelector('#butterTag text'); if (t && avName()) t.textContent = avName(); } if (!$('hbPage').hidden && (HBP.page === 'custom' || HBP.page === 'voice' || HBP.page === 'my')) hbpRender(); break;
       case 'google': HBP.google = m; if (!$('hbPage').hidden && (HBP.page === 'notes' || HBP.page === 'google')) hbpRender(); break;
@@ -3652,11 +3664,17 @@ html:not(.kmapp) body:not(.av-komugi) .hbpage.p-my #hbpTitle { visibility: hidde
           <button type="button" class="hbbtn" id="hbPerReply">管理画面で返事する</button></div>`;
       $('hbPerReply').onclick = () => { HBP.cv = 'talks'; HBP.page = 'console'; hbpRender(); };
     } else if (p === 'group') {
-      const g = ((HBP.con && HBP.con.groups) || []).find(x => x.gid === HBP.gid) || {};
+      const g = (HBP.myGroups || (HBP.con && HBP.con.groups) || []).find(x => x.gid === HBP.gid) || {}, Lg = (HBP.glog || {})[HBP.gid];
       const pic = g.pic ? `<img src="${esc(g.pic)}" alt="" referrerpolicy="no-referrer">` : `<span>${esc(String(g.name || 'G').slice(0, 1))}</span>`;
-      body.innerHTML = `<div class="hbc hbwide"><div class="hbacct"><i class="hbpic">${pic}</i><div><div class="k">GROUP</div><h3>${esc(g.name || 'LINEグループ')}</h3><span class="hbtag">${g.members ? g.members + '人' : 'LINEグループ'}</span> <span class="hbtag">${g.ch === 'komugi' ? 'コムギ' : 'ハタボ'}</span></div></div></div>
-        <div class="hbc"><div class="k">SEND</div><h3>このグループに送る</h3><textarea class="hbin" id="hbGrpTxt" rows="4" maxlength="2000" placeholder="グループに送る文"></textarea><p style="font-size:11.5px">公式LINEから送るので、メンバーの人数ぶん送信数に数えられます。</p><button type="button" class="hbbtn" id="hbGrpGo">送る</button></div>`;
-      $('hbGrpGo').onclick = () => { const v = $('hbGrpTxt').value.trim(); if (!v) return; if (!confirm('「' + (g.name || 'グループ') + '」に送ります。よろしいですか？')) return; jrSend({ type: 'grp_send', gid: g.gid, text: v }); $('hbGrpTxt').value = ''; };
+      const tm = t => { const x = new Date(t || 0); return (x.getMonth() + 1) + '/' + x.getDate() + ' ' + x.getHours() + ':' + String(x.getMinutes()).padStart(2, '0'); };
+      const items = (Lg && Lg.items) || [];
+      const log = !Lg ? '<p>よみこみ中です…</p>' : Lg.denied ? '<p>このグループのやりとりは、グループの管理者だけが見られます。</p>' : items.length ? '<div class="hbline">' + items.map((x, k) => { const nd = k === 0 || new Date(items[k - 1].at).toDateString() !== new Date(x.at).toDateString(); return (nd ? `<div class="hbline-d">${new Date(x.at).toLocaleDateString('ja-JP', { month: 'long', day: 'numeric', weekday: 'short' })}</div>` : '') + `<div class="hbline-m${x.bot ? ' bot' : ''}">${x.bot ? '' : `<small>${esc(x.name || '')}</small>`}<p>${esc(x.text || '')}</p><time>${tm(x.at).split(' ')[1]}</time></div>`; }).join('') + '</div>' : `<p>${Lg.rec ? 'まだやりとりがありません。' : '記録はまだはじまっていません。'}</p>`;
+      body.innerHTML = `<div class="hbc hbwide"><div class="hbacct"><i class="hbpic">${pic}</i><div><div class="k">GROUP</div><h3>${esc(g.name || 'LINEグループ')}</h3><span class="hbtag">${g.members ? g.members + '人' : 'LINEグループ'}</span> <span class="hbtag${(Lg && Lg.rec) || g.rec ? ' gold' : ''}">${(Lg && Lg.rec) || g.rec ? '記録中' : '記録していません'}</span></div></div></div>
+        <div class="hbc hbwide"><div class="k">MESSAGES</div><h3>やりとり</h3>${log}
+          <p style="font-size:11.5px">ハタボがグループに入ったあと、管理者が「記録をはじめる」を押してからの発言を、ぜんぶ文字で残しています（音声メッセージは文字に起こします）。記録を始めると、グループのみんなにもお知らせが出ます。グループで「ハタボ、記録」と送ると、記録のボタンが出ます。</p></div>
+        ${J.office ? `<div class="hbc"><div class="k">SEND</div><h3>このグループに送る</h3><textarea class="hbin" id="hbGrpTxt" rows="4" maxlength="2000" placeholder="グループに送る文"></textarea><p style="font-size:11.5px">公式LINEから送るので、メンバーの人数ぶん送信数に数えられます。</p><button type="button" class="hbbtn" id="hbGrpGo">送る</button></div>` : ''}`;
+      { const ln = body.querySelector('.hbline'); if (ln) ln.scrollTop = ln.scrollHeight; }
+      const gb = document.getElementById('hbGrpGo'); if (gb) gb.onclick = () => { const v = $('hbGrpTxt').value.trim(); if (!v) return; if (!confirm('「' + (g.name || 'グループ') + '」に送ります。よろしいですか？')) return; jrSend({ type: 'grp_send', gid: g.gid, text: v }); $('hbGrpTxt').value = ''; };
     } else if (p === 'voice') {
       const C = HBP.custom;
       if (!C) { body.innerHTML = '<div class="hbc"><p>よみこみ中です…</p></div>'; if (J.ready) jrSend({ type: 'custom_get' }); return; }
@@ -4278,7 +4296,7 @@ html:not(.kmapp) body:not(.av-komugi) .hbpage.p-my #hbpTitle { visibility: hidde
     const O = HBP.con && !HBP.con.denied ? HBP.con : {}, pins = store.get('hbPins', []), q = ($('hbpSearch').value || '').trim();
     const me = { key: 'me:me', kind: 'me', name: (typeof avName === 'function' && avName()) || 'ハタボ', sub: L[0] ? L[0].title : 'あなたのAI棒', last: L[0] ? (L[0].last || L[0].at) : 0, pic: '' };
     const people = (O.threads || []).map(t => ({ key: 'p:' + t.id, id: t.id, kind: 'p', name: t.vname || 'お客さま', sub: (t.aiboName ? '→ ' + t.aiboName + '　' : '') + (t.body === false ? '' : String(t.preview || '')), last: t.last, unread: t.unread || 0, pic: t.pic || '' }));
-    const groups = (O.groups || []).map(g => ({ key: 'g:' + g.gid, id: g.gid, kind: 'g', name: g.name, sub: (g.members ? g.members + '人' : 'LINEグループ') + (g.ch === 'komugi' ? '・コムギ' : ''), last: g.lastAt, pic: g.pic || '' }));
+    const groups = (HBP.myGroups || O.groups || []).map(g => ({ key: 'g:' + g.gid, id: g.gid, kind: 'g', name: g.name, sub: (g.members ? g.members + '人' : 'LINEグループ') + (g.ch === 'komugi' ? '・コムギ' : ''), last: g.lastAt, pic: g.pic || '' }));
     const all = [me].concat(people, groups).filter(x => !q || (x.name + ' ' + x.sub).includes(q));
     all.sort((a, b) => (pins.includes(b.key) - pins.includes(a.key)) || ((b.last || 0) - (a.last || 0)));
     const MARK = { me: '<path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.6 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/>', p: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>', g: '<circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><path d="M2 20c0-3 3-5 6-5s6 2 6 5M12 20c0-3 3-5 6-5s4 1 4 3"/>' };
@@ -4292,7 +4310,7 @@ html:not(.kmapp) body:not(.av-komugi) .hbpage.p-my #hbpTitle { visibility: hidde
     const c = key.indexOf(':'), k = key.slice(0, c), id = key.slice(c + 1); hbpDrawer(false);
     if (k === 'me') return hbpTalk('');
     if (k === 'p') { HBP.pid = id; HBP.goenOf = null; const T = (HBP.con && HBP.con.threads) || []; HBP.thr = { t: Object.assign({ turns: [] }, T.find(x => x.id === id) || {}), panel: {} }; HBP.page = 'person'; hbpRender(); hbpChats(); if (J.ready) { jrSend({ type: 'thr_open', id }); jrSend({ type: 'thr_goen', id }); } return; }
-    if (k === 'g') { HBP.gid = id; HBP.page = 'group'; hbpRender(); hbpChats(); }
+    if (k === 'g') { HBP.gid = id; HBP.page = 'group'; hbpRender(); hbpChats(); if (J.ready) jrSend({ type: 'group_log', gid: id }); }
   }
   $('hbpTalks').addEventListener('click', e => { if (Date.now() - (HBP.lpDone || 0) < 600) return; const pb = e.target.closest('[data-pin]'); if (pb) { e.stopPropagation(); return hbpPin(pb.dataset.pin); } const r = e.target.closest('[data-tk]'); if (r) hbpOpenTalk(r.dataset.tk); });
   $('hbpTalks').addEventListener('keydown', e => { const r = e.target.closest('[data-tk]'); if (r && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); hbpOpenTalk(r.dataset.tk); } });
@@ -4315,7 +4333,7 @@ html:not(.kmapp) body:not(.av-komugi) .hbpage.p-my #hbpTitle { visibility: hidde
   function hbpOpen(p) {
     if (!HBP.data) { try { const c = store.get('hbpData', null); if (c && c.type === 'mypage') HBP.data = c; } catch (e) {} }   // 前回の内容をすぐ出して、届いたら新しくする
     HBP.page = p || 'my'; hbTheme(); $('hbPage').hidden = false; hbpRender(); hbpChats(); if (HBP.page === 'console' && J.ready) jrSend({ type: 'console', as: store.get('conAs', 'office') }); if (HBS.friend === null) hbpFriend();
-    if (J.ready) { jrSend({ type: 'mypage' }); jrSend({ type: 'chats' }); if (!HBP.con && HBP.page !== 'console') jrSend({ type: 'console', as: J.office ? 'office' : 'self' }); if (!HBP.custom) jrSend({ type: 'custom_get' }); }
+    if (J.ready) { jrSend({ type: 'mypage' }); jrSend({ type: 'chats' }); jrSend({ type: 'groups_mine' }); if (!HBP.con && HBP.page !== 'console') jrSend({ type: 'console', as: J.office ? 'office' : 'self' }); if (!HBP.custom) jrSend({ type: 'custom_get' }); }
   }
   function hbpClose() { $('hbPage').hidden = true; }
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !$('hbPage').hidden && (HBP.page === 'notes' || HBP.page === 'google') && J.ready) jrSend({ type: 'google_status' }); });
@@ -4331,6 +4349,8 @@ html:not(.kmapp) body:not(.av-komugi) .hbpage.p-my #hbpTitle { visibility: hidde
   if (HB_START === 'oauth') document.addEventListener('jrready', () => { if (OAUTH_RID) jrSend({ type: 'oauth_info', rid: OAUTH_RID }); }, { once: true });
   else   if (HB_START === 'login' || HB_START === 'admin') { hbpOpen('my'); document.addEventListener('jrready', () => { if (J.office) hbpOpen('console'); else if (HB_START === 'admin') toast('管理画面は事務局だけです。Myハタボを開きました'); }, { once: true }); }
   else if (HB_START && HB_START !== 'talk') hbpOpen(HB_START);
+  // ミニアプリのトップは、Myハタボのホーム（?page=talk・紹介URL（?ref=）・台本モードのときは、これまでどおり話す画面）
+  else if (!HB_START && (document.body.classList.contains('av-hatabo') || document.body.classList.contains('av-komugi')) && !Q.get('ref') && !new URLSearchParams(location.search).get('ref') && !Q.get('stage') && !new URLSearchParams(location.search).get('stage')) { hbpOpen('my'); document.addEventListener('jrready', () => { if (J.plain) hbpClose(); }, { once: true }); }
   window.hbpPreview = (d, pg, gn, ib, ex) => { HBP.data = d; if (gn) HBP.goen = gn; if (ib) { HBP.inbox = ib; HBP.inboxShown = true; } if (ex) Object.assign(HBP, ex); hbpOpen(pg); };   // 画面の確認用
   $('trioBtn').addEventListener('click', () => jrSend({ type: 'trio', on: !J.trio }));
   $('planBtn').addEventListener('click', () => { const p = store.get('jrPlan2', J.canPlan ? 'super' : 'std'); jrSend({ type: 'plan', plan: PLAN_ORDER[(PLAN_ORDER.indexOf(p) + 1) % PLAN_ORDER.length] }); });
