@@ -1143,6 +1143,23 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
 .hbpage.lt .hbp-body, .hbpage.lt .hbp-tabs { scrollbar-color: rgba(0,0,0,.2) transparent; }
 .hbpage .hbp-body::-webkit-scrollbar { width: 8px; } .hbpage .hbp-body::-webkit-scrollbar-track { background: transparent; } .hbpage .hbp-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,.18); border-radius: 8px; }
 .hbpage.lt .hbp-body::-webkit-scrollbar-thumb { background: rgba(0,0,0,.2); }
+
+/* ===== Myハタボ：上はサイトと同じロゴ、パソコンの左下に自分のアカウント（11/20） ===== */
+.hbp-brand { display: none; align-items: center; gap: 10px; flex: none; }
+.hbp-brand img { width: auto !important; height: 32px !important; border-radius: 0 !important; background: none !important; box-shadow: none !important; padding: 0 !important; }
+.hbp-brand b { font: 900 20px/1 "Noto Sans JP", sans-serif !important; letter-spacing: .06em !important; color: #62AD7F; flex: none !important; }
+html:not(.kmapp) body:not(.av-komugi) .hbp-brand { display: flex; }
+html:not(.kmapp) body:not(.av-komugi) .hbp-top img.flag { display: none; }
+html:not(.kmapp) body:not(.av-komugi) #hbpTitle { font: 700 13px var(--display) !important; letter-spacing: .04em !important; color: var(--cmut); padding-left: 12px; margin-left: 2px; border-left: 1px solid var(--cline); flex: 1; }
+html:not(.kmapp) body:not(.av-komugi) .hbpage.p-my #hbpTitle { visibility: hidden; }
+.hbp-acct { display: none !important; }
+@media (min-width: 900px) {
+  .hbpage .hbp-tabs .hbp-acct { display: flex !important; margin-top: auto; align-items: center; gap: 10px !important; padding: 10px !important; border-top: 1px solid var(--cline) !important; border-radius: 10px !important; text-align: left; }
+  .hbpage .hbp-tabs .hbp-acct i { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; flex: none; font: 800 14px var(--display); font-style: normal; background: #62AD7F; color: #fff; }
+  .hbpage .hbp-tabs .hbp-acct span { display: grid; gap: 2px; min-width: 0; }
+  .hbpage .hbp-tabs .hbp-acct b { font: 700 14px var(--display); color: var(--ctext); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hbpage .hbp-tabs .hbp-acct small { font: 500 11.5px var(--body); color: var(--cmut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
 </style>
 </head>
 <body>
@@ -1593,8 +1610,8 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
 </div>
 <button type="button" class="cvfab" id="cvFab">トーク ‹</button>
 <div class="hbpage" id="hbPage" hidden>
-  <div class="hbp-top"><img class="flag" src="https://www.hatha-lab.com/xm_w.png" alt=""><b id="hbpTitle">Myハタボ</b><button type="button" id="hbpClose">ハタボと話す</button></div>
-  <nav class="hbp-tabs" id="hbpTabs" aria-label="Myハタボのメニュー"><button type="button" data-p="my"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span>ホーム</span></button><button type="button" data-p="clones"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.2c2.4.2 4.3 1.8 4.9 4.8"/></svg><span>愛棒</span></button><button type="button" data-p="goen"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="6" r="2.6"/><circle cx="18" cy="18" r="2.6"/><path d="M8.3 10.8 15.7 7.2M8.3 13.2l7.4 3.6"/></svg><span>ご縁</span></button><button type="button" data-p="inbox"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg><span>伝言</span></button><button type="button" data-p="more"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>もっと</span></button></nav>
+  <div class="hbp-top"><span class="hbp-brand" aria-label="HATHABO（ハタボ）"><img src="https://www.hatha-lab.com/award_mark.svg" alt=""><b>HATHABO</b></span><img class="flag" src="https://www.hatha-lab.com/xm_w.png" alt=""><b id="hbpTitle">Myハタボ</b><button type="button" id="hbpClose">ハタボと話す</button></div>
+  <nav class="hbp-tabs" id="hbpTabs" aria-label="Myハタボのメニュー"><button type="button" data-p="my"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span>ホーム</span></button><button type="button" data-p="clones"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.2c2.4.2 4.3 1.8 4.9 4.8"/></svg><span>愛棒</span></button><button type="button" data-p="goen"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="6" r="2.6"/><circle cx="18" cy="18" r="2.6"/><path d="M8.3 10.8 15.7 7.2M8.3 13.2l7.4 3.6"/></svg><span>ご縁</span></button><button type="button" data-p="inbox"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg><span>伝言</span></button><button type="button" data-p="more"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>もっと</span></button><button type="button" class="hbp-acct" data-p="settings" id="hbpAcct" aria-label="Myハタボ（アカウントと設定）"><i id="hbpAcctAv">ハ</i><span><b id="hbpAcctName">Myハタボ</b><small id="hbpAcctSub">アカウントと設定</small></span></button></nav>
   <div class="hbp-body" id="hbpBody"></div>
 </div>
 
@@ -3351,7 +3368,10 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
     const p = HBP.page, d = HBP.data, nm = avName() || 'ハタボ';
     $('hbpTitle').textContent = { more: 'もっと', console: '管理画面', api: 'AIからつなぐ（API）', clones: '愛棒', admin: '事務局の管理画面', settings: '設定', google: 'Googleアカウント連携', social: '公開設定', custom: 'キャラ設定', ticket: '追加チケット', my: 'Myハタボ', notes: 'メモ・議事録', grow: '育てた' + nm, goen: 'ご縁のひろがり', inbox: '伝言', gacha: 'AI棒ガチャ', friends: '友だち', plan: 'プラン・支払い', aisai: 'AISAI・愛祭', times: 'ハタボタイムズ', share: '紹介する' }[p] || 'Myハタボ';
     const tabOf = ({ my: 'my', clones: 'clones', goen: 'goen', inbox: 'inbox' })[p] || 'more';
-    document.querySelectorAll('#hbpTabs button').forEach(b => b.classList.toggle('on', b.dataset.p === tabOf));
+    if (d) { const f = d.funnel || {}, nm0 = String(d.name || '').trim(); $('hbpAcctName').textContent = nm0 ? nm0 + 'さん' : 'Myハタボ'; $('hbpAcctAv').textContent = (nm0 || 'ハ').slice(0, 1); $('hbpAcctSub').textContent = f.stage === 'trial' ? (f.lineupName || '') + ' ' + (f.grade || '') + '・お試し あと' + f.daysLeft + '日' : f.stage === 'contract' ? (f.lineupName || '') + ' ' + (f.grade || '') : (d.plan || 'アカウントと設定'); }
+    $('hbPage').classList.toggle('p-my', p === 'my');
+    { const ac = $('hbpAcct'); if (ac) ac.classList.toggle('on', p === 'settings' || p === 'google' || p === 'plan'); }
+    document.querySelectorAll('#hbpTabs button:not(.hbp-acct)').forEach(b => b.classList.toggle('on', b.dataset.p === tabOf && !(p === 'settings' || p === 'google' || p === 'plan')));
     { const on = document.querySelector('#hbpTabs .on'); if (on) try { on.scrollIntoView({ inline: 'center', block: 'nearest' }); } catch (e) {} }
     const body = $('hbpBody');
     body.classList.remove('wide'); body.classList.remove('con');
