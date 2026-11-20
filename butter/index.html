@@ -1160,6 +1160,20 @@ html:not(.kmapp) body:not(.av-komugi) .hbpage.p-my #hbpTitle { visibility: hidde
   .hbpage .hbp-tabs .hbp-acct b { font: 700 14px var(--display); color: var(--ctext); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .hbpage .hbp-tabs .hbp-acct small { font: 500 11.5px var(--body); color: var(--cmut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 }
+
+/* ===== Myハタボ：ロゴは白・大きめ。パソコンではChatGPTのように、ロゴを左のメニューのいちばん上に（11/20） ===== */
+.hbp-brand img { height: 40px !important; }
+.hbp-brand b { font-size: 22px !important; color: #FFFFFF; }
+.hbpage.lt .hbp-brand b { color: #16233F; }
+@media (min-width: 900px) {
+  .hbpage:not([hidden]) { grid-template-rows: auto minmax(0, 1fr) !important; }
+  .hbpage .hbp-top { grid-column: 1 !important; grid-row: 1 !important; background: var(--cnav) !important; border-right: 1px solid var(--cline); border-bottom: 0 !important; padding: 18px 16px 10px !important; }
+  html:not(.kmapp) body:not(.av-komugi) .hbpage #hbpTitle { display: none; }
+  .hbpage .hbp-top #hbpClose { position: absolute; top: 16px; right: 24px; z-index: 2; }
+  .hbpage .hbp-tabs { padding-top: 6px !important; }
+  .hbpage .hbp-body { grid-column: 2 !important; grid-row: 1 / span 2 !important; padding-top: 72px !important; }
+  .hbpage .hbp-body.con { padding-top: 64px !important; }
+}
 </style>
 </head>
 <body>
