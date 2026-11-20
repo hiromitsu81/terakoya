@@ -1973,6 +1973,7 @@ function session(ws) {
   async function summarize() {
     const key = convoKey();
     if (!key || S.summarizing || S.newTurns < 1) return;
+    if (S.noMem) { S.newTurns = 0; return; }   // 「覚えておく」をオフにした会話は、まとめも学びも残さない
     if (S.guest) return leadNote();
     S.summarizing = true;
     const n = S.newTurns;
@@ -3143,6 +3144,7 @@ function session(ws) {
       if (m.type === 'google_auto') { await saveCol(gDocKey(S.owner), 'google', { auto: !!m.on }); const g = await gGet(S.owner); return send({ type: 'google', ready: true, linked: !!g.refresh, email: g.email || '', auto: g.auto !== false }); }
       if (m.type === 'google_unlink') { const g = await gGet(S.owner); if (g.refresh) { try { await fetch('https://oauth2.googleapis.com/revoke?token=' + encodeURIComponent(gDec(g.refresh)), { method: 'POST' }); } catch (e) {} } await saveCol(gDocKey(S.owner), 'google', { refresh: '', email: '', folder: '' }); return send({ type: 'google', ready: !!ENV.GOOGLE_CLIENT_ID, linked: false }); }
       if (m.type === 'note_drive') { const items = await loadNotes(S.owner), it = items.find(x => x.id === String(m.id || '')); if (it) { it.url = await driveSave(S.owner, it.title, it.text).catch(() => null) || it.url || ''; await saveNotes(S.owner, items); } return send(Object.assign(await myPage(S), { driveMsg: it && it.url ? 'Googleドライブに保存しました' : 'Googleドライブに保存できませんでした' })); }
+      if (m.type === 'mem') { S.noMem = m.on === false; return send({ type: 'mem', on: !S.noMem }); }   // ＋の「覚えておく」
       if (m.type === 'byok_get' || m.type === 'byok_set' || m.type === 'byok_del') {   // 自分のClaudeのAPIキー（画面には出さない。末尾4文字だけ）
         if (!S.owner || S.visit || S.web && !S.webOffice && !S.myRef) return send({ type: 'byok', denied: true });
         const k = ownKey(S.owner);

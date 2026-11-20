@@ -568,3 +568,27 @@ body.hb-peek .hbtop{bottom:180px}
 @keyframes hbCore{0%,100%{transform:scale(.85);opacity:.5}50%{transform:scale(1.15);opacity:1}}
 @media(prefers-reduced-motion:reduce){.hero2>.wr::before{animation:none}}
 @media(prefers-reduced-motion:reduce){.hero2::before,.hero2::after{animation:none}.hero2::after{display:none}}
+/* ===== 11/20 夜：Myハタボの新しい画面（実際の画面・見本のデータ）と光の粒 ===== */
+.uisec{background:radial-gradient(120% 90% at 50% 0%,#1A2747 0%,#0B1120 60%,#070A12 100%);padding:10px 0 70px}
+.uiduo{display:grid;grid-template-columns:minmax(0,3.3fr) minmax(0,1fr);gap:clamp(14px,2.4vw,34px);align-items:end;max-width:1180px;margin:0 auto}
+.uifig{position:relative;margin:0}
+.uifig img{display:block;width:100%;height:auto}
+.uifig.uipc{border-radius:14px;padding:8px;background:linear-gradient(180deg,#2A3142,#151A26);box-shadow:0 40px 80px -30px rgba(0,0,0,.75),0 0 0 1px rgba(255,255,255,.08)}
+.uifig.uipc img{border-radius:8px}
+.uifig.uipc::after{content:"";display:block;height:12px;margin:8px -26px -8px;border-radius:0 0 14px 14px;background:linear-gradient(180deg,#3A4255,#1C2230)}
+.uifig.uisp{border-radius:clamp(22px,3.2vw,40px);padding:clamp(6px,.8vw,10px);background:#0B0E15;box-shadow:0 40px 80px -30px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.12)}
+.uifig.uisp img{border-radius:clamp(16px,2.6vw,32px)}
+.uifig .uiwrap{position:relative}
+.uiorb{position:absolute;width:var(--s,4%);aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;pointer-events:none}
+.uiorb::before,.uiorb::after{content:"";position:absolute;inset:-45%;border-radius:50%;background-image:radial-gradient(1.8px 1.8px at 12% 30%,#CFF5DF 50%,transparent 51%),radial-gradient(1.6px 1.6px at 88% 22%,#E6F2FF 50%,transparent 51%),radial-gradient(2px 2px at 76% 86%,#FFF6D6 50%,transparent 51%),radial-gradient(1.4px 1.4px at 20% 80%,#BFE2FF 50%,transparent 51%),radial-gradient(1.6px 1.6px at 50% 4%,#CFF5DF 50%,transparent 51%),radial-gradient(1.4px 1.4px at 96% 56%,#E6F2FF 50%,transparent 51%),radial-gradient(1.8px 1.8px at 4% 58%,#FFF6D6 50%,transparent 51%),radial-gradient(1.4px 1.4px at 46% 98%,#BFE2FF 50%,transparent 51%);animation:uiOrb 2.4s cubic-bezier(.4,0,.6,1) infinite!important;filter:drop-shadow(0 0 3px rgba(127,211,158,.95))}
+.uiorb::after{animation-delay:-1.2s!important;transform:rotate(45deg)}
+@keyframes uiOrb{0%{transform:scale(1.35) rotate(0deg);opacity:0}20%{opacity:1}100%{transform:scale(.45) rotate(40deg);opacity:0}}
+@media (prefers-reduced-motion:reduce){.uiorb::before,.uiorb::after{animation:none;display:none}}
+.uicap{margin:14px 0 0;text-align:center;font-size:12.5px;color:#A3AAB7}
+.ui4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:22px;align-items:start}
+.ui4 .uifig.uisp{max-width:290px;margin:0 auto}
+@media(max-width:1100px){.ui4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.uiduo{grid-template-columns:minmax(0,2.2fr) minmax(0,1fr);gap:10px}.uisec{padding:6px 0 40px}.uifig.uipc{padding:4px;border-radius:9px}.uifig.uipc::after{height:7px;margin:4px -12px -4px}}
+@media(max-width:520px){.ui4{gap:12px}}
+/* 右上：ログインとMyハタボをひとつに */
+.hbh .my .myl{white-space:nowrap}

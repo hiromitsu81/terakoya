@@ -238,3 +238,5 @@ cn.forEach(function(e){io2.observe(e)});
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
 })();
+/* 右上のボタンはひとつ：ログインしていない人には「ログイン」、している人には「Myハタボ」 */
+(function(){try{var a=document.querySelectorAll('.hbh a.my[data-myacct]'),on=!!localStorage.getItem('hbIn');a.forEach(function(x){var l=x.querySelector('.myl');if(on){x.href='mypage.html';if(l)l.textContent='Myハタボ'}else{x.href='login.html';if(l)l.textContent='ログイン'}});document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('a[href^="https://app.hatha-lab.com"],a[href*="liff.line.me"]');if(b)try{localStorage.setItem('hbIn','1')}catch(_){}} ,true);if(/mypage\.html$/.test(location.pathname)&&document.referrer.indexOf('app.hatha-lab.com')>=0)localStorage.setItem('hbIn','1')}catch(e){}})();
