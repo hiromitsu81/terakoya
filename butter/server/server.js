@@ -954,7 +954,7 @@ function lineWebhook(req, res, chId) {
         let messages = null;
         const src = ev.source || {}, inGroup = src.type === 'group' || src.type === 'room';
         if (ev.type === 'join') {                                   // グループに追加された：自己紹介とサービスガイド（退出はしない）
-          const gref = await groupJoin(src); messages = [groupCards(gref)]; if (ch.id !== 'komugi') messages.push(cmVideo());
+          const gref = await groupJoin(src); messages = [groupCards(gref), cmVideo()];
         } else if (ev.type === 'leave') {
           await saveCol(gidOf(src), 'groups', { active: false, leftAt: Date.now() }); continue;
         } else if (ev.type === 'postback' && inGroup && /act=inviter/.test((ev.postback || {}).data || '')) {
@@ -988,7 +988,7 @@ function lineWebhook(req, res, chId) {
         } else if (inGroup) { continue;
         } else if (ev.type === 'follow') {
           let name = ''; try { const pr = await fetch('https://api.line.me/v2/bot/profile/' + ev.source.userId, { headers: { Authorization: 'Bearer ' + ch.token() } }); name = (await pr.json()).displayName || ''; } catch (e) {}
-          if (ch.id === 'komugi') { const mac = isMac('g:' + ev.source.userId); messages = [mac ? komugiMacWelcome(name) : komugiWelcome(name)]; if (mac) await linkMacMenu(ev.source.userId); else await macNote('［友だち追加］' + (name || 'だれか') + 'さんが、コムギを友だち追加しました'); }
+          if (ch.id === 'komugi') { const mac = isMac('g:' + ev.source.userId); messages = [mac ? komugiMacWelcome(name) : komugiWelcome(name), cmVideo()]; if (mac) await linkMacMenu(ev.source.userId); else await macNote('［友だち追加］' + (name || 'だれか') + 'さんが、コムギを友だち追加しました'); }
           else messages = [welcomeCards(name), cmVideo()];
           await officeNote('［友だち追加］' + (name || 'だれか') + 'さんが' + (ch.id === 'komugi' ? 'コムギ' : 'ハタボ') + 'を友だち追加しました');
         } else if (ev.type === 'message' && ch.id === 'komugi') {
@@ -1002,7 +1002,7 @@ function lineWebhook(req, res, chId) {
     } catch (e) { console.error('webhook', String(e.message).slice(0, 160)); }
   }));
 }
-/* ===== あいさつに添えるCM動画（公式LINEの友だち追加とグループ参加のとき）。サイトの cm/ に置いた動画を使う ===== */
+/* ===== あいさつに添えるCM動画（ハタボとコムギの公式LINEの、友だち追加とグループ参加のとき）。サイトの cm/ に置いた動画を使う ===== */
 function cmVideo() {
   const site = (ENV.SITE_URL || 'https://www.hatha-lab.com').replace(/\/$/, '');
   return { type: 'video', originalContentUrl: process.env.HATABO_CM_URL || site + '/cm/hatabo_cm.mp4', previewImageUrl: process.env.HATABO_CM_PREVIEW || site + '/cm/hatabo_cm_line.jpg' };
