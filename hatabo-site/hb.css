@@ -531,5 +531,8 @@ body.hb-peek .hbtop{bottom:180px}
 .fvsl.sv .fvs2{color:#DCE0E7}.fvsl.sv .fvc span{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.18);color:#DCE0E7}
 .fvsl.sv .fvi{border-color:#1E2536}
 /* Myハタボのしるし：旗 */
-.hb .myflag,.myflag{display:inline-block!important;width:auto;height:18px;vertical-align:-3px;margin-right:2px}
+.hb .myflag,.myflag{display:inline-block!important;width:auto;height:22px;vertical-align:-5px;margin-right:3px}
 .myflag.lg{height:.82em;vertical-align:-.04em;margin-right:.18em}
+/* 文の区切り：広い画面では文ごとに改行、行はなるべく長く */
+.sbr{display:none}
+@media(min-width:761px){.sbr{display:inline}.hb .lead2{max-width:min(100%,64em)}.hb p,.hb figcaption{text-wrap:wrap}}

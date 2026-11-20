@@ -182,3 +182,25 @@ function f(v){var s=v.toFixed(dec);if(com)s=s.replace(/\B(?=(\d{3})+(?!\d))/g,",
 function st(ts){if(!t0)t0=ts;var q=Math.min(1,(ts-t0)/1100),ez=1-Math.pow(1-q,3);t.textContent=f(n*ez);if(q<1)requestAnimationFrame(st);else t.textContent=raw}requestAnimationFrame(st)})},{threshold:.6});
 cn.forEach(function(e){io2.observe(e)});
 })})();
+/* ---------- 文の区切り：広い画面では「。」のあとで改行し、文の途中ではなるべく折り返さない（スマホはふつうに流す） ---------- */
+(function(){
+  function run(){
+    var ps=document.querySelectorAll('main p, main figcaption, main .dgl');
+    ps.forEach(function(p){
+      if(p.closest('.cw,.hbh,.hbf,.fv,table,button,a,.chips')||p.querySelector('.sbr'))return;
+      var t=p.textContent; if(t.length>260)return;
+      var n=(t.match(/。(?![」』）)\s]*$)/g)||[]).length; if(!n||n>4)return;
+      var w=document.createTreeWalker(p,NodeFilter.SHOW_TEXT,null),nodes=[],x;while((x=w.nextNode()))nodes.push(x);
+      nodes.forEach(function(nd){
+        var v=nd.nodeValue,i;if(v.indexOf('。')<0)return;
+        var parts=v.split(/(?<=。)(?![」』）])/);
+        var f=document.createDocumentFragment();
+        parts.forEach(function(s){f.appendChild(document.createTextNode(s));if(/。$/.test(s)){var b=document.createElement('br');b.className='sbr';f.appendChild(b)}});
+        nd.parentNode.replaceChild(f,nd);
+      });
+      /* 最後の「。」のうしろに何もなければ、そこには改行を入れない */
+      var last=p.querySelectorAll('.sbr');if(last.length){var l=last[last.length-1],r=document.createRange();r.setStartAfter(l);r.setEndAfter(p.lastChild);if(!r.toString().trim())l.remove()}
+    });
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
+})();
