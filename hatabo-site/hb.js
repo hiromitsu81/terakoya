@@ -1,4 +1,4 @@
-/* ハタボ サービスサイト 共通スクリプト */
+/* HATHABO サービスサイト 共通スクリプト */
 (function(){
   /* ---------- menu ---------- */
   var mb=document.querySelector('.hbh .menu'),nv=document.querySelector('.hbh nav');
@@ -24,10 +24,10 @@
 
   /* ---------- consult widget ---------- */
   var P=window.HB_CW||null;var SYS=(P&&P.sys?P.sys:[]).concat([
-   'あなたは「ハタボ」の相談窓口にいるハタボ本人です。ハタボは、LINEで動く、スマホとパソコンの愛棒（AIエージェント）。運営はハタラボ（HATHA LAB）。',
+   'あなたは「HATHABO」の相談窓口にいるHATHABO本人です。HATHABOは、LINEで動く、スマホとパソコンの愛棒（AIエージェント）。運営はハタラボ（HATHA LAB）。名前の表記はHATHABO、読み方はハタボ。文章ではHATHABOと書く。',
    '話し方：日本語で、ていねいに、短く2〜4文。記号や表はつかわない。',
    'ラインナップ：ハタイエンタ（家族）、ハタリス（個人）、ハタボックス（個人事業）、ハタエース（お店・宿）、ハタボーラ（会社）。大手は法人のお客さまページ。グレードはX（標準）・G（上位）・Z（いちばん上）。',
-   '料金の目安（月額・税込み）：ハタリス X 2,980円〜、G 4,980円〜、Z 12,800円〜。ハタイエンタ 家族 5,980円〜（5人まで・1日の回数を家族で分け合う。6人目から1人980円）。ハタボ コネクト（仮称・いつものClaude・ChatGPTにつなぐ）は準備中で月1,480円の予定。ハタボックス 5,000円〜。ハタエース 1拠点10,000円〜＋スタッフ1席1,500円。ハタボーラ 1席2,980円〜（5席から）。月額には、AIの料金・設定・困ったときの伴走まで入っています。年払いは12か月分を10か月分で。',
+   '料金の目安（月額・税込み）：ハタリス X 2,980円〜、G 4,980円〜、Z 12,800円〜。ハタイエンタ 家族 5,980円〜（5人まで・1日の回数を家族で分け合う。6人目から1人980円）。HATHABO コネクト（仮称・いつものClaude・ChatGPTにつなぐ）は準備中で月1,480円の予定。ハタボックス 5,000円〜。ハタエース 1拠点10,000円〜＋スタッフ1席1,500円。ハタボーラ 1席2,980円〜（5席から）。月額には、AIの料金・設定・困ったときの伴走まで入っています。年払いは12か月分を10か月分で。',
    'はじめは7日間のお試し（いちばん上のZ、初日30回・2日目から1日15回まで）。7日以内にやめれば0円。',
    '育てた分は残る：覚えたことや性格は、プランを変えても引きつげます。使う人はオーナーズクラブの仲間になり、祭りやアワードに参加できます。',
    'きまり：住所・電話番号・家族の詳しいこと・体調やお金のくわしいことは聞かない。契約、くわしい見積もり、法人やパートナーの話は「担当におつなぎします」と案内し、法人ページやパートナーページ、プラン・料金ページの見積もりをすすめる。わからないことは、わからないと言う。何のAIで動いているか聞かれたら、うそはつかず「いくつかのAIの会社の仕組みを組み合わせています。くわしくは担当からご説明します」と答える。',
@@ -36,22 +36,22 @@
   var FAQ=(P&&P.faq?P.faq:[]).concat([
    [/料金|いくら|値段|月額/,'料金は、家族向けのハタイエンタが月5,980円から、個人向けのハタリスが月2,980円からです。月額には、AIの料金や設定、困ったときのお手伝いまで入っています。くわしくは「プラン・料金」の見積もりで、すぐに出せます。'],
    [/試|無料|お試し/,'はじめの7日間は、いちばん上のグレードZを無料でお試しいただけます。7日以内にやめれば0円です。'],
-   [/LINE|ライン|アプリ/,'ハタボは、いつものLINEで動くので、アプリを入れる必要はありません。スマホでもパソコンでも話せます。'],
+   [/LINE|ライン|アプリ/,'HATHABOは、いつものLINEで動くので、アプリを入れる必要はありません。スマホでもパソコンでも話せます。'],
    [/法人|会社|企業|お店|宿/,'お店や会社でのご利用は、法人のお客さまページで、席数や導入の流れをご案内しています。担当からもご連絡できます。'],
-   [/AISAI|アイサイ|オーナー/,'オーナーズクラブは、ハタボを使う人だけが入れる仲間です。中では AISAI＝愛祭 と呼んでいて、祭りやアワード、オーナーサポートがあります。']
+   [/AISAI|アイサイ|オーナー/,'オーナーズクラブは、HATHABOを使う人だけが入れる仲間です。中では AISAI＝愛祭 と呼んでいて、祭りやアワード、オーナーサポートがあります。']
   ]);
   var LIMIT=12,used=0;try{used=+sessionStorage.getItem('hb_cw')||0}catch(e){}
   var emb=document.querySelector('.hbh .brand img');var src=emb?emb.getAttribute('src'):'award_mark.svg';
   var btn=document.createElement('button');btn.className='cw-btn';btn.type='button';btn.innerHTML='<img src="'+src+'" alt="">'+(P&&P.btn||'相談はこちら');if(P)btn.classList.add('cw-p');
-  var box=document.createElement('div');box.className='cw';box.setAttribute('role','dialog');box.setAttribute('aria-label','ハタボに相談');
-  box.innerHTML='<div class="top"><img src="'+src+'" alt=""><div><b>'+(P&&P.title||'ハタボに相談')+'</b><small>'+(P&&P.sub||'文字でも、声でも。いまの会話が試乗です')+'</small></div><button type="button" aria-label="閉じる">×</button></div><div class="log" aria-live="polite"></div><div class="qk">'+(P&&P.qk?P.qk:['料金の目安は？','何ができるの？','お店で使いたい']).map(function(x){return '<button type="button">'+x+'</button>'}).join('')+'</div><form><button type="button" class="ic mic" title="声で話す" hidden>🎤</button><input placeholder="ハタボに話しかける" aria-label="メッセージ"><button type="button" class="ic spk" title="声で聞く" hidden>🔈</button><button type="submit">送る</button></form><div class="nt">家族の詳しいことや住所は書かないでください。契約やくわしい見積もりは担当におつなぎします。</div>';
+  var box=document.createElement('div');box.className='cw';box.setAttribute('role','dialog');box.setAttribute('aria-label','HATHABOに相談');
+  box.innerHTML='<div class="top"><img src="'+src+'" alt=""><div><b>'+(P&&P.title||'HATHABOに相談')+'</b><small>'+(P&&P.sub||'文字でも、声でも。いまの会話が試乗です')+'</small></div><button type="button" aria-label="閉じる">×</button></div><div class="log" aria-live="polite"></div><div class="qk">'+(P&&P.qk?P.qk:['料金の目安は？','何ができるの？','お店で使いたい']).map(function(x){return '<button type="button">'+x+'</button>'}).join('')+'</div><form><button type="button" class="ic mic" title="声で話す" hidden>🎤</button><input placeholder="HATHABOに話しかける" aria-label="メッセージ"><button type="button" class="ic spk" title="声で聞く" hidden>🔈</button><button type="submit">送る</button></form><div class="nt">家族の詳しいことや住所は書かないでください。契約やくわしい見積もりは担当におつなぎします。</div>';
   var LM=!(window.claude&&claude.use);
-  if(LM&&P&&P.lm){box.innerHTML='<div class="top"><img src="'+src+'" alt=""><div><b>'+P.title+'</b><small>'+P.sub+'</small></div><button type="button" aria-label="閉じる">×</button></div>'+P.lm+'<div class="log" hidden></div><div class="qk" hidden></div><form hidden><button type="button" class="ic mic" hidden></button><input hidden><button type="button" class="ic spk" hidden></button></form>';btn.innerHTML='<img src="'+src+'" alt="">'+P.btn}else if(LM){box.innerHTML='<div class="top"><img src="'+src+'" alt=""><div><b>ハタボに申込相談</b><small>公式LINEで、担当のハタボがご案内します</small></div><button type="button" aria-label="閉じる">×</button></div>'+'<div style="padding:16px 18px;font-size:14px;line-height:1.75;color:#16233F"><p style="margin:0 0 10px">ハタボの公式LINEを友だち追加すると、<b>申込相談担当のハタボ</b>と話せます。暮らしやお仕事を聞いて、合うプランをいっしょに選びます。7日間の無料お試しも、そのまま始められます。</p>'+'<ol style="margin:0 0 12px;padding-left:1.3em"><li>下のボタンかQRコードで友だち追加</li><li>トークのカードかメニューの「ハタボに相談」を押す</li><li>申込相談担当のハタボと話す</li></ol><p style="margin:0 0 12px;font-size:13px;color:#5E6B85">担当とのオンライン相談（ビデオ通話・30分・無料）も、LINEのハタボに「オンライン相談したい」と送ると、空いている時間から予約できます。</p>'+'<a href="https://line.me/R/ti/p/@024curid" target="_blank" rel="noopener" style="display:block;text-align:center;background:#06C755;color:#fff;font-weight:800;border-radius:999px;padding:12px;text-decoration:none">LINEで友だち追加</a>'+'<img src="line_qr.png" alt="ハタボ公式LINEのQRコード" class="cw-qr" style="display:block;width:150px;margin:12px auto 0"></div>'+'<div class="log" hidden></div><div class="qk" hidden></div><form hidden><button type="button" class="ic mic" hidden></button><input hidden><button type="button" class="ic spk" hidden></button></form>';btn.innerHTML='<img src="'+src+'" alt="">LINEで申込相談'}
+  if(LM&&P&&P.lm){box.innerHTML='<div class="top"><img src="'+src+'" alt=""><div><b>'+P.title+'</b><small>'+P.sub+'</small></div><button type="button" aria-label="閉じる">×</button></div>'+P.lm+'<div class="log" hidden></div><div class="qk" hidden></div><form hidden><button type="button" class="ic mic" hidden></button><input hidden><button type="button" class="ic spk" hidden></button></form>';btn.innerHTML='<img src="'+src+'" alt="">'+P.btn}else if(LM){box.innerHTML='<div class="top"><img src="'+src+'" alt=""><div><b>HATHABOに申込相談</b><small>公式LINEで、担当のHATHABOがご案内します</small></div><button type="button" aria-label="閉じる">×</button></div>'+'<div style="padding:16px 18px;font-size:14px;line-height:1.75;color:#16233F"><p style="margin:0 0 10px">HATHABOの公式LINEを友だち追加すると、<b>申込相談担当のHATHABO</b>と話せます。暮らしやお仕事を聞いて、合うプランをいっしょに選びます。7日間の無料お試しも、そのまま始められます。</p>'+'<ol style="margin:0 0 12px;padding-left:1.3em"><li>下のボタンかQRコードで友だち追加</li><li>トークのカードかメニューの「HATHABOに相談」を押す</li><li>申込相談担当のHATHABOと話す</li></ol><p style="margin:0 0 12px;font-size:13px;color:#5E6B85">担当とのオンライン相談（ビデオ通話・30分・無料）も、LINEのHATHABOに「オンライン相談したい」と送ると、空いている時間から予約できます。</p>'+'<a href="https://line.me/R/ti/p/@024curid" target="_blank" rel="noopener" style="display:block;text-align:center;background:#06C755;color:#fff;font-weight:800;border-radius:999px;padding:12px;text-decoration:none">LINEで友だち追加</a>'+'<img src="line_qr.png" alt="HATHABO公式LINEのQRコード" class="cw-qr" style="display:block;width:150px;margin:12px auto 0"></div>'+'<div class="log" hidden></div><div class="qk" hidden></div><form hidden><button type="button" class="ic mic" hidden></button><input hidden><button type="button" class="ic spk" hidden></button></form>';btn.innerHTML='<img src="'+src+'" alt="">LINEで申込相談'}
   document.body.appendChild(btn);document.body.appendChild(box);
   var log=box.querySelector('.log'),inp=box.querySelector('input'),form=box.querySelector('form'),mic=box.querySelector('.mic'),spk=box.querySelector('.spk');
   var hist=[],busy=false,sample=null,dict=null,tts=null,speakOn=false;
   function add(t,me){var d=document.createElement('div');d.className='m'+(me?' me':'');d.textContent=t;log.appendChild(d);log.scrollTop=log.scrollHeight;return d}
-  add(P&&P.hello||'こんにちは、ハタボです。気になることを、文字か声で聞いてください。');if(P&&P.peek){var pk=document.createElement('div');pk.className='cw-peek';pk.innerHTML=P.peek+'<button type="button" aria-label="閉じる">×</button>';document.body.appendChild(pk);setTimeout(function(){pk.classList.add('on');document.body.classList.add('hb-peek')},1600);pk.addEventListener('click',function(e){pk.classList.remove('on');document.body.classList.remove('hb-peek');if(e.target.tagName!=='BUTTON')btn.click()})}window.HB_CW_OPEN=function(t){box.classList.add('open');if(t&&!LM)send(t)};
+  add(P&&P.hello||'こんにちは、HATHABOです。気になることを、文字か声で聞いてください。');if(P&&P.peek){var pk=document.createElement('div');pk.className='cw-peek';pk.innerHTML=P.peek+'<button type="button" aria-label="閉じる">×</button>';document.body.appendChild(pk);setTimeout(function(){pk.classList.add('on');document.body.classList.add('hb-peek')},1600);pk.addEventListener('click',function(e){pk.classList.remove('on');document.body.classList.remove('hb-peek');if(e.target.tagName!=='BUTTON')btn.click()})}window.HB_CW_OPEN=function(t){box.classList.add('open');if(t&&!LM)send(t)};
   btn.addEventListener('click',function(){box.classList.toggle('open');if(box.classList.contains('open')&&!LM)inp.focus()});
   box.querySelector('.top button').addEventListener('click',function(){box.classList.remove('open')});
   box.querySelectorAll('.qk button').forEach(function(b){b.addEventListener('click',function(){send(b.textContent)})});
@@ -60,7 +60,7 @@
   function say(t){if(speakOn&&tts){tts.speak(t.slice(0,1900)).catch(function(){})}}
   function send(t){
     if(busy)return;add(t,true);
-    if(used>=LIMIT){add('この窓口でのお話は、ここまでとさせてください。続きは、7日間のお試しで、あなたのLINEのハタボとどうぞ。');return}
+    if(used>=LIMIT){add('この窓口でのお話は、ここまでとさせてください。続きは、7日間のお試しで、あなたのLINEのHATHABOとどうぞ。');return}
     used++;try{sessionStorage.setItem('hb_cw',used)}catch(e){}
     hist.push({role:'user',content:t});
     if(!sample){var a=fallback(t);add(a);hist.push({role:'assistant',content:a});say(a);return}
@@ -139,7 +139,7 @@
   requestAnimationFrame(tick);
 
 })();
-  /* ---------- ブランドの色（サイト全体）：ハタボ・話す＝緑、AI＝青、愛棒＝赤、聞く・読む・書く＝それぞれの色 ---------- */
+  /* ---------- ブランドの色（サイト全体）：HATHABO・話す＝緑、AI＝青、愛棒＝赤、聞く・読む・書く＝それぞれの色 ---------- */
 (function(){
     var skip={SCRIPT:1,STYLE:1,TEXTAREA:1,INPUT:1,OPTION:1,TITLE:1,svg:1};
     function walk(root,re,heads){
@@ -149,10 +149,10 @@
       var list=[];while(w.nextNode())list.push(w.currentNode);
       list.forEach(function(n){
         var f=document.createDocumentFragment(),t=n.nodeValue,last=0;re.lastIndex=0;var m;
-        while((m=re.exec(t))){f.appendChild(document.createTextNode(t.slice(last,m.index)));var sp=document.createElement('span');sp.className=({'ハタボ':'k-hb','AI':'k-ai','愛棒':'k-love','話す':'v-talk','聞く':'v-listen','読む':'v-read','書く':'v-write','見る':'v-see'})[m[0]];sp.textContent=m[0];f.appendChild(sp);last=m.index+m[0].length}
+        while((m=re.exec(t))){f.appendChild(document.createTextNode(t.slice(last,m.index)));var sp=document.createElement('span');sp.className=({'HATHABO':'k-hb','ハタボ':'k-hb','AI':'k-ai','愛棒':'k-love','話す':'v-talk','聞く':'v-listen','読む':'v-read','書く':'v-write','見る':'v-see'})[m[0]];sp.textContent=m[0];f.appendChild(sp);last=m.index+m[0].length}
         f.appendChild(document.createTextNode(t.slice(last)));n.parentNode.replaceChild(f,n)})}
     function run(){
-      walk(document.body,/ハタボ(?!ー)|(?<![A-Za-z])AI(?![A-Za-z])|愛棒|話す|聞く|読む|書く|見る/g)}
+      walk(document.body,/HATHABO|ハタボ(?!ー|ック)|(?<![A-Za-z])AI(?![A-Za-z])|愛棒|話す|聞く|読む|書く|見る/g)}
     if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
   })();
 

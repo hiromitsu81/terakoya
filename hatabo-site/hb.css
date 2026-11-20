@@ -488,3 +488,45 @@ body.hb-peek .hbtop{bottom:180px}
 @media(max-width:760px){.hbh .brand b{font-size:17px;letter-spacing:.1em}.hbh .brand span small{font-size:8px;margin-top:4px}}
 .hbh .brand img{height:40px;width:40px;filter:drop-shadow(0 1px 2px rgba(22,35,63,.35)) contrast(1.15)}
 @media(max-width:760px){.hbh .brand img{height:34px;width:34px}}
+
+/* ===== 黒と銀（CMのエンブレムの世界）：ヘッダー・最初の画面・帯・フッター ===== */
+:root{--hb-black:#0A0D14;--hb-black2:#121725;--hb-silver1:#F2F4F7;--hb-silver2:#B9C0CB;--hb-silver3:#7F8899;--hb-serif:"Noto Serif JP","Hiragino Mincho ProN","Yu Mincho",serif}
+.hb-silver-text,.hbh .brand b{background:linear-gradient(180deg,#FFFFFF 0%,#DDE1E8 45%,#9BA3B0 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+/* ヘッダー */
+.hbh{background:rgba(10,13,20,.94);border-bottom:1px solid rgba(255,255,255,.08)}
+.hbh .brand b{font-family:var(--hb-serif);font-weight:700}.hbh .brand b .k-hb{color:transparent!important;-webkit-text-fill-color:transparent}
+.hbh .brand span small,.hbh .brand span small .k-hb{color:var(--hb-silver3)!important;font-weight:700}
+.hbh .brand img{filter:drop-shadow(0 0 6px rgba(160,200,255,.25))}
+.hbh nav a{color:#DCE0E7}.hbh nav a:hover,.hbh nav a.on{border-bottom-color:#E9ECF1}
+.hbh nav a .k-hb,.hbh .my .k-hb{color:#9FD7B4!important}
+.hbh .ddm a,.hbh .ddm a b{color:var(--hb-ink)}.hbh .ddm a .k-hb{color:var(--c-hatabo,#62AD7F)}
+.hbh .my{color:#E6E9EE;border-color:rgba(255,255,255,.22);background:transparent}
+.hbh .acts .bt.pri{background:linear-gradient(180deg,#FFFFFF,#C9CFD8);color:var(--hb-black);box-shadow:0 0 0 1px rgba(255,255,255,.25),0 6px 18px rgba(0,0,0,.35)}
+.hbh .menu{color:#E6E9EE}
+@media(max-width:1080px){.hbh nav.open{background:var(--hb-black2);border-bottom-color:rgba(255,255,255,.08)}.hbh nav.open a,.hbh nav.open .ddm a,.hbh nav.open .ddm a b{color:#DCE0E7}.hbh nav.open .ddm a small{color:#9AA2B0}.hbh nav.open .ddm{background:transparent;box-shadow:none}}
+/* 最初の画面：黒地に光の粒、明朝の見出し */
+.hero2{position:relative;background:radial-gradient(ellipse at 72% 40%,#1B2338 0%,#0E1220 45%,var(--hb-black) 80%);color:var(--hb-silver1)}
+.hero2::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.55;background-image:radial-gradient(1.4px 1.4px at 12% 22%,#BFE2FF 50%,transparent 51%),radial-gradient(1px 1px at 28% 68%,#CFE6FF 50%,transparent 51%),radial-gradient(1.8px 1.8px at 46% 12%,#A9D4FF 50%,transparent 51%),radial-gradient(1px 1px at 58% 82%,#DCEBFF 50%,transparent 51%),radial-gradient(1.4px 1.4px at 66% 30%,#BFE2FF 50%,transparent 51%),radial-gradient(1px 1px at 80% 58%,#CFE6FF 50%,transparent 51%),radial-gradient(2px 2px at 90% 18%,#A9D4FF 50%,transparent 51%),radial-gradient(1px 1px at 8% 86%,#DCEBFF 50%,transparent 51%),radial-gradient(1.2px 1.2px at 38% 44%,#BFE2FF 50%,transparent 51%),radial-gradient(1px 1px at 74% 90%,#CFE6FF 50%,transparent 51%);background-size:420px 420px;animation:hbStars 60s linear infinite}
+@keyframes hbStars{to{background-position:420px -420px}}
+@media(prefers-reduced-motion:reduce){.hero2::before{animation:none}}
+.hero2 .in{position:relative}
+.hero2 .kicker{color:var(--hb-silver2)}
+.hero2 .h1{font-family:var(--hb-serif);font-weight:900;color:var(--hb-silver1);letter-spacing:.02em}
+.hero2 .lead2{color:#C3C9D4}.hero2 .small{color:#A7AFBC}
+.hero2 .bt.pri{background:linear-gradient(180deg,#FFFFFF,#C9CFD8);color:var(--hb-black)}
+.hero2 .bt.sec{background:transparent;color:#F2F4F7;border-color:rgba(255,255,255,.55)}
+.hero2 .chips span{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.18);color:#DCE0E7}
+.hero2 .dv .lap .scr{border-color:#1E2536;box-shadow:0 0 0 1px rgba(255,255,255,.08),0 30px 70px -20px rgba(0,0,0,.7)}
+.hero2 .dv .lap .base{background:linear-gradient(180deg,#C9CFD8,#7F8899)}
+/* 帯とフッター：同じ黒にそろえる */
+.shiftband{background:var(--hb-black)}.shiftband p{font-family:var(--hb-serif)}
+.hbf{background:var(--hb-black)}.hbf .fb{border-top-color:rgba(255,255,255,.08)}
+.cw-btn{background:var(--hb-black);box-shadow:0 0 0 1px rgba(255,255,255,.14),0 12px 30px rgba(0,0,0,.4)}
+.hbw-h{font-family:var(--hb-serif)}
+/* スマホの最初の画面（1枚目のHATHABO）：黒と銀 */
+.fvsl.sv .fvw b{font-family:var(--hb-serif);font-weight:700;background:linear-gradient(180deg,#fff,#AEB5C1);-webkit-background-clip:text;background-clip:text;color:transparent!important;letter-spacing:.1em}
+.fvsl.sv .fvw b .k-hb{color:transparent!important;-webkit-text-fill-color:transparent}
+.fvsl.sv .fvh{font-family:var(--hb-serif);color:#F2F4F7}
+.fvsl.sv .fvb{background:linear-gradient(180deg,#FFFFFF,#C9CFD8);color:#0A0D14!important;box-shadow:0 0 0 1px rgba(255,255,255,.25),0 14px 28px -12px rgba(0,0,0,.6)}
+.fvsl.sv .fvs2{color:#DCE0E7}.fvsl.sv .fvc span{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.18);color:#DCE0E7}
+.fvsl.sv .fvi{border-color:#1E2536}
