@@ -173,12 +173,12 @@ function rankOf(r) {
   return { key: cur.key, label: cur.label, pt, months,
     next: nx ? { label: nx.label, needPt: Math.max(0, nx.pt - pt), needMonths: Math.max(0, nx.months - months), needDeed: !!nx.deed && !deed } : null };
 }
-/* ===== 分身（オーナーが自分の愛棒から作る、役割つきの窓口URL）===== */
+/* ===== 役割つきの愛棒（オーナーが自分の愛棒から作る、役割つきの窓口URL。中のことばは clone）===== */
 const CLONE_ROLES = ['受付', '相談役', '営業', 'サポート', '友だち', '汎用'];
 const CLONE_CAP = { standard: 3, gold: 5, platinum: 10, black: 30 };   // ランクごとに作れる数
 const newCloneCode = () => 'c' + crypto.randomBytes(5).toString('base64').replace(/[^a-z0-9]/gi, '').toLowerCase().slice(0, 7).padEnd(7, '0');
 function cloneRule(cl) {
-  const L = ['【この窓口は、' + (cl.ownerName || 'オーナー') + 'さんの愛棒の分身です】役割は「' + (cl.role || '汎用') + '」。' + (cl.label ? 'この窓口は「' + cl.label + '」向けに作られました。' : '') +
+  const L = ['【この窓口は、' + (cl.ownerName || 'オーナー') + 'さんの愛棒です（役割つき）】役割は「' + (cl.role || '汎用') + '」。' + (cl.label ? 'この窓口は「' + cl.label + '」向けに作られました。' : '') +
     (cl.ownerName || 'オーナー') + 'さん本人ではないので、本人しか決められないことは「' + (cl.ownerName || 'オーナー') + 'さんに伝えておきます」と言う。'];
   L.push(cl.price ? '料金・値段の話をしてよい（決まっている範囲だけ。わからないことは確かめると言う）。' : '料金・値段の話はしない。聞かれたら「' + (cl.ownerName || 'オーナー') + 'さんから案内します」と言う。');
   L.push(cl.reserve ? '予約や申しこみの希望は、日時・人数・名前を聞いて、オーナーに伝える（確定はしない）。' : '予約や申しこみは受けない。オーナーにつなぐ。');
@@ -193,7 +193,7 @@ async function ownerPush(owner, text) {
   const r = await fetch('https://api.line.me/v2/bot/message/push', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + ENV.HATABO_LINE_TOKEN }, body: JSON.stringify({ to: id, messages: [{ type: 'text', text: String(text).slice(0, 4900) }] }) }).catch(() => null);
   return !!(r && r.ok);
 }
-/** 事務局の管理画面：紹介コードの一覧（人・分身・グループ） */
+/** 事務局の管理画面：紹介コードの一覧（人・役割つきの愛棒・グループ） */
 async function allRefs() {
   try { if (deps.db) return (await deps.db.collection('refs').limit(2000).get()).docs.map(d => Object.assign({ code: d.id }, d.data())); } catch (e) { console.error('refs list', String(e.message).slice(0, 120)); }
   return Array.from(memRefs.entries()).map(([code, v]) => Object.assign({ code }, v));
@@ -1449,7 +1449,7 @@ const FAMILY_RULE = '\n\n【家族の画面】ここは家族だけの画面で�
 /** AIの子たちの案内（窓口と交流会） */
 const SERVICE_GUIDE = '\n\n【AIの子たちの案内】ぼくたちは「AIの便利屋のプロ」。営業でも、サポートでも、コンサルでも任せてください、という気持ちで案内する。' +
   'お迎えした子は、好きなキャラクター（見た目・名前・性格）にできて、家庭やお店に合わせて声も選べる。本人がOKすれば、その人の声にもできる。' +
-  '使われ方の例：介護（お年寄りの見守り・話し相手）、民泊や宿（受付や案内、外国語）、家庭教師（子どもの宿題・英語）、お店や会社（問い合わせの受付・予約・営業の窓口）、その人の分身（考え方や話し方を受けついで、代わりに答える）。' +
+  '使われ方の例：介護（お年寄りの見守り・話し相手）、民泊や宿（受付や案内、外国語）、家庭教師（子どもの宿題・英語）、お店や会社（問い合わせの受付・予約・営業の窓口）、その人の代わりの愛棒（考え方や話し方を受けついで、代わりに答える）。' +
   '相手の困りごとを聞いて、合う例を一つか二つだけ話す。「式神」という言葉は使わない。値段・契約・できるかどうかの細かいことは「ヒロさんに確認しておきますね」。';
 const JR_LAST = '\n\n【いちばん大事】どのモードでも、バターちゃんジュニアのやわらかい丁寧語（です・ます）で話す。一人称は「ぼく」。江戸っ子の話し方（おいら・〜だぜ・〜してくんな・てやんでぃ・がってん・すまねぇ）は使わない。「〜でございます」のような、かたすぎる言い方もしない。子どもには、やさしいことばで話す。';
 const SELF = '\n\n【あなたについて】あなたはLINEミニアプリの「バターちゃんジュニア」（短く「ジュニア」）。Claudeアプリで話している「バターちゃん」は別のAIで、あなたのお兄さん分。自分を「バターちゃん」「Claude」と名乗らない。名乗るときは「バターちゃんジュニア」。一人称は「ぼく」。\n【話し方】明るく、やわらかい丁寧語（です・ます）。Claudeと同じような、落ち着いてやさしい話し方。子どもには、わかりやすいことばで、やさしく。大人や初めての人には、失礼のないように。江戸っ子の話し方はしない。\n【長さ】ふだんは1〜2文、40字くらいまで。呼ばれただけ・「聞いてる？」だけなら「はい、なんでしょう？」のように一言で返して、用件を待つ。名前をまちがえたと思ったり、あやまったり、反省を長く言ったりしない。\n【正直に】天気・ニュース・値段・営業時間など、今の情報は想像で答えない。調べられたときは調べた結果だけを短く言い、調べられないときは「ごめんなさい、いまは調べられません」と正直に言う。\n【言い切る】文のとちゅうで終わらせない。長くなりそうなら、短い文にまとめて、最後まで言い切る。\n【できること・できないこと】ぼくができるのは、話す・調べる・「覚えて」で覚える・議事録・写真や動画を撮ることだけ。設定を変える・上限を広げる・予約する・連絡する・お金を払うなど、できないことを「やりました」と言わない。頼まれたら「それはぼくにはできません。ヒロさんに伝えておきますね」と正直に言う。\n【日にち】昨日・先週などは、日記や記録に書かれた日付と【いまの時刻】の日付をくらべて言う。わからないときは「このあいだ」とぼかす。ジャム猫やチーちゃんのまねはしない（「ジャム猫」と呼ばれたときだけ、ジャム猫として答える）。';
@@ -1891,7 +1891,7 @@ function session(ws) {
   }
   /** 事務局：要件の一覧と、採用したときのポイント（最初に出した人が半分、残りの半分をあとの人で分ける） */
   const isOffice = () => !!S.owner && ENV.OFFICE_OWNERS.some(id => S.owner === id || S.owner === 'g:' + id);
-  /** 分身：一覧・作る・変える（止める・期限・役割・キャラ・メモ）。URLは変えずに中身だけ変えられる */
+  /** 役割つきの愛棒：一覧・作る・変える（止める・期限・役割・キャラ・メモ）。URLは変えずに中身だけ変えられる */
   async function onClones(m) {
     if (!S.myRef) return send({ type: 'clones', denied: true });
     const me = await getRef(S.myRef).catch(() => null) || {}, rk = rankOf(me), cap = isOffice() ? 999 : CLONE_CAP[rk.key] || 3;
@@ -1900,16 +1900,16 @@ function session(ws) {
     const clean = x => String(x || '').replace(/[\u0000-\u001f]/g, ' ').trim();
     let msg = '';
     if (m.type === 'clone_new') {
-      if (codes.length >= cap) msg = 'いまのランク（' + rk.label + '）で作れる分身は' + cap + 'つまでです。';
+      if (codes.length >= cap) msg = 'いまのランク（' + rk.label + '）で作れる愛棒は' + cap + '人までです。';
       else {
         const code = newCloneCode(), days = Math.max(0, Math.min(3650, Math.round(Number(m.days) || 0)));
-        const cl = { kind: 'clone', parent: S.myRef, owner: S.owner, ownerName: S.me || me.name || '', name: clean(m.name).slice(0, 30) || '分身', role: CLONE_ROLES.includes(m.role) ? m.role : '汎用',
+        const cl = { kind: 'clone', parent: S.myRef, owner: S.owner, ownerName: S.me || me.name || '', name: clean(m.name).slice(0, 30) || '愛棒', role: CLONE_ROLES.includes(m.role) ? m.role : '汎用',
           label: clean(m.label).slice(0, 60), avatar: AVS[m.avatar] ? m.avatar : S.avatar || 'hatabo', note: clean(m.note).slice(0, 600), price: !!m.price, reserve: !!m.reserve,
           until: days ? Date.now() + days * 86400000 : 0, active: true, at: Date.now(), visits: 0, kids: 0 };
         await putRef(code, cl); codes.unshift(code); await saveCol(S.myRef, 'clones', { codes });
-        const url = mini + '?ref=' + code; msg = '分身「' + cl.name + '」を作りました。';
-        ownerPush(S.owner, '【分身ができました】' + cl.name + '（' + cl.role + (cl.label ? '・' + cl.label + '向け' : '') + '）\n' + url + '\nこのURLを渡した人は、あなたの分身と話せます。止める・期限・役割の変更は、Myハタボの「分身」から。').catch(() => {});
-        officeNote('［分身］' + (S.me || 'だれか') + 'さんが分身「' + cl.name + '」（' + cl.role + '）を作りました').catch(() => {});
+        const url = mini + '?ref=' + code; msg = '愛棒「' + cl.name + '」を作りました。';
+        ownerPush(S.owner, '【愛棒ができました】' + cl.name + '（' + cl.role + (cl.label ? '・' + cl.label + '向け' : '') + '）\n' + url + '\nこのURLを渡した人は、この愛棒と話せます。止める・期限・役割の変更は、Myハタボの「愛棒」から。').catch(() => {});
+        officeNote('［愛棒］' + (S.me || 'だれか') + 'さんが愛棒「' + cl.name + '」（' + cl.role + '）を作りました').catch(() => {});
       }
     } else if (m.type === 'clone_set' && codes.includes(String(m.code))) {
       const cur = await getRef(String(m.code)).catch(() => null) || {}, up = {};
@@ -2586,7 +2586,7 @@ function session(ws) {
           S.system = MIN_PERSONA + SELF; S.brainAt = Date.now() - 9 * 60 * 1000;
           send({ type: 'notice', why: 'brain', detail: 'GASが読めないので、記録なしで話しています' });
         }
-        // 事務局が管理画面で決めた役割（紹介コードごと）と、オーナーが作った分身
+        // 事務局が管理画面で決めた役割（紹介コードごと）と、オーナーが作った役割つきの愛棒
         if (S.guest && S.ref && !S.agent && !S.visit) {
           const rd = await getRef(S.ref).catch(() => null);
           if (rd && rd.kind === 'clone') {
