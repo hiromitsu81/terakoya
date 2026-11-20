@@ -88,8 +88,11 @@
    bora:{n:'ハタボーラ（会社）',per:true,g:{X:[['1席（1日60回まで）',2980]],G:[['1席（1日40回まで）',9800]]},note:'5席から。10席以上10%、50席以上15%、100席以上20%引き。'}
   };
   var ALL=['ietna','ris','box','ace','bora'];
-  var OP=[['mimamori','見守り報告（家族のLINEへ）',300,['ietna','ris']],['gaku','学習モード（英語・中国語）',980,['ietna','ris','box']],['add','愛棒の追加（1体）',980,['ietna','ris','box']],['lw','LINEでも使う（書く・見る）',300,['ietna','ris','box']],['chara','キャラ・話し方のカスタム',500,ALL],['avatar','アバターの作成（オリジナルの見た目）',0,ALL,9800],['orig','オリジナルキャラクター（専用の公式LINEとミニアプリ・見た目・性格・声）10万円から',0,ALL,100000],['rename','名前の変更（最初の名付けは無料）',0,ALL,1000],['voice','オリジナルの声（好きな声・本人の声）',980,ALL,29800],['emo','表情ゆたかな声（気持ちと間が出る声。Zとオリジナルキャラは込み）',500,ALL],['lang','外国語の窓口',3000,['ace']],['line','LINE公式アカウント連携（書く・見る）',5000,['ace','bora']]];
-  var st={l:'ris',g:'X',t:0,n:5,o:{},pay:'m'};
+  var OP=[['mimamori','見守り報告（家族のLINEへ）',300,['ietna','ris']],['gaku','学習モード（英語・中国語）',980,['ietna','ris','box']],['add','愛棒の追加（1体）',980,['ietna','ris','box']],['lw','LINEでも使う（書く・見る）',300,['ietna','ris','box']],['chara','キャラ・話し方のカスタム',500,ALL],['avatar','アバターの作成（オリジナルの見た目）',0,ALL,9800],['orig','オリジナルキャラクター（専用の公式LINEとミニアプリ・見た目・性格・声）10万円から',0,ALL,100000],['rename','名前の変更（最初の名付けは無料）',0,ALL,1000],['voice','オリジナルの声（好きな声・本人の声）',980,ALL,29800],['emo','表情ゆたかな声（気持ちと間が出る声。Zとオリジナルキャラは込み）',500,ALL],['lang','外国語の窓口',3000,['ace']]];
+  /* AIの土台と、LINEの窓口（11/20） */
+  var BASE=[['fix','土台固定（ハタボのAI・月額に込み）',0,ALL],['conn','ハタボ コネクト（従量）：いつものAIから。月100回まで無料',0,ALL],['plus','ハタボ コネクト プラス：月2,000回込み・愛棒＋5体（準備中）',1480,ALL],['addon','自社のAIを土台に（アドオン型・1席1,000円・10席から）',0,['bora']]];
+  var WIN=[['share','ハタボの公式LINEに相乗り',0,ALL],['own','自分の公式LINEにつなぐ（はじめの設定0円）',5000,['ace','bora']]];
+  var st={l:'ris',g:'X',t:0,n:5,o:{},pay:'m',b:'fix',w:'share',f:0};
   try{var q=new URLSearchParams(location.search).get('l');if(q&&L[q])st.l=q}catch(e){}
   if(location.hash&&L[location.hash.slice(1)])st.l=location.hash.slice(1);
   var $=function(s){return sim.querySelector(s)};
@@ -99,22 +102,31 @@
     $('#s-l').innerHTML=Object.keys(L).map(function(k){return '<label><input type="radio" name="l" value="'+k+'"'+(k===st.l?' checked':'')+'>'+L[k].n+'</label>'}).join('');
     $('#s-g').innerHTML=['X','G','Z'].map(function(g){var ok=!!m.g[g];return '<label style="'+(ok?'':'opacity:.4')+'"><input type="radio" name="g" value="'+g+'"'+(g===st.g?' checked':'')+(ok?'':' disabled')+'>'+g+(g==='X'?'（標準）':g==='G'?'（上位）':'（いちばん上）')+'</label>'}).join('');
     $('#s-t').innerHTML=tiers.map(function(t,i){return '<label><input type="radio" name="t" value="'+i+'"'+(i===st.t?' checked':'')+'>'+t[0]+'</label>'}).join('');
+    var okB=function(k){var b=BASE.filter(function(x){return x[0]===k})[0];return b&&b[3].indexOf(st.l)>=0},okW=function(k){var w=WIN.filter(function(x){return x[0]===k})[0];return w&&w[3].indexOf(st.l)>=0};
+    if(!okB(st.b))st.b='fix';if(!okW(st.w))st.w='share';
+    $('#s-b').innerHTML=BASE.filter(function(b){return b[3].indexOf(st.l)>=0}).map(function(b){return '<label><input type="radio" name="b" value="'+b[0]+'"'+(b[0]===st.b?' checked':'')+'>'+b[1]+(b[2]?'　+'+yen(b[2])+'／月':'')+'</label>'}).join('');
+    $('#s-w').innerHTML=WIN.map(function(w){var ok=w[3].indexOf(st.l)>=0;return '<label style="'+(ok?'':'opacity:.4')+'"><input type="radio" name="w" value="'+w[0]+'"'+(w[0]===st.w?' checked':'')+(ok?'':' disabled')+'>'+w[1]+(w[2]?'　+'+yen(w[2])+'／月':'　0円')+(ok?'':'（お店・会社）')+'</label>'}).join('');
+    $('#s-ff').hidden=!(st.b==='plus'&&st.l==='ietna');if(document.activeElement!==$('#s-f'))$('#s-f').value=st.f;
     var showN=m.per||m.seat;$('#s-nf').hidden=!showN;$('#s-nl').textContent=m.per?'席数（5席から）':'スタッフの席数';
     $('#s-o').innerHTML=OP.filter(function(o){return o[3].indexOf(st.l)>=0&&!(o[0]==='emo'&&st.g==='Z')}).map(function(o){return '<label><input type="checkbox" name="o" value="'+o[0]+'"'+(st.o[o[0]]?' checked':'')+'>'+o[1]+'　'+(o[2]?'+'+yen(o[2])+'／月':'')+(o[4]?(o[2]?'・':'')+'初回 '+yen(o[4]):'')+'</label>'}).join('');
     var base=tiers[st.t][1],lines=[];
-    if(m.per){var n=Math.max(5,st.n|0);var disc=n>=100?.2:n>=50?.15:n>=10?.1:0;base=Math.round(base*n*(1-disc));lines.push(n+'席'+(disc?'（席数割 '+disc*100+'%）':''))}
+    if(m.per&&st.b==='addon'){var na=Math.max(10,st.n|0);base=1000*na;lines.push(na+'席（アドオン型・自社のAI）')}
+    else if(m.per){var n=Math.max(5,st.n|0);var disc=n>=100?.2:n>=50?.15:n>=10?.1:0;base=Math.round(base*n*(1-disc));lines.push(n+'席'+(disc?'（席数割 '+disc*100+'%）':''))}
     else if(m.seat){var n2=Math.max(0,st.n|0);base+=m.seat*n2;lines.push('スタッフ'+n2+'席')}
     var opt=0,once=0;OP.forEach(function(o){if(st.o[o[0]]&&o[3].indexOf(st.l)>=0&&!(o[0]==='emo'&&st.g==='Z')){opt+=o[2];once+=(o[4]||0);lines.push(o[1])}});
+    var bs=0;if(st.b==='conn')lines.push('ハタボ コネクト（従量）：月100回まで無料、こえたら さがす1回1円・伝言と予約の希望1回5円');
+    if(st.b==='plus'){bs=1480;lines.push('ハタボ コネクト プラス（月2,000回込み・準備中）');if(st.l==='ietna'&&st.f>0){bs+=500*st.f;lines.push('コネクトの家族追加 '+st.f+'人')}}
+    if(st.w==='own'){bs+=5000;lines.push('自分の公式LINEにつなぐ（LINEの送信料はお店のプランで）')}else lines.push('ハタボの公式LINEに相乗り（0円）');
     if(document.activeElement!==$('#s-n'))$('#s-n').value=st.n;
-    var mon=base+opt,shown=st.pay==='y'?Math.round(mon*10/12):mon;
-    $('#r-n').textContent=m.n+' '+st.g;$('#r-p').innerHTML=yen(shown)+'<small>／月</small>';
+    var mon=base+opt+bs,shown=st.pay==='y'?Math.round(mon*10/12):mon;
+    $('#r-n').textContent=m.n+' '+(st.b==='addon'?'アドオン型':st.g);$('#r-p').innerHTML=yen(shown)+'<small>／月</small>';
     $('#r-y').textContent=st.pay==='y'?'年払い：1年で'+yen(mon*10)+'（12か月分を10か月分の料金で）':'月払い：初期費用0円、いつでも見直せます';
-    $('#r-l').innerHTML=[tiers[st.t][0]].concat(lines).map(function(x){return '<li>'+x+'</li>'}).join('')+'<li>AIの料金・設定・伴走は月額に込み</li>'+(once?'<li><b>初回のみ '+yen(once)+'</b>（アバター・名前・声の作成）</li>':'');
+    $('#r-l').innerHTML=[tiers[st.t][0]].concat(lines).map(function(x){return '<li>'+x+'</li>'}).join('')+(st.b==='addon'?'<li>AIの料金は自社の契約。設定・伴走は込み</li>':st.b==='fix'?'<li>AIの料金・設定・伴走は月額に込み</li>':'<li>ハタボのAI・設定・伴走は込み。自分のAIの料金は、そのAIの側で</li>')+(st.b!=='fix'&&st.b!=='addon'?'<li>AIから届いた予約が成立したら、お店の側で1件30円</li>':'')+(once?'<li><b>初回のみ '+yen(once)+'</b>（アバター・名前・声の作成）</li>':'');
     $('#r-note').textContent=m.note||'';
-    try{localStorage.setItem('hb_quote',JSON.stringify({l:m.n,g:st.g,t:tiers[st.t][0],price:shown,pay:st.pay}))}catch(e){}
+    try{localStorage.setItem('hb_quote',JSON.stringify({l:m.n,g:st.g,t:tiers[st.t][0],price:shown,pay:st.pay,base:st.b,win:st.w}))}catch(e){}
   }
-  sim.addEventListener('change',function(e){var t=e.target;if(t.name==='l'){st.l=t.value;st.g='X';st.t=0;st.n=st.l==='bora'?5:0;st.o={}}else if(t.name==='g'){st.g=t.value;st.t=0}else if(t.name==='t')st.t=+t.value;else if(t.name==='o')st.o[t.value]=t.checked;else if(t.name==='pay')st.pay=t.value;else if(t.id==='s-n')st.n=+t.value;render()});
-  sim.addEventListener('input',function(e){if(e.target.id==='s-n'){st.n=+e.target.value;render()}});
+  sim.addEventListener('change',function(e){var t=e.target;if(t.name==='l'){st.l=t.value;st.g='X';st.t=0;st.n=st.l==='bora'?5:0;st.o={}}else if(t.name==='g'){st.g=t.value;st.t=0}else if(t.name==='t')st.t=+t.value;else if(t.name==='o')st.o[t.value]=t.checked;else if(t.name==='pay')st.pay=t.value;else if(t.name==='b'){st.b=t.value;if(st.b==='addon'&&st.n<10)st.n=10}else if(t.name==='w')st.w=t.value;else if(t.id==='s-f')st.f=Math.max(0,Math.min(20,+t.value||0));else if(t.id==='s-n')st.n=+t.value;render()});
+  sim.addEventListener('input',function(e){if(e.target.id==='s-n'){st.n=+e.target.value;render()}else if(e.target.id==='s-f'){st.f=Math.max(0,Math.min(20,+e.target.value||0));render()}});
   if(st.l==='bora')st.n=5;else st.n=0;$('#s-n').value=st.n;render();
 })();
 
