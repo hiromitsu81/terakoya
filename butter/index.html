@@ -2792,7 +2792,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
   let lipLive = false;   // 声の大きさで口を動かしている間は、ランダムの口パクを止める
   function jrSend(o) {
     if (J.ws && J.ws.readyState === 1 && J.ready) return J.ws.send(typeof o === 'string' || o instanceof ArrayBuffer ? o : JSON.stringify(o));
-    if (o && typeof o === 'object' && !(o instanceof ArrayBuffer) && /^(funnel|mypage)$/.test(o.type)) { J.q = (J.q || []).filter(x => x.type !== o.type).concat([o]); try { jrConnect(); } catch (e) {} }   // つながっていないときのボタンは、つないでから送る
+    if (o && typeof o === 'object' && !(o instanceof ArrayBuffer) && /^(funnel|mypage)$/.test(o.type)) { if (J.dead && o.type === 'funnel') { toast(!LIFF ? 'このボタンは、LINEのトークのメニューから開いたMyハタボで使えます' : 'いまサーバーにつながれません。少しあとでもう一度押してください'); setTimeout(() => { try { hbpRender(); } catch (e) {} }, 50); return; } J.q = (J.q || []).filter(x => x.type !== o.type).concat([o]); try { jrConnect(); } catch (e) {} }   // つながっていないときのボタンは、つないでから送る
     else if (J.ws && J.ws.readyState === 1) J.ws.send(typeof o === 'string' || o instanceof ArrayBuffer ? o : JSON.stringify(o));
   }
   function jrConnect() {
