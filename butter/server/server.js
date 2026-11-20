@@ -1231,7 +1231,7 @@ const SERVICE_KNOWLEDGE = () => '\n\n【ハタボのサービス（聞かれた�
   '\nグレード：X＝速くて軽いAI、G＝賢いAI（Zの半分くらいの費用）、Z＝いちばん賢いAI（Claudeと同じ精度）。1日に話せる回数は X ' + GRADE_CAP.std + '回・G ' + GRADE_CAP.high + '回・Z ' + GRADE_CAP.super + '回。こえたら追加チケット（' + TICKETS.map(t => t.yen.toLocaleString('ja-JP') + '円で' + t.n + '回').join('、') + '）。ありがとうポイントでもチケットと交換できる（1,000ptで40回など）。' +
   '\nお試し：' + TRIAL_DAYS + '日間、いちばん上のZで無料（' + TRIAL_TEXT + '）。Myハタボの「プラン」から申し込む。' + TRIAL_DAYS + '日以内にやめれば0円。そのまま続けると、選んだプランの契約に切りかわる。' +
   '\nオプション：見守り報告（家族のLINEへ）月300円、学習モード（英語・中国語）月980円、愛棒の追加（2体目から）1体月980円、LINEでも使う月300円、キャラ・話し方のカスタム月500円、アバターの作成 初期9,800円、オリジナルキャラクター（専用の公式LINE・ミニアプリ・見た目・性格・声）初期10万円から、名前の変更1,000円（最初の名付けは無料）、オリジナルの声 月980円＋初期29,800円、外国語の窓口 月3,000円（お店・宿）、LINE公式アカウント連携 月5,000円（お店・宿・会社）。' +
-  '\n土台と窓口（どの車種にもつけられる）：AIの土台は「土台固定」（ハタボのAI X・G・Z、月額に込み）と「土台フレックス＝ハタボ コネクト」（いつものChatGPT・Gemini・Claude・Grokから、MCPでハタボのネットワークへ。愛棒をさがす・伝言・予約の希望。コネクト（従量）は月0円・月100回まで無料、こえたら さがす1回1円・伝言と予約の希望1回5円。コネクト プラスは月1,480円・月2,000回込み・つなげる愛棒がランクの数＋5体で準備中。AIから届いた予約が成立したら、受けたお店の側で1件30円。成果プランのお店は「取れた予約 100円」で数え、30円は重ねない。法人で自社のAIを土台にする形はアドオン型 1席 月1,000円）。キーはMyハタボの「もっと」→「AIからつなぐ（API）」。LINEの窓口は、ハタボの公式LINEに相乗り（0円。家族・ひとり・個人事業・はじめてのお店）と、自分の公式LINEにつなぐ形（LINE公式アカウント連携 月5,000円、はじめの設定0円。チャネルを作ってキーを貼るだけで、ハタボが自動でつなぐ。自動設定は準備中で、それまでは担当が設定）。はじめは相乗り、育ったら自分の公式LINEへ移れる。' +
+  '\nエンジンとボディ（車のたとえ：AIの土台＝エンジン、LINEの窓口＝ボディ、MCPなどのつながるしくみ＝道路。どの車種にもつけられる）：エンジンは「土台固定」（ハタボのAI X・G・Z、月額に込み）か「ハタボ コネクト」（いつものChatGPT・Gemini・Claude・Grokを頭にして、MCPでハタボのネットワークへ）。コネクトの車種は頭（AI）の分を引いたボディの料金：ハタリス月1,980円・ハタイエンタ月3,980円・ハタボックス月3,300円・ハタエース1拠点月6,600円（スタッフ1席1,000円）・ハタボーラ1席月1,980円（コネクトにはグレードはない）。そのうえでコネクト（従量）は月100回まで無料、こえたら さがす1回1円・伝言と予約の希望1回5円。コネクト プラスは月1,480円・月2,000回込み・つなげる愛棒がランクの数＋5体で準備中（ハタイエンタは家族追加1人500円）。AIから届いた予約が成立したら、受けたお店の側で1件30円（成果プランのお店は「取れた予約100円」で数え、重ねない）。法人で自社のAIを土台にする形はアドオン型1席月1,000円（10席から）。キーはMyハタボの「もっと」→「AIからつなぐ（API）」。ボディ（LINEの窓口）は3つ：ハタボの公式LINEに相乗り（0円。家族・ひとり・個人事業・はじめてのお店）、自分の公式LINEにつなぐ（月5,000円・はじめの設定0円。チャネルを作ってキーを貼るだけでハタボが自動でつなぐ。自動設定は準備中で、それまでは担当が設定）、こちらで新しく作る（専用の公式LINEとミニアプリ・見た目・性格・声。オリジナルキャラクター 初期10万円から）。はじめは相乗り、育ったら自分の公式LINEへ移れる。' +
   '\nできること：話すだけで調べもの・段取り・文章の下書き・予定の整理・メモと議事録（Myハタボの「メモ・議事録」に残る。Googleを連携するとドライブにも）・伝言（ご縁の人のAI棒どうし）・LINEグループの記録と議事録（管理者だけ、30日で消える）。PCでも同じアカウントで使える（設定の「PCで開く」）。' +
   '\nありがとうポイント：紹介した人が話しはじめたら' + THANKS.visit + 'pt、お試しで' + THANKS.trial + 'pt、契約で' + THANKS.contract + 'pt（2代目は1/2、3代目は1/4）。ガチャ（1日1回むりょう、2回目からは' + GACHA.cost + 'pt）とチケットに使える。' +
   '\n管理画面（Myハタボの「もっと」→「管理画面」。PC・タブレットでも。事務局とオーナーで共通）：会話（窓口ごと・新しい順・未読の伝言はバッジ。開くと中身と、その愛棒への指示・メモリー・共有）、返事は下書きを確かめて承認するとお客さまのLINEへ、相談役のハタボに声で相談（Xは1日1回・Gは3回・Zは10回）、愛棒、オーナー、お金、窓口（URLを作る）、設定（白とダーク・会話を残す期間（はじめは90日。Xは90日・Gは180日・Zは365日まで）・お店の人（Xは1人・Gは3人・Zは10人）・営業時間外の自動の返事）。お店の愛棒と話すお客さまには「この会話はお店の方も見られます」と最初に出る。' +
@@ -2953,7 +2953,7 @@ function session(ws) {
           S.tellTo = to;
           S.system = S.system.replace(/ハタラボの担当（ヒロさん）|ハタラボのヒロさん/g, to).replace(/〈伝え先〉/g, to).replace(/ヒロさん/g, to);
         }
-        send({ type: 'ready', plain: hearing(), me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs, guest: !!S.guest, service: S.role === 'サービス相談', myRef: S.myRef || '', visit: S.visit ? { code: S.visit, name: S.visitHost } : null, avatar: S.avatar || '', komugi: !!S.komugi, mac: !!S.macSelf, office: isOffice(), web: !!S.web, shopView: !!S.clone, bridge: !!S.bridge, superUntil: superUntil(S.owner), canPlan: !!(S.claude || superUntil(S.owner)), claude: !!S.claude, aiName: !S.visit && S.custom && S.custom.aiName || '' });
+        send({ type: 'ready', plain: hearing(), me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs, guest: !!S.guest, service: S.role === 'サービス相談', myRef: S.myRef || '', visit: S.visit ? { code: S.visit, name: S.visitHost } : null, avatar: S.avatar || '', komugi: !!S.komugi, mac: !!S.macSelf, office: isOffice(), web: !!S.web, srv: SERVER_REV, shopView: !!S.clone, bridge: !!S.bridge, superUntil: superUntil(S.owner), canPlan: !!(S.claude || superUntil(S.owner)), claude: !!S.claude, aiName: !S.visit && S.custom && S.custom.aiName || '' });
         if (S.visit) { const T = S.avatar === 'komugi' ? x => x.replace(/だボー/g, 'です').replace(/ボー/g, 'です') : S.avatar === 'hatabo' ? bizBo : bizBo; return speakOnly(T(S.visitSponsor ? S.visitHost + 'のAI棒だボー。なんでも聞いてほしいボー。' : S.visitHost + 'さんのAI棒だボー。話してくれたことは、' + S.visitHost + 'さんに伝言で届けるボー。'), 'excited'); }
         if (m.greet && S.guest && S.consult) return recapGreet().then(deliverInbox).catch(() => {});      // 相談メモがある人には、振り返りからはじめる
         const hi = m.greet ? (S.guest ? (S.history.length ? againFor() : (AVS[S.avatar] ? greetFor() : guestGreeting(S.me))) : greeting(S.me, S.mode, S.trio)) : '';
@@ -3025,7 +3025,7 @@ function session(ws) {
       if (m.type === 'clones' || m.type === 'clone_new' || m.type === 'clone_set') return onClones(m);
       if (m.type === 'admin' || m.type === 'admin_set') return onAdmin(m);
       if (m.type === 'api' || m.type === 'api_new' || m.type === 'api_stop' || m.type === 'api_resv') return onApi(m);
-      if (['console', 'thr_open', 'thr_draft', 'thr_send', 'consult', 'mem_set', 'mem_del', 'aibo_set', 'con_set', 'staff_add', 'staff_del', 'con_url_new', 'con_url_set'].includes(m.type)) return onConsole(m);
+      if (['console', 'thr_open', 'thr_draft', 'thr_send', 'consult', 'mem_set', 'mem_del', 'aibo_set', 'con_set', 'staff_add', 'staff_del', 'con_url_new', 'con_url_set'].includes(m.type)) return onConsole(m).catch(e => { console.error('console', m.type, String(e && e.stack || e).slice(0, 400)); send({ type: 'console', error: '管理画面の読みこみでエラーがおきました（' + String(e && e.message || e).slice(0, 80) + '）' }); });
       if (m.type === 'docs' || m.type === 'docs_set' || m.type === 'docs_share' || m.type === 'docs_copy') return onDocs(m);
       if (m.type === 'friends') return send(await friendsView());
       if (m.type === 'friend_req' || m.type === 'friend_ok' || m.type === 'friend_no' || m.type === 'friend_del') return onFriend(m);
@@ -3126,6 +3126,7 @@ const PLAN_TABLE = {
   Z: { label: 'Z（いちばん上）', keepMax: 365, voice: 10, staff: 10 },
 };
 const KEEP_DEFAULT = 90;
+const SERVER_REV = '2026-11-20d';   // 画面が「サーバーが古い」と気づけるように、ready で返す
 const gradeOfRef = r => { const f = funnelOf(r); return (f.stage === 'contract' || f.stage === 'trial') ? (PLAN_TABLE[f.grade] ? f.grade : f.stage === 'trial' ? 'Z' : 'X') : 'X'; };
 const TELL_REPLY_RE = /(伝えて?おきます|お伝えします|お伝えしておきます|伝えますね|伝言(を|として)?(お?預か|残し|承))/;
 const threadId = (shop, visitor, aibo) => 't' + crypto.createHash('sha256').update('th:' + shop + ':' + visitor + ':' + aibo).digest('hex').slice(0, 31);

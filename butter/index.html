@@ -2846,7 +2846,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
       case 'google_url': try { if (window.liff && liff.openWindow) liff.openWindow({ url: m.url, external: true }); else window.open(m.url, '_blank'); } catch (e) { location.href = m.url; } toast('ブラウザでGoogleにログインしてね。終わったらLINEにもどってきてね'); setTimeout(() => jrSend({ type: 'google_status' }), 20000); break;
       case 'docs': HBP.docs = m; if (!$('hbPage').hidden && HBP.page === 'docs') hbpRender(); break;
       case 'clones': HBP.clones = m; if (m.msg) toast(m.msg); if (!$('hbPage').hidden && HBP.page === 'clones') hbpRender(); break;
-      case 'console': if (m.denied) { HBP.con = { denied: true }; } else { HBP.con = m; if (m.msg) toast(m.msg); } conBadge(); if (!$('hbPage').hidden && HBP.page === 'console') hbpRender(); break;
+      case 'console': if (m.error) { HBP.conErr = m.error; if (!HBP.con) { if (HBP.page === 'console') hbpRender(); } else toast(m.error); break; } HBP.conErr = ''; if (m.denied) { HBP.con = { denied: true }; } else { HBP.con = m; if (m.msg) toast(m.msg); } conBadge(); if (!$('hbPage').hidden && HBP.page === 'console') hbpRender(); break;
       case 'thread': if (m.denied) { toast('この会話は見られません'); break; } HBP.thr = m; if (HBP.con && HBP.con.threads) { const x = HBP.con.threads.find(t => t.id === m.t.id); if (x) x.unread = 0; conBadge(); } if (!$('hbPage').hidden && HBP.page === 'console') hbpRender(); break;
       case 'thr_draft': if (HBP.thr && HBP.thr.t.id === m.id) { HBP.draft = m.draft || ''; if (!m.draft) toast('下書きを作れませんでした'); hbpRender(); } break;
       case 'thr_sent': toast(m.ok ? 'LINEに返事を送りました' : (m.why || '送れませんでした')); HBP.draft = ''; jrSend({ type: 'thr_open', id: m.id }); break;
@@ -2864,7 +2864,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
       case 'ready':
         document.body.classList.remove('connecting');
         J.ready = true; J.tries = 0; J.greeted = true; window.__aiName = m.visit ? '' : m.aiName || ''; setTimeout(() => { try { avText(); const t = document.querySelector('#butterTag text'); if (t && avName()) t.textContent = avName(); } catch (e) {} }, 0); document.body.classList.toggle('svc', !!m.service); { const vb = $('visitBar'); if (m.visit) { vb.hidden = false; $('visitName').textContent = m.visit.name + 'さんのAI棒と話しています'; } else { vb.hidden = true; if (J.visit) { J.visit = ''; toast('つながっていない人のAI棒には入れませんでした'); } } } J.profile = m.profile || null; if (!$('hbPage').hidden) jrSend({ type: 'mypage' }); 
-        setTimeout(() => document.dispatchEvent(new Event('jrready')), 50); J.guest = !!m.guest; J.plain = !!m.plain; document.body.classList.toggle('plain', J.plain); if (J.plain || J.guest) setTimeout(() => { const b = document.querySelector('.vsw button[data-v="chat"]'); if (b) b.click(); }, 0);   // 窓口は、いつもトーク画面から（キャラの画面は切りかえで見られる） J.mac = !!m.mac; J.bridge = !!m.bridge; J.office = !!m.office; if (m.shopView && !J.shopNoted) { J.shopNoted = true; addBubble('おしらせ', 'この会話はお店の方も見られます。', 'her'); } J.avatar = KOMUGI_APP ? 'komugi' : m.avatar || ''; document.body.classList.toggle('av-komugi', J.avatar === 'komugi'); if (HATABO_APP && !J.avatar) J.avatar = 'hatabo'; document.body.classList.toggle('av-hatabo', J.avatar === 'hatabo'); { const t = document.querySelector('#butterTag text'), nm = { komugi: 'コムギ', hatabo: 'ハタボ' }[J.avatar]; if (t && nm) t.textContent = nm; }  if (J.avatar) { document.body.classList.remove('hb-hatched'); let was = false; try { was = localStorage.getItem('hatched_' + J.avatar) === '1'; } catch (e) {} if (was) setTimeout(hbHatch, 600); }   // 前にかえった子は、立ち上げのたびに、たまごからかえって出てくる $('goenBtn').hidden = J.guest; J.myRef = m.myRef || ''; J.me = String(m.me || '').replace(/（テスト）$/, ''); $('shareBtn').hidden = false;
+        setTimeout(() => document.dispatchEvent(new Event('jrready')), 50); J.guest = !!m.guest; J.plain = !!m.plain; document.body.classList.toggle('plain', J.plain); if (J.plain || J.guest) setTimeout(() => { const b = document.querySelector('.vsw button[data-v="chat"]'); if (b) b.click(); }, 0);   // 窓口は、いつもトーク画面から（キャラの画面は切りかえで見られる） J.mac = !!m.mac; J.bridge = !!m.bridge; J.office = !!m.office; J.srv = m.srv || ''; if (m.shopView && !J.shopNoted) { J.shopNoted = true; addBubble('おしらせ', 'この会話はお店の方も見られます。', 'her'); } J.avatar = KOMUGI_APP ? 'komugi' : m.avatar || ''; document.body.classList.toggle('av-komugi', J.avatar === 'komugi'); if (HATABO_APP && !J.avatar) J.avatar = 'hatabo'; document.body.classList.toggle('av-hatabo', J.avatar === 'hatabo'); { const t = document.querySelector('#butterTag text'), nm = { komugi: 'コムギ', hatabo: 'ハタボ' }[J.avatar]; if (t && nm) t.textContent = nm; }  if (J.avatar) { document.body.classList.remove('hb-hatched'); let was = false; try { was = localStorage.getItem('hatched_' + J.avatar) === '1'; } catch (e) {} if (was) setTimeout(hbHatch, 600); }   // 前にかえった子は、立ち上げのたびに、たまごからかえって出てくる $('goenBtn').hidden = J.guest; J.myRef = m.myRef || ''; J.me = String(m.me || '').replace(/（テスト）$/, ''); $('shareBtn').hidden = false;
         document.body.classList.toggle('familyok', !J.guest);
         document.body.classList.toggle('guestmode', J.guest);
         if (J.guest) { $('typedInput').placeholder = J.avatar === 'komugi' ? '馬越さんにしてほしいこと、なんでもどうぞ' : 'ヒロさんにしてほしいこと、なんでもどうぞ'; }
@@ -3366,7 +3366,7 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
       body.innerHTML = `<div class="hbc"><div class="k">SETTINGS</div><h3>設定</h3><p>あなたのAI棒の設定は、ここにまとまっています。公式LINEのメニューの「設定」からも開けます。</p></div>${gradeCard}
         <div class="hbc">${rows.map(([k, t, d0]) => `<button type="button" class="hbrow" ${k === 'oa' ? 'onclick="goOaTalkW()"' : k === 'pc' ? 'onclick="pcLinkW()"' : `data-go="${k}"`}><div><b>${t}</b><span>${d0}</span></div><i>›</i></button>`).join('')}</div>`;
       body.querySelectorAll('[data-grade]').forEach(b => b.addEventListener('click', () => { jrSend({ type: 'plan', plan: b.dataset.grade }); store.set('jrPlan2', b.dataset.grade); planShow(); hbpOpen('settings'); }));
-      if (!KOMUGI_APP) { const pref = store.get('hbTheme', 'auto'), tc = document.createElement('div'); tc.className = 'hbc'; tc.innerHTML = '<div class="k">THEME</div><h3>見た目</h3><p>白とダークを選べます。はじめはスマホの設定に合わせます。</p><div class="hbgr">' + [['auto', 'スマホに合わせる'], ['light', '白'], ['dark', 'ダーク']].map(([k, t]) => '<button type="button" class="hbgrb' + (pref === k ? ' on' : '') + '" data-theme="' + k + '"><b>' + t + '</b></button>').join('') + '</div>'; body.insertBefore(tc, body.children[2] || null); tc.querySelectorAll('[data-theme]').forEach(b => b.addEventListener('click', () => { store.set('hbTheme', b.dataset.theme); hbTheme(); hbpRender(); })); }
+      if (!KOMUGI_APP) { const pref = store.get('hbTheme', 'dark'), tc = document.createElement('div'); tc.className = 'hbc'; tc.innerHTML = '<div class="k">THEME</div><h3>見た目</h3><p>はじめはダークです。白やスマホの設定に合わせることもできます。</p><div class="hbgr">' + [['dark', 'ダーク'], ['light', '白'], ['auto', 'スマホに合わせる']].map(([k, t]) => '<button type="button" class="hbgrb' + (pref === k ? ' on' : '') + '" data-theme="' + k + '"><b>' + t + '</b></button>').join('') + '</div>'; body.insertBefore(tc, body.children[2] || null); tc.querySelectorAll('[data-theme]').forEach(b => b.addEventListener('click', () => { store.set('hbTheme', b.dataset.theme); hbTheme(); hbpRender(); })); }
     } else if (p === 'docs') {
       const D = HBP.docs;
       if (!D) { body.innerHTML = '<div class="hbc"><p>よみこみ中…</p></div>'; if (J.ready) jrSend({ type: 'docs' }); return; }
@@ -3788,9 +3788,9 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
     if (pd === '1') setTimeout(() => toast('お支払いの登録を受けつけました。反映まで少しお待ちください'), 1200);
     else if (pd === '0') setTimeout(() => toast('お支払いはまだ済んでいません'), 1200); }
 
-  /* ===== 白とダーク：はじめはスマホ（端末）の設定に合わせる。Myハタボと管理画面で同じ ===== */
+  /* ===== 白とダーク：はじめはダーク。白・端末の設定に合わせるも選べる。Myハタボと管理画面で同じ ===== */
   function hbTheme() {
-    const pref = store.get('hbTheme', 'auto'), dark = pref === 'dark' || (pref === 'auto' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+    const pref = store.get('hbTheme', 'dark'), dark = pref === 'dark' || (pref === 'auto' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
     $('hbPage').classList.toggle('lt', !dark && !KOMUGI_APP);
   }
   try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', hbTheme); } catch (e) {}
@@ -3807,7 +3807,14 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
   function conRender(body) {
     const C = HBP.con, n = x => Number(x || 0).toLocaleString('ja-JP');
     body.classList.add('wide', 'con');
-    if (!C) { body.innerHTML = '<div class="cn"><div class="cmain"><p class="cmut">よみこみ中…</p></div></div>'; if (J.ready) jrSend({ type: 'console', as: store.get('conAs', 'office') }); return; }
+    if (!C) {
+      // 返事がないときは、理由を出す（サーバーが古い・つながっていない・エラー）
+      const why = HBP.conErr ? esc(HBP.conErr) : !J.ready ? 'ハタボのサーバーにつないでいます…' : !J.srv ? 'サーバーが、管理画面より古いままのようです。いつものコマンドでサーバーを入れ直してから、開き直してください。' : (Date.now() - (HBP.conAsk || 0) > 8000 && HBP.conAsk ? 'サーバーから返事がありません。少しあとで「もう一度」を押してください。' : 'よみこみ中…');
+      body.innerHTML = '<div class="cn"><div class="cmain"><div class="ccard"><p>' + why + '</p>' + (J.ready ? '<button type="button" class="cbtn" id="conRetry">もう一度</button>' : '') + '</div></div></div>';
+      const rt = body.querySelector('#conRetry'); if (rt) rt.onclick = () => { HBP.conErr = ''; HBP.conAsk = Date.now(); jrSend({ type: 'console', as: store.get('conAs', 'office') }); hbpRender(); };
+      if (J.ready && (!HBP.conAsk || Date.now() - HBP.conAsk > 4000)) { HBP.conAsk = Date.now(); jrSend({ type: 'console', as: store.get('conAs', 'office') }); setTimeout(() => { if (!HBP.con && HBP.page === 'console' && !$('hbPage').hidden) hbpRender(); }, 8500); }
+      return;
+    }
     if (C.denied) { body.innerHTML = '<div class="cn"><div class="cmain"><p>管理画面は、自分のハタボを持っている人と事務局が使えます。</p></div></div>'; return; }
     const cv = HBP.cv = HBP.cv || (C.office ? 'home' : 'talks'), unread = (C.threads || []).reduce((s, t) => s + (t.unread || 0), 0);
     const NAV = [['home', 'ホーム'], ['talks', '会話'], ['aibo', '愛棒'], ['owners', 'オーナー'], ['money', 'お金'], ['win', '窓口'], ['set', '設定']];
@@ -3863,8 +3870,8 @@ body[data-kemo="excited"] .kmBody, body[data-kemo="laugh"] .kmBody { animation: 
         <div class="ccard"><h3>向こうから来る（LINEの友だち追加）</h3><p class="cmut">ハタボの公式LINEで友だちになった人は、なにもしなくても「会話」に出ます（印は「友だち追加」）。</p><h3 style="margin-top:12px">自分の公式LINEをつなぐ <span class="cent">準備中</span></h3><p class="cmut">LINEの管理画面でチャネルを作って、キーを貼るだけ。Webhook・リッチメニュー・あいさつはハタボが自動で設定します。それまでは担当が設定します（月5,000円・はじめの設定0円）。</p></div>
         <div class="ccard ctbl"><table><thead><tr><th>名前</th><th>種類</th><th>役割</th><th>状態</th><th>期限</th><th></th></tr></thead><tbody>${A.map(a => `<tr><td><b>${esc(a.name)}</b></td><td>${a.kind === 'url' ? '紹介URL' : '愛棒のURL'}</td><td>${esc(a.role)}</td><td>${a.open ? '受付中' : '止めています'}</td><td>${a.until ? new Date(a.until).toLocaleDateString('ja-JP') : '期限なし'}</td><td style="white-space:nowrap"><button type="button" class="cbtn" data-ccopy="${esc(a.url)}">URLをコピー</button>${a.kind === 'url' ? ` <button type="button" class="cbtn" data-urlact="${esc(a.code)}" data-on="${a.open ? 0 : 1}">${a.open ? '止める' : '再開'}</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="6" class="cmut">まだありません。</td></tr>'}</tbody></table></div>`;
     } else if (cv === 'set') {
-      const st = C.settings || {}, pref = store.get('hbTheme', 'auto'), L = C.table || {};
-      main = `<h2>設定</h2><div class="ccard"><h3>見た目</h3><div class="ctheme">${[['auto', 'スマホの設定に合わせる'], ['light', '白'], ['dark', 'ダーク']].map(([k, t]) => `<button type="button" class="cbtn ${pref === k ? 'p' : ''}" data-theme="${k}">${t}</button>`).join('')}</div></div>
+      const st = C.settings || {}, pref = store.get('hbTheme', 'dark'), L = C.table || {};
+      main = `<h2>設定</h2><div class="ccard"><h3>見た目</h3><div class="ctheme">${[['dark', 'ダーク（はじめ）'], ['light', '白'], ['auto', 'スマホの設定に合わせる']].map(([k, t]) => `<button type="button" class="cbtn ${pref === k ? 'p' : ''}" data-theme="${k}">${t}</button>`).join('')}</div></div>
         ${C.me.ref ? `<div class="ccard"><h3>会話を残す期間</h3><p class="cmut">はじめは${n(C.keepDefault)}日。すぎた会話は自動で消えます。愛棒ごとに変えるときは「愛棒」から。</p><select class="cin" id="ckeep">${[30, 90, 180, 365].map(d => `<option value="${d}" ${st.keepDays === d ? 'selected' : ''} ${d > C.limits.keepMax ? 'disabled' : ''}>${d}日${d > C.limits.keepMax ? '（プランを上げると）' : ''}</option>`).join('')}</select>
           <label class="hbsw" style="margin-top:10px"><input type="checkbox" id="cshare" ${st.shareSelf ? 'checked' : ''}><span>自分のハタボとの会話の中身を、事務局にも見せる（オフのときは件数と日時だけ）</span></label></div>
         <div class="ccard"><h3>お店の人（スタッフ）</h3><p class="cmut">相手のMyハタボの紹介コードで登録します。いまのプランで${n(C.limits.staff)}人まで。</p>${(st.staff || []).map(x => `<div class="hbrow"><div><b>${esc(x.name || x.ref)}</b><span>${x.role === 'reply' ? '見る・返事もできる' : '見るだけ'}</span></div><button type="button" class="cbtn" data-sdel="${esc(x.ref)}">外す</button></div>`).join('')}
