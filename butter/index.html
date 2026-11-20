@@ -1533,6 +1533,16 @@ body:is(.av-hatabo, .av-komugi):not(.plain) .chatv .cv-top { display: none !impo
 .hbacg i { display: block; height: 100%; width: 100%; background: #7FD39E; border-radius: 4px; }
 .hbacg.mid i { background: #E6C468; } .hbacg.low i { background: #E68585; }
 .hbp-acct .hbacg { margin-top: 2px; }
+
+/* 紹介（Claudeの「贈りましょう」の形） */
+.hbgift { display: grid; border-radius: 22px; overflow: hidden; border: 1px solid var(--cline); background: var(--ccard); }
+.hbgift-top { display: grid; place-items: center; padding: 34px 0 26px; background: radial-gradient(circle at 50% 60%, rgba(127,211,158,.16), transparent 60%), linear-gradient(180deg, #161D2B, #0F141F); color: #F2F4F7; }
+.hbgift-art { width: 190px; height: 172px; }
+.hbgift-in { padding: 26px 26px 6px; text-align: center; display: grid; gap: 14px; justify-items: center; }
+.hbgift-in h2 { margin: 0; font: 800 clamp(24px, 4.2vw, 32px)/1.3 var(--display); color: #fff; }
+.hbgift-in p { margin: 0; max-width: 560px; font-size: 15px; line-height: 1.85; color: #D5DAE3 !important; text-align: left; }
+.hbgift-tk { display: grid; justify-items: center; gap: 6px; margin: 10px 0 4px; } .hbgift-tk svg { width: 140px; height: 74px; } .hbgift-tk span { font: 700 14px var(--display); color: #E8EBF0; }
+.hbgift-go { margin: 18px 20px 22px !important; width: auto !important; padding: 15px !important; font-size: 16px !important; border-radius: 999px !important; }
 </style>
 </head>
 <body>
@@ -4178,8 +4188,11 @@ body:is(.av-hatabo, .av-komugi):not(.plain) .chatv .cv-top { display: none !impo
     } else if (p === 'times') {
       body.innerHTML = `<div class="hbc"><div class="k">HATABO TIMES</div><h3>お知らせ</h3>${NEWS.map(x => `<div class="hbnews"><time>${x.d.replace(/-/g, '.')}</time><b>${esc(x.t)}</b><p>${esc(x.b)}</p></div>`).join('')}</div>`;
     } else if (p === 'share') {
-      body.innerHTML = `<div class="hbc"><div class="k">SHARE</div><h3>${esc(nm)}を紹介する</h3><p>話すだけで、動く愛棒を友だちに。紹介した人とされた人は、ご縁としてつながります。</p>
-        ${d ? '<p>これまでのご縁：<b style="color:#16233F">' + n(d.kids) + '人</b></p>' : ''}<button type="button" class="hbbtn" id="hbpShare">カードで送る</button></div>
+      body.innerHTML = `<div class="hbgift hbwide"><div class="hbgift-top"><svg class="hbgift-art" viewBox="0 0 220 200" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M58 78h112v100H58z"/><path d="M114 78v100"/><path d="M114 76c-22-30-50-24-44-6 5 14 34 10 44 6z"/><path d="M114 76c18-32 46-28 42-10-4 14-32 12-42 10z"/><path d="M114 78c14 14 22 30 10 46-8 10 4 18 16 16"/><path d="M22 128l42-52 44 32-40 52z" fill="rgba(255,255,255,.08)"/><path d="M48 132c8-8 6 10 14 2s6 10 14 2"/></svg></div><div class="hbgift-in"><h2>${esc(nm)}を贈りましょう</h2>
+          <p>友だちに、いちばん上のZで使える7日間のお試しを贈りましょう。友だちが気に入って契約すると、あなたにありがとうポイントが入ります。紹介した人とされた人は、ご縁としてつながります。</p>
+          <div class="hbgift-tk"><svg viewBox="0 0 120 64" aria-hidden="true"><g fill="rgba(127,211,158,.18)" stroke="#7FD39E" stroke-width="2.5" stroke-linejoin="round"><path d="M8 18l26-8 3 6a6 6 0 0 0 9-3l4-1 10 34-4 1a6 6 0 0 0-8 5l-26 8z" transform="rotate(-8 30 34)"/><path d="M42 8h36v8a6 6 0 0 0 0 10v26H42V26a6 6 0 0 0 0-10z"/><path d="M84 14l26 8-10 34-26-8 1-6a6 6 0 0 0-3-9l2-5z" transform="rotate(6 92 34)"/></g><g stroke="#7FD39E" stroke-width="1.6" stroke-dasharray="3 3"><path d="M46 20h28"/></g></svg>
+          <span>${d ? 'これまでに贈った人 ' + n(d.kids) + '人' : 'ご縁がひろがるほど、ポイントもふえます'}</span></div></div>
+          <button type="button" class="hbbtn hbgift-go" id="hbpShare">共有する</button></div>
         ${J.myRef ? `<div class="hbc"><div class="k">GROUP</div><h3>LINEグループに入れる</h3><p>グループにハタボを追加すると、自己紹介とはじめ方のカードが出ます。グループを管理したいときは、この招待コードをグループに投稿してね。そのグループから来た人が、あなたのご縁になります。</p><p style="font:900 26px ui-monospace,monospace;letter-spacing:.12em;color:#16233F;margin:8px 0">${esc(J.myRef)}</p><button type="button" class="hbbtn w" id="hbpCode">招待コードをコピー</button></div>` : ''}`;
       if ($('hbpCode')) $('hbpCode').onclick = () => { const t = '招待コード ' + J.myRef; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast('コピーしたよ。グループに貼ってね'), () => prompt('コピーしてね', t)); };
       $('hbpShare').onclick = shareHatabo;
