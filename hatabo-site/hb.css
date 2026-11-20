@@ -592,3 +592,36 @@ body.hb-peek .hbtop{bottom:180px}
 @media(max-width:520px){.ui4{gap:12px}}
 /* 右上：ログインとMyハタボをひとつに */
 .hbh .my .myl{white-space:nowrap}
+
+/* 11/20 夜4：トップ右の光の丸＝アイコンと同じ大きさ、まわりから光の粒が集まる */
+.hcore{position:absolute;left:73%;top:50%;width:min(36vw,480px);aspect-ratio:1;transform:translate(-50%,-50%);pointer-events:none;z-index:0}
+.hcore canvas{position:absolute;inset:0;width:100%;height:100%}
+.hcore img{position:absolute;left:50%;top:50%;width:46%;transform:translate(-50%,-50%);filter:drop-shadow(0 0 26px rgba(190,225,255,.75)) drop-shadow(0 0 60px rgba(120,190,255,.35));animation:hcPulse 3.2s ease-in-out infinite}
+.hcore-g{position:absolute;left:50%;top:50%;width:52%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(200,230,255,.38) 0,rgba(140,200,255,.16) 45%,transparent 70%);animation:hcPulse 3.2s ease-in-out infinite}
+@keyframes hcPulse{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.04)}}
+@media(prefers-reduced-motion:reduce){#hcoreCv{--rm:1}.hcore img,.hcore-g{animation:none}}
+.hero2 .wr.in{position:relative;z-index:1}
+.hero2::after{display:none!important}.hero2::before{animation:none!important;opacity:.4!important;transform:none!important}.hero2>.wr::before{display:none!important}
+@media(max-width:1100px){.hcore{left:78%;width:min(34vw,360px);opacity:.75}}
+
+/* 画面紹介：白っぽい帯・スマホの枠・スクロールで入って、文字が流れるように出る */
+.uisec{background:linear-gradient(180deg,#EEF2F8 0%,#F8FAFD 60%,#fff 100%)!important;padding:56px 0 70px!important}
+.uisec .uicap{color:#5E6B85}
+.uiwrap{position:relative}
+.uiwrap .uirev{position:absolute;left:0;top:0;width:100%;height:100%;clip-path:inset(0 0 0 0)}
+.uifig.uisp{background:linear-gradient(145deg,#2B303B,#0B0E15 40%,#1A1E27);box-shadow:0 30px 60px -28px rgba(10,14,24,.55),0 0 0 1.5px #3A4050,inset 0 0 0 1px rgba(255,255,255,.08)!important;position:relative}
+.uifig.uisp::before{content:"";position:absolute;top:clamp(3px,.4vw,5px);left:50%;width:22%;height:clamp(4px,.5vw,6px);transform:translateX(-50%);border-radius:999px;background:#05070B;z-index:2}
+.uifig.uisp::after{content:"";position:absolute;right:-3px;top:22%;width:3px;height:12%;border-radius:2px;background:#3A4050}
+.uianim .uipc{opacity:0;transform:translateX(-46px)}.uianim .uisp{opacity:0;transform:translateX(46px)}
+.uianim .uirev{clip-path:inset(0 0 100% 0)}
+.uianim.on .uipc,.uianim.on .uisp{opacity:1;transform:none;transition:opacity .7s ease,transform .8s cubic-bezier(.2,.8,.2,1)}
+.uianim.on .uisp{transition-delay:.15s}
+.uianim.on .uipc .uirev{animation:uiType 3.2s .6s both!important}
+.uianim.on .uisp .uirev{animation:uiList 2.2s .8s both!important}
+@keyframes uiType{0%{clip-path:inset(0 0 100% 0);animation-timing-function:steps(16,end)}75%{clip-path:inset(0 0 52% 0)}76%,100%{clip-path:inset(0 0 0 0)}}
+@keyframes uiList{0%{clip-path:inset(0 0 100% 0);animation-timing-function:steps(8,end)}80%{clip-path:inset(0 0 30% 0)}81%,100%{clip-path:inset(0 0 0 0)}}
+.uianim.speak .uiorb::before,.uianim.speak .uiorb::after{animation-duration:.7s!important;filter:drop-shadow(0 0 5px rgba(127,211,158,1))}
+.ui4.uianim>div{opacity:0;transform:translateY(30px)}
+.ui4.uianim.on>div{opacity:1;transform:none;transition:opacity .6s,transform .7s cubic-bezier(.2,.8,.2,1)}
+.ui4.uianim.on>div:nth-child(2){transition-delay:.12s}.ui4.uianim.on>div:nth-child(3){transition-delay:.24s}.ui4.uianim.on>div:nth-child(4){transition-delay:.36s}
+@media(prefers-reduced-motion:reduce){.uianim .uipc,.uianim .uisp,.ui4.uianim>div{opacity:1!important;transform:none!important}.uianim .uirev{clip-path:none!important;animation:none!important}}
