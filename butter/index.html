@@ -1634,6 +1634,49 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   .hbplus-sh.in .hbplus-card { opacity: 1; }
   .hbplus-scrim { background: rgba(0,0,0,.25); }
 }
+
+/* ===== 11/20 夜6：つなぐボタン・プラグイン・招待・卵のガチャ・キャラはまんなか ===== */
+.hbp-conn { display: grid; gap: 6px; justify-items: center; margin: 6px 0 4px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,.08); }
+.hbp-conn button { display: grid; justify-items: center; gap: 2px; border: 0; background: transparent; color: #A3AAB7; font: 600 9.5px var(--display); cursor: pointer; padding: 2px 0; width: 100%; }
+.hbp-conn button:hover { color: #fff; }
+.hbp-conn i, .hbs-conn i { width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center; font: 900 11px/1 var(--display); font-style: normal; color: #fff; }
+.hbp-conn i.pl, .hbs-conn i.pl { background: rgba(255,255,255,.1); }
+.hbpage:not(.rail) .hbp-tabs .hbp-conn, .hbbot .hbp-conn { display: none; }
+@media (max-width: 899px) { .hbp-tabs .hbp-conn { display: none !important; } }
+.hbs-conn { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 2px 4px 8px; }
+.hbs-conn i { display: grid !important; flex: none; }
+.hbs-conn button { display: flex; align-items: center; gap: 6px; border: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.03); color: #E9EDF4; border-radius: 10px; padding: 7px 8px; font: 600 11.5px var(--display); cursor: pointer; }
+.hbplh { margin: 16px 0 6px; font-size: 13px; color: #9FD8B5; }
+.hbinv { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+.hbinv button { display: flex; align-items: center; gap: 12px; text-align: left; border: 1px solid rgba(127,211,158,.35); background: linear-gradient(100deg, rgba(63,163,106,.28), rgba(20,30,48,.7)); color: #F2F4F7; border-radius: 16px; padding: 12px 16px; cursor: pointer; font: inherit; }
+.hbinv button i { font-style: normal; font-size: 22px; } .hbinv b { display: block; font-size: 15px; } .hbinv small { display: block; font-size: 12px; color: #C9CFD8; margin-top: 2px; }
+.hbinv em { margin-left: auto; font-style: normal; font-weight: 800; font-size: 13px; color: #9FD8B5; white-space: nowrap; }
+.hbinv .hbinv-g { border-color: rgba(255,214,130,.35); background: linear-gradient(100deg, rgba(201,162,74,.22), rgba(20,30,48,.7)); }
+@media (max-width: 899px) { .hbinv { grid-template-columns: 1fr; } }
+.hbegg { position: fixed; inset: 0; z-index: 130; display: grid; place-items: center; background: rgba(4,6,10,.94); opacity: 0; transition: opacity .25s; }
+.hbegg.in { opacity: 1; }
+.hbegg-in { position: relative; text-align: center; color: #fff; padding: 26px 22px; width: min(92vw, 380px); }
+.hbegg-k { margin: 0; font: 700 11px/1 var(--display); letter-spacing: .3em; color: #9FD8B5; } .hbegg-in h3 { margin: 8px 0 18px; font-size: 20px; }
+.hbegg-e { position: relative; width: 170px; height: 210px; border: 0; background: transparent; cursor: pointer; margin: 0 auto; display: block; }
+.hbegg-e .eg { position: absolute; left: 0; right: 0; background: radial-gradient(circle at 35% 30%, #FFFDF5, #F1E6CC 60%, #D9C79E); box-shadow: inset -8px -10px 18px rgba(0,0,0,.15), 0 0 40px rgba(255,236,190,.35); transition: transform .5s cubic-bezier(.2,1.4,.4,1), opacity .5s; }
+.hbegg-e .eg.t { top: 0; height: 52%; border-radius: 85px 85px 0 0 / 120px 120px 0 0; clip-path: polygon(0 0,100% 0,100% 88%,86% 100%,72% 86%,58% 100%,44% 86%,30% 100%,16% 86%,0 100%); }
+.hbegg-e .eg.b { bottom: 0; height: 52%; border-radius: 0 0 85px 85px / 0 0 90px 90px; clip-path: polygon(0 12%,16% 0,30% 14%,44% 0,58% 14%,72% 0,86% 14%,100% 0,100% 100%,0 100%); }
+.hbegg-e img { position: absolute; left: 50%; top: 52%; width: 120px; transform: translate(-50%, -50%) scale(.2); opacity: 0; transition: transform .6s cubic-bezier(.2,1.4,.4,1) .15s, opacity .4s .15s; filter: drop-shadow(0 0 22px rgba(255,236,190,.8)); }
+.hbegg.shake .hbegg-e { animation: hbEggShake .9s ease-in-out; }
+@keyframes hbEggShake { 0%,100% { transform: rotate(0); } 15% { transform: rotate(-9deg); } 30% { transform: rotate(8deg); } 45% { transform: rotate(-6deg); } 60% { transform: rotate(5deg); } 75% { transform: rotate(-3deg); } }
+.hbegg.open .eg.t { transform: translate(-30px, -70px) rotate(-28deg); opacity: .0; }
+.hbegg.open .eg.b { transform: translateY(40px); opacity: .0; }
+.hbegg.open .hbegg-e img { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+.hbegg-h { margin: 16px 0 12px; color: #C9CFD8; font-size: 14px; }
+.hbegg-go { width: auto !important; display: inline-block; padding: 12px 22px; }
+.hbegg-x { position: absolute; top: 4px; right: 4px; width: 36px; height: 36px; border-radius: 50%; border: 0; background: rgba(255,255,255,.1); color: #fff; font-size: 20px; cursor: pointer; }
+@media (min-width: 900px) {
+  body.hbshell .app { margin-left: calc(var(--shellw, 364px) + max(0px, (100vw - var(--shellw, 364px) - 980px) / 2)); }
+  body.hbshell:not(.chatview) .hborbfab { left: calc(var(--shellw, 364px) + (100vw - var(--shellw, 364px)) / 2) !important; right: auto !important; bottom: 76px !important; transform: translateX(-50%); }
+  body.hbshell:not(.chatview) .hborbfab .hbvt-orb { width: 54px !important; height: 54px !important; }
+  body.hbshell:not(.chatview) .hborbfab b { display: none; }
+  body.hbshell:not(.chatview) #typed { margin-top: 64px; }
+}
 </style>
 </head>
 <body>
@@ -2088,7 +2131,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
 <button type="button" class="cvfab" id="cvFab">トーク ‹</button>
 <div class="hbpage" id="hbPage" hidden>
   <div class="hbp-top"><button type="button" id="hbpMenu" aria-label="メニューと会話の一覧を開く"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg></button><span class="hbp-brand" aria-label="HATHABO（ハタボ）"><img src="award_mark.svg" alt=""><b>HATHABO</b></span><img class="flag" src="https://www.hatha-lab.com/xm_w.png" alt=""><b id="hbpTitle">Myハタボ</b><button type="button" id="hbpRail" aria-label="会話の一覧を開く・閉じる" title="会話の一覧を開く・閉じる"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/></svg></button><div class="hbp-mode" id="hbpMode" hidden role="group" aria-label="表示モード"><button type="button" data-mode="chat" title="ふだんの画面（文字で話す）">トーク</button><button type="button" data-mode="char" title="キャラを大きく出す（プロジェクターでのプレゼンや交流会に）">キャラ</button></div><button type="button" id="hbpClose" hidden>ハタボと話す</button></div>
-  <nav class="hbp-tabs" id="hbpTabs" aria-label="Myハタボのメニュー"><button type="button" data-p="my"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span>ホーム</span></button><button type="button" data-p="talk" class="hbp-voicetab" aria-label="自分のハタボと声で話す"><span class="hbvt-orb"><img class="hbvt-logo" src="award_mark.svg" alt=""></span><span class="hbvt-l">話す</span></button><button type="button" data-p="clones"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.2c2.4.2 4.3 1.8 4.9 4.8"/></svg><span>愛棒</span></button><button type="button" data-p="goen"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="6" r="2.6"/><circle cx="18" cy="18" r="2.6"/><path d="M8.3 10.8 15.7 7.2M8.3 13.2l7.4 3.6"/></svg><span>ご縁</span></button><button type="button" data-p="inbox"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg><span>伝言</span></button><button type="button" data-p="more"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>もっと</span></button><button type="button" class="hbp-acct" data-p="acct" id="hbpAcct" aria-label="Myハタボ（アカウントと設定）"><i id="hbpAcctAv">ハ</i><s class="hbacg" aria-hidden="true"><i></i></s><span><b id="hbpAcctName">Myハタボ</b><em id="hbpAcctLeft"></em><small id="hbpAcctSub">アカウントと設定</small></span></button></nav>
+  <nav class="hbp-tabs" id="hbpTabs" aria-label="Myハタボのメニュー"><button type="button" data-p="my"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span>ホーム</span></button><button type="button" data-p="talk" class="hbp-voicetab" aria-label="自分のハタボと声で話す"><span class="hbvt-orb"><img class="hbvt-logo" src="award_mark.svg" alt=""></span><span class="hbvt-l">話す</span></button><button type="button" data-p="clones"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.2c2.4.2 4.3 1.8 4.9 4.8"/></svg><span>愛棒</span></button><button type="button" data-p="goen"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="6" r="2.6"/><circle cx="18" cy="18" r="2.6"/><path d="M8.3 10.8 15.7 7.2M8.3 13.2l7.4 3.6"/></svg><span>ご縁</span></button><div class="hbp-conn" aria-label="つなぐ"><button type="button" data-p="connectors" title="LINE"><i style="background:#06C755">L</i><span>LINE</span></button><button type="button" data-p="connectors" title="メッセンジャー（これから）"><i style="background:#0866FF">M</i><span>メッセ</span></button><button type="button" data-p="connectors" title="インスタ（これから）"><i style="background:linear-gradient(45deg,#F58529,#DD2A7B,#8134AF)">I</i><span>インスタ</span></button><button type="button" data-p="connectors" title="Slack（これから）"><i style="background:#4A154B">S</i><span>Slack</span></button><button type="button" data-p="google" title="Gmail"><i style="background:#EA4335">G</i><span>Gmail</span></button><button type="button" data-p="plugins" title="プラグイン"><i class="pl"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></i><span>プラグイン</span></button></div><button type="button" data-p="inbox"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg><span>伝言</span></button><button type="button" data-p="more"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>もっと</span></button><button type="button" class="hbp-acct" data-p="acct" id="hbpAcct" aria-label="Myハタボ（アカウントと設定）"><i id="hbpAcctAv">ハ</i><s class="hbacg" aria-hidden="true"><i></i></s><span><b id="hbpAcctName">Myハタボ</b><em id="hbpAcctLeft"></em><small id="hbpAcctSub">アカウントと設定</small></span></button></nav>
   <aside class="hbp-side" id="hbpSide" aria-label="トーク一覧"><label class="hbs-search"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16 16l5 5"/></svg><input id="hbpSearch" type="search" placeholder="名前・ひとことで探す" aria-label="トーク一覧を探す"></label><button type="button" class="hbs-new" id="hbpNew"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>新しいチャット</button><nav class="hbs-menu" id="hbpSideMenu" aria-label="メニュー"></nav><div class="hbs-k">トーク</div><div class="hbs-list hbs-talks" id="hbpTalks"></div><details class="hbs-mine" id="hbpMine"><summary>ハタボとのチャット</summary><div class="hbs-list" id="hbpChats"></div></details></aside>
   <div class="hbp-scrim" id="hbpScrim" hidden></div>
   <nav class="hbp-strip" id="hbpStrip" aria-label="トーク（アイコン）"></nav>
@@ -3852,9 +3895,9 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   setInterval(() => { try { if (!J.ready || !$('hbPage') || $('hbPage').hidden) return; const p = HBP.page, k = { clones: 'clones', admin: 'admin', reqs: 'reqs', api: 'api', console: 'console' }[p]; if (k && !HBP[k] && Date.now() - (HBP['ask_' + k] || 0) > 4000) { HBP['ask_' + k] = Date.now(); jrSend({ type: k }); } } catch (e) {} }, 1500);
   function hbpRender() {
     const p = HBP.page, d = HBP.data, nm = avName() || 'ハタボ';
-    $('hbpTitle').textContent = { connectors: 'コネクタ', voice: '音声と音声入力', byok: '自分のClaudeで動かす', person: 'トーク', group: 'グループ', voice: 'ボイス', acct: 'アカウント', more: 'もっと', console: '管理画面', api: 'AIからつなぐ（API）', clones: '愛棒', admin: '事務局の管理画面', settings: '設定', google: 'Googleアカウント連携', social: '公開設定', custom: 'キャラ設定', ticket: '追加チケット', my: 'Myハタボ', notes: 'メモ・議事録', grow: '育てた' + nm, goen: 'ご縁のひろがり', inbox: '伝言', gacha: 'AI棒ガチャ', friends: '友だち', plan: 'プラン・支払い', aisai: 'AISAI・愛祭', times: 'ハタボタイムズ', share: '紹介する' }[p] || 'Myハタボ';
+    $('hbpTitle').textContent = { plugins: 'プラグイン', connectors: 'コネクタ', voice: '音声と音声入力', byok: '自分のClaudeで動かす', person: 'トーク', group: 'グループ', voice: 'ボイス', acct: 'アカウント', more: 'もっと', console: '管理画面', api: 'AIからつなぐ（API）', clones: '愛棒', admin: '事務局の管理画面', settings: '設定', google: 'Googleアカウント連携', social: '公開設定', custom: 'キャラ設定', ticket: '追加チケット', my: 'Myハタボ', notes: 'メモ・議事録', grow: '育てた' + nm, goen: 'ご縁のひろがり', inbox: '伝言', gacha: 'AI棒ガチャ', friends: '友だち', plan: 'プラン・支払い', aisai: 'AISAI・愛祭', times: 'ハタボタイムズ', share: '紹介する' }[p] || 'Myハタボ';
     const tabOf = ({ my: 'my', clones: 'clones', goen: 'goen', person: '', group: '' })[p] ?? 'acct';
-    const ACCT = { connectors: 1, byok: 1, acct: 1, settings: 1, google: 1, plan: 1, api: 1, ticket: 1, voice: 1, custom: 1, more: 1, notes: 1, share: 1, gacha: 1, friends: 1, grow: 1, aisai: 1, times: 1, console: 1, inbox: 1 };
+    const ACCT = { plugins: 1, connectors: 1, byok: 1, acct: 1, settings: 1, google: 1, plan: 1, api: 1, ticket: 1, voice: 1, custom: 1, more: 1, notes: 1, share: 1, gacha: 1, friends: 1, grow: 1, aisai: 1, times: 1, console: 1, inbox: 1 };
     if (d) { { const lim = Math.max(1, d.limit || 1), lp = d.unlimited ? 100 : Math.round(Math.max(0, lim - (d.today || 0)) / lim * 100); document.querySelectorAll('.hbacg i').forEach(x => { x.style.width = lp + '%'; x.parentNode.className = 'hbacg' + (lp < 20 ? ' low' : lp < 50 ? ' mid' : ''); }); }
       const f = d.funnel || {}, nm0 = String(d.name || (HBP.con && HBP.con.me && HBP.con.me.name) || '').trim(); $('hbpAcctName').textContent = nm0 ? nm0 + 'さん' : 'Myハタボ'; $('hbpAcctAv').textContent = (nm0 || 'ハ').slice(0, 1); $('hbpAcctLeft').textContent = d.unlimited ? '制限なし' : '残り ' + Math.max(0, (d.limit || 0) - (d.today || 0)) + '回'; $('hbpAcctSub').textContent = f.stage === 'trial' ? (f.lineupName || '') + ' ' + (f.grade || '') + '・お試し あと' + f.daysLeft + '日' : f.stage === 'contract' ? (f.lineupName || '') + ' ' + (f.grade || '') : (d.plan || 'アカウントと設定'); }
     $('hbPage').classList.toggle('p-my', p === 'my'); $('hbPage').classList.toggle('p-acct', p === 'acct');
@@ -3867,7 +3910,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
     const body = $('hbpBody');
     body.classList.remove('wide'); body.classList.remove('con'); body.classList.remove('chatpg');
     if (p === 'console') return conRender(body);
-    if (!d && p !== 'times' && p !== 'share' && p !== 'aisai' && p !== 'goen' && p !== 'inbox' && p !== 'gacha' && p !== 'friends' && p !== 'custom' && p !== 'settings' && p !== 'google' && p !== 'social' && p !== 'docs' && p !== 'reqs' && p !== 'clones' && p !== 'admin' && p !== 'api' && p !== 'more' && p !== 'voice' && p !== 'person' && p !== 'group' && p !== 'byok' && p !== 'connectors') { body.innerHTML = '<div class="hbc"><p>よみこみ中です…</p></div>'; return; }
+    if (!d && p !== 'times' && p !== 'share' && p !== 'aisai' && p !== 'goen' && p !== 'inbox' && p !== 'gacha' && p !== 'friends' && p !== 'custom' && p !== 'settings' && p !== 'google' && p !== 'social' && p !== 'docs' && p !== 'reqs' && p !== 'clones' && p !== 'admin' && p !== 'api' && p !== 'more' && p !== 'voice' && p !== 'person' && p !== 'group' && p !== 'byok' && p !== 'connectors' && p !== 'plugins') { body.innerHTML = '<div class="hbc"><p>よみこみ中です…</p></div>'; return; }
     const n = x => Number(x || 0).toLocaleString('ja-JP');
     if (p === 'my') {
       const left = Math.max(0, d.limit - d.today), pct = Math.min(100, Math.round(d.today / Math.max(1, d.limit) * 100));
@@ -3924,15 +3967,26 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
       const dl = body.querySelector('#dLink'); if (dl) dl.onclick = () => jrSend({ type: 'google_link', docs: true });
       body.querySelectorAll('[data-dshare]').forEach(c => c.onchange = () => jrSend({ type: 'docs_share', id: c.dataset.dshare, on: c.checked }));
       body.querySelectorAll('[data-dcopy]').forEach(b => b.onclick = () => { b.disabled = true; b.textContent = '入れています…'; jrSend({ type: 'docs_copy', id: b.dataset.dcopy }); });
+    } else if (p === 'plugins') {
+      const PL = [['メッセージ', [['LINE', 'つながる'], ['LINEグループ', 'つながる'], ['メッセンジャー', 'これから'], ['インスタのDM', 'これから'], ['WhatsApp', 'これから'], ['Slack', 'これから'], ['Discord', 'これから'], ['Telegram', 'これから'], ['サイトのチャット', 'これから']]],
+        ['メール・予定・ファイル', [['Gmail', 'Googleで'], ['Googleカレンダー', 'Googleで'], ['Googleドライブ', 'つながる']]],
+        ['お店・予約・お金', [['Stripe（お支払い）', 'つながる'], ['予約・POS・EC', 'これから'], ['会計ソフト', 'これから']]],
+        ['AI', [['自分のClaude', 'つながる'], ['ChatGPT・Claude・Geminiから呼ぶ（API）', 'つながる']]]];
+      body.innerHTML = `<div class="hbc hbwide acctrows"><div class="k">PLUGINS</div><h3>プラグイン</h3><p>ハタボとつなげるサービスの一覧です。「これから」は順番につないでいきます。</p>${PL.map(([h, R]) => `<h4 class="hbplh">${h}</h4><div class="hbrows">${R.map(([t, st]) => `<div class="hbrow hbconn"><div><b>${t}</b><em class="${st === 'これから' ? '' : 'on'}">${st}</em></div></div>`).join('')}</div>`).join('')}<p style="margin-top:14px"><a class="hbbtn w" style="display:inline-block;width:auto" href="https://www.hatha-lab.com/integrations.html" target="_blank" rel="noopener">外部連携の一覧（サイト）を見る</a></p></div>`;
     } else if (p === 'connectors') {
       const G = HBP.google || {}, B = HBP.byok || {}, GR = HBP.myGroups || [], F = (d && d.funnel) || {};
       const R = [['google', 'Google', 'メモと議事録をGoogleドライブに', G.linked ? 'つないでいます' + (G.email ? '（' + G.email + '）' : '') : 'つないでいません', G.linked ? '外す・見直す' : 'つなぐ'],
         ['byok', '自分のClaude', 'ハタボの頭を自分のClaudeに', B.set ? 'つないでいます（…' + (B.tail || '') + '）' : 'つないでいません', B.set ? '入れかえ・外す' : 'つなぐ'],
         ['lgroups', 'LINEグループ', 'ハタボが入っているグループ', GR.length ? GR.length + 'グループ' : 'まだありません', '一覧を見る'],
+        ['google', 'Gmail', 'メールを読んで、下書き・仕分け', G.linked ? 'つないでいます' : 'Googleとつなぐと使えます', G.linked ? '見直す' : 'つなぐ'],
+        ['soon', 'メッセンジャー', 'Facebookページあての会話をトーク一覧に', 'これから', 'これから'],
+        ['soon', 'インスタのDM', 'プロアカウントのDMをトーク一覧に', 'これから', 'これから'],
+        ['soon', 'Slack', 'チャンネルとDMで、ハタボに話しかける', 'これから', 'これから'],
+        ['plugins', 'プラグイン', 'ほかのつなぎ先の一覧', 'いろいろ', '一覧を見る'],
         ['plan', 'お支払い（Stripe）', 'プランとカード', F.paid ? '登録しています' : F.stage === 'trial' ? 'お試し中' : 'まだです', F.paid ? 'カードを見直す' : '見る'],
         ['api', 'AIからつなぐ（API）', 'ChatGPT・Claude・Geminiからハタボを呼ぶ', 'キーを出す・止める', '開く']];
       body.innerHTML = `<div class="hbc hbwide acctrows"><div class="k">CONNECTORS</div><h3>コネクタ</h3><p>ハタボとつないでいるサービスです。押すと、つなぐ・外すができます。</p><div class="hbrows">${R.map(([k, t, d0, st, b]) => `<button type="button" class="hbrow hbconn" data-conn="${k}"><div><b>${t}</b><span>${esc(d0)}</span><em class="${/つないでいます|登録|グループ$/.test(st) ? 'on' : ''}">${esc(st)}</em></div><i>${esc(b)} ›</i></button>`).join('')}</div></div>`;
-      body.querySelectorAll('[data-conn]').forEach(b => b.onclick = () => { const k = b.dataset.conn; if (k === 'lgroups') { if (window.innerWidth < 900) hbpDrawer(true); else toast('左のトーク一覧に、グループが並んでいます'); return; } HBP.page = k; hbpRender(); if (J.ready) { if (k === 'google') jrSend({ type: 'google_status' }); if (k === 'byok') jrSend({ type: 'byok_get' }); if (k === 'api') jrSend({ type: 'api' }); if (k === 'plan') jrSend({ type: 'mypage' }); } });
+      body.querySelectorAll('[data-conn]').forEach(b => b.onclick = () => { const k = b.dataset.conn; if (k === 'soon') { toast('これからつなげます。先に使いたいときは、ハタボ公式に相談してください'); return; } if (k === 'lgroups') { if (window.innerWidth < 900) hbpDrawer(true); else toast('左のトーク一覧に、グループが並んでいます'); return; } HBP.page = k; hbpRender(); if (J.ready) { if (k === 'google') jrSend({ type: 'google_status' }); if (k === 'byok') jrSend({ type: 'byok_get' }); if (k === 'api') jrSend({ type: 'api' }); if (k === 'plan') jrSend({ type: 'mypage' }); } });
       if (J.ready && !HBP.google) jrSend({ type: 'google_status' });
     } else if (p === 'byok') {
       const B = HBP.byok;
@@ -4589,7 +4643,8 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
           <span style="flex:1"></span><button type="button" class="hbask-mic" id="hbAskMic" aria-label="声で話す"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button><button type="submit" class="hbask-go" aria-label="送る"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button></div></form>
       <div class="hbquick">${Q.map(([t, pre, dpath]) => `<button type="button" data-q="${esc(pre)}"><i><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${dpath}"/></svg></i>${t}</button>`).join('')}</div></div></div>`;
     const car = `<div class="hbcar"><div class="hbcar-h"><b>おすすめ・新しい機能</b><span><button type="button" data-cmv="-1" aria-label="前へ">‹</button><button type="button" data-cmv="1" aria-label="次へ">›</button></span></div><div class="hbcar-tr" id="hbCar">${HB_PICKS.map(([go, t, d0]) => `<button type="button" class="hbcar-c" data-go="${go}"><b>${esc(t)}</b><span>${esc(d0)}</span></button>`).join('')}</div></div>`;
-    return `<div class="hbhero">${ban}${ask}${car}</div>`;
+    const inv = `<div class="hbinv"><button type="button" class="hbinv-m" data-go="share"><i aria-hidden="true">🎁</i><span><b>友だちを招待して、一緒に試そう</b><small>招待した友だちとは、最初からご縁でつながります。招待のお礼（お試しの日数・ポイント）は準備中です。</small></span><em>招待する ›</em></button><button type="button" class="hbinv-g" id="hbEggBtn"><i aria-hidden="true">🥚</i><span><b>愛棒ガチャ</b><small>卵から、あなたの愛棒が生まれる</small></span></button></div>`;
+    return `<div class="hbhero">${inv}${ban}${ask}${car}</div>`;
   }
   document.addEventListener('click', e => { const b = e.target.closest('[data-cmv]'); if (!b) return; const c = $('hbCar'); if (c) c.scrollBy({ left: Number(b.dataset.cmv) * Math.max(240, c.clientWidth * 0.8), behavior: 'smooth' }); });
   function hbpTalk(text, mic) {   // ホームの入力欄から：トーク画面に出て、そのまま話す
@@ -4683,6 +4738,17 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
     new MutationObserver(() => hbPlusMark()).observe($('hbpBody'), { childList: true });
     hbPlusMark();
   })();
+  function hbEgg(force) {
+    if (!force && store.get('hbEgg', '')) return;
+    const kids = document.body.classList.contains('av-komugi') ? [['komugi', 'コムギ', 'komugi_char.png']] : [['hatabo', 'ハタボ', 'award_mark.svg']];
+    const k = kids[Math.random() * kids.length | 0], o = document.createElement('div'); o.className = 'hbegg'; o.innerHTML = `<div class="hbegg-in"><p class="hbegg-k">AIBO GACHA</p><h3>あなたの愛棒が、生まれるよ</h3><button type="button" class="hbegg-e" aria-label="卵をタップして割る"><span class="eg t"></span><span class="eg b"></span><img src="${k[2]}" alt=""></button><p class="hbegg-h">卵をタップしてね</p><button type="button" class="hbbtn hbegg-go" hidden>${esc(k[1])}と はじめる</button><button type="button" class="hbegg-x" aria-label="とじる">×</button></div>`;
+    document.body.append(o); requestAnimationFrame(() => o.classList.add('in'));
+    const close = () => { o.classList.remove('in'); setTimeout(() => o.remove(), 250); try { store.set('hbEgg', k[0]); } catch (e) {} };
+    o.querySelector('.hbegg-e').onclick = () => { if (o.classList.contains('open')) return; o.classList.add('shake'); setTimeout(() => { o.classList.remove('shake'); o.classList.add('open'); o.querySelector('.hbegg-h').textContent = k[1] + 'が生まれました！ これからキャラが増えていきます'; o.querySelector('.hbegg-go').hidden = false; try { if (window.hbBuzz) window.hbBuzz(); } catch (e) {} }, 900); };
+    o.querySelector('.hbegg-go').onclick = close; o.querySelector('.hbegg-x').onclick = close;
+  }
+  window.hbEgg = hbEgg;
+  document.addEventListener('click', e => { if (e.target.closest('#hbEggBtn')) hbEgg(true); });
   function hbpChats() {
     const C = HBP.chats || {}, L = C.list || [];
     const day = t => { if (!t) return ''; const x = new Date(t), n = new Date(); return x.toDateString() === n.toDateString() ? x.getHours() + ':' + String(x.getMinutes()).padStart(2, '0') : (x.getMonth() + 1) + '/' + x.getDate(); };
@@ -4694,11 +4760,12 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
     const dmap = {}; ((HBP.inbox && HBP.inbox.items) || []).forEach(x => { const k = x.from || x.fromName || '?'; const r = dmap[k] || (dmap[k] = { key: 'd:' + k, id: k, kind: 'd', name: x.fromName || 'ご縁の人', sub: '', last: 0, unread: 0, pic: '' }); if ((x.at || 0) >= r.last) { r.last = x.at || 0; r.sub = '伝言：' + String(x.text || '').slice(0, 40); } if (!x.read) r.unread++; });
     const dens = Object.values(dmap);
     const groups = (HBP.myGroups || O.groups || []).map(g => ({ key: 'g:' + g.gid, id: g.gid, kind: 'g', name: g.name, sub: (g.members ? g.members + '人' : 'LINEグループ') + (g.ch === 'komugi' ? '・コムギ' : ''), last: g.lastAt, pic: g.pic || '' }));
-    const all = [me].concat(people, dens, groups).filter(x => !q || (x.name + ' ' + x.sub).includes(q));
+    const official = J.office ? [] : [{ key: 'o:official', kind: 'o', name: 'ハタボ公式', sub: '窓口・使い方・ヒロに相談', last: 0, pic: '' }];
+    const all = [me].concat(people, dens, groups, official).filter(x => !q || (x.name + ' ' + x.sub).includes(q));
     all.sort((a, b) => (pins.includes(b.key) - pins.includes(a.key)) || ((b.last || 0) - (a.last || 0)));
     const MARK = { d: '<path d="M3 6h18v12H3z M3 7l9 6 9-6" stroke="currentColor" stroke-width="2" fill="none"/>', me: '<path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.6 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/>', p: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>', g: '<circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><path d="M2 20c0-3 3-5 6-5s6 2 6 5M12 20c0-3 3-5 6-5s4 1 4 3"/>' };
-    const TIP = { me: 'あなたのハタボ', p: '人', g: 'グループ', d: '伝言' };
-    const av = x => x.kind === 'me' ? '<img src="award_mark.svg" alt="">' : x.pic ? `<img src="${esc(x.pic)}" alt="" referrerpolicy="no-referrer" loading="lazy">` : `<span>${esc(String(x.name || '?').slice(0, 1))}</span>`;
+    const TIP = { me: 'あなたのハタボ', p: '人', g: 'グループ', d: '伝言', o: '公式' }; MARK.o = MARK.me;
+    const av = x => x.kind === 'me' || x.kind === 'o' ? '<img src="award_mark.svg" alt="">' : x.pic ? `<img src="${esc(x.pic)}" alt="" referrerpolicy="no-referrer" loading="lazy">` : `<span>${esc(String(x.name || '?').slice(0, 1))}</span>`;
     const cur = HBP.page === 'person' ? 'p:' + HBP.pid : HBP.page === 'group' ? 'g:' + HBP.gid : '';
     hbpStrip(all, av);
     $('hbpTalks').innerHTML = all.length ? all.map(x => { const pin = pins.includes(x.key); return `<div class="hbt${x.key === cur ? ' on' : ''}${pin ? ' pinned' : ''}" data-tk="${esc(x.key)}" role="button" tabindex="0"><i class="hbt-av">${av(x)}<em class="hbt-mk ${x.kind}" title="${TIP[x.kind]}"><svg viewBox="0 0 24 24" width="10" height="10" fill="currentColor" aria-hidden="true">${MARK[x.kind]}</svg></em></i><span class="hbt-t"><b>${esc(x.name)}</b><small>${esc(x.sub || '')}</small></span><span class="hbt-r"><small>${day(x.last)}</small>${x.unread ? '<u>' + x.unread + '</u>' : ''}</span><button type="button" class="hbt-pin" data-pin="${esc(x.key)}" aria-label="${pin ? 'ピン留めをはずす' : 'ピン留め'}" title="${pin ? 'ピン留めをはずす' : 'いちばん上にピン留め'}"><svg viewBox="0 0 24 24" width="14" height="14" fill="${pin ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6l-1 6 4 4H6l4-4z M12 13v8"/></svg></button></div>`; }).join('') : '<p class="hbs-empty">見つかりません</p>';
@@ -4723,6 +4790,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   function hbpOpenTalk(key) {
     const c = key.indexOf(':'), k = key.slice(0, c), id = key.slice(c + 1); hbpDrawer(false); if (k !== 'me') { hbpUnshell(); HBP.draft = ''; }
     if (k === 'me') return hbpTalk('');
+    if (k === 'o') { window.open('https://line.me/R/ti/p/@024curid', '_blank', 'noopener'); return; }
     $('hbpBody').classList.remove('sw-l', 'sw-r', 'sw-in'); void $('hbpBody').offsetWidth; $('hbpBody').classList.add('sw-in');
     if (k === 'p') { HBP.pid = id; HBP.goenOf = null; const T = (HBP.con && HBP.con.threads) || []; HBP.thr = { t: Object.assign({ turns: [] }, T.find(x => x.id === id) || {}), panel: {} }; HBP.page = 'person'; hbpRender(); hbpChats(); if (J.ready) { jrSend({ type: 'thr_open', id }); jrSend({ type: 'thr_goen', id }); } return; }
     if (k === 'd') { HBP.page = 'inbox'; HBP.inboxShown = false; hbpRender(); hbpChats(); if (J.ready) jrSend({ type: 'inbox' }); return; }
@@ -4739,6 +4807,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   $('hbpChats').addEventListener('click', e => { const b = e.target.closest('[data-chat]'); if (!b) return; jrSend({ type: 'chat_open', id: b.dataset.chat }); hbpDrawer(false); hbpTalk(''); });
   $('hbpNew').addEventListener('click', () => { jrSend({ type: 'chat_new' }); hbpDrawer(false); hbpTalk(''); toast('新しいチャットをはじめました'); });
   // スマホ：左の2列（メニューと会話の一覧）を、左上のボタンで引き出しに
+  setTimeout(() => { const sm = $('hbpSideMenu'); if (sm && !sm.querySelector('.hbs-conn')) sm.insertAdjacentHTML('beforeend', '<div class="hbs-k">つなぐ</div><div class="hbs-conn">' + document.querySelector('#hbpTabs .hbp-conn').innerHTML + '</div>'); }, 0);
   $('hbpSideMenu').innerHTML = [...document.querySelectorAll('#hbpTabs > button')].filter(b => !['inbox', 'more'].includes(b.dataset.p)).map(b => `<button type="button" data-p="${b.dataset.p}">${b.querySelector('svg, img.hbvt-logo') ? b.querySelector('svg, img.hbvt-logo').outerHTML.replace('class="hbvt-logo"', 'class="hbsm-logo" width="20" height="20"') : b.dataset.p === 'acct' ? '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>' : ''}<span>${esc(b.dataset.p === 'acct' ? 'アカウント' : b.dataset.p === 'talk' ? '話す（自分のハタボ）' : b.textContent.trim())}</span></button>`).join('');
   $('hbpSideMenu').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (!b) return; hbpDrawer(false); if (b.dataset.p === 'talk') return hbpTalkVoice(); const t = document.querySelector('#hbpTabs > button[data-p="' + b.dataset.p + '"]'); if (t) t.click(); });
   { let sx = 0, sy = 0; $('hbpSide').addEventListener('touchstart', e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
@@ -4756,6 +4825,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   $('hbpMode').addEventListener('click', e => { const b = e.target.closest('[data-mode]'); if (!b) return; hbpClose(); if (window.hbSetView) window.hbSetView(b.dataset.mode); });
   function hbpOpen(p) {
     if (!HBP.data) { try { const c = store.get('hbpData', null); if (c && c.type === 'mypage') HBP.data = c; } catch (e) {} }   // 前回の内容をすぐ出して、届いたら新しくする
+    setTimeout(() => { if (document.body.classList.contains('av-hatabo') || document.body.classList.contains('av-komugi')) hbEgg(false); }, 900);
     HBP.page = p || 'my'; hbTheme(); $('hbPage').hidden = false; document.body.classList.remove('hbshell'); document.body.classList.add('hbp-open'); hbpRender(); hbpChats(); if (HBP.page === 'console' && J.ready) jrSend({ type: 'console', as: store.get('conAs', 'office') }); if (HBS.friend === null) hbpFriend();
     hbpFetchAll();
   }
