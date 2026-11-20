@@ -24,6 +24,7 @@ const post = (port, events, path = '/line/webhook') => new Promise((ok, ng) => {
   const j = sent.pop(); assert.ok(/reply/.test(j.url) && j.body.messages[0].type === 'flex', '入ったらカード');
   const txt = JSON.stringify(j.body); assert.ok(/ref=g[a-z0-9]{6}/.test(txt) && /act=inviter/.test(txt), 'グループの紹介コードと招待した人のボタン');
   assert.ok(!sent.some(x => /leave/.test(x.url)), '退出しない');
+  const v = j.body.messages.find(m => m.type === 'video'); assert.ok(v && /^https:\/\/.+\/cm\/hatabo_cm\.mp4$/.test(v.originalContentUrl) && /\.jpg$/.test(v.previewImageUrl), 'グループに入ったらCM動画もそえる');
   await post(port, [{ type: 'message', replyToken: 'r2', source: src, message: { type: 'text', text: 'こんばんは' } }]);
   assert.strictEqual(sent.length, 0, 'ふつうの会話には出てこない');
   await post(port, [{ type: 'message', replyToken: 'r3', source: src, message: { type: 'text', text: 'ハタボって何？' } }]);
@@ -40,9 +41,12 @@ const post = (port, events, path = '/line/webhook') => new Promise((ok, ng) => {
   await post(port, [{ type: 'join', replyToken: 'k1', source: { type: 'group', groupId: 'Ck' } }], '/line/webhook/komugi');
   const kj = JSON.stringify(sent.pop().body); assert.ok(/コムギが入りました/.test(kj) && /2012686672/.test(kj) && !/ボー/.test(kj), 'コムギの公式LINEはコムギの言葉とミニアプリ: ' + kj.slice(0, 300));
   assert.ok(/komugi_face\.jpg/.test(kj) && /#FF2E9A/.test(kj) && !/#16233F/.test(kj), 'コムギのカードは黒とネオン・コムギの顔');
+  assert.ok(!/"type":"video"/.test(kj), 'コムギはCM動画を出さない');
   require('fs').writeFileSync('/tmp/kj.json', kj);
   await post(port, [{ type: 'message', replyToken: 'k2', source: { type: 'group', groupId: 'Ck', userId: 'U1' }, message: { type: 'text', text: 'コムギちゃんおる？' } }], '/line/webhook/komugi');
   assert.ok(/呼びましたか/.test(JSON.stringify(sent.pop().body)), 'コムギと呼ばれたら出る');
-  console.log('OK：グループに入る・退出しない・呼ばれたときだけ・招待した人・グループの紹介コード');
+  await post(port, [{ type: 'follow', replyToken: 'f1', source: { type: 'user', userId: 'Unew' } }]);
+  { const fb = sent.filter(x => /reply/.test(x.url)).pop().body; assert.ok(fb.messages.length === 2 && fb.messages[1].type === 'video', '友だち追加のあいさつにCM動画'); }
+  console.log('OK：グループに入る・退出しない・呼ばれたときだけ・招待した人・グループの紹介コード・あいさつのCM動画');
   server.close(); process.exit(0);
 })().catch(e => { console.error('NG', e); process.exit(1); });

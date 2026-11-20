@@ -954,7 +954,7 @@ function lineWebhook(req, res, chId) {
         let messages = null;
         const src = ev.source || {}, inGroup = src.type === 'group' || src.type === 'room';
         if (ev.type === 'join') {                                   // グループに追加された：自己紹介とサービスガイド（退出はしない）
-          const gref = await groupJoin(src); messages = [groupCards(gref)];
+          const gref = await groupJoin(src); messages = [groupCards(gref)]; if (ch.id !== 'komugi') messages.push(cmVideo());
         } else if (ev.type === 'leave') {
           await saveCol(gidOf(src), 'groups', { active: false, leftAt: Date.now() }); continue;
         } else if (ev.type === 'postback' && inGroup && /act=inviter/.test((ev.postback || {}).data || '')) {
@@ -989,7 +989,7 @@ function lineWebhook(req, res, chId) {
         } else if (ev.type === 'follow') {
           let name = ''; try { const pr = await fetch('https://api.line.me/v2/bot/profile/' + ev.source.userId, { headers: { Authorization: 'Bearer ' + ch.token() } }); name = (await pr.json()).displayName || ''; } catch (e) {}
           if (ch.id === 'komugi') { const mac = isMac('g:' + ev.source.userId); messages = [mac ? komugiMacWelcome(name) : komugiWelcome(name)]; if (mac) await linkMacMenu(ev.source.userId); else await macNote('［友だち追加］' + (name || 'だれか') + 'さんが、コムギを友だち追加しました'); }
-          else messages = [welcomeCards(name)];
+          else messages = [welcomeCards(name), cmVideo()];
           await officeNote('［友だち追加］' + (name || 'だれか') + 'さんが' + (ch.id === 'komugi' ? 'コムギ' : 'ハタボ') + 'を友だち追加しました');
         } else if (ev.type === 'message' && ch.id === 'komugi') {
           messages = [{ type: 'flex', altText: 'コムギとは、ミニアプリでお話しできます', contents: kmCard('KOMUGI', 'こちらでお話しできます', ['すみません……ここ（トーク）では、お返事ができんとです。', 'メニューの「コムギと話す」から、話しかけてもらえたら。'], 'コムギと話す', LINE_CH.komugi.mini) }];
@@ -1001,6 +1001,11 @@ function lineWebhook(req, res, chId) {
       }
     } catch (e) { console.error('webhook', String(e.message).slice(0, 160)); }
   }));
+}
+/* ===== あいさつに添えるCM動画（公式LINEの友だち追加とグループ参加のとき）。サイトの cm/ に置いた動画を使う ===== */
+function cmVideo() {
+  const site = (ENV.SITE_URL || 'https://www.hatha-lab.com').replace(/\/$/, '');
+  return { type: 'video', originalContentUrl: process.env.HATABO_CM_URL || site + '/cm/hatabo_cm.mp4', previewImageUrl: process.env.HATABO_CM_PREVIEW || site + '/cm/hatabo_cm_line.jpg' };
 }
 /* ===== キャラ設定（Myハタボ）：AI棒の名前・呼び方・話し方・長さ・自分のこと・指示。Claudeの「カスタム指示」と同じ考え ===== */
 const TONES = { char: 'キャラのまま', polite: 'ていねい（です・ます）', frank: 'フランク（友だちのように）', gentle: 'やさしく、ゆっくり', kansai: '関西弁' };
@@ -2799,4 +2804,4 @@ if (require.main === module) {
   deps.init();
   createServer().listen(ENV.PORT, () => console.log('butter-junior on :' + ENV.PORT));
 }
-module.exports = { createServer, deps, ENV, splitter, takeEmotion, clean, PHOTO_RE, VIDEO_RE, session, calledJunior, calledJam, hearingStart, hearingCheckAll, handleStripeEvent, stripeSigOk, funnelOf, getRef, putRef, checkoutFor };
+module.exports = { cmVideo, createServer, deps, ENV, splitter, takeEmotion, clean, PHOTO_RE, VIDEO_RE, session, calledJunior, calledJam, hearingStart, hearingCheckAll, handleStripeEvent, stripeSigOk, funnelOf, getRef, putRef, checkoutFor };
