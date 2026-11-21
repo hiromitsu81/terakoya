@@ -255,12 +255,12 @@ async function priceFor(lineup, grade, pay) {
   return id;
 }
 /** 支払いページを作る。お試し中なら、お試しが終わるまでは引き落とさない */
-async function checkoutFor(S, r, f) {
+async function checkoutFor(S, r, f, extra) {
   const price = await priceFor(f.lineup, f.grade, f.pay);
   if (!price) { console.log('checkout noprice', f.lineup + '_' + f.grade + '_' + f.pay); return null; }
   const back = (S.avatar === 'komugi' ? LINE_CH.komugi.mini : HATABO_MINI) + '?page=plan';
   const trialEnd = f.stage === 'trial' && (r.trialUntil || 0) > Date.now() + 49 * 3600000 ? Math.floor(r.trialUntil / 1000) : 0;
-  const md = { myRef: S.myRef, lineup: f.lineup, grade: f.grade, pay: f.pay, refFrom: S.refFrom || '', name: String(S.me || '').slice(0, 40) };
+  const md = Object.assign({ myRef: S.myRef, lineup: f.lineup, grade: f.grade, pay: f.pay, refFrom: S.refFrom || '', name: String(S.me || '').slice(0, 40) }, extra || {});
   const ses = await stripeCall('/v1/checkout/sessions', Object.assign({ mode: 'subscription', client_reference_id: S.myRef, success_url: back + '&paid=1', cancel_url: back + '&paid=0', locale: 'ja', 'line_items[0][price]': price, 'line_items[0][quantity]': 1, metadata: md, subscription_data: { metadata: md } },
     trialEnd ? { 'subscription_data[trial_end]': trialEnd } : {}, r.stripeCustomer ? { customer: r.stripeCustomer } : {}));
   return ses.url || null;
@@ -293,9 +293,11 @@ async function handleStripeEvent(ev) {
     const md = o.metadata || {}, code = String(md.myRef || o.client_reference_id || '');
     if (!code) return 'noref';
     const r = await getRef(code).catch(() => null) || {};
-    const inTrial = r.stage === 'trial' && (r.trialUntil || 0) > now;
+    const startTrial = md.trialStart === '1' && !r.stage;   // 紹介なしの申し込み：支払いを登録できたら、ここからお試し（7日は引き落とさない）
+    const inTrial = (r.stage === 'trial' && (r.trialUntil || 0) > now) || startTrial;
     const patch = { paidAt: now, payFailAt: 0, stripeCustomer: o.customer || '', stripeSub: o.subscription || '', lineup: md.lineup || r.lineup || '', grade: md.grade || r.grade || '', pay: md.pay || r.pay || 'm' };
     if (!inTrial) { patch.stage = 'contract'; patch.contractAt = now; }
+    if (startTrial) Object.assign(patch, { stage: 'trial', trialAt: now, trialUntil: now + TRIAL_DAYS * 86400000 });
     await putRef(code, patch);
     if (o.customer) { try { if (deps.db) await deps.db.collection('stripeCustomers').doc(o.customer).set({ myRef: code, at: now }); } catch (e) {} memStripe.set(o.customer, code); }
     const f = funnelOf(Object.assign({}, r, patch)), plan = (f.lineupName || '') + ' ' + (f.grade || '');
@@ -484,6 +486,7 @@ async function myPage(S) {
     pts: (mine && mine.pts) || 0, rank: rankOf(mine), thanks: THANKS, tickets: (mine && mine.tickets) || 0, ticketPacks: TICKETS,
     unread: (inbox || []).filter(x => !x.read).length,
     status: statusOf(mine, S.funnel || funnelOf(mine)), member: !!(mine && mine.member), chars: mine ? charsOfRef(mine).map(c => ({ ch: c, name: CHAR_NAME[c], aid: (S.myRef || '') + '-' + AID_MARK[c] })) : [],
+    referred: !!(mine && mine.parent && Date.now() - (mine.parentAt || mine.at || 0) < REF_DAYS * 86400000),
     funnel: S.funnel || funnelOf(mine), payReady: stripeOn(), lineups: LINEUP, trialDays: TRIAL_DAYS, trialDaily: TRIAL_DAILY, trialFirst: TRIAL_FIRST,
     notes: (notes || []).slice(0, 50), summary: String(S.memo || '').slice(0, 3000) };
 }
@@ -2354,6 +2357,7 @@ function session(ws) {
         await saveCol('office', 'audit', { items }); msg = code + ' を変更しました';
       }
     }
+    if (m.type === 'org_op' && !isDev()) msg = await orgOp(m) || msg;   // 法人と施設
     const refs = await allRefs(), AU = new Map((await allApiUse(monthJ())).map(x => [x.ref, x])), NM = new Map(refs.map(r => [r.code, r.name || r.ownerName || '']));
     const rows = refs.map(r => { const f = funnelOf(r), rk = rankOf(r), au = AU.get(r.code) || {}; return { chars: charsOfRef(r), pic: r.pic || '', member: !!r.member, status: statusOf(r, f), parentName: r.parent ? NM.get(r.parent) || '' : '', daysLeft: f.daysLeft || 0, trialUntil: f.trialUntil || 0, api: au.billable || 0, apiYen: au.yen || 0, apiDone: au.done || 0, code: r.code, kind: r.kind || 'person', name: r.name || '', ownerName: r.ownerName || '', parent: r.parent || '', stage: f.stage, lineup: f.lineupName || '', grade: f.grade || '',
       paid: !!r.paidAt, payFail: !!r.payFailAt, rank: rk.label, pts: r.pts || 0, ptsTotal: earned(r), kids: r.kids || 0, visits: r.visits || 0, role: r.role || '', roleNote: r.roleNote || '', aisaiHelp: r.aisaiHelp || 0, adopts: r.adopts || 0,
@@ -2381,7 +2385,31 @@ function session(ws) {
     sum.member = rows.filter(x => x.member).length; sum.ref = rows.filter(x => x.kind === 'person' && x.status === 'ref').length;
     if (isDev()) { rows.forEach(x => { x.apiYen = null; x.ownerName = x.ownerName ? String(x.ownerName).slice(0, 1) + '…' : ''; }); sum.apiYen = null; }
     if (m.type === 'admin_person') return onAdminPerson(m, refs, rows);
-    send({ type: 'admin', perm: permNow(), self, rows: rows.filter(x => !x.mergedInto), sum, roles: Object.keys(ROLE_RULE), audit: ((await loadCol('office', 'audit')).items || []).slice(0, 30), msg });
+    const orgs = ((await loadCol('all', 'orgs').catch(() => ({}))).list || []);
+    send({ type: 'admin', perm: permNow(), self, orgs, rows: rows.filter(x => !x.mergedInto), sum, roles: Object.keys(ROLE_RULE), audit: ((await loadCol('office', 'audit')).items || []).slice(0, 30), msg });
+  }
+  /** 法人（会社）と施設（店舗・宿・物件）：店舗IDの入れ物。法人の下に施設、それぞれに人と役割。（やすくんの土台ができたら、そちらへ移す） */
+  async function orgOp(m) {
+    const O = await loadCol('all', 'orgs').catch(() => ({})), L = Array.isArray(O.list) ? O.list : [], cl = (x, n) => String(x || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, n), nid = p => p + crypto.randomBytes(5).toString('hex');
+    const ROLES = ['最高管理者', '事務局', '担当', '閲覧'], who = S.me || (S.web && S.web.email) || '';
+    const corp = L.find(c => c.id === m.corp), fac = corp && (corp.facilities || []).find(f => f.id === m.fac);
+    let msg = '';
+    if (m.op === 'seed_we') {   // サンプル：WeCorporation（たくちゃん・ハヤトさんの会社）。物件と管理室は見本の名前
+      if (L.some(c => c.sample === 'we')) return 'WeCorporationのサンプルは、もうあります';
+      L.push({ id: nid('c'), name: 'WeCorporation', kind: 'corp', sample: 'we', plan: 'ハタボーラ（見本）', entry: 'taku', note: 'ニセコの宿泊事業。清掃管理（ゲリー入社プロジェクト）', at: Date.now(), by: who,
+        members: [{ name: 'ハヤトさん', role: '最高管理者' }, { name: 'たくちゃん', role: '事務局' }],
+        facilities: [{ id: nid('f'), name: '管理室', kind: 'office', note: '清掃の配置・予約の取りこみ・物件ごとの管理', members: [{ name: 'たくちゃん', role: '事務局' }, { name: 'じゅんじゅん', role: '担当' }] },
+          { id: nid('f'), name: '物件A（見本）', kind: 'stay', note: '予約はiCalで取りこみ', members: [{ name: '清掃スタッフ（見本）', role: '閲覧' }] },
+          { id: nid('f'), name: '物件B（見本）', kind: 'stay', note: '予約はiCalで取りこみ', members: [{ name: '清掃スタッフ（見本）', role: '閲覧' }] }] });
+      msg = 'WeCorporationのサンプルを作りました';
+    } else if (m.op === 'add_corp' && cl(m.name, 40)) { L.push({ id: nid('c'), name: cl(m.name, 40), kind: 'corp', plan: cl(m.plan, 30), note: cl(m.note, 200), members: [], facilities: [], at: Date.now(), by: who }); msg = '法人を足しました'; }
+    else if (m.op === 'add_fac' && corp && cl(m.name, 40)) { (corp.facilities = corp.facilities || []).push({ id: nid('f'), name: cl(m.name, 40), kind: ['stay', 'shop', 'office', 'facility'].includes(m.kind) ? m.kind : 'facility', note: cl(m.note, 200), members: [] }); msg = '施設を足しました'; }
+    else if (m.op === 'add_member' && corp && (cl(m.code, 20) || cl(m.name, 30))) { const tgt = fac || corp; (tgt.members = tgt.members || []).push({ code: cl(m.code, 20).replace(/[^\w-]/g, ''), name: cl(m.name, 30), role: ROLES.includes(m.role) ? m.role : '担当' }); msg = '人を入れました'; }
+    else if (m.op === 'del_member' && corp) { const tgt = fac || corp, i = Number(m.i); if (tgt.members && tgt.members[i]) { tgt.members.splice(i, 1); msg = '外しました'; } }
+    else if (m.op === 'del_fac' && corp && fac) { corp.facilities = corp.facilities.filter(f => f !== fac); msg = '施設を消しました'; }
+    else if (m.op === 'del_corp' && corp) { L.splice(L.indexOf(corp), 1); msg = '法人を消しました'; }
+    if (msg) { await saveCol('all', 'orgs', { list: L }); const A = await loadCol('office', 'audit'), items = (A.items || []).slice(0, 199); items.unshift({ at: Date.now(), by: who, code: (corp && corp.name) || 'org', what: msg }); await saveCol('office', 'audit', { items }); }
+    return msg;
   }
   /** 事務局長：頼まれた「〇〇さんに送って」を、送る前のカード（相手・文面）にする。送るのは人が「送る」を押したときだけ */
   async function chiefDraft(asked, said) {
@@ -2649,6 +2677,19 @@ function session(ws) {
     const act = String(m.act || ''), L = LINEUP[m.lineup], g = String(m.grade || ''), pay = m.pay === 'y' ? 'y' : 'm';
     const r = await getRef(S.myRef).catch(() => null) || {}, cur = funnelOf(r), now = Date.now();
     let patch = null, kind = '';
+    const F = m.form && typeof m.form === 'object' ? { name: String(m.form.name || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 40), contact: String(m.form.contact || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 80), use: String(m.form.use || '').replace(/[\u0000-\u0008<>]/g, '').trim().slice(0, 400), ref: String(m.form.ref || '').replace(/[^\w-]/g, '').slice(0, 20) } : null;
+    if (F) {   // 申し込みフォーム・契約フォーム：名前と紹介コード（紹介した人がまだいないときだけ）
+      if (F.name && !r.name) { await putRef(S.myRef, { name: F.name }); r.name = F.name; if (!S.me) S.me = F.name; }
+      if (F.ref && !r.parent && F.ref !== S.myRef) { const pr = await getRef(F.ref).catch(() => null); if (pr && (pr.owner || pr.kind)) { await putRef(S.myRef, { parent: F.ref, parentAt: now }); r.parent = S.refFrom = F.ref; r.parentAt = now; await putRef(F.ref, { kids: (pr.kids || 0) + 1 }).catch(() => {}); } else return send({ type: 'notice', why: 'funnel', detail: 'refcode' }); }
+      gas(Object.assign({ action: 'lead', lead: { who: F.name || S.me, ref: await refLabel(r.parent || '').catch(() => ''), kind: act === 'contract' ? '契約フォーム' : '申し込みフォーム', title: (L ? L.name : '') + ' ' + g, need: F.use, when: '', budget: '', next: '', memo: F.contact } }, S.auth)).catch(() => {});
+      officePush('［' + (act === 'contract' ? '契約フォーム' : '申し込みフォーム') + '］' + (F.name || S.me || 'だれか') + 'さん：' + (L ? L.name : '') + ' ' + g + (r.parent ? '（紹介あり）' : '（紹介なし）') + (F.use ? '\n' + F.use.slice(0, 120) : '')).catch(() => {});
+    }
+    const referred = !!(r.parent && now - (r.parentAt || r.at || 0) < REF_DAYS * 86400000);
+    if (act === 'trial' && !cur.stage && !referred && stripeOn()) {   // 紹介なし：先に支払いを登録して、そこからお試し（7日のあいだは引き落とさない）
+      if (!(L && L.grades[g])) return send({ type: 'notice', why: 'funnel', detail: 'plan' });
+      try { const url = await checkoutFor(S, Object.assign({}, r, { trialUntil: now + TRIAL_DAYS * 86400000 }), { lineup: m.lineup, grade: g, pay, stage: 'trial' }, { trialStart: '1' }); if (url) return send({ type: 'checkout', url, why: 'trial' }); } catch (e) { console.error('trial checkout', String(e.message).slice(0, 120)); }
+      return send({ type: 'notice', why: 'funnel', detail: 'checkout' });
+    }
     // 決済がつながっていれば：契約・支払いの登録は支払いページへ、契約中のプラン変更・カードは Stripe の画面へ
     if (stripeOn() && (act === 'pay' || act === 'contract' || (act === 'change' && cur.stage === 'contract' && r.stripeCustomer) || act === 'portal')) {
       try {
@@ -3086,6 +3127,7 @@ function session(ws) {
         S.auth = m.idToken ? { idToken: String(m.idToken) } : { pass: String(m.pass || '') };
         try { const pl = m.idToken ? JSON.parse(Buffer.from(String(m.idToken).split('.')[1], 'base64url').toString()) : {}; S.pic = /^https:\/\/[\w.-]+\.line-scdn\.net\//.test(pl.picture || '') ? String(pl.picture).slice(0, 300) : ''; } catch (e) { S.pic = ''; }   // LINEのアイコン（事務局の一覧に出す）
         S.ref = String(m.ref || '').replace(/[^\w-]/g, '').slice(0, 20);
+        S.refKeep = String(m.refKeep || '').replace(/[^\w-]/g, '').slice(0, 20);   // 前に開いた紹介URLのコード（ブラウザに90日）：まだ紹介した人がいないときだけ使う
         S.agent = ['service', 'seminar-biz', 'seminar-partner'].includes(m.agent) ? m.agent : '';
         S.visit = String(m.visit || '').replace(/[^\w-]/g, '').slice(0, 20);   // ご縁の図から、その人のAI棒と話す   // 公式LINEのリッチメニューの「ハタボに相談」：サイトと同じサービス相談
         S.asGuest = !!m.asGuest;
@@ -3144,8 +3186,10 @@ function session(ws) {
         // 紹介コード：自分のコードを作り、はじめて来た人は「だれの紹介か」を覚える
         S.myRef = S.owner ? await myRefFor(S.owner) : '';
         if (S.web && S.myRef) { const mm = await getRef(S.myRef).catch(() => null); S.me = (mm && mm.name) || ''; }
-        if (S.web && S.myRef && S.web.nu) {   // Googleではじめて来た人：お試し（ハタリスX・7日間）を始め、公式のハタボとつなぐ
-          try { const mm = await getRef(S.myRef).catch(() => null) || {}; const f = funnelOf(mm); if (!f.stage) { const now = Date.now(); await putRef(S.myRef, { owner: S.owner, stage: 'trial', lineup: 'ris', grade: 'X', pay: 'm', trialAt: now, trialUntil: now + TRIAL_DAYS * 86400000, via: 'google', officialGoen: true }); } } catch (e) { console.error('google new', String(e.message).slice(0, 100)); }
+        if (S.web && S.myRef && S.web.nu) {   // Googleではじめて来た人：紹介があればお試し（ハタリスX・7日間）を始める。紹介がなければ申し込みフォームから（支払いの登録のあとにお試し）
+          try { const mm = await getRef(S.myRef).catch(() => null) || {}; const f = funnelOf(mm), rk = S.refKeep && S.refKeep !== S.myRef ? await getRef(S.refKeep).catch(() => null) : null;
+            if (!mm.parent && rk && (rk.owner || rk.kind)) { await putRef(S.myRef, { parent: S.refKeep, parentAt: Date.now() }); mm.parent = S.refFrom = S.refKeep; await putRef(S.refKeep, { kids: (rk.kids || 0) + 1 }).catch(() => {}); }
+            if (!f.stage && mm.parent) { const now = Date.now(); await putRef(S.myRef, { owner: S.owner, stage: 'trial', lineup: 'ris', grade: 'X', pay: 'm', trialAt: now, trialUntil: now + TRIAL_DAYS * 86400000, via: 'google', officialGoen: true }); } } catch (e) { console.error('google new', String(e.message).slice(0, 100)); }
         }
         if (S.myRef && !S.peek) {
           const mine = await getRef(S.myRef);
@@ -3398,6 +3442,22 @@ function session(ws) {
         return;
       }
       if (m.type === 'custom_get') return send({ type: 'custom', c: S.custom || cleanCustom({}), tones: TONES, lens: LENS, dialects: DIALECTS, voices: Object.fromEntries(Object.entries(VOICES).map(([k, v]) => [k, v.label])), presets: PRESETS, named: !!(S.custom && S.custom.aiName) });
+      if (m.type === 'import_preview' || m.type === 'import_apply') {   // いつものAIから引っ越す：ChatGPT・Claudeが書いた「あなたのこと」を、キャラ設定と覚えることに分ける（入れる前に本人が見て直す）
+        if (!S.owner || S.visit) return send({ type: 'import', error: 'ログインしてから使えます' });
+        if (m.type === 'import_preview') {
+          const t = String(m.text || '').replace(/\u0000/g, '').trim().slice(0, 12000); if (t.length < 20) return send({ type: 'import', error: '貼りつけた中身が短すぎます' });
+          try { const r = await deps.claude.messages.create({ model: ENV.MODEL, max_tokens: 1500, system: 'AIの引っ越し係。ほかのAIがまとめた「この人のこと」を、ハタボに入れる形に分ける。書いてあることだけを使い、想像で足さない。病気・体調・お金・借金・口座やカード・住所・電話番号・マイナンバーなどの番号・ほかの人の秘密は入れない。JSONだけを返す。',
+              messages: [{ role: 'user', content: '【ほかのAIのまとめ】\n' + t + '\n\nJSONだけ：{"about":"この人のこと（仕事・暮らし・大事な人・好きなこと・続いている話題。600字まで）","rules":"いつもの指示（話し方の好み・答え方・決まり。箇条書き。1500字まで）","facts":["覚えておく短い事実（1つ60字まで・30こまで）"],"callMe":"呼び方（わかれば）","skipped":"入れなかったこと（種類だけ・短く）"}' }] });
+            const x = (r.content || []).filter(b => b.type === 'text').map(b => b.text).join(''), j = JSON.parse(x.slice(x.indexOf('{'), x.lastIndexOf('}') + 1));
+            return send({ type: 'import', preview: { about: String(j.about || '').slice(0, 600), rules: String(j.rules || '').slice(0, 1500), facts: (Array.isArray(j.facts) ? j.facts : []).map(f => String(f).slice(0, 60)).filter(Boolean).slice(0, 30), callMe: String(j.callMe || '').slice(0, 20), skipped: String(j.skipped || '').slice(0, 200) }, now: { about: (S.custom && S.custom.about) || '', rules: (S.custom && S.custom.rules) || '' } });
+          } catch (e) { console.error('import', String(e.message).slice(0, 120)); return send({ type: 'import', error: 'うまく読みとれませんでした。もう一度貼りつけてください' }); }
+        }
+        const old = S.custom || {}, c = cleanCustom(Object.assign({}, old, { about: String(m.about || '').slice(0, 600), rules: String(m.rules || '').slice(0, 1500) }, m.callMe ? { callMe: String(m.callMe).slice(0, 20) } : {}));
+        if (old.aiName) c.aiName = old.aiName; S.custom = c; await savePrefs(ownKey(S.owner), { custom: c });
+        const facts = (Array.isArray(m.facts) ? m.facts : []).map(f => String(f).replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 60)).filter(Boolean).slice(0, 30);
+        if (facts.length) { S.lessons = (S.lessons || []).filter(x => !facts.includes(x)).concat(facts).slice(-30); await savePrefs(ownKey(S.owner), { lessons: S.lessons }); }
+        return send({ type: 'import', done: true, n: facts.length });
+      }
       if (m.type === 'custom_set') {
         if (!S.owner || S.visit) return;
         const c = cleanCustom(m.c), old = S.custom || {};
@@ -3409,7 +3469,7 @@ function session(ws) {
       if (m.type === 'ticket') return onTicket(m);
       if (m.type === 'reqs' || m.type === 'req_adopt') return onReqs(m);
       if (m.type === 'clones' || m.type === 'clone_new' || m.type === 'clone_set') return onClones(m);
-      if (m.type === 'admin' || m.type === 'admin_set' || m.type === 'admin_person') return onAdmin(m);
+      if (m.type === 'admin' || m.type === 'admin_set' || m.type === 'admin_person' || m.type === 'org_op') return onAdmin(m);
       if (m.type === 'chief_send') return onChiefSend(m);
       if (m.type === 'perms' || m.type === 'perm_set' || m.type === 'perm_del' || m.type === 'perm_invite' || m.type === 'perm_inv_del') return onPerms(m);
       if (m.type === 'api' || m.type === 'api_new' || m.type === 'api_stop' || m.type === 'api_resv') return onApi(m);
