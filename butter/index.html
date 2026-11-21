@@ -3459,8 +3459,9 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
         planShow();
         if (diag) diag.hidden = true;
         if (awake.until !== 0) keepAwake(true, 0);
-        jrMicStart().catch(() => { hint.textContent = 'マイクが使えません。LINEの設定でマイクを許可してください。'; });
-        jrBtn(); if (!J.playing) setState('listening');
+        if (pcQuiet()) { J.micOff = true; J.paused = true; }   // パソコンでは、話すボタンを押すまでマイクを切っておく（まわりの声に勝手に答えないように）
+        else jrMicStart().catch(() => { hint.textContent = 'マイクが使えません。LINEの設定でマイクを許可してください。'; });
+        jrBtn(); if (!J.playing) setState(J.paused ? 'idle' : 'listening');
         hint.textContent = J.guest ? (J.avatar === 'komugi' ? '馬越 雅哉さんの相棒の、コムギです……。気軽に、話しかけてもらえたら。' : J.avatar === 'hatabo' ? 'ハタボーです。そのまま話しかけてほしいです。' : 'ヒロさんの相棒の、ジュニアです。そのまま話しかけてくださいね。') : J.trio ? '三人モード：「ジュニア」と呼んだときだけ答えるよ。' : 'そのまま話しかけてね。話している途中でも、声をかけたら止まって聞くよ。';
         break;
       case 'partial':
@@ -4070,8 +4071,9 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
           take(['google']); const C = Object.values(by);
           return `<div class="hbc hbwide acctrows"><div class="k">ACCOUNT</div><h3>アカウント</h3><div class="hbrows">${A.map(row).join('')}</div></div>
             <div class="hbc hbwide acctrows"><div class="k">APP</div><h3>アプリ</h3><div class="hbrows">${B.map(row).join('')}<label class="hbrow hbsw"><div><b>触覚フィードバック</b><span>話すボタンを押したとき、ブルッと震える（対応しているスマホだけ）</span></div><input type="checkbox" id="hbHap" ${store.get('hbHaptic', true) ? 'checked' : ''}></label></div></div>
-            <div class="hbc hbwide acctrows"><div class="k">MORE</div><h3>そのほか</h3><div class="hbrows">${C.map(row).join('')}<button type="button" class="hbrow hblogout" id="hbLogout"><div><b>ログアウト</b><span>この端末からログアウトします</span></div><i>›</i></button></div></div>`; })()}`;
+            <div class="hbc hbwide acctrows"><div class="k">MORE</div><h3>そのほか</h3><div class="hbrows">${C.map(row).join('')}<button type="button" class="hbrow" id="hbTourBtn"><div><b>使い方の案内</b><span>話すボタン・画面の場所・AIアプリとつなぐ（ハタボコネクト）</span></div><i>›</i></button><button type="button" class="hbrow hblogout" id="hbLogout"><div><b>ログアウト</b><span>この端末からログアウトします</span></div><i>›</i></button></div></div>`; })()}`;
       { const hp = document.getElementById('hbHap'); if (hp) hp.onchange = () => { store.set('hbHaptic', hp.checked); if (hp.checked && window.hbBuzz) window.hbBuzz(); }; }
+      $('hbTourBtn').onclick = () => hbTour();
       $('hbLogout').onclick = () => { if (!confirm('この端末からログアウトします。よろしいですか？')) return; try { ['hbpData', 'hbPins', 'srv'].forEach(k => store.set(k, null)); } catch (e) {} try { if (window.liff && liff.isLoggedIn && liff.isLoggedIn()) liff.logout(); } catch (e) {} try { sessionStorage.clear(); } catch (e) {} toast('ログアウトしました'); setTimeout(() => { location.replace('https://www.hatha-lab.com/mypage.html?out=1'); }, 600); };   // ログアウトしたら、サイトのMyハタボへもどる
     } else if (p === 'more') {
       const R = [['console', '管理画面', '会話・愛棒・窓口・お金・設定（PC・タブレットでも）'], ['share', '紹介する', 'ハタボのカードを友だちに。ご縁がひろがります'], ['notes', 'メモ・議事録', '話して残したメモと議事録'], ['gacha', 'AI棒ガチャ', '1日1回むりょう'], ['friends', '友だち', 'ガチャで出会った人・ご縁の人'], ['grow', '育てた' + nm, 'レベル・覚えたこと・引きつぎ'], ['aisai', 'AISAI・愛祭', 'オーナーズクラブ・ランク・アワード'], ['plan', 'プラン・支払い', 'お試し・お支払い'], ['times', 'ハタボタイムズ', 'お知らせ・使い方'], ['api', 'AIからつなぐ（API）', 'ChatGPT・Gemini・Claude・Grokから使う'], ['settings', '設定', 'キャラ・連携・公開設定・PCで使う']];
@@ -4878,6 +4880,38 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   else if (HB_START && HB_START !== 'talk') hbpOpen(HB_START);
   // ミニアプリのトップは、Myハタボのホーム（?page=talk・紹介URL（?ref=）・台本モードのときは、これまでどおり話す画面）
   else if (!HB_START && (document.body.classList.contains('av-hatabo') || document.body.classList.contains('av-komugi')) && !Q.get('ref') && !new URLSearchParams(location.search).get('ref') && !Q.get('stage') && !new URLSearchParams(location.search).get('stage')) { hbpOpen('my'); document.addEventListener('jrready', () => { if (J.plain) hbpClose(); }, { once: true }); }
+  /* --- パソコンで開いたときの使い方の案内（はじめての1回。あとから「アカウント」→「使い方の案内」でも見られる） --- */
+  function pcQuiet() { let on = false; try { on = sessionStorage.getItem('hb.pcMic') === '1'; } catch (e) {} return document.body.classList.contains('pcweb') && !on; }
+  const MCP_URL = 'https://butter-junior-722073142596.asia-northeast1.run.app/mcp';
+  function hbTour() {
+    const old = document.getElementById('hbTour'); if (old) old.remove();
+    const S = [
+      ['ようこそ', (J.office ? 'パソコンの管理画面とMyハタボです。' : 'パソコンのMyハタボです。') + 'はじめに、使い方をかんたんに案内します。1分ほどで終わります。', ''],
+      ['話すときは、このボタン', 'パソコンでは、まわりの声に勝手に答えないように、<b>マイクは切ってあります</b>。話したいときは、画面の下のまんなかの丸いボタン（おして話す）を押してください。もう一度押すと止まります。', '#talkBtn'],
+      ['文字でも頼めます', 'マイクを使わなくても、入力欄に書いて Enter で送れます。会議中や電車の中でも使えます。', '#hbAskIn'],
+      ['画面の場所', 'トーク一覧・愛棒・ご縁・アカウントは、メニューから開きます。' + (J.office ? '事務局の管理画面は「アカウント」のいちばん上の「管理画面（事務局）」です。' : 'プランやキャラ設定、コネクタは「アカウント」にあります。'), ''],
+      ['AIアプリとつなぐ（ハタボコネクト）', 'Claude などのAIアプリから、ハタボに覚えさせたり、キャラ設定を変えたりできます。<ol style="margin:8px 0 0;padding-left:20px;line-height:1.8"><li>Claude の「設定」→「コネクタ」（または「プラグイン」→「プラグインを参照」）→「追加」→「カスタムコネクタ」。チームのプランでは、オーナーが組織の設定から追加します</li><li>名前は「ハタボ」、URL は下のものを貼って追加</li><li>「連携」を押して、<b>LINEでつなぐ</b>（スマホでQRを読んで「つなぐ」）か <b>Googleでつなぐ</b></li><li>Claude で「ハタボのキャラ設定を見せて」と頼んで、返事がくればできあがり</li></ol><div style="display:flex;gap:8px;align-items:center;margin-top:10px"><code style="flex:1;min-width:0;overflow:auto;white-space:nowrap;background:#F3F5F9;border-radius:10px;padding:8px 10px;font-size:12px">' + MCP_URL + '</code><button type="button" id="tourCopy" style="border:0;border-radius:999px;background:#16233F;color:#fff;font-weight:800;padding:9px 14px;cursor:pointer">コピー</button></div>', ''],
+      ['準備できました', 'ハタボと話してみましょう。「ハタボと話してみる」を押すと、マイクがオンになります。あとから案内を見るときは「アカウント」→「使い方の案内」です。', '']
+    ];
+    let i = 0; const d = document.createElement('div'); d.id = 'hbTour';
+    d.style.cssText = 'position:fixed;inset:0;z-index:99998;background:rgba(8,12,24,.55);display:grid;place-items:center;padding:20px';
+    const mark = sel => { document.querySelectorAll('.hbTourMark').forEach(e => { e.classList.remove('hbTourMark'); e.style.outline = ''; e.style.outlineOffset = ''; e.style.position = e.dataset.tpos || ''; e.style.zIndex = e.dataset.tz || ''; }); const e = sel && document.querySelector(sel); if (e && e.offsetParent) { e.classList.add('hbTourMark'); e.dataset.tpos = e.style.position; e.dataset.tz = e.style.zIndex; e.style.outline = '4px solid #F7D774'; e.style.outlineOffset = '4px'; if (getComputedStyle(e).position === 'static') e.style.position = 'relative'; e.style.zIndex = '99999'; } };
+    const end = talk => { mark(''); d.remove(); store.set('hbPcTour', 2); if (talk && J.micOff) $('cvMicSw').click(); };
+    const draw = () => {
+      const [t, b, sel] = S[i], last = i === S.length - 1;
+      d.innerHTML = '<div role="dialog" aria-modal="true" aria-label="使い方の案内" style="background:#fff;color:#141A2A;border-radius:20px;max-width:520px;width:100%;max-height:86vh;overflow:auto;padding:24px 24px 20px;box-shadow:0 24px 70px rgba(0,0,0,.45);font-size:14.5px;line-height:1.75">'
+        + '<div style="font-size:12px;font-weight:800;color:#2E86BD;letter-spacing:.08em">使い方の案内　' + (i + 1) + ' / ' + S.length + '</div><h3 style="margin:6px 0 8px;font-size:20px">' + t + '</h3><div>' + b + '</div>'
+        + '<div style="display:flex;gap:10px;justify-content:space-between;align-items:center;margin-top:20px"><button type="button" data-t="skip" style="border:0;background:none;color:#5B6478;font-weight:700;cursor:pointer;padding:8px 4px">あとで見る</button><span style="display:flex;gap:8px">'
+        + (i ? '<button type="button" data-t="back" style="border:1px solid #C9D0DC;background:#fff;color:#16233F;border-radius:999px;padding:10px 18px;font-weight:800;cursor:pointer">もどる</button>' : '')
+        + '<button type="button" data-t="next" style="border:0;background:' + (last ? '#06C755' : '#16233F') + ';color:#fff;border-radius:999px;padding:10px 22px;font-weight:800;cursor:pointer">' + (last ? 'ハタボと話してみる' : 'つぎへ') + '</button></span></div></div>';
+      mark(sel);
+      const cp = d.querySelector('#tourCopy'); if (cp) cp.onclick = () => { try { navigator.clipboard.writeText(MCP_URL); toast('URLをコピーしました'); } catch (e) {} };
+      d.querySelectorAll('[data-t]').forEach(x => x.onclick = () => { const k = x.dataset.t; if (k === 'skip') end(false); else if (k === 'back') { i--; draw(); } else if (last) end(true); else { i++; draw(); } });
+    };
+    document.body.appendChild(d); draw();
+  }
+  window.hbTour = hbTour;
+  document.addEventListener('jrready', () => { if (document.body.classList.contains('pcweb') && !store.get('hbPcTour', 0)) setTimeout(hbTour, 600); }, { once: true });
   window.hbpPreview = (d, pg, gn, ib, ex) => { HBP.data = d; if (gn) HBP.goen = gn; if (ib) { HBP.inbox = ib; HBP.inboxShown = true; } if (ex) Object.assign(HBP, ex); hbpOpen(pg); };   // 画面の確認用
   $('trioBtn').addEventListener('click', () => jrSend({ type: 'trio', on: !J.trio }));
   $('planBtn').addEventListener('click', () => { const p = store.get('jrPlan2', J.canPlan ? 'super' : 'std'); jrSend({ type: 'plan', plan: PLAN_ORDER[(PLAN_ORDER.indexOf(p) + 1) % PLAN_ORDER.length] }); });
@@ -4949,7 +4983,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
     J.micOff = store.get('hbMicOff', false);
     const micApply = () => { msw.setAttribute('aria-pressed', J.micOff ? 'false' : 'true'); msw.textContent = J.micOff ? 'マイクなし' : 'マイクあり'; try { (J.mic ? J.mic.getAudioTracks() : []).forEach(t => { t.enabled = !J.micOff; }); } catch (e) {} if (J.micOff && J.ready && !J.paused) { J.paused = true; J.queue = []; jrSend({ type: 'barge' }); setState('idle'); jrBtn(); } };
     micApply();
-    msw.addEventListener('click', () => { J.micOff = !J.micOff; store.set('hbMicOff', J.micOff); micApply(); if (!J.micOff && J.ready && J.paused) { J.paused = false; setState('listening'); jrBtn(); } toast(J.micOff ? 'マイクなし：こちらの声は拾いません。文字で話しかけてください' : 'マイクあり：話しかけると聞きます'); });
+    msw.addEventListener('click', () => { J.micOff = !J.micOff; store.set('hbMicOff', J.micOff); try { if (J.micOff) sessionStorage.removeItem('hb.pcMic'); else sessionStorage.setItem('hb.pcMic', '1'); } catch (e) {} if (!J.micOff && J.ready && !J.ctx) jrMicStart().catch(() => { toast('マイクが使えません。ブラウザのマイクの許可を確かめてください'); }); micApply(); if (!J.micOff && J.ready && J.paused) { J.paused = false; setState('listening'); jrBtn(); } toast(J.micOff ? 'マイクなし：こちらの声は拾いません。文字で話しかけてください' : 'マイクあり：話しかけると聞きます'); });
     document.addEventListener('jrready', micApply);
     spk.addEventListener('click', () => { J.muted = !J.muted; store.set('hbMute', J.muted); if (J.muted) { try { jrStopAudio(); } catch (e) {} } spkShow(); });
     // 話すボタンの文字・グレード・名前を、キャラ画面とそろえる
