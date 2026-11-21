@@ -1880,6 +1880,74 @@ body.cl #hbTopBrand, body.cl .hbp-brand { pointer-events: none !important; curso
   .clacct span { flex: 1; min-width: 0; display: grid; }
   .clacct small { color: var(--cmut, #A3AAB7); font-size: 12px; font-weight: 500; }
 }
+
+/* ===== 11/21 2回目：暗めの紺・白く光る話すボタン・ホームのマーク・トークとキャラの切りかえ・つなぐは縦に ===== */
+body.cl { --clnavy: #0A1226; --clnavy2: #0E1A36; --clcard: #13223F; --clline: rgba(150,180,230,.16); }
+html.pwa body.cl, html.pwa:has(body.cl) { background: #0A1226 !important; }
+body.cl .hbpage { --cbg: #0A1226; --cnav: #0D1831; --ccard: #12213F; --cbub: #162849; --csel: #1A2E55; --cline: rgba(150,180,230,.16); }
+body.cl.av-hatabo .chatv { background: radial-gradient(120% 80% at 50% 0%, #1A2C55 0%, #0F1C3A 45%, #0A1226 100%) !important; color: #EAF0FA; }
+body.cl.av-hatabo .chatv .cv-bot { background: rgba(10,18,38,.9) !important; border-color: rgba(150,180,230,.16) !important; }
+body.cl.av-hatabo .chatv .cv-in { border-color: rgba(150,180,230,.3); background: rgba(255,255,255,.05); }
+body.cl.av-hatabo .chatv .cv-in input::placeholder { color: #9AA8C4; }
+body.cl:is(.av-hatabo, .av-komugi):not(.hbp-open):not(.plain) .hbtop { background: rgba(10,18,38,.96) !important; border-bottom-color: rgba(150,180,230,.14) !important; }
+body.cl .hbp-top { background: #0A1226 !important; }
+body.cl .ibrow.me .ibb { background: #2C4C8E; border-color: #2C4C8E; }
+body.cl .ibav { background: #3B5A99; }
+body.cl .ibcomp button#ibSend { background: #2C4C8E; }
+/* 話すボタン：白く光らせて、いちばん目立たせる */
+body.cl .cltalk, body.cl.cl .chatv .cv-in .cv-mic, body.cl.cl .hbask-mic, body.cl.cl .chatv .cv-in button[type="submit"], body.cl.cl .hbask-go { background: #F4F6FA !important; color: #0A1226 !important; border: 0 !important; box-shadow: 0 0 0 3px rgba(255,255,255,.16), 0 0 20px rgba(150,190,255,.45) !important; }
+.cltalk { display: grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: 50%; padding: 0; cursor: pointer; }
+.cltalk img, body.cl .chatv .cv-in .cv-mic img { width: 30px; height: 30px; border-radius: 50%; background: #0A1226 !important; box-shadow: none !important; }
+.cldict, body.cl .chatv .cv-in .cldict, body.cl .hbask .cldict { display: grid; place-items: center; flex: none; width: 38px; height: 38px; border: 0 !important; border-radius: 50%; background: transparent !important; color: #C9D3E6 !important; cursor: pointer; padding: 0; box-shadow: none !important; }
+.cldict.on, body.cl .chatv .cv-in .cldict.on, body.cl .hbask .cldict.on { color: #fff !important; background: #D9483B !important; }
+body.cl:not(.pcweb) .hbask { grid-template-columns: auto minmax(0, 1fr) auto auto !important; }
+body.cl:not(.pcweb) .hbask .cldict { order: 3; }
+body.cl:not(.pcweb) .hbask-mic, body.cl:not(.pcweb) .hbask-go { order: 4 !important; }
+body.cl .hbask.has .cldict, body.cl .chatv .cv-in.has .cldict { display: none !important; }
+.cldict svg { width: 21px; height: 21px; }
+.cldict.on { color: #fff; background: #D9483B; animation: cldict 1.2s ease-in-out infinite; }
+@keyframes cldict { 50% { box-shadow: 0 0 0 6px rgba(217,72,59,.25); } }
+.cldict[hidden] { display: none; }
+.ibcomp .cldict, .ibcomp .cltalk { align-self: flex-end; }
+.ibcomp:has(textarea:not(:placeholder-shown)) .cltalk { display: none; }
+.ibcomp:has(textarea:placeholder-shown) #ibSend { display: none; }
+/* ホームのいちばん上：光るマークとあいさつ */
+.clhero { display: none; }
+.clmark { position: relative; width: 84px; height: 84px; margin: 0 auto; display: grid; place-items: center; }
+.clmark::before { content: ""; position: absolute; inset: -18px; border-radius: 50%; background: radial-gradient(closest-side, rgba(150,190,255,.45), rgba(150,190,255,0)); animation: clglow 3.6s ease-in-out infinite; }
+.clmark img { position: relative; width: 84px; height: 84px; filter: drop-shadow(0 0 14px rgba(170,205,255,.55)); }
+@keyframes clglow { 50% { opacity: .45; transform: scale(.9); } }
+@media (prefers-reduced-motion: reduce) { .clmark::before, .cldict.on { animation: none; } }
+/* トークとキャラの切りかえ（会話の上に小さく） */
+.clmode { display: none; }
+@media (max-width: 899px) {
+  body.cl:not(.pcweb) .clhero { display: grid; gap: 8px; justify-items: center; text-align: center; padding: 22px 0 18px; }
+  body.cl:not(.pcweb) .clhero h1 { margin: 10px 0 0; font: 800 22px var(--display); color: #fff; }
+  body.cl:not(.pcweb) .clhero p { margin: 0; font-size: 14px; color: #A9B6CF; }
+  body.cl:not(.pcweb) .hbask-col > h2 { display: none; }
+  body.cl:not(.pcweb):is(.av-hatabo, .av-komugi):not(.hbp-open):not(.plain) .clmode { display: flex; position: fixed; z-index: 57; top: calc(56px + env(safe-area-inset-top) + 8px); left: 50%; transform: translateX(-50%); padding: 3px; gap: 2px; border-radius: 999px; background: rgba(13,24,49,.92); border: 1px solid rgba(150,180,230,.2); }
+  .clmode button { border: 0; border-radius: 999px; padding: 5px 14px; background: transparent; color: #A9B6CF; font: 700 12px var(--display); cursor: pointer; }
+  .clmode button.on { background: #F4F6FA; color: #0A1226; }
+  body.cl:not(.pcweb).chatview #cvList { padding-top: 46px !important; }
+  /* 左の一覧：ロゴだけ上に残して、ほかはいっしょにスクロール。最下段の自分は固定 */
+  body.cl:not(.pcweb) #hbpSideMenu { padding: 0 0 6px; }
+  body.cl:not(.pcweb) .clscroll .hbs-search { margin: 0 0 8px; }
+  /* つなぐ：縦にずらっと */
+  .clconn { display: grid; gap: 2px; margin-top: 4px; }
+  .clconn button { display: flex; align-items: center; gap: 12px; width: 100%; padding: 9px 8px; border: 0; border-radius: 10px; background: transparent; color: var(--ctext, #E8EBF0); text-align: left; font: 700 14.5px var(--body); cursor: pointer; }
+  .clconn button:active { background: var(--csel, rgba(255,255,255,.08)); transform: scale(.98); }
+  .clconn i { display: grid; place-items: center; flex: none; width: 28px; height: 28px; border-radius: 8px; color: #fff; font: 900 13px var(--display); font-style: normal; }
+  .clconn span { flex: 1; }
+  .clconn small { padding: 2px 8px; border-radius: 999px; background: rgba(255,255,255,.08); color: var(--cmut, #A3AAB7); font-size: 11px; font-weight: 700; }
+  .clconn small.ok { background: rgba(98,173,127,.18); color: #9FD9B4; }
+  /* 入力欄のないページは、右下に話すボタン */
+  .clfab { display: none; }
+  body.cl:not(.pcweb).hbp-open:not(.clcomp):not(.drawer-open) .clfab { display: grid; }
+  .clfab { position: fixed; z-index: 65; right: 16px; bottom: calc(18px + env(safe-area-inset-bottom) - var(--pwgap, 0px)); width: 60px; height: 60px; border-radius: 50%; place-items: center; border: 0; padding: 0; cursor: pointer; background: #F4F6FA; box-shadow: 0 0 0 4px rgba(255,255,255,.14), 0 0 26px rgba(150,190,255,.55); }
+  .clfab img { width: 40px; height: 40px; border-radius: 50%; background: #0A1226; }
+  body.cl.drawer-open .clfab { display: none !important; }
+}
+.hbask-emb { width: 28px; height: 28px; border-radius: 50%; background: #0A1226; }
 </style>
 </head>
 <body>
@@ -4646,7 +4714,7 @@ body.cl #hbTopBrand, body.cl .hbp-brand { pointer-events: none !important; curso
             : '<div class="ibrow' + (x.mine ? ' me' : '') + (x.pending ? ' wait' : '') + '">' + (x.mine ? '' : av(W)) + '<div class="ibb">' + esc(x.text) + '</div><time>' + (x.pending ? '送信中' : hm(x.at)) + '</time></div>'); }).join('');
         body.innerHTML = '<div class="ibhead"><button type="button" class="ibback" id="ibBack" aria-label="伝言の一覧にもどる">‹</button>' + av(W) + '<b>' + esc(nm(W)) + (W === '_goen' ? '' : 'さん') + '</b></div>'
           + '<div class="ibthread">' + (rows || '<p class="ibempty">まだやりとりはありません。<br>下から、最初の伝言を送ってみましょう。</p>') + '</div>'
-          + (W === '_goen' ? '' : '<div class="ibcomp"><textarea id="ibText" rows="1" maxlength="500" placeholder="' + esc(nm(W)) + 'さんのAI棒に伝言"></textarea><button type="button" id="ibSend" aria-label="送る"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 21 3l-8.5 18-2.2-7.3z" fill="currentColor"/></svg></button></div>');
+          + (W === '_goen' ? '' : '<div class="ibcomp"><textarea id="ibText" rows="1" maxlength="500" placeholder="' + esc(nm(W)) + 'さんのAI棒に伝言"></textarea><button type="button" class="cldict" data-dict="ibText" aria-label="声で入力（文字にする）">' + clMicIc() + '</button><button type="button" class="cltalk" aria-label="ハタボと声で話す"><img src="award_mark.svg" alt=""></button><button type="button" id="ibSend" aria-label="送る"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 21 3l-8.5 18-2.2-7.3z" fill="currentColor"/></svg></button></div>');
         body.classList.add('ibmode');
         const ta = $('ibText'), sb = $('ibSend');
         if (ta) { ta.value = HBP.ibDraft[W] || ''; const fit = () => { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 120) + 'px'; }; fit(); ta.oninput = () => { HBP.ibDraft[W] = ta.value; fit(); }; }
@@ -5042,11 +5110,12 @@ body.cl #hbTopBrand, body.cl .hbp-brand { pointer-events: none !important; curso
       <div class="hbask-col"><h2>${esc(clGreet() + (nm0 ? '、' + nm0 + 'さん' : ''))}</h2>
       <div class="clask"><form class="hbask" id="hbAsk"><textarea id="hbAskIn" rows="2" placeholder="ハタボに頼みたいことを書く" aria-label="ハタボに頼むこと"></textarea>
         <div class="hbask-row"><button type="button" class="hbplus" data-plus aria-label="写真・調べもの・話す相手など"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button><button type="button" class="hbvpill" data-go="voice" title="声を選ぶ"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4"/></svg>${esc(hbpVoiceName())}</button>
-          <span style="flex:1"></span><button type="button" class="hbask-mic" id="hbAskMic" aria-label="声で話す"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button><button type="submit" class="hbask-go" aria-label="送る"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button></div></form><p class="clnote">${clNote()}</p></div>
+          <span style="flex:1"></span><button type="button" class="cldict" data-dict="hbAskIn" aria-label="声で入力（文字にする）">${clMicIc()}</button><button type="button" class="hbask-mic" id="hbAskMic" aria-label="ハタボと声で話す"><img class="hbask-emb" src="award_mark.svg" alt=""></button><button type="submit" class="hbask-go" aria-label="送る"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button></div></form><p class="clnote">${clNote()}</p></div>
       <div class="hbquick">${Q.map(([t, pre, dpath]) => `<button type="button" data-q="${esc(pre)}"><i><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${dpath}"/></svg></i>${t}</button>`).join('')}</div></div></div>`;
     const car = `<div class="hbcar"><div class="hbcar-h"><b>おすすめ・新しい機能</b><span><button type="button" data-cmv="-1" aria-label="前へ">‹</button><button type="button" data-cmv="1" aria-label="次へ">›</button></span></div><div class="hbcar-tr" id="hbCar">${HB_PICKS.map(([go, t, d0]) => `<button type="button" class="hbcar-c" data-go="${go}"><b>${esc(t)}</b><span>${esc(d0)}</span></button>`).join('')}</div></div>`;
     const inv = `<div class="hbinv"><button type="button" class="hbinv-m" data-go="share"><i aria-hidden="true">🎁</i><span><b>友だちを招待して、一緒に試そう</b><small>招待した友だちとは、最初からご縁でつながります。招待のお礼（お試しの日数・ポイント）は準備中です。</small></span><em>招待する ›</em></button><button type="button" class="hbinv-g" id="hbEggBtn"><i aria-hidden="true">🥚</i><span><b>愛棒ガチャ</b><small>卵から、あなたの愛棒が生まれる</small></span></button></div>`;
-    return `<div class="hbhero">${inv}${ban}${ask}${car}</div>`;
+    const clh = `<div class="clhero"><div class="clmark"><img src="award_mark.svg" alt=""></div><h1>${esc(clGreet() + (nm0 ? '、' + nm0 + 'さん' : ''))}</h1><p>なんでも聞いてください</p></div>`;
+    return `<div class="hbhero">${clh}${inv}${ban}${ask}${car}</div>`;
   }
   document.addEventListener('click', e => { const b = e.target.closest('[data-cmv]'); if (!b) return; const c = $('hbCar'); if (c) c.scrollBy({ left: Number(b.dataset.cmv) * Math.max(240, c.clientWidth * 0.8), behavior: 'smooth' }); });
   function hbpTalk(text, mic) {   // ホームの入力欄から：トーク画面に出て、そのまま話す
@@ -6349,6 +6418,61 @@ body.cl #hbTopBrand, body.cl .hbp-brand { pointer-events: none !important; curso
     setInterval(clTickBars, 600); clTickBars();
   }
   clInit();
+
+  /* ===== 11/21 2回目：声で入力・トークとキャラの切りかえ・つなぐの並び・どのページにも話すボタン ===== */
+  function clMicIc() { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>'; }
+  /** 声で入力：話した言葉を入力欄に文字で入れるだけ（送らない）。ブラウザが対応していないときはボタンを出さない */
+  const CL_SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let clRec = null;
+  function clDictate(btn) {
+    const el = $(btn.dataset.dict); if (!el || !CL_SR) return;
+    if (clRec) { try { clRec.stop(); } catch (e) {} return; }
+    const r = clRec = new CL_SR(), base = el.value ? el.value.replace(/\s*$/, ' ') : '';
+    r.lang = 'ja-JP'; r.interimResults = true; r.continuous = false;
+    btn.classList.add('on');
+    r.onresult = ev => { let t = ''; for (let i = 0; i < ev.results.length; i++) t += ev.results[i][0].transcript; el.value = base + t; el.dispatchEvent(new Event('input', { bubbles: true })); };
+    r.onerror = ev => { if (ev.error === 'not-allowed') toast('マイクの許可が必要です'); };
+    r.onend = () => { btn.classList.remove('on'); clRec = null; try { el.focus(); } catch (e) {} };
+    try { r.start(); } catch (e) { btn.classList.remove('on'); clRec = null; }
+  }
+  document.addEventListener('click', e => {
+    const d = e.target.closest && e.target.closest('[data-dict]'); if (d) { e.preventDefault(); return clDictate(d); }
+    const t = e.target.closest && e.target.closest('.cltalk, .clfab'); if (t) { e.preventDefault(); return hbpTalkVoice(); }
+    const v = e.target.closest && e.target.closest('.clmode [data-v]'); if (v && window.hbSetView) return window.hbSetView(v.dataset.v);
+    const c = e.target.closest && e.target.closest('.clconn [data-p]'); if (c) { hbpDrawer(false); const p = c.dataset.p, tab = document.querySelector('#hbpTabs > button[data-p="' + p + '"]'); if (tab) tab.click(); else hbpOpen(p); }
+  });
+  document.addEventListener('pointerdown', e => { if (e.target.closest && e.target.closest('.cldict, .cltalk, .clfab, .clmode button, .clconn button')) clTick(); }, true);
+  /** つなぐ：使っている人の多い順に縦に。いま使えるものと準備中を分けて見せる */
+  const CL_CONN = [
+    ['connectors', 'LINE', '#06C755', 'L', 1], ['google', 'Gmail', '#EA4335', 'G', 1], ['connectors', 'Instagram', 'linear-gradient(45deg,#F58529,#DD2A7B,#8134AF)', 'I', 0], ['connectors', 'Messenger', '#0866FF', 'M', 0],
+    ['connectors', 'Microsoft Teams', '#5059C9', 'T', 0], ['connectors', 'Slack', '#4A154B', 'S', 0], ['connectors', 'LINE WORKS', '#00C73C', 'W', 0], ['connectors', 'Chatwork', '#E9473F', 'C', 0],
+    ['connectors', 'Google Chat', '#1E8E3E', 'G', 0], ['connectors', 'Discord', '#5865F2', 'D', 0], ['connectors', 'Telegram', '#229ED9', 'T', 0], ['plugins', 'プラグイン', '#3A4660', '+', 2]];
+  function clConnHtml() { return '<div class="clconn">' + CL_CONN.map(([p, n, c, l, ok]) => '<button type="button" data-p="' + p + '"><i style="background:' + c + '">' + l + '</i><span>' + esc(n) + '</span>' + (ok === 1 ? '<small class="ok">つなげる</small>' : ok === 0 ? '<small>準備中</small>' : '') + '</button>').join('') + '</div>'; }
+  function clInit2() {
+    if (!CL || document.body.dataset.clInit2 || !clMobile()) return;
+    const sc = document.querySelector('#hbpSide .clscroll'); if (!sc) return setTimeout(clInit2, 150);
+    document.body.dataset.clInit2 = '1';
+    // 左の一覧：探す・ホーム・愛棒・ご縁マップも、いっしょにスクロール。名前は英字
+    const side = $('hbpSide'), menu = $('hbpSideMenu'), srch = side.querySelector('.hbs-search');
+    if (srch) sc.prepend(srch); if (menu) srch ? srch.after(menu) : sc.prepend(menu);
+    const bb = side.querySelector('.clbrand b'); if (bb) bb.textContent = 'HATHABO';
+    const old = sc.querySelector('.hbs-conn'); if (old) old.outerHTML = clConnHtml(); else sc.insertAdjacentHTML('beforeend', '<div class="hbs-k">つなぐ</div>' + clConnHtml());
+    // トーク画面の入力欄：声で入力するマイクを、話すボタンの左に
+    const mic = $('cvMic'); if (mic && mic.parentNode && mic.parentNode.id === 'cvForm' && !mic.parentNode.querySelector('.cldict')) mic.insertAdjacentHTML('beforebegin', '<button type="button" class="cldict" data-dict="cvInput" aria-label="声で入力（文字にする）">' + clMicIc() + '</button>');
+    // トークとキャラの切りかえ
+    document.body.insertAdjacentHTML('beforeend', '<div class="clmode" role="group" aria-label="表示の切りかえ"><button type="button" data-v="chat">トーク</button><button type="button" data-v="char">キャラ</button></div><button type="button" class="clfab" aria-label="ハタボと声で話す"><img src="award_mark.svg" alt=""></button>');
+    if (!CL_SR) document.querySelectorAll('.cldict').forEach(b => { b.hidden = true; });
+  }
+  setTimeout(clInit2, 300);
+  setInterval(() => {   // 切りかえの見た目・入力欄のあるページか・左の一覧が開いているか
+    if (!CL) return;
+    const chat = document.body.classList.contains('chatview');
+    document.querySelectorAll('.clmode [data-v]').forEach(b => b.classList.toggle('on', (b.dataset.v === 'chat') === chat));
+    const body = $('hbpBody'), P = $('hbPage');
+    document.body.classList.toggle('clcomp', !!(body && (body.querySelector('.clask, .ibcomp'))));
+    document.body.classList.toggle('drawer-open', !!(P && P.classList.contains('drawer')));
+    if (!CL_SR) document.querySelectorAll('.cldict:not([hidden])').forEach(b => { b.hidden = true; });
+  }, 400);
 
   liffBoot();
   if (HATABO_APP) { const ib = KOMUGI_APP ? addBubble('コムギ', 'はじめまして。馬越 雅哉さんの相棒の、コムギです。気軽に話しかけてくださいね。', 'her') : addBubble('ハタボ', 'はじめまして、ハタボです。下の「話す」を押すか、文字で話しかけてください。', 'her'); if (ib) ib.parentElement.id = 'introBubble'; }
