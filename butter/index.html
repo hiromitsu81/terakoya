@@ -3373,7 +3373,8 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
     // 紹介コードは、そのとき開いたURLのものだけ送る（前に開いた紹介URLを覚えて使うと、別のアバター（コムギなど）で出てしまう）。だれの紹介かはサーバーが最初の1回で覚えている
     const ref = String(r0 || '').replace(/[^\w-]/g, '').slice(0, 20);
     if (r0) store.set('jrRef', ref);
-    ws.onopen = () => jrSend(Object.assign({ type: 'hello', mode: BIZ() ? 'business' : 'family', greet: !J.greeted && !document.body.classList.contains('av-hatabo') && !document.body.classList.contains('av-komugi'), ref, asGuest, peek, agent, visit: J.visit || '', app: KOMUGI_APP ? 'komugi' : HATABO_APP ? 'hatabo' : '' }, typeof tr === 'boolean' ? { trio: tr } : {}, WT ? { webToken: WT } : LIFF ? { idToken: idToken() } : { pass: cfg.pass }));
+    ws.onopen = () => jrSend(Object.assign({ type: 'hello', mode: BIZ() ? 'business' : 'family', greet: !J.greeted && !WT && !document.body.classList.contains('pcweb') && !document.body.classList.contains('av-hatabo') && !document.body.classList.contains('av-komugi'),   // パソコンのブラウザ（管理画面など）では、勝手に話しはじめない
+      ref, asGuest, peek, agent, visit: J.visit || '', app: KOMUGI_APP ? 'komugi' : HATABO_APP ? 'hatabo' : '' }, typeof tr === 'boolean' ? { trio: tr } : {}, WT ? { webToken: WT } : LIFF ? { idToken: idToken() } : { pass: cfg.pass }));
     ws.onmessage = ev => { J.lastRx = Date.now(); let m; try { m = JSON.parse(ev.data); } catch (e) { return; } if (m.type === 'pong') return; if (m.type === 'ready') clearTimeout(giveUp); jrOn(m); };
     J.lastRx = Date.now();
     ws.onclose = () => {
