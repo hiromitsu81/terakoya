@@ -1840,7 +1840,7 @@ body.cl #hbTopBrand, body.cl .hbp-brand { pointer-events: none !important; curso
   /* 上の帯 */
   body.cl:not(.pcweb) .hbp-top > :not(.clset), body.cl:not(.pcweb) .hbtop > :not(.clset) { display: none !important; }
   body.cl:not(.pcweb) .clset { display: flex; align-items: center; gap: 2px; width: 100%; }
-  body.cl:not(.pcweb) .hbp-top { padding: calc(6px + env(safe-area-inset-top)) 6px 6px !important; min-height: 0; }
+  body.cl:not(.pcweb) .hbp-top { padding: 6px !important; min-height: 0; }
   body.cl:not(.pcweb):is(.av-hatabo, .av-komugi):not(.hbp-open):not(.plain) .hbtop { padding: env(safe-area-inset-top) 6px 0; }
   /* トーク画面の下：＋・入力欄・話すボタン（文字があるときは送るボタン）・注意書き */
   body.cl:not(.pcweb) .chatv .vsw, body.cl:not(.pcweb) .chatv .cv-row { display: none !important; }
@@ -1948,6 +1948,20 @@ body.cl .hbask.has .cldict, body.cl .chatv .cv-in.has .cldict { display: none !i
   body.cl.drawer-open .clfab { display: none !important; }
 }
 .hbask-emb { width: 28px; height: 28px; border-radius: 50%; background: #0A1226; }
+
+/* ===== 11/21 3回目：緑をなくす・トークとキャラはスマホでは下・メモのGoogleのカード ===== */
+body.cl .hbs-kind button.on { background: #F4F6FA !important; border-color: #F4F6FA !important; color: #0A1226 !important; }
+body.cl .hbt.on, body.cl .hbt.me, body.cl .hbt.on:hover { background: #1A2E55 !important; border-color: rgba(150,180,230,.3) !important; }
+body.cl .hbt[data-tk="me:me"], body.cl .hbt[data-tk="me:me"]:hover { background: linear-gradient(90deg, rgba(58,90,160,.5), rgba(26,46,85,.35)) !important; border: 1px solid rgba(150,180,230,.28) !important; }
+body.cl .clacct i { background: #3B5A99; color: #fff; }
+body.cl .hbpage .gdrive, body.cl .hbpage .gdrive.on { background: #12213F !important; border: 1px solid rgba(150,180,230,.2) !important; color: #E8EBF0 !important; }
+body.cl .hbpage .gdrive b, body.cl .hbpage .gdrive span, body.cl .hbpage .gdrive label { color: #E8EBF0 !important; }
+body.cl .hbpage .gdrive #gUnlink { background: rgba(255,255,255,.08) !important; color: #C9D3E6 !important; }
+@media (max-width: 899px) {
+  body.cl:not(.pcweb):is(.av-hatabo, .av-komugi):not(.hbp-open):not(.plain) .clmode { top: auto; bottom: calc(env(safe-area-inset-bottom) + 92px); }
+  body.cl:not(.pcweb).chatview #cvList { padding-top: 10px !important; padding-bottom: 50px !important; }
+}
+#cldbg { position: fixed; z-index: 2147483600; left: 8px; right: 8px; top: calc(env(safe-area-inset-top) + 64px); padding: 12px 14px; border-radius: 12px; background: #fff; color: #0A1226; font: 600 13px/1.6 ui-monospace, monospace; white-space: pre-wrap; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
 </style>
 </head>
 <body>
@@ -2567,7 +2581,7 @@ body.cl .hbask.has .cldict, body.cl .chatv .cv-in.has .cldict { display: none !i
   const PWA_PHONE = (() => { try { return (matchMedia('(display-mode: standalone)').matches || navigator.standalone === true) && matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } })();   // ホーム画面から開いたスマホ：スマホの見た目のまま
   if (PWA_PHONE) { document.body.classList.add('pwa'); document.documentElement.classList.add('pwa'); }
   // iPhoneのホーム画面のハタボ：画面の高さが上の時計の帯の分だけ短く伝わり、下にすき間ができることがある。そのすき間の高さをはかって、下の部品をのばす
-  function pwaGap() { if (!PWA_PHONE) return; let g = 0; try { const sh = Math.max(screen.height, screen.width), sw = Math.min(screen.height, screen.width); if (innerHeight > innerWidth && Math.abs(innerWidth - sw) < 2) g = Math.round(sh - innerHeight); } catch (e) {} if (!(g > 0 && g <= 120)) g = 0; document.documentElement.style.setProperty('--pwgap', g + 'px'); }
+  function pwaGap() { if (!PWA_PHONE) return; let g = 0; try { const sh = Math.max(screen.height, screen.width), sw = Math.min(screen.height, screen.width); if (innerHeight > innerWidth && Math.abs(innerWidth - sw) < 2) g = Math.round(sh - innerHeight); } catch (e) {} if (!(g > 0 && g <= 120)) g = 0; document.documentElement.style.setProperty('--pwgap', '0px'); document.documentElement.dataset.gap = g; }
   pwaGap(); addEventListener('resize', pwaGap); addEventListener('orientationchange', () => setTimeout(pwaGap, 300));
   try { if (!PWA_PHONE && (WT || (LIFF && !/\bLine\//i.test(navigator.userAgent)))) document.body.classList.add('pcweb'); } catch (e) {}
   // ハタボのミニアプリ（HATHA LAB）で開いたときは、つながる前からハタボの見た目にする（家族のバターちゃんは寺小屋の入口）
@@ -6464,6 +6478,15 @@ body.cl .hbask.has .cldict, body.cl .chatv .cv-in.has .cldict { display: none !i
     if (!CL_SR) document.querySelectorAll('.cldict').forEach(b => { b.hidden = true; });
   }
   setTimeout(clInit2, 300);
+
+  /* 画面の高さを調べる：上のタイトルを3秒おすと、画面の大きさを出す（iPhoneの下のすき間を直すため） */
+  { let t0 = 0, tm = null;
+    const show = () => { const d = document.documentElement, cs = getComputedStyle(d), probe = document.createElement('div'); probe.style.cssText = 'position:fixed;top:0;height:env(safe-area-inset-top);width:env(safe-area-inset-bottom)'; document.body.append(probe); const r = probe.getBoundingClientRect(); probe.remove();
+      const vv = window.visualViewport || {}, sa = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+      let b = $('cldbg'); if (!b) { b = document.createElement('div'); b.id = 'cldbg'; b.onclick = () => b.remove(); document.body.append(b); }
+      b.textContent = '画面の大きさ（このまま写真を送ってください）\nscreen ' + screen.width + '×' + screen.height + '\ninner ' + innerWidth + '×' + innerHeight + '\nvisual ' + Math.round(vv.width || 0) + '×' + Math.round(vv.height || 0) + ' top ' + Math.round(vv.offsetTop || 0) + '\nclient ' + d.clientWidth + '×' + d.clientHeight + '\nsafe top ' + Math.round(r.height) + ' bottom ' + Math.round(r.width) + '\nstandalone ' + sa + ' gap ' + (d.dataset.gap || 0) + '\n' + navigator.userAgent.replace(/^Mozilla\/5\.0 /, '').slice(0, 90) + '\n（押すと消えます）'; };
+    document.addEventListener('pointerdown', e => { if (e.target.closest && e.target.closest('[data-cl-title]')) { t0 = Date.now(); clearTimeout(tm); tm = setTimeout(show, 3000); } }, true);
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(n => document.addEventListener(n, () => clearTimeout(tm), true)); }
   setInterval(() => {   // 切りかえの見た目・入力欄のあるページか・左の一覧が開いているか
     if (!CL) return;
     const chat = document.body.classList.contains('chatview');
