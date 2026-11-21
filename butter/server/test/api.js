@@ -41,7 +41,7 @@ function client(port, hello) { return new Promise((resolve, reject) => {
   assert.ok(ini.j.result.serverInfo.name === 'hatabo' && ini.j.result.capabilities.tools, 'initialize');
   const nt = await fetch('http://127.0.0.1:' + port + P, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) });
   assert.strictEqual(nt.status, 202, 'お知らせは202');
-  const tl = await rpc(P, 'tools/list'); assert.ok(tl.j.result.tools.some(t => t.name === 'search_aibo') && tl.j.result.tools.length === 9, 'tools/list');
+  const tl = await rpc(P, 'tools/list'); assert.ok(tl.j.result.tools.some(t => t.name === 'search_aibo') && tl.j.result.tools.length === 11, 'tools/list');
   const rm = await rpc(P, 'tools/call', { name: 'remember', arguments: { text: '打ち合わせは平日の夜がいい' } }); assert.ok(rm.j.result.structuredContent.ok && rm.j.result.structuredContent.character === 'hatabo', '覚えさせる');
   await rpc(P, 'tools/call', { name: 'remember', arguments: { text: '博多の話題が好き', character: 'komugi' } });
   const an = await rpc(P, 'tools/call', { name: 'add_note', arguments: { title: 'AIからのメモ', text: 'Claudeから残したメモ' } }); assert.ok(an.j.result.structuredContent.ok, 'メモを残す');
@@ -50,6 +50,17 @@ function client(port, hello) { return new Promise((resolve, reject) => {
   const rk = await rpc(P, 'tools/call', { name: 'recall', arguments: { character: 'komugi', notes: 0 } }).then(x => x.j.result.structuredContent);
   assert.ok(rk.lessons.length === 1 && rk.lessons[0] === '博多の話題が好き' && rk.notes.length === 0, 'コムギの記憶');
   assert.ok(!/U[0-9a-f]{32}/.test(JSON.stringify([rm.j, an.j, rc, rk])), '記憶の道具もLINEのIDを出さない');
+  const sc1 = await rpc(P, 'tools/call', { name: 'set_character', arguments: { tone: 'polite', dialect: 'hakata', call_me: 'ヒロさん', rules: '結論から話す' } }).then(x => x.j.result.structuredContent);
+  assert.ok(sc1.ok && sc1.settings.tone === 'polite' && sc1.settings.dialect === 'hakata' && sc1.settings.call_me === 'ヒロさん', '自分のハタボのキャラ設定を変える');
+  const gc1 = await rpc(P, 'tools/call', { name: 'get_character', arguments: {} }).then(x => x.j.result.structuredContent);
+  assert.ok(gc1.settings.rules === '結論から話す' && gc1.options.dialect.hakata, 'キャラ設定を見る（選べる値つき）');
+  const sc2 = await rpc(P, 'tools/call', { name: 'set_character', arguments: { aibo: cl.code, tone: 'gentle', rules: 'お客さまには敬語で、メニューを先に案内する' } }).then(x => x.j.result.structuredContent);
+  assert.ok(sc2.ok && sc2.character.tone === 'gentle', '愛棒ごとのキャラ設定');
+  const cr = require('../server.js').cloneRule(await require('../server.js').getRef(cl.code));
+  assert.ok(cr.includes('やさしく、ゆっくり') && cr.includes('メニューを先に案内する'), '愛棒の話し方が窓口の決まりに入る');
+  const un = await rpc(P, 'tools/call', { name: 'set_character', arguments: { aibo: cl.code, undo: true } }).then(x => x.j.result.structuredContent);
+  assert.ok(un.ok && un.character.tone === 'char', '1つ前に戻す');
+  const badc = await rpc(P, 'tools/call', { name: 'set_character', arguments: { aibo: 'cxxxxxxx', tone: 'frank' } }); assert.ok(badc.j.result.isError, 'ほかの人の愛棒は変えられない');
   const sr = await rpc('/mcp', 'tools/call', { name: 'search_aibo', arguments: { query: 'そば', area: '高津区' } }, { Authorization: 'Bearer ' + key });
   const found = sr.j.result.structuredContent; assert.ok(found.found === 1 && found.aibo[0].id === cl.code && found.aibo[0].can_reserve, 'さがす（Bearerでも）');
   const all = JSON.stringify([ini.j, tl.j, sr.j]); assert.ok(!/U[0-9a-f]{32}/.test(all) && !/"owner":"g:/.test(all), 'LINEのIDは外に出さない');
