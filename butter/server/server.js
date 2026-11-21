@@ -819,6 +819,7 @@ async function googleLogin(code, res, page, x) {
       owner = offId; await saveCol(gmailKey(email), 'gmail', { owner, email, at: Date.now(), via: 'office' }).catch(() => {});
     }
     if (x && x.oauth) return owner ? oauthConsent(res, x.oauth, owner, email) : page('まだハタボとつながっていません', email + ' は、まだハタボのアカウントとつながっていません。もどって「LINEでつなぐ」をえらぶか、LINEのMyハタボの「Googleアカウント連携」でこのGmailをつないでから、もう一度おためしください。');
+    if (x && x.to === 'office' && !office) return page('事務局のアカウントではありません', email + ' は、事務局の管理画面に入れるアカウントではありません。<br><br><a href="' + (ENV.SITE_URL || 'https://www.hatha-lab.com') + '/mypage.html">Myハタボにログインする</a>');
     let isNew = false;
     if (!owner && !office) {   // はじめての人：Googleだけで、そのままアカウントをつくる（7日間のお試しから）
       owner = 'g_' + gmailKey(email).slice(0, 24); isNew = true;
@@ -829,14 +830,14 @@ async function googleLogin(code, res, page, x) {
     if (perm && owner) { const e = PERMS.list.find(x => x.email === email); if (e && !e.owner) { e.owner = owner.replace(/^g:/, ''); await saveCol('all', 'perms', { list: PERMS.list }).catch(() => {}); } }   // Googleで入った人のLINEのアカウントも、同じ役割にする
     const t = webSign({ owner, office: !!perm, perm, email, nu: isNew ? 1 : 0, exp: Date.now() + 12 * 3600000 });
     if (!t) return page('準備中です', 'ウェブのログインの鍵（WEB_SECRET）がまだ設定されていません。');
-    res.writeHead(302, { Location: ENV.APP_URL + '&page=' + (office ? 'admin' : 'my') + '#wt=' + t }); res.end();
+    res.writeHead(302, { Location: ENV.APP_URL + '&page=' + (office && x && x.to === 'office' ? 'office' : 'my') + '#wt=' + t }); res.end();
   } catch (e) { console.error('google login', String(e.message).slice(0, 160)); page('ログインできませんでした', 'もう一度おためしください。'); }
 }
 function googleHttp(req, res) {
   const u = new URL(req.url, ENV.PUBLIC_URL), page = (t, b) => { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); res.end('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font-family:sans-serif;background:#F6F8FC;color:#16233F;display:grid;place-items:center;min-height:90vh;text-align:center;padding:20px"><div><h2>' + t + '</h2><p>' + b + '</p></div>'); };
   if (!ENV.GOOGLE_CLIENT_ID) return page('準備中です', 'Googleアカウント連携は、まだ設定されていません。');
-  if (u.pathname === '/google/login') {   // サイトの「ログイン」→ Googleでログイン（Myハタボ・事務局の管理画面へ）。?oauth=…はAIアプリからつなぐとき
-    const n = crypto.randomBytes(16).toString('hex'), rid = String(u.searchParams.get('oauth') || '').replace(/[^\w-]/g, '').slice(0, 64); gNonce.set(n, { login: true, at: Date.now(), oauth: rid || undefined }); if (gNonce.size > 500) gNonce.clear();
+  if (u.pathname === '/google/login' || u.pathname === '/office') {   // サイトの「ログイン」→ Googleでログイン（Myハタボへ）。/office は事務局の入口（事務局の画面へ）。?oauth=…はAIアプリからつなぐとき
+    const n = crypto.randomBytes(16).toString('hex'), rid = String(u.searchParams.get('oauth') || '').replace(/[^\w-]/g, '').slice(0, 64); gNonce.set(n, { login: true, at: Date.now(), oauth: rid || undefined, to: u.pathname === '/office' || u.searchParams.get('to') === 'office' ? 'office' : '' }); if (gNonce.size > 500) gNonce.clear();
     res.writeHead(302, { Location: 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({ client_id: ENV.GOOGLE_CLIENT_ID, redirect_uri: ENV.PUBLIC_URL + '/google/callback', response_type: 'code', scope: 'openid email profile', prompt: 'select_account', state: n }) });
     return res.end();
   }
@@ -3837,7 +3838,7 @@ async function oauthLine(owner, rid, ok) {
 }
 function createServer() {
   const server = http.createServer((req, res) => {
-    if (req.url.startsWith('/google/')) return googleHttp(req, res);
+    if (req.url.startsWith('/google/') || req.url === '/office' || req.url.startsWith('/office?')) return googleHttp(req, res);   // /office：事務局の入口
     if (req.url === '/favicon.ico' || req.url === '/icon.png') { res.writeHead(302, { Location: 'https://www.hatha-lab.com/' + (req.url === '/icon.png' ? 'icon-512.png' : 'favicon.ico') }); return res.end(); }
     if (req.url.startsWith('/admin/')) return adminHttp(req, res).catch(e => { console.error('admin', String(e.message).slice(0, 160)); try { res.writeHead(500); res.end('{}'); } catch (x) {} });
     if (req.url.startsWith('/oauth/') || req.url.startsWith('/.well-known/oauth') || req.url.startsWith('/.well-known/openid-configuration')) return oauthHttp(req, res).catch(e => { console.error('oauth', String(e.message).slice(0, 160)); try { res.writeHead(500); res.end('{}'); } catch (x) {} });
