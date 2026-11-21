@@ -3594,7 +3594,7 @@ const OA_CAN = '<ul><li>ハタボのネットワークで、お店や人の愛�
 async function oaConsentHtml(rq, owner, via) {
   const t = webSign({ rid: rq.rid, owner, exp: Date.now() + 10 * 60000 });
   return '<h1>' + oaEsc(rq.name) + ' を、ハタボにつなぎますか？</h1><p>' + oaEsc(via) + 'で確かめました。つなぐと、' + oaEsc(rq.name) + ' からこんなことができます。</p>' + OA_CAN
-    + '<form method="post" action="/oauth/approve"><input type="hidden" name="t" value="' + oaEsc(t) + '"><button class="b ok" name="ok" value="1">つなぐ</button><button class="b n" name="ok" value="0">やめる</button></form>';
+    + '<form method="post" action="/oauth/approve"><input type="hidden" name="t" value="' + oaEsc(t) + '"><button class="b ok" name="ok" value="1" onclick="setTimeout(()=>{this.disabled=true;this.textContent=\'つないでいます…\'},0)">つなぐ</button><button class="b n" name="ok" value="0">やめる</button></form>';
 }
 async function oauthConsent(res, rid, owner, email) {
   const rq = await loadCol(rid, 'oauthreq'); if (!rq.rid || Date.now() > rq.exp) return oaPage(res, 'もう一度おねがいします', '<h1>%T%</h1><p>時間が切れました。AIアプリから、もう一度つないでください。</p>');
@@ -3677,7 +3677,9 @@ async function oauthHttp(req, res) {
   if (P === '/oauth/approve' && req.method === 'POST') {
     const f = new URLSearchParams(await oaBody(req)), W = webVerify(f.get('t'));
     if (!W || !W.rid || !W.owner) return oaPage(res, 'もう一度おねがいします', '<h1>%T%</h1><p>時間が切れました。AIアプリから、もう一度つないでください。</p>');
-    const rq = await loadCol(W.rid, 'oauthreq'); if (!rq.rid || rq.done || Date.now() > rq.exp) return oaPage(res, 'もう一度おねがいします', '<h1>%T%</h1><p>時間が切れました。</p>');
+    const rq = await loadCol(W.rid, 'oauthreq');
+    if (rq.rid && rq.done && rq.owner === W.owner) return oaPage(res, 'つなぎました', '<h1>%T%</h1><p>もうつながっています。この画面は閉じて、AIアプリの画面にもどってください。</p>');   // 2回押したときなど
+    if (!rq.rid || rq.done || Date.now() > rq.exp) return oaPage(res, 'もう一度おねがいします', '<h1>%T%</h1><p>時間が切れたか、ほかの方法でつなぎ終わっています。AIアプリから、もう一度つないでください。</p>');
     if (f.get('ok') !== '1') { await saveCol(rq.rid, 'oauthreq', { done: true }); const x = new URL(rq.redirect); x.searchParams.set('error', 'access_denied'); if (rq.state) x.searchParams.set('state', rq.state); res.writeHead(302, { Location: x.toString() }); return res.end(); }
     res.writeHead(302, { Location: await oaIssueCode(rq, W.owner) }); return res.end();
   }
