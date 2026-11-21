@@ -816,6 +816,16 @@ async function googleLogin(code, res, page, x) {
     const j = await r.json(); let p = {}; try { p = JSON.parse(Buffer.from(String(j.id_token || '').split('.')[1], 'base64url').toString()); } catch (e) {}
     const email = String(p.email || '').toLowerCase();
     if (!email || p.email_verified === false) return page('ログインできませんでした', 'Googleのメールアドレスを確かめられませんでした。もう一度おためしください。');
+    if (x && x.inv) {   // 事務局の招待URL：1回だけ・7日まで。開いた人のGoogleのメールに、その役割を付ける
+      const I = await loadCol(x.inv, 'invite').catch(() => ({}));
+      if (!I.perm || I.used || Date.now() > (I.exp || 0)) return page('招待URLが使えません', 'この招待URLは、もう使われたか、期限（7日）が切れています。招待した人に、もう一度URLを出してもらってください。');
+      await loadPerms(true); const L = PERMS.list; let e = L.find(y => y.email === email);
+      if (!(e && (e.perm === 'top' || ENV.TOP_EMAILS.includes(email)))) { if (!e) { e = { email, at: Date.now() }; L.push(e); } e.perm = I.perm; e.name = I.name || e.name || ''; e.by = '招待（' + (I.by || '') + '）'; e.upd = Date.now(); }
+      const gm0 = await loadCol(gmailKey(email), 'gmail').catch(() => ({})); if (gm0.owner && !e.owner) e.owner = String(gm0.owner).replace(/^g:/, '');
+      await saveCol('all', 'perms', { list: L, log: [{ at: Date.now(), by: '招待URL', what: email + ' → ' + (PERM_NAMES[I.perm] || I.perm) + '（' + (I.name || '') + '・招待：' + (I.by || '') + '）' }].concat(PERMS.log || []).slice(0, 100) }); PERMS_AT = 0;
+      await saveCol(x.inv, 'invite', { used: Date.now(), usedBy: email });
+      officePush('［事務局の招待］' + (I.name || email) + 'さん（' + email + '）が招待URLを開いて、「' + (PERM_NAMES[I.perm] || I.perm) + '」になりました。').catch(() => {});
+    }
     const gm = await loadCol(gmailKey(email), 'gmail'); let owner = gm.owner || ''; const office = ENV.OFFICE_EMAILS.includes(email) || ENV.TOP_EMAILS.includes(email) || isOfficeOwner(owner) || (await loadPerms(), !!permOf(owner, email));
     const offId = /^U[0-9a-f]{32}$/.test(ENV.OFFICE_OWNERS[0] || '') ? ENV.OFFICE_OWNERS[0] : '';   // 本物のLINEのIDのときだけ使う（仮の値は使わない）
     if (gm.via === 'office' && owner !== offId) owner = '';   // 前に仮の値でつないだものは、つなぎ直す
@@ -841,7 +851,7 @@ function googleHttp(req, res) {
   const u = new URL(req.url, ENV.PUBLIC_URL), page = (t, b) => { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); res.end('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font-family:sans-serif;background:#F6F8FC;color:#16233F;display:grid;place-items:center;min-height:90vh;text-align:center;padding:20px"><div><h2>' + t + '</h2><p>' + b + '</p></div>'); };
   if (!ENV.GOOGLE_CLIENT_ID) return page('準備中です', 'Googleアカウント連携は、まだ設定されていません。');
   if (u.pathname === '/google/login' || u.pathname === '/office') {   // サイトの「ログイン」→ Googleでログイン（Myハタボへ）。/office は事務局の入口（事務局の画面へ）。?oauth=…はAIアプリからつなぐとき
-    const n = crypto.randomBytes(16).toString('hex'), rid = String(u.searchParams.get('oauth') || '').replace(/[^\w-]/g, '').slice(0, 64); gNonce.set(n, { login: true, at: Date.now(), oauth: rid || undefined, to: u.pathname === '/office' || u.searchParams.get('to') === 'office' ? 'office' : '' }); if (gNonce.size > 500) gNonce.clear();
+    const n = crypto.randomBytes(16).toString('hex'), rid = String(u.searchParams.get('oauth') || '').replace(/[^\w-]/g, '').slice(0, 64); gNonce.set(n, { login: true, at: Date.now(), oauth: rid || undefined, to: u.pathname === '/office' || u.searchParams.get('to') === 'office' || u.searchParams.get('inv') ? 'office' : '', inv: String(u.searchParams.get('inv') || '').replace(/[^\w]/g, '').slice(0, 40) || undefined }); if (gNonce.size > 500) gNonce.clear();
     res.writeHead(302, { Location: 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({ client_id: ENV.GOOGLE_CLIENT_ID, redirect_uri: ENV.PUBLIC_URL + '/google/callback', response_type: 'code', scope: 'openid email profile', prompt: 'select_account', state: n }) });
     return res.end();
   }
@@ -2421,12 +2431,22 @@ function session(ws) {
       else { let e = L.find(x => x.email === email); if (!e) { e = { email, at: Date.now() }; L.push(e); } e.perm = perm; e.name = String(m.name || e.name || '').slice(0, 30); e.by = who; e.upd = Date.now();
         const gm = await loadCol(gmailKey(email), 'gmail').catch(() => ({})); if (gm.owner && !e.owner) e.owner = String(gm.owner).replace(/^g:/, '');
         log.unshift({ at: Date.now(), by: who, what: email + ' → ' + PERM_NAMES[perm] }); msg = email + ' を「' + PERM_NAMES[perm] + '」にしました'; }
+    } else if (m.type === 'perm_invite') {
+      const perm = String(m.perm || ''); if (!PERM_NAMES[perm] || perm === 'top') msg = '招待できる役割は、事務局か開発です';
+      else { const id = 'i' + crypto.randomBytes(12).toString('hex'), I = { perm, name: String(m.name || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 30), by: who, at: Date.now(), exp: Date.now() + 7 * 86400000 };
+        await saveCol(id, 'invite', I); const IL = await loadCol('all', 'invites').catch(() => ({})); await saveCol('all', 'invites', { ids: [id].concat(IL.ids || []).slice(0, 50) });
+        log.unshift({ at: Date.now(), by: who, what: '招待URLを作りました：' + (I.name || '') + '（' + PERM_NAMES[perm] + '）' }); msg = '招待URLを作りました。7日まで・1回だけ使えます'; S.newInvite = ENV.PUBLIC_URL + '/office?inv=' + id; }
+    } else if (m.type === 'perm_inv_del') {
+      const id = String(m.id || '').replace(/[^\w]/g, '').slice(0, 40); if (id) { await saveCol(id, 'invite', { exp: 0 }); log.unshift({ at: Date.now(), by: who, what: '招待URLを取り消しました' }); msg = '招待URLを取り消しました'; }
     } else if (m.type === 'perm_del') {
       const email = String(m.email || '').toLowerCase(), i = L.findIndex(x => x.email === email);
       if (i >= 0) { L.splice(i, 1); log.unshift({ at: Date.now(), by: who, what: email + ' の役割を外しました' }); msg = email + ' の役割を外しました'; }
     }
     if (m.type !== 'perms') { await saveCol('all', 'perms', { list: L, log: log.slice(0, 100) }); PERMS_AT = 0; await loadPerms(true); }
-    send({ type: 'perms', perm: 'top', names: PERM_NAMES, list: PERMS.list.map(x => ({ email: x.email, perm: x.perm, name: x.name || '', linked: !!x.owner, upd: x.upd || x.at || 0 })), top: ENV.TOP_EMAILS, office: ENV.OFFICE_EMAILS, log: PERMS.log.slice(0, 30), msg });
+    const IL = await loadCol('all', 'invites').catch(() => ({})), invites = [];
+    for (const id of (IL.ids || []).slice(0, 20)) { const I = await loadCol(id, 'invite').catch(() => ({})); if (I.perm) invites.push({ id, name: I.name || '', perm: I.perm, by: I.by || '', at: I.at || 0, exp: I.exp || 0, used: I.used || 0, usedBy: I.usedBy || '', live: !I.used && Date.now() < (I.exp || 0), url: !I.used && Date.now() < (I.exp || 0) ? ENV.PUBLIC_URL + '/office?inv=' + id : '' }); }
+    const newUrl = S.newInvite || ''; S.newInvite = '';
+    send({ type: 'perms', perm: 'top', names: PERM_NAMES, list: PERMS.list.map(x => ({ email: x.email, perm: x.perm, name: x.name || '', linked: !!x.owner, upd: x.upd || x.at || 0 })), top: ENV.TOP_EMAILS, office: ENV.OFFICE_EMAILS, log: PERMS.log.slice(0, 30), invites, newUrl, msg });
   }
   async function onReqs(m) {
     if (!isOffice()) return send({ type: 'reqs', denied: true });
@@ -3391,7 +3411,7 @@ function session(ws) {
       if (m.type === 'clones' || m.type === 'clone_new' || m.type === 'clone_set') return onClones(m);
       if (m.type === 'admin' || m.type === 'admin_set' || m.type === 'admin_person') return onAdmin(m);
       if (m.type === 'chief_send') return onChiefSend(m);
-      if (m.type === 'perms' || m.type === 'perm_set' || m.type === 'perm_del') return onPerms(m);
+      if (m.type === 'perms' || m.type === 'perm_set' || m.type === 'perm_del' || m.type === 'perm_invite' || m.type === 'perm_inv_del') return onPerms(m);
       if (m.type === 'api' || m.type === 'api_new' || m.type === 'api_stop' || m.type === 'api_resv') return onApi(m);
       if (['console', 'thr_goen', 'thr_open', 'thr_draft', 'thr_send', 'consult', 'mem_set', 'mem_del', 'aibo_set', 'con_set', 'staff_add', 'staff_del', 'con_url_new', 'con_url_set', 'grp_send'].includes(m.type)) return onConsole(m).catch(e => { console.error('console', m.type, String(e && e.stack || e).slice(0, 400)); send({ type: 'console', error: '管理画面の読みこみでエラーがおきました（' + String(e && e.message || e).slice(0, 80) + '）' }); });
       if (m.type === 'docs' || m.type === 'docs_set' || m.type === 'docs_share' || m.type === 'docs_copy') return onDocs(m);

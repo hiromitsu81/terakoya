@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8"><meta name="hb-ver" content="11/21-1915">
+<meta charset="utf-8"><meta name="hb-ver" content="11/21-1930">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
 <title>福まねき特戦隊｜バターちゃん</title>
@@ -4242,7 +4242,14 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
         <p style="font-size:13px;line-height:1.8;opacity:.85">最高管理者：すべて（役割の付け外しも）。事務局：窓口の会話・オーナー・愛棒・お金。開発：事務局の画面に入れるが、会話の中身は「●」で伏せ、お金は出さず、変えることはできない。<br>Googleで入るときのメールで決めます。そのGmailをLINEのMyハタボと連携すると、LINEで入っても同じ役割になります。</p>
         <div class="hbrows">${[].concat((P.top || []).map(e => `<div class="hbrow"><div><b>${esc(e)}</b><span>最高管理者（サーバーの設定）</span></div></div>`), (P.office || []).map(e => `<div class="hbrow"><div><b>${esc(e)}</b><span>事務局（サーバーの設定）</span></div></div>`), (P.list || []).map(x => `<div class="hbrow"><div><b>${esc(x.name ? x.name + '　' : '')}${esc(x.email)}</b><span>${esc(N[x.perm] || x.perm)}${x.linked ? '・LINEとつながっています' : '・LINEとはまだ'}・${dt(x.upd)}</span></div><button type="button" class="hbmini" data-pdel="${esc(x.email)}">外す</button></div>`)).join('') || '<p>まだいません</p>'}</div>
         <form id="permF" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px"><input class="hbin" id="permN" placeholder="名前（例：やすくん）" style="flex:1 1 140px"><input class="hbin" id="permE" type="email" placeholder="Gmail" required style="flex:2 1 220px"><select class="hbin" id="permP" style="flex:0 0 auto">${opt('dev')}</select><button class="hbask-go" type="submit" style="width:auto;padding:0 18px">付ける</button></form></div>
+        <div class="hbc hbwide"><div class="k">INVITE</div><h3>招待URL</h3><p style="font-size:13px;line-height:1.8;opacity:.85">役割を選んでURLを作り、相手に送ります。相手がURLを開いてGoogleでログインすると、そのGmailにその役割が付きます（1回だけ・7日まで）。付いたら、事務局のLINEに知らせます。</p>
+          <form id="invF" style="display:flex;gap:8px;flex-wrap:wrap"><input class="hbin" id="invN" placeholder="相手の名前（例：やすくん）" style="flex:1 1 160px"><select class="hbin" id="invP" style="flex:0 0 auto"><option value="office">事務局</option><option value="dev" selected>開発</option></select><button class="hbask-go" type="submit" style="width:auto;padding:0 18px">招待URLを作る</button></form>
+          ${P.newUrl ? `<div class="hburl" style="margin-top:12px"><input class="hbin" readonly value="${esc(P.newUrl)}" id="invNew"><button type="button" class="hbbtn w" data-icopy="${esc(P.newUrl)}">コピー</button></div><p class="hbmuted" style="font-size:12px">このURLは、渡したい人にだけ送ってください。開いた人に役割が付きます。</p>` : ''}
+          <div class="hbrows" style="margin-top:12px">${(P.invites || []).map(v => `<div class="hbrow"><div><b>${esc(v.name || '（名前なし）')}・${esc(N[v.perm] || v.perm)}</b><span>${v.used ? '使われました：' + esc(v.usedBy) + '・' + new Date(v.used).toLocaleDateString('ja-JP') : v.live ? new Date(v.exp).toLocaleDateString('ja-JP') + 'まで・まだ使われていません' : '期限切れ・取り消し'}・作った人 ${esc(v.by)}</span></div>${v.live ? `<button type="button" class="hbmini" data-icopy="${esc(v.url)}">コピー</button><button type="button" class="hbmini" data-idel="${esc(v.id)}">取り消す</button>` : ''}</div>`).join('') || '<p class="hbmuted">まだありません</p>'}</div></div>
         <div class="hbc hbwide"><div class="k">LOG</div><h3>変えた記録</h3><div class="hbrows">${(P.log || []).map(l => `<div class="hbrow"><div><b>${esc(l.what)}</b><span>${esc(l.by || '')}・${new Date(l.at).toLocaleString('ja-JP')}</span></div></div>`).join('') || '<p>まだありません</p>'}</div></div>`;
+      body.querySelector('#invF').onsubmit = e => { e.preventDefault(); jrSend({ type: 'perm_invite', perm: $('invP').value, name: $('invN').value }); };
+      body.querySelectorAll('[data-icopy]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(b.dataset.icopy); toast('コピーしました'); } catch (x) { toast('コピーできませんでした'); } });
+      body.querySelectorAll('[data-idel]').forEach(b => b.onclick = () => { if (confirm('この招待URLを取り消しますか？')) jrSend({ type: 'perm_inv_del', id: b.dataset.idel }); });
       body.querySelector('#permF').onsubmit = e => { e.preventDefault(); jrSend({ type: 'perm_set', email: $('permE').value, perm: $('permP').value, name: $('permN').value }); };
       body.querySelectorAll('[data-pdel]').forEach(b => b.onclick = () => { if (confirm(b.dataset.pdel + ' の役割を外しますか？')) jrSend({ type: 'perm_del', email: b.dataset.pdel }); });
     } else if (p === 'admin') {
