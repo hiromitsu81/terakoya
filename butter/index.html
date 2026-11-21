@@ -1272,7 +1272,8 @@ html:not(.kmapp) body:not(.av-komugi) .hbpage.p-my #hbpTitle { visibility: hidde
   .hbpage .hbp-top { gap: 8px !important; padding-left: 12px !important; padding-right: 12px !important; }
   .hbpage .hbp-brand { gap: 7px; } .hbpage .hbp-brand img { height: 32px !important; } .hbpage .hbp-brand b { font-size: 17px !important; }
   .hbp-mode button { padding: 5px 9px !important; }
-  html:not(.kmapp) body:not(.av-komugi) .hbpage:not(.p-my) .hbp-brand b { display: none; }
+  html:not(.kmapp) body:not(.av-komugi) .hbpage.p-person .hbp-brand b, html:not(.kmapp) body:not(.av-komugi) .hbpage.p-group .hbp-brand b { display: none; }
+  html:not(.kmapp) body:not(.av-komugi) .hbpage:not(.p-person):not(.p-group) #hbpTitle { display: none; }   /* 下のタブを切りかえても、上はいつも「HATHABO」（トークの相手の名前だけは出す） */
   .hbp-side { display: flex; flex-direction: column; position: fixed; top: 0; bottom: 0; left: 0; z-index: 70; width: min(86vw, 330px); padding: 18px 12px calc(12px + env(safe-area-inset-bottom)); background: var(--cnav, #10141E); border-right: 1px solid var(--cline); transform: translateX(-102%); transition: transform .22s ease; overflow-y: auto; }
   .hbpage.drawer .hbp-side { transform: none; }
   .hbp-scrim { position: fixed; inset: 0; z-index: 65; background: rgba(0,0,0,.5); }
@@ -2143,7 +2144,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
 
 <div class="overlay" id="startOverlay">
   <div class="sheet">
-    <h2>バターちゃんをおこす</h2>
+    <h2 data-hb="ハタボと話す">バターちゃんをおこす</h2>
     <p class="note">最初に1回だけ押してください（マイクを使います）。お話しはClaudeアプリのバターちゃんと。この画面は声に合わせて口や表情が動き、「チーちゃん、おて」「バターちゃん、ガチャ回して」に反応します。⚙で「このページが話す」にも切りかえられます。</p>
     <p class="err" id="startErr" hidden></p>
     <button class="btn primary" id="startBtn">おこす</button>
@@ -2274,7 +2275,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   };
   // LINEミニアプリ（LIFF）で開かれたとき：?liff=1&g=<GASのデプロイID>&liffId=<LIFF ID>
   const Q = new URLSearchParams(location.search.replace(/^\?liff\.state=[^&]*&?/, '?'));
-  window.HB_VER = '11/21-1230';   // アプリの版（新しいアプリが届いているかの目じるし）
+  window.HB_VER = '11/21-1240';   // アプリの版（新しいアプリが届いているかの目じるし）
   try { console.log('HATHABO app', window.HB_VER); } catch (e) {}
   // ?page= や ?rid= を、そのまま・Q・LINEの liff.state の中から読む（PCのブラウザでLINEにログインすると、もどったときにアドレスから消えるので先にとっておく）
   function qpar(n) { let v = new URLSearchParams(location.search).get(n) || Q.get(n); if (!v) { try { const st = new URLSearchParams(location.search).get('liff.state'); if (st) v = new URLSearchParams(decodeURIComponent(st).split('?')[1] || '').get(n); } catch (e) {} } return v || ''; }
@@ -2308,7 +2309,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
     document.title = nm + '｜HATHA LAB';
     const h = document.querySelector('header h1'); if (h) h.textContent = nm;
     const ti = document.getElementById('typedInput'); if (ti) { ti.placeholder = '文字でもOK'; ti.setAttribute('aria-label', nm + 'に送る文字'); }
-    const so = document.getElementById('startOverlay'); if (so) { const h2 = so.querySelector('h2'); if (h2) h2.textContent = nm + 'とはなす'; const no = so.querySelector('.note'); if (no) no.textContent = '最初に1回だけ押してください（マイクを使います）。'; const sb = document.getElementById('startBtn'); if (sb) sb.textContent = 'はじめる'; }
+    const so = document.getElementById('startOverlay'); if (so) { const h2 = so.querySelector('h2'); if (h2) h2.textContent = nm + 'と話す'; const no = so.querySelector('.note'); if (no) no.textContent = '最初に1回だけ押してください（マイクを使います）。'; const sb = document.getElementById('startBtn'); if (sb) sb.textContent = nm + 'と話す'; }
     const sc = document.getElementById('scene'); if (sc) sc.setAttribute('aria-label', 'まんなかに' + nm + '、左に招き猫のジャム猫、右に柴犬のチーちゃん');
     document.querySelectorAll('.bubble .who').forEach(w => { if (w.textContent === 'バターちゃん' || w.textContent === 'ジュニア' || ((w.textContent === 'ハタボ' || w.textContent === 'コムギ') && w.textContent !== nm)) w.textContent = nm; });
   }
@@ -4858,7 +4859,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   $('hbpMode').addEventListener('click', e => { const b = e.target.closest('[data-mode]'); if (!b) return; hbpClose(); if (window.hbSetView) window.hbSetView(b.dataset.mode); });
   function hbpOpen(p) {
     if (!HBP.data) { try { const c = store.get('hbpData', null); if (c && c.type === 'mypage') HBP.data = c; } catch (e) {} }   // 前回の内容をすぐ出して、届いたら新しくする
-    setTimeout(() => { if (document.body.classList.contains('av-hatabo') || document.body.classList.contains('av-komugi')) hbEgg(false); }, 900);
+    if (p === 'clones') setTimeout(() => { if (document.body.classList.contains('av-hatabo') || document.body.classList.contains('av-komugi')) hbEgg(false); }, 900);   // 卵は「愛棒」を開いたときだけ
     HBP.page = p || 'my'; hbTheme(); $('hbPage').hidden = false; document.body.classList.remove('hbshell'); document.body.classList.add('hbp-open'); hbpRender(); hbpChats(); if (HBP.page === 'console' && J.ready) jrSend({ type: 'console', as: store.get('conAs', 'office') }); if (HBS.friend === null) hbpFriend();
     hbpFetchAll();
   }
@@ -4901,7 +4902,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   else   if (HB_START === 'login' || HB_START === 'admin') { hbpOpen('my'); document.addEventListener('jrready', () => { if (J.office) hbpOpen('console'); else if (HB_START === 'admin') toast('管理画面は事務局だけです。Myハタボを開きました'); }, { once: true }); }
   else if (HB_START && HB_START !== 'talk') hbpOpen(HB_START);
   // ミニアプリのトップは、Myハタボのホーム（?page=talk・紹介URL（?ref=）・台本モードのときは、これまでどおり話す画面）
-  else if (!HB_START && (document.body.classList.contains('av-hatabo') || document.body.classList.contains('av-komugi')) && !Q.get('ref') && !new URLSearchParams(location.search).get('ref') && !Q.get('stage') && !new URLSearchParams(location.search).get('stage')) { hbpOpen('my'); document.addEventListener('jrready', () => { if (J.plain) hbpClose(); }, { once: true }); }
+  else if (!HB_START && (document.body.classList.contains('av-hatabo') || document.body.classList.contains('av-komugi')) && !Q.get('ref') && !new URLSearchParams(location.search).get('ref') && !Q.get('stage') && !new URLSearchParams(location.search).get('stage')) { if (window.hbSetView) window.hbSetView('chat'); }   // ミニアプリを開いたら、すぐトーク画面（ホームは下のタブから）
   /* --- パソコンで開いたときの使い方の案内（はじめての1回。あとから「アカウント」→「使い方の案内」でも見られる） --- */
   function pcQuiet() { let on = false; try { on = sessionStorage.getItem('hb.pcMic') === '1'; } catch (e) {} return document.body.classList.contains('pcweb') && !on; }
   const MCP_URL = 'https://butter-junior-722073142596.asia-northeast1.run.app/mcp';
@@ -4933,6 +4934,8 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
     document.body.appendChild(d); draw();
   }
   window.hbTour = hbTour;
+  // ハタボ・コムギのミニアプリ：「〜と話す」を押さなくても、開いたらそのままつなぐ（声を出す許可は、最初に画面をさわったときにもらう）
+  if (HATABO_APP && LIFF && !STAGE) { setTimeout(() => { const so = $('startOverlay'); if (so && !so.hidden) $('startBtn').click(); }, 300); document.addEventListener('pointerdown', () => { try { AC(); } catch (e) {} }, { once: true, capture: true }); }
   { const tb = $('hbpTabs'); if (tb && !tb.querySelector('.hbp-help')) { const hb = document.createElement('button'); hb.type = 'button'; hb.className = 'hbp-help'; hb.style.display = 'none'; hb.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 1 1 3.4 2.3c-.6.3-1 .8-1 1.5v.6M12 17h.01"/></svg><span>使い方</span>'; hb.onclick = e => { e.stopPropagation(); hbTour(); }; const ac = tb.querySelector('.hbp-acct'); tb.insertBefore(hb, ac || null); } }   // 左のメニューに「使い方」
   { const tourOnce = () => { let sk = ''; try { sk = sessionStorage.getItem('hb.tourSkip') || ''; } catch (e) {} if (document.body.classList.contains('pcweb') && !store.get('hbPcTour', 0) && !sk && !document.getElementById('hbTour')) hbTour(); };
     document.addEventListener('jrready', () => setTimeout(tourOnce, 600), { once: true });
@@ -5543,7 +5546,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   });
   showMode();
   liffBoot();
-  if (HATABO_APP) { const ib = KOMUGI_APP ? addBubble('コムギ', 'はじめまして。馬越 雅哉さんの相棒の、コムギです。気軽に話しかけてくださいね。', 'her') : addBubble('ハタボ', 'はじめまして、ハタボです。話しかけると、たまごから生まれます。', 'her'); if (ib) ib.parentElement.id = 'introBubble'; }
+  if (HATABO_APP) { const ib = KOMUGI_APP ? addBubble('コムギ', 'はじめまして。馬越 雅哉さんの相棒の、コムギです。気軽に話しかけてくださいね。', 'her') : addBubble('ハタボ', 'はじめまして、ハタボです。下の「話す」を押すか、文字で話しかけてください。', 'her'); if (ib) ib.parentElement.id = 'introBubble'; }
   else if (LIFF) addBubble('ジュニア', 'こんにちは。バターちゃんジュニアです。となりは柴犬のチーちゃんと、招き猫のジャム猫です。', 'her');
   else addBubble('バターちゃん', 'こんにちは！バターちゃんだよ。となりは柴犬のチーちゃん！', 'her');
   setState('idle');
