@@ -1776,7 +1776,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
 .ibrow time, .ibsys time { flex: none; font-size: 10px; color: var(--cmut, #8A93A6); }
 .ibsys { align-self: center; max-width: 86%; padding: 8px 14px; border-radius: 14px; background: var(--ccard, #FFF7E2); border: 1px solid rgba(226,178,60,.45); color: var(--ctext, #16233F); font-size: 13px; text-align: center; display: grid; gap: 2px; }
 .ibempty { text-align: center; margin: 40px 0; color: var(--cmut, #8A93A6); font-size: 14px; line-height: 1.7; }
-.ibcomp { position: sticky; bottom: 0; z-index: 3; display: flex; align-items: flex-end; gap: 8px; margin: 0 -16px; padding: 8px 12px 44px;   /* 下のまんなかの「話す」にかぶらないように */ background: var(--cbg, #F6F8FC); border-top: 1px solid var(--cline, #DCE2EC); }
+.ibcomp { position: sticky; bottom: 0; z-index: 3; display: flex; align-items: flex-end; gap: 8px; margin: 0 -16px; padding: 8px 12px calc(8px + env(safe-area-inset-bottom));   /* 下のまんなかの「話す」にかぶらないように */ background: var(--cbg, #F6F8FC); border-top: 1px solid var(--cline, #DCE2EC); }
 .ibcomp textarea { flex: 1; min-height: 40px; max-height: 120px; padding: 9px 14px; border-radius: 20px; border: 1px solid var(--cline, #DCE2EC); background: var(--ccard, #fff); color: var(--ctext, #16233F); font: 16px/1.4 var(--body); resize: none; }
 .ibcomp button { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 50%; background: #2F7D55; color: #fff; cursor: pointer; }
 .ibcomp button svg { width: 20px; height: 20px; }
@@ -1808,10 +1808,78 @@ body.pwa #talkOaBtn, body.pwa .pinbar { display: none !important; }
 
 /* ホーム画面のハタボ（iPhone）：下のすき間を白くしない。はかったすき間（--pwgap）の分、画面いっぱいの部品を下へのばす */
 html.pwa, html.pwa body { background: #0B0E15 !important; }
-html.pwa #pwSheet { bottom: calc(-1 * var(--pwgap, 0px)); padding-bottom: calc(max(20px, env(safe-area-inset-bottom)) + var(--pwgap, 0px)); }
+html.pwa #pwSheet { bottom: calc(-1 * var(--pwgap, 0px)); padding-bottom: max(20px, env(safe-area-inset-bottom)); }
 html.pwa .hbpage { bottom: calc(-1 * var(--pwgap, 0px)); }
-html.pwa .hbpage .hbp-tabs { padding-bottom: calc(6px + env(safe-area-inset-bottom) + var(--pwgap, 0px)); }
-html.pwa body:is(.av-hatabo, .av-komugi):not(.hbp-open):not(.plain) .hbbot { bottom: calc(-1 * var(--pwgap, 0px)); padding-bottom: calc(6px + env(safe-area-inset-bottom) + var(--pwgap, 0px)); }
+
+html.pwa body:is(.av-hatabo, .av-komugi):not(.hbp-open):not(.plain) .hbbot { bottom: calc(-1 * var(--pwgap, 0px)); }
+
+/* ===== Claudeの形の画面（ハタボのアプリ）：上は三本線・タイトル・新しい会話・点3つ。下は＋・入力欄・話すボタン。下のタブと左の帯はなし ===== */
+.clset { display: none; }
+.clnote { margin: 6px 0 0; text-align: center; font-size: 11px; line-height: 1.5; color: var(--cmut, #8A93A6); }
+body:not(.cl) .clnote { display: none; }
+.clask { display: grid; }
+body.cl #hbTopBrand, body.cl .hbp-brand { pointer-events: none !important; cursor: default !important; }   /* ロゴは押せない飾り（ホームは左の一覧から） */
+.clb { position: relative; display: grid; place-items: center; flex: none; width: 44px; height: 44px; padding: 0 !important; border: 0 !important; border-radius: 12px !important; background: transparent !important; color: #E8EBF0 !important; cursor: pointer; transition: transform .08s, background .15s; }
+.clb svg { width: 23px; height: 23px; }
+.clb:active { transform: scale(.92); background: rgba(255,255,255,.1) !important; }
+.clbadge { position: absolute; top: 5px; right: 3px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #EC7D8F; color: #fff; font: 800 11px/18px var(--display); font-style: normal; text-align: center; box-shadow: 0 0 0 2px #0B0E15; }
+.clbadge[hidden] { display: none; }
+.cltitle { flex: 1; min-width: 0; text-align: center; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font: 800 16px var(--display); letter-spacing: .02em; color: #fff; }
+.clpop { position: fixed; z-index: 2147482000; top: calc(env(safe-area-inset-top) + 54px); right: 10px; min-width: 200px; padding: 6px; border-radius: 16px; background: #1A2030; border: 1px solid rgba(255,255,255,.12); box-shadow: 0 18px 40px -12px rgba(0,0,0,.7); display: grid; }
+.clpop[hidden] { display: none; }
+.clpop button { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 0; border-radius: 10px; background: transparent; color: #E8EBF0; font: 700 15px var(--body); text-align: left; cursor: pointer; }
+.clpop button:active { background: rgba(255,255,255,.08); transform: scale(.98); }
+.clpop svg { width: 19px; height: 19px; flex: none; }
+#hbpSide button:active, #hbpSide .hbt:active, .clacct:active, .hbask button:active, .chatv .cv-in button:active { transform: scale(.96); transition: transform .08s; }
+@media (max-width: 899px) {
+  body.cl:not(.pcweb) .hbbot, body.cl:not(.pcweb) .hbp-strip, body.cl:not(.pcweb) #cvStrip, body.cl:not(.pcweb) .hbhomefab, body.cl:not(.pcweb) .cvfab, body.cl:not(.pcweb) .hbpage > .hbp-tabs { display: none !important; }
+  body.cl:not(.pcweb) .hbpage:not([hidden]) > .hbp-body, body.cl:not(.pcweb) .hbpage > .hbp-body.chatpg { padding-left: 16px !important; }
+  body.cl:not(.pcweb) #cvList { padding-left: 14px !important; }
+  body.cl:not(.pcweb) .app { padding-bottom: 0 !important; }
+  body.cl:not(.pcweb):is(.av-hatabo, .av-komugi) .chatv { bottom: calc(-1 * var(--pwgap, 0px)) !important; }
+  /* 上の帯 */
+  body.cl:not(.pcweb) .hbp-top > :not(.clset), body.cl:not(.pcweb) .hbtop > :not(.clset) { display: none !important; }
+  body.cl:not(.pcweb) .clset { display: flex; align-items: center; gap: 2px; width: 100%; }
+  body.cl:not(.pcweb) .hbp-top { padding: calc(6px + env(safe-area-inset-top)) 6px 6px !important; min-height: 0; }
+  body.cl:not(.pcweb):is(.av-hatabo, .av-komugi):not(.hbp-open):not(.plain) .hbtop { padding: env(safe-area-inset-top) 6px 0; }
+  /* トーク画面の下：＋・入力欄・話すボタン（文字があるときは送るボタン）・注意書き */
+  body.cl:not(.pcweb) .chatv .vsw, body.cl:not(.pcweb) .chatv .cv-row { display: none !important; }
+  body.cl:not(.pcweb) .chatv .cv-bot { padding: 8px 10px calc(8px + env(safe-area-inset-bottom)); }
+  body.cl:not(.pcweb) .chatv .cv-in { padding: 4px; gap: 4px; border-radius: 26px; }
+  body.cl:not(.pcweb) .chatv .cv-in .hbplus { background: transparent !important; color: inherit; width: 38px; height: 38px; }
+  body.cl:not(.pcweb) .chatv .cv-in input { padding: 0 4px; }
+  body.cl:not(.pcweb) .chatv .cv-in .cv-mic { width: 44px; height: 44px; flex: none; background: #2F7D55 !important; box-shadow: 0 0 0 3px rgba(98,173,127,.28), 0 6px 18px -6px rgba(63,163,106,.8); }
+  body.cl:not(.pcweb) .chatv .cv-in .cv-mic img { width: 30px; height: 30px; }
+  body.cl:not(.pcweb) .chatv .cv-in.has .cv-mic, body.cl:not(.pcweb) .chatv .cv-in:not(.has) button[type="submit"] { display: none; }
+  body.cl:not(.pcweb) .chatv .cv-in button[type="submit"] { width: 44px; height: 44px; background: #2F7D55 !important; }
+  /* ホーム：入力欄を下にくっつける */
+  body.cl:not(.pcweb) .hbpage:not([hidden]) .clask { position: fixed; z-index: 6; left: 0; right: 0; bottom: calc(-1 * var(--pwgap, 0px)); padding: 8px 10px calc(8px + env(safe-area-inset-bottom)); background: linear-gradient(180deg, rgba(11,14,21,0), var(--cbg, #0B0E15) 22%); }
+  body.cl:not(.pcweb) .hbpage.drawer .clask { position: static; padding: 0; background: none; }
+  body.cl:not(.pcweb) .hbpage > .hbp-body:has(.clask) { padding-bottom: calc(150px + env(safe-area-inset-bottom)) !important; }
+  body.cl:not(.pcweb) .hbask { padding: 6px 6px 6px 14px; border-radius: 26px; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 4px; }
+  body.cl:not(.pcweb) .hbask textarea { min-height: 24px; max-height: 120px; padding: 8px 4px !important; order: 2; }
+  body.cl:not(.pcweb) .hbask-row { display: contents; }
+  body.cl:not(.pcweb) .hbask .hbplus { order: 1; width: 38px; height: 38px; }
+  body.cl:not(.pcweb) .hbask .hbvpill, body.cl:not(.pcweb) .hbask-row > span { display: none; }
+  body.cl:not(.pcweb) .hbask-mic, body.cl:not(.pcweb) .hbask-go { order: 3; width: 44px; height: 44px; background: #2F7D55 !important; color: #fff !important; border: 0 !important; box-shadow: 0 0 0 3px rgba(98,173,127,.28), 0 6px 18px -6px rgba(63,163,106,.8); }
+  body.cl:not(.pcweb) .hbask.has .hbask-mic, body.cl:not(.pcweb) .hbask:not(.has) .hbask-go { display: none; }
+  /* 左の一覧：上にロゴ（飾り）とホーム・愛棒・ご縁マップを固定。下にトーク。いちばん下までいくと、つなぐ。最下段に自分 */
+  body.cl:not(.pcweb) .hbp-side { padding: 0 !important; overflow: hidden; bottom: calc(-1 * var(--pwgap, 0px)) !important; }
+  body.cl:not(.pcweb) #hbpNew, body.cl:not(.pcweb) #hbpSideMenu [data-p="talk"], body.cl:not(.pcweb) #hbpSideMenu [data-p="acct"] { display: none !important; }
+  body.cl:not(.pcweb) .hbp-side .hbs-search { margin: 0 12px 8px; }
+  body.cl:not(.pcweb) #hbpSideMenu { padding: 0 12px 6px; border-bottom: 1px solid var(--cline, rgba(255,255,255,.1)); }
+  body.cl:not(.pcweb) .ibhead { display: none; }   /* 相手の名前は上の帯に出る */
+  body.cl:not(.pcweb) .hbp-body.ibmode { grid-template-rows: 1fr auto; }
+  .clbrand { display: flex; align-items: center; gap: 10px; padding: calc(14px + env(safe-area-inset-top)) 18px 12px; pointer-events: none; user-select: none; }
+  .clbrand img { width: 30px; height: 30px; }
+  .clbrand b { font: 900 18px var(--display); letter-spacing: .08em; color: #fff; }
+  .clscroll { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 12px 16px; -webkit-overflow-scrolling: touch; }
+  .clscroll .hbs-conn { margin-top: 4px; }
+  .clacct { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 18px calc(12px + env(safe-area-inset-bottom)); border: 0; border-top: 1px solid var(--cline, rgba(255,255,255,.1)); background: var(--cnav, #10141E); color: #fff; text-align: left; font: 700 15px var(--body); cursor: pointer; }
+  .clacct i { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 50%; background: #62AD7F; color: #0B0E15; font: 900 15px var(--display); font-style: normal; }
+  .clacct span { flex: 1; min-width: 0; display: grid; }
+  .clacct small { color: var(--cmut, #A3AAB7); font-size: 12px; font-weight: 500; }
+}
 </style>
 </head>
 <body>
@@ -2253,7 +2321,7 @@ html.pwa body:is(.av-hatabo, .av-komugi):not(.hbp-open):not(.plain) .hbbot { bot
   <div class="cv-top"><img src="award_mark.svg" alt=""><b id="cvName">ハタボ</b><button type="button" id="cvScr" hidden title="パソコンの画面を見せる（見せている間だけ）">画面を見せる</button><button type="button" id="cvSpk" aria-pressed="true">声あり</button><button type="button" id="cvMicSw" aria-pressed="true" title="マイクなし：こちらの声を拾わない（文字だけで話す）">マイクあり</button><button type="button" id="cvMy"><img class="myflag" src="https://www.hatha-lab.com/xm_w.png" alt="">Myハタボ</button></div>
   <div class="cv-list" id="cvList"><p class="cv-empty" id="cvEmpty">下のエンブレムを押して話しかけてね。<br>話したことと返事が、ここに残ります。</p></div>
   <div class="cv-bot">
-    <form class="cv-in" id="cvForm"><button type="button" class="hbplus" data-plus aria-label="写真・調べもの・話す相手など"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button><input id="cvInput" type="text" placeholder="文字でもOK" autocomplete="off" aria-label="ハタボに送る文字"><button type="submit" aria-label="送る">↑</button></form>
+    <form class="cv-in" id="cvForm"><button type="button" class="hbplus" data-plus aria-label="写真・調べもの・話す相手など"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button><input id="cvInput" type="text" placeholder="ハタボに話しかける" autocomplete="off" aria-label="ハタボに送る文字"><button type="submit" aria-label="送る">↑</button></form>
     <div class="vsw" role="group" aria-label="画面の切りかえ"><button type="button" data-v="chat">トーク</button><button type="button" data-v="char">AI棒</button></div>
     <div class="cv-row">
       <div class="cv-s"><button type="button" class="cv-pill gradeb" data-grade-open>グレード</button><button type="button" class="cv-pill" id="cvMove" title="ChatGPTやClaudeが知っている「あなたのこと」を、わたしのハタボに入れる">いつものAIから引っ越す</button></div>
@@ -4971,10 +5039,10 @@ html.pwa body:is(.av-hatabo, .av-komugi):not(.hbp-open):not(.plain) .hbbot { bot
     const ban = `<div class="hbban" aria-roledescription="カルーセル" aria-label="お知らせ"><div class="hbban-tr" style="transform:translateX(${-100 * s0}%)">${HB_SLIDES.map(x => `<div class="hbban-s ${x.c}"><div><div class="k">${x.k}</div><h3>${esc(x.t)}</h3><p>${esc(x.d)}</p><button type="button" class="hbbtn" data-go="${x.go}">${esc(x.b)}</button></div></div>`).join('')}</div><div class="hbban-dots">${HB_SLIDES.map((x, k) => `<button type="button" data-slide="${k}" class="${k === s0 ? 'on' : ''}" aria-label="${k + 1}枚目"></button>`).join('')}</div></div>`;
     const ch = km ? '<img src="komugi_char.png" alt="">' : '<svg viewBox="110 22 280 356" aria-hidden="true" class="hbcharsvg"></svg>'; setTimeout(hbpCharFill, 0);
     const ask = `<div class="hbask-wrap"><button type="button" class="hbchar" id="hbChar" title="ご縁のガチャ：卵から、案内役のハタボやご縁の人のハタボが出てきます">${ch}<small>ガチャを引く</small></button>
-      <div class="hbask-col"><h2>${esc(nm0 ? nm0 + 'さん、' : '')}何をお手伝いしましょうか？</h2>
-      <form class="hbask" id="hbAsk"><textarea id="hbAskIn" rows="2" placeholder="ハタボに頼みたいことを書く（Enterで送る）" aria-label="ハタボに頼むこと"></textarea>
+      <div class="hbask-col"><h2>${esc(clGreet() + (nm0 ? '、' + nm0 + 'さん' : ''))}</h2>
+      <div class="clask"><form class="hbask" id="hbAsk"><textarea id="hbAskIn" rows="2" placeholder="ハタボに頼みたいことを書く" aria-label="ハタボに頼むこと"></textarea>
         <div class="hbask-row"><button type="button" class="hbplus" data-plus aria-label="写真・調べもの・話す相手など"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button><button type="button" class="hbvpill" data-go="voice" title="声を選ぶ"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4"/></svg>${esc(hbpVoiceName())}</button>
-          <span style="flex:1"></span><button type="button" class="hbask-mic" id="hbAskMic" aria-label="声で話す"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button><button type="submit" class="hbask-go" aria-label="送る"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button></div></form>
+          <span style="flex:1"></span><button type="button" class="hbask-mic" id="hbAskMic" aria-label="声で話す"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button><button type="submit" class="hbask-go" aria-label="送る"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button></div></form><p class="clnote">${clNote()}</p></div>
       <div class="hbquick">${Q.map(([t, pre, dpath]) => `<button type="button" data-q="${esc(pre)}"><i><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${dpath}"/></svg></i>${t}</button>`).join('')}</div></div></div>`;
     const car = `<div class="hbcar"><div class="hbcar-h"><b>おすすめ・新しい機能</b><span><button type="button" data-cmv="-1" aria-label="前へ">‹</button><button type="button" data-cmv="1" aria-label="次へ">›</button></span></div><div class="hbcar-tr" id="hbCar">${HB_PICKS.map(([go, t, d0]) => `<button type="button" class="hbcar-c" data-go="${go}"><b>${esc(t)}</b><span>${esc(d0)}</span></button>`).join('')}</div></div>`;
     const inv = `<div class="hbinv"><button type="button" class="hbinv-m" data-go="share"><i aria-hidden="true">🎁</i><span><b>友だちを招待して、一緒に試そう</b><small>招待した友だちとは、最初からご縁でつながります。招待のお礼（お試しの日数・ポイント）は準備中です。</small></span><em>招待する ›</em></button><button type="button" class="hbinv-g" id="hbEggBtn"><i aria-hidden="true">🥚</i><span><b>愛棒ガチャ</b><small>卵から、あなたの愛棒が生まれる</small></span></button></div>`;
@@ -6186,6 +6254,102 @@ html.pwa body:is(.av-hatabo, .av-komugi):not(.hbp-open):not(.plain) .hbbot { bot
     toast(BIZ() ? 'ビジネスモード：ていねいに、家族の話はしないよ' : 'ファミリーモード：おうちのバターちゃんだよ');
   });
   showMode();
+  /* ===== Claudeの形の画面（ハタボのアプリ）：上の帯・左の一覧・下の入力欄 ===== */
+  const CL = HATABO_APP;
+  function clNote() { return 'ハタボはAIなので、まちがえることがあります。'; }
+  function clGreet() { const h = new Date().getHours(); return h < 4 ? 'こんばんは' : h < 11 ? 'おはようございます' : h < 18 ? 'こんにちは' : 'こんばんは'; }
+  const CL_IC = {
+    menu: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
+    neu: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6"/><path d="M17.5 3.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>',
+    more: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg>',
+    pin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 17v5M9 3h6l-1 6 3 3v2H7v-2l3-3z"/></svg>',
+    share: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>',
+    edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>'
+  };
+  if (CL) document.body.classList.add('cl');
+  const clMobile = () => window.innerWidth < 900 && !document.body.classList.contains('pcweb');
+  const clPageOpen = () => { const P = $('hbPage'); return !!P && !P.hidden && !document.body.classList.contains('hbshell'); };
+  /** いま開いている会話のしるし（ピン留め用） */
+  function clKey() {
+    if (clPageOpen()) return HBP.page === 'person' ? 'p:' + HBP.pid : HBP.page === 'group' ? 'g:' + HBP.gid : HBP.page === 'uperson' ? 'u:' + HBP.ucode : HBP.page === 'inbox' && HBP.ibWith ? 'd:' + HBP.ibWith : '';
+    return J.focusKey || 'me:me';
+  }
+  function clTitle() {
+    if (clPageOpen()) {
+      if (HBP.page === 'my') return 'ハタボ';
+      if (HBP.page === 'inbox' && HBP.ibWith) { if (HBP.ibWith === '_goen') return 'ご縁のお知らせ'; const ib = HBP.inbox || {}, it = (ib.items || []).find(x => !x.mine && x.from === HBP.ibWith && x.fromName) || (ib.items || []).find(x => x.mine && x.to === HBP.ibWith && x.toName), pp = (ib.people || []).find(q => q.code === HBP.ibWith); const n = String((it && (it.fromName || it.toName)) || (pp && pp.name) || 'ご縁の人').replace(/(さん|くん|ちゃん)$/, ''); return n + 'さん'; }
+      if (HBP.page === 'inbox') return '伝言';
+      const t = $('hbpTitle'); return (t && t.textContent.trim()) || 'ハタボ';
+    }
+    if (J.focusName) return J.focusName;
+    const C = HBP.chats || {}, t = (C.list || []).find(x => x.id === C.cur); return (t && t.title) || 'ハタボ';
+  }
+  function clUnread() { return ((HBP.inbox && HBP.inbox.items) || []).filter(x => !x.read && !x.mine).length; }
+  function clTickBars() {
+    const t = clTitle(), n = clUnread();
+    document.querySelectorAll('[data-cl-title]').forEach(e => { if (e.textContent !== t) e.textContent = t; });
+    document.querySelectorAll('[data-cl-badge]').forEach(e => { const v = n > 99 ? '99+' : String(n); if (e.textContent !== v) e.textContent = v; e.hidden = !n; });
+    const a = document.querySelector('.clacct'); if (a) { const nm = ($('hbpAcctName') || {}).textContent || 'Myハタボ', av = ($('hbpAcctAv') || {}).textContent || 'ハ'; const b = a.querySelector('b'), i = a.querySelector('i'); if (b && b.textContent !== nm) b.textContent = nm; if (i && i.textContent !== av) i.textContent = av; }
+  }
+  /** 押したときの小さなカチッという音（iPhoneのウェブアプリは振動できないので音と動きで）。Androidは少し振動も */
+  let clAC = null;
+  function clTick() {
+    if (document.body.classList.contains('cv-listen') || store.get('hbMute', false)) return;   // 聞いている間は鳴らさない
+    try { clAC = clAC || new (window.AudioContext || window.webkitAudioContext)(); if (clAC.state === 'suspended') clAC.resume(); const t = clAC.currentTime, o = clAC.createOscillator(), g = clAC.createGain(); o.type = 'triangle'; o.frequency.setValueAtTime(1500, t); o.frequency.exponentialRampToValueAtTime(500, t + 0.03); g.gain.setValueAtTime(0.05, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.04); o.connect(g); g.connect(clAC.destination); o.start(t); o.stop(t + 0.05); } catch (e) {}
+    try { if (navigator.vibrate) navigator.vibrate(8); } catch (e) {}
+  }
+  function clMore(btn) {
+    let pop = $('clPop'); if (!pop) { pop = document.createElement('div'); pop.id = 'clPop'; pop.className = 'clpop'; pop.setAttribute('role', 'menu'); pop.hidden = true; document.body.append(pop); }
+    if (!pop.hidden) { pop.hidden = true; return; }
+    const key = clKey(), pins = store.get('hbPins', []) || [], C = HBP.chats || {}, canName = !clPageOpen() && !J.focusKey && !!C.cur;
+    pop.innerHTML = (key ? '<button type="button" role="menuitem" data-clm="pin">' + CL_IC.pin + (pins.includes(key) ? 'ピン留めをはずす' : 'ピン留め') + '</button>' : '')
+      + '<button type="button" role="menuitem" data-clm="share">' + CL_IC.share + '共有</button>'
+      + (canName ? '<button type="button" role="menuitem" data-clm="name">' + CL_IC.edit + '名前の変更</button>' : '');
+    const r = btn.getBoundingClientRect(); pop.style.top = Math.round(r.bottom + 6) + 'px';
+    pop.hidden = false;
+  }
+  document.addEventListener('click', e => {
+    const m = e.target.closest && e.target.closest('[data-clm]'), pop = $('clPop');
+    if (m) { pop.hidden = true; const k = m.dataset.clm;
+      if (k === 'pin') hbpPin(clKey());
+      else if (k === 'share') shareHatabo();
+      else if (k === 'name') { const C = HBP.chats || {}, t = (C.list || []).find(x => x.id === C.cur), v = prompt('この会話の名前', (t && t.title) || ''); if (v && v.trim() && J.ready) jrSend({ type: 'chat_rename', id: C.cur, title: v.trim().slice(0, 40) }); }
+      return; }
+    if (pop && !pop.hidden && !(e.target.closest && e.target.closest('#clPop, [data-cl="more"]'))) pop.hidden = true;
+    const b = e.target.closest && e.target.closest('[data-cl]'); if (!b) return;
+    const k = b.dataset.cl;
+    if (k === 'menu') { if (clPageOpen()) hbpDrawer(!$('hbPage').classList.contains('drawer')); else { hbpOpen('my'); setTimeout(() => hbpDrawer(true), 30); } }
+    else if (k === 'new') hbNewMenu();
+    else if (k === 'more') clMore(b);
+  });
+  document.addEventListener('pointerdown', e => { if (e.target.closest && e.target.closest('.clb, .clpop button, #hbpSide button, #hbpSide .hbt, .clacct, #cvMic, #hbAskMic, .chatv .cv-in button, .hbask button')) clTick(); }, true);
+  document.addEventListener('input', e => { const f = e.target && e.target.closest && e.target.closest('#cvForm, #hbAsk'); if (f) f.classList.toggle('has', !!String(e.target.value || '').trim()); });
+  document.addEventListener('submit', e => { const f = e.target; if (f && (f.id === 'cvForm' || f.id === 'hbAsk')) setTimeout(() => f.classList.remove('has'), 0); }, true);
+  function clInit() {
+    if (!CL || document.body.dataset.clInit) return; document.body.dataset.clInit = '1';
+    const set = '<div class="clset"><button type="button" class="clb" data-cl="menu" aria-label="メニューと会話の一覧">' + CL_IC.menu + '<i class="clbadge" data-cl-badge hidden></i></button><span class="cltitle" data-cl-title>ハタボ</span><button type="button" class="clb" data-cl="new" aria-label="新しい会話">' + CL_IC.neu + '</button><button type="button" class="clb" data-cl="more" aria-label="この会話のメニュー" aria-haspopup="menu">' + CL_IC.more + '</button></div>';
+    document.querySelectorAll('.hbp-top, .hbtop').forEach(el => el.insertAdjacentHTML('afterbegin', set));
+    // トーク画面：話すボタンを入力欄の右へ。下に注意書き
+    const f = $('cvForm'), mic = $('cvMic');
+    if (f && mic && clMobile()) { f.append(mic); f.insertAdjacentHTML('afterend', '<p class="clnote">' + clNote() + '</p>'); }
+    // 左の一覧（スマホ）：ロゴ（飾り）→ 探す → ホーム・愛棒・ご縁マップ（固定）→ トーク（ここから下がスクロール）→ つなぐ → 最下段に自分
+    setTimeout(() => {
+      const side = $('hbpSide'), menu = $('hbpSideMenu'); if (!side || !menu || !clMobile()) return;
+      menu.querySelectorAll('[data-p="goen"] span').forEach(x => { x.textContent = 'ご縁マップ'; });
+      side.insertAdjacentHTML('afterbegin', '<div class="clbrand" aria-hidden="true"><img src="award_mark.svg" alt=""><b>ハタボ</b></div>');
+      const sc = document.createElement('div'); sc.className = 'clscroll';
+      let n = menu.nextElementSibling; const move = []; while (n) { move.push(n); n = n.nextElementSibling; }
+      move.forEach(x => sc.append(x));
+      const conn = menu.querySelector('.hbs-conn'); if (conn) { const k = conn.previousElementSibling; if (k && k.classList.contains('hbs-k')) sc.append(k); sc.append(conn); }
+      menu.after(sc);
+      side.insertAdjacentHTML('beforeend', '<button type="button" class="clacct"><i>ハ</i><span><b>Myハタボ</b><small>アカウントと設定</small></span></button>');
+      side.querySelector('.clacct').onclick = () => { hbpDrawer(false); const t = document.querySelector('#hbpTabs > button[data-p="acct"]'); if (t) t.click(); else hbpOpen('acct'); };
+      clTickBars();
+    }, 120);
+    setInterval(clTickBars, 600); clTickBars();
+  }
+  clInit();
+
   liffBoot();
   if (HATABO_APP) { const ib = KOMUGI_APP ? addBubble('コムギ', 'はじめまして。馬越 雅哉さんの相棒の、コムギです。気軽に話しかけてくださいね。', 'her') : addBubble('ハタボ', 'はじめまして、ハタボです。下の「話す」を押すか、文字で話しかけてください。', 'her'); if (ib) ib.parentElement.id = 'introBubble'; }
   else if (LIFF) addBubble('ジュニア', 'こんにちは。バターちゃんジュニアです。となりは柴犬のチーちゃんと、招き猫のジャム猫です。', 'her');
