@@ -789,9 +789,11 @@ async function googleLogin(code, res, page, x) {
     const j = await r.json(); let p = {}; try { p = JSON.parse(Buffer.from(String(j.id_token || '').split('.')[1], 'base64url').toString()); } catch (e) {}
     const email = String(p.email || '').toLowerCase();
     if (!email || p.email_verified === false) return page('ログインできませんでした', 'Googleのメールアドレスを確かめられませんでした。もう一度おためしください。');
-    let owner = (await loadCol(gmailKey(email), 'gmail')).owner || ''; const office = ENV.OFFICE_EMAILS.includes(email) || isOfficeOwner(owner);
-    if (!owner && ENV.OFFICE_EMAILS.includes(email) && ENV.OFFICE_OWNERS[0]) {   // 事務局のGmailは、まだ連携していなくても事務局のLINEのアカウントとして入る（そのまま連携も残す）
-      owner = ENV.OFFICE_OWNERS[0]; await saveCol(gmailKey(email), 'gmail', { owner, email, at: Date.now(), via: 'office' }).catch(() => {});
+    const gm = await loadCol(gmailKey(email), 'gmail'); let owner = gm.owner || ''; const office = ENV.OFFICE_EMAILS.includes(email) || isOfficeOwner(owner);
+    const offId = /^U[0-9a-f]{32}$/.test(ENV.OFFICE_OWNERS[0] || '') ? ENV.OFFICE_OWNERS[0] : '';   // 本物のLINEのIDのときだけ使う（仮の値は使わない）
+    if (gm.via === 'office' && owner !== offId) owner = '';   // 前に仮の値でつないだものは、つなぎ直す
+    if (!owner && ENV.OFFICE_EMAILS.includes(email) && offId) {   // 事務局のGmailは、まだ連携していなくても事務局のLINEのアカウントとして入る（そのまま連携も残す）
+      owner = offId; await saveCol(gmailKey(email), 'gmail', { owner, email, at: Date.now(), via: 'office' }).catch(() => {});
     }
     if (x && x.oauth) return owner ? oauthConsent(res, x.oauth, owner, email) : page('まだハタボとつながっていません', email + ' は、まだハタボのアカウントとつながっていません。もどって「LINEでつなぐ」をえらぶか、LINEのMyハタボの「Googleアカウント連携」でこのGmailをつないでから、もう一度おためしください。');
     let isNew = false;
