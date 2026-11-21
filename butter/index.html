@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8"><meta name="hb-ver" content="11/21-1615">
+<meta charset="utf-8"><meta name="hb-ver" content="11/21-1630">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
 <title>福まねき特戦隊｜バターちゃん</title>
@@ -4877,7 +4877,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
     const day = t => { if (!t) return ''; const x = new Date(t), n = new Date(); return x.toDateString() === n.toDateString() ? x.getHours() + ':' + String(x.getMinutes()).padStart(2, '0') : (x.getMonth() + 1) + '/' + x.getDate(); };
     $('hbpChats').innerHTML = L.length ? L.map(t => `<button type="button" class="hbs-chat${t.id === C.cur ? ' on' : ''}" data-chat="${esc(t.id)}"><b>${esc(t.title || '会話')}</b><small>${day(t.last || t.at)}</small></button>`).join('') : '<p class="hbs-empty">' + (C.off ? 'ログインすると、ここに並びます' : 'まだありません') + '</p>';
     // トーク一覧（LINEの形）：自分のハタボ・窓口に話しかけた人・LINEグループ。ピン留めが上、あとは新しい順
-    const O = HBP.con && !HBP.con.denied ? HBP.con : {}, pins = store.get('hbPins', []), q = ($('hbpSearch').value || '').trim();
+    const O = HBP.con && !HBP.con.denied ? HBP.con : {}, pins = (store.get('hbPins', []) || []), q = ($('hbpSearch').value || '').trim();
     const me = { key: 'me:me', kind: 'me', name: (typeof avName === 'function' && avName()) || 'ハタボ', sub: L[0] ? L[0].title : 'あなたのAI棒', last: L[0] ? (L[0].last || L[0].at) : 0, pic: '' };
     const people = hbSafe(() => (O.threads || []).map(t => ({ key: 'p:' + t.id, id: t.id, kind: 'p', name: t.vname || 'お客さま', sub: (t.aiboName ? '→ ' + t.aiboName + '　' : '') + (t.body === false ? '' : String(t.preview || '')), last: t.last, unread: t.unread || 0, pic: t.pic || '' })), []);
     const dmap = {}; hbSafe(() => ((HBP.inbox && HBP.inbox.items) || []).forEach(x => { const k = x.from || x.fromName || '?'; const r = dmap[k] || (dmap[k] = { key: 'd:' + k, id: k, kind: 'd', name: x.fromName || 'ご縁の人', sub: '', last: 0, unread: 0, pic: '' }); if ((x.at || 0) >= r.last) { r.last = x.at || 0; r.sub = '伝言：' + String(x.text || '').slice(0, 40); } if (!x.read) r.unread++; }), null);
@@ -4919,7 +4919,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   }
   function hbpOpenUser(code) { HBP.ucode = code; HBP.uper = null; HBP.page = 'uperson'; $('hbPage').hidden = false; document.body.classList.remove('hbshell'); document.body.classList.add('hbp-open'); hbpRender(); hbpChats(); if (J.ready) jrSend({ type: 'admin_person', code }); }
   window.hbpOpenUser = hbpOpenUser;
-  function hbpPin(key) { const P = store.get('hbPins', []), had = P.includes(key); store.set('hbPins', had ? P.filter(k => k !== key) : [key].concat(P).slice(0, 20)); toast(had ? 'ピン留めをはずしました' : 'いちばん上にピン留めしました'); hbpChats(); }
+  function hbpPin(key) { const P = (store.get('hbPins', []) || []), had = P.includes(key); store.set('hbPins', had ? P.filter(k => k !== key) : [key].concat(P).slice(0, 20)); toast(had ? 'ピン留めをはずしました' : 'いちばん上にピン留めしました'); hbpChats(); }
   function hbpOpenTalk(key) {
     const c = key.indexOf(':'), k = key.slice(0, c), id = key.slice(c + 1); hbpDrawer(false); if (k !== 'me') { hbpUnshell(); HBP.draft = ''; }
     if (k === 'me') { if (J.focusKey && window.hbSetFocus) window.hbSetFocus('', ''); return hbpTalk(''); }
