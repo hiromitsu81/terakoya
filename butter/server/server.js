@@ -790,7 +790,10 @@ async function googleLogin(code, res, page, x) {
     const email = String(p.email || '').toLowerCase();
     if (!email || p.email_verified === false) return page('ログインできませんでした', 'Googleのメールアドレスを確かめられませんでした。もう一度おためしください。');
     let owner = (await loadCol(gmailKey(email), 'gmail')).owner || ''; const office = ENV.OFFICE_EMAILS.includes(email) || isOfficeOwner(owner);
-    if (x && x.oauth) return owner ? oauthConsent(res, x.oauth, owner, email) : page('まだハタボとつながっていません', email + ' は、まだハタボのアカウントとつながっていません。もどって「LINEでつなぐ」をえらんでください。');
+    if (!owner && ENV.OFFICE_EMAILS.includes(email) && ENV.OFFICE_OWNERS[0]) {   // 事務局のGmailは、まだ連携していなくても事務局のLINEのアカウントとして入る（そのまま連携も残す）
+      owner = ENV.OFFICE_OWNERS[0]; await saveCol(gmailKey(email), 'gmail', { owner, email, at: Date.now(), via: 'office' }).catch(() => {});
+    }
+    if (x && x.oauth) return owner ? oauthConsent(res, x.oauth, owner, email) : page('まだハタボとつながっていません', email + ' は、まだハタボのアカウントとつながっていません。もどって「LINEでつなぐ」をえらぶか、LINEのMyハタボの「Googleアカウント連携」でこのGmailをつないでから、もう一度おためしください。');
     let isNew = false;
     if (!owner && !office) {   // はじめての人：Googleだけで、そのままアカウントをつくる（7日間のお試しから）
       owner = 'g_' + gmailKey(email).slice(0, 24); isNew = true;
