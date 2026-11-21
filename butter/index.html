@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8"><meta name="hb-ver" content="11/21-1405">
+<meta charset="utf-8"><meta name="hb-ver" content="11/21-1410">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
 <title>福まねき特戦隊｜バターちゃん</title>
@@ -4992,7 +4992,17 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   }
   window.hbGacha = hbGacha;
   /* --- ハタボに案内してもらう：ハタボが声で話しながら、説明しているところを光らせる --- */
-  function hbGuideTour() {
+  function hbGuideTour(mode) {
+    if (!mode) {   // はじめに「声で案内」か「文字だけ」かを選ぶ（まわりに人がいる・声を出せない人もいるので）
+      const o = document.createElement('div'); o.id = 'hbGuideAsk';
+      o.style.cssText = 'position:fixed;inset:0;z-index:2147483002;background:rgba(8,12,24,.55);display:grid;place-items:center;padding:20px';
+      const last = store.get('hbGuideVoice', '');
+      o.innerHTML = '<div role="dialog" aria-modal="true" style="background:#fff;color:#141A2A;border-radius:20px;max-width:400px;width:100%;padding:22px 22px 18px;font:500 14.5px/1.7 var(--display);box-shadow:0 24px 70px rgba(0,0,0,.45)"><b style="display:block;font-size:18px;margin-bottom:6px">ハタボの案内</b><p style="margin:0 0 16px">案内のしかたを選んでください。</p><button type="button" data-g="voice" style="width:100%;min-height:50px;border:0;border-radius:999px;background:#06C755;color:#fff;font-weight:800;font-size:15px;margin-bottom:10px;cursor:pointer">🔊 声で案内してもらう' + (last === 'voice' ? '（前回）' : '') + '</button><button type="button" data-g="text" style="width:100%;min-height:50px;border:1px solid #C9D0DC;border-radius:999px;background:#fff;color:#16233F;font-weight:800;font-size:15px;margin-bottom:8px;cursor:pointer">文字だけで案内してもらう' + (last === 'text' ? '（前回）' : '') + '</button><button type="button" data-g="x" style="width:100%;border:0;background:none;color:#5B6478;font-weight:700;padding:8px;cursor:pointer">やめる</button></div>';
+      document.body.append(o);
+      o.querySelectorAll('[data-g]').forEach(b => b.onclick = () => { const g = b.dataset.g; o.remove(); if (g === 'x') return; store.set('hbGuideVoice', g); hbGuideTour(g); });
+      return;
+    }
+    const voice = mode === 'voice';
     const PC = document.body.classList.contains('pcweb');
     const steps = (PC ? [
       ['', 'ここからは、ぼくが案内しますね。'],
@@ -5015,7 +5025,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
     const mark = sel => { document.querySelectorAll('.hbGuideMark').forEach(e => { e.classList.remove('hbGuideMark'); e.style.outline = ''; e.style.outlineOffset = ''; e.style.boxShadow = e.dataset.gbs || ''; }); const e = sel && document.querySelector(sel); if (e && e.offsetParent) { e.classList.add('hbGuideMark'); e.dataset.gbs = e.style.boxShadow; e.style.outline = '3px solid #F7D774'; e.style.outlineOffset = '4px'; e.style.boxShadow = '0 0 0 9999px rgba(8,12,24,.0), 0 0 28px 6px rgba(247,215,116,.55)'; try { e.scrollIntoView({ block: 'nearest' }); } catch (x) {} } };
     const end = () => { stop = true; clearTimeout(tm); mark(''); cap.remove(); };
     cap.querySelector('button').onclick = end;
-    const next = () => { if (stop) return; if (i >= steps.length) { end(); return; } const [sel, t] = steps[i++]; mark(sel); cap.querySelector('span').textContent = t; if (J.ready) jrSend({ type: 'guide_say', text: t }); tm = setTimeout(next, 1800 + t.length * 150); };
+    const next = () => { if (stop) return; if (i >= steps.length) { end(); return; } const [sel, t] = steps[i++]; mark(sel); cap.querySelector('span').textContent = t; if (voice && J.ready) jrSend({ type: 'guide_say', text: t }); tm = setTimeout(next, (voice ? 1800 : 1500) + t.length * (voice ? 150 : 110)); };
     next();
   }
   window.hbGuideTour = hbGuideTour;
