@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8"><meta name="hb-ver" content="11/21-1335">
+<meta charset="utf-8"><meta name="hb-ver" content="11/21-1345">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
 <title>福まねき特戦隊｜バターちゃん</title>
@@ -4697,7 +4697,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
     const Q = [['メモ', 'メモして：', 'M5 4h10l4 4v12H5z M9 12h6 M9 16h4'], ['議事録', '議事録をとって。会議の名前は：', 'M4 5h16v14H4z M8 9h8 M8 13h8 M8 17h5'], ['調べもの', '調べて：', 'M11 4a7 7 0 1 0 0 14a7 7 0 1 0 0-14 M16 16l4 4'], ['予定', '予定を入れて：', 'M4 6h16v14H4z M4 10h16 M9 3v5 M15 3v5'], ['文章', '文章を書いて：', 'M4 20h16 M6 16l9-9 3 3-9 9H6z'], ['伝言', 'さんに伝えて：', 'M4 5h16v11H8l-4 4z']];
     const s0 = HBP.slide || 0;
     const ban = `<div class="hbban" aria-roledescription="カルーセル" aria-label="お知らせ"><div class="hbban-tr" style="transform:translateX(${-100 * s0}%)">${HB_SLIDES.map(x => `<div class="hbban-s ${x.c}"><div><div class="k">${x.k}</div><h3>${esc(x.t)}</h3><p>${esc(x.d)}</p><button type="button" class="hbbtn" data-go="${x.go}">${esc(x.b)}</button></div></div>`).join('')}</div><div class="hbban-dots">${HB_SLIDES.map((x, k) => `<button type="button" data-slide="${k}" class="${k === s0 ? 'on' : ''}" aria-label="${k + 1}枚目"></button>`).join('')}</div></div>`;
-    const ch = km ? '<img src="komugi_char.png" alt="">' : '<svg viewBox="110 22 280 356" aria-hidden="true" class="hbcharsvg"></svg>'; setTimeout(hbpCharFill, 0);
+    const ch = km ? '<img src="komugi_char.png" alt="">' : '<img src="award_mark.svg" alt="" style="width:62%;height:auto">';   // ふだんはハタボのロゴ（キャラは「AI棒」の画面で） setTimeout(hbpCharFill, 0);
     const ask = `<div class="hbask-wrap"><button type="button" class="hbchar" id="hbChar" title="キャラモードで大きく出す（プレゼン役）">${ch}<small>キャラで出す</small></button>
       <div class="hbask-col"><h2>${esc(nm0 ? nm0 + 'さん、' : '')}何をお手伝いしましょうか？</h2>
       <form class="hbask" id="hbAsk"><textarea id="hbAskIn" rows="2" placeholder="ハタボに頼みたいことを書く（Enterで送る）" aria-label="ハタボに頼むこと"></textarea>
@@ -4811,7 +4811,8 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   }
   window.hbEgg = hbEgg;
   document.addEventListener('click', e => { if (e.target.closest('#hbEggBtn')) hbEgg(true); });
-  function hbpChats() {
+  function hbpChats() { try { hbpChats0(); } catch (e) { try { console.error('chats', e); $('hbpTalks').innerHTML = '<div class="hbt" data-tk="me:me" role="button" tabindex="0"><i class="hbt-av"><img src="award_mark.svg" alt=""></i><div><b>ハタボと話す</b><small>あなたのAI棒</small></div></div>'; } catch (x) {} } }   // 一覧で何かあっても「ハタボと話す」だけは出す
+  function hbpChats0() {
     const C = HBP.chats || {}, L = C.list || [];
     const day = t => { if (!t) return ''; const x = new Date(t), n = new Date(); return x.toDateString() === n.toDateString() ? x.getHours() + ':' + String(x.getMinutes()).padStart(2, '0') : (x.getMonth() + 1) + '/' + x.getDate(); };
     $('hbpChats').innerHTML = L.length ? L.map(t => `<button type="button" class="hbs-chat${t.id === C.cur ? ' on' : ''}" data-chat="${esc(t.id)}"><b>${esc(t.title || '会話')}</b><small>${day(t.last || t.at)}</small></button>`).join('') : '<p class="hbs-empty">' + (C.off ? 'ログインすると、ここに並びます' : 'まだありません') + '</p>';
@@ -5011,7 +5012,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   (() => {
     const V = $('chatV'), L = $('cvList'), map = new WeakMap();
     const isApp = () => document.body.classList.contains('av-hatabo') || document.body.classList.contains('av-komugi') || document.body.classList.contains('pcweb');   // パソコンのMyハタボ・管理画面もトーク画面を使う
-    const setView = window.hbSetView = v => { document.querySelectorAll('.hbp-mode [data-mode]').forEach(b => b.classList.toggle('on', b.dataset.mode === (v === 'chat' ? 'chat' : 'char'))); if (document.body.classList.contains('plain')) v = 'chat'; document.body.classList.toggle('chatview', v === 'chat' && isApp()); store.set('hbView', v); if (v === 'chat') requestAnimationFrame(() => { L.scrollTop = L.scrollHeight; }); };
+    const setView = window.hbSetView = v => { window.__hbViewSet = true; document.querySelectorAll('.hbp-mode [data-mode]').forEach(b => b.classList.toggle('on', b.dataset.mode === (v === 'chat' ? 'chat' : 'char'))); if (document.body.classList.contains('plain')) v = 'chat'; document.body.classList.toggle('chatview', v === 'chat' && isApp()); store.set('hbView', v); if (v === 'chat') requestAnimationFrame(() => { L.scrollTop = L.scrollHeight; }); };
     let stick = true;
     L.addEventListener('scroll', () => { stick = L.scrollHeight - L.scrollTop - L.clientHeight < 80; }, { passive: true });
     const sync = () => {
@@ -5085,7 +5086,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
       document.querySelectorAll('.shareb').forEach(b => { b.hidden = false; });
       const nm = (typeof avName === 'function' && avName()) || 'ハタボ'; if ($('cvName').textContent !== nm) $('cvName').textContent = nm;
       document.body.classList.toggle('cv-speak', state === 'speaking'); document.body.classList.toggle('cv-listen', state === 'listening' && !!J.ready);
-      if (isApp() && !document.body.dataset.cvInit) { document.body.dataset.cvInit = '1'; setView(document.body.classList.contains('pcweb') ? 'chat' : store.get('hbView', 'chat')); }   // パソコンは、いつもトーク画面から
+      if (isApp() && !document.body.dataset.cvInit) { document.body.dataset.cvInit = '1'; if (!window.__hbViewSet) setView(document.body.classList.contains('pcweb') ? 'chat' : store.get('hbView', 'chat')); }   // パソコンは、いつもトーク画面から
     }, 300);
     // 左右のスワイプで、トーク画面とキャラ画面を切りかえる
     let sx = 0, sy = 0;
