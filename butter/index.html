@@ -2291,7 +2291,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   };
   // LINEミニアプリ（LIFF）で開かれたとき：?liff=1&g=<GASのデプロイID>&liffId=<LIFF ID>
   const Q = new URLSearchParams(location.search.replace(/^\?liff\.state=[^&]*&?/, '?'));
-  window.HB_VER = '11/21-1315';   // アプリの版（新しいアプリが届いているかの目じるし）
+  window.HB_VER = '11/21-1325';   // アプリの版（新しいアプリが届いているかの目じるし）
   try { console.log('HATHABO app', window.HB_VER); } catch (e) {}
   // ?page= や ?rid= を、そのまま・Q・LINEの liff.state の中から読む（PCのブラウザでLINEにログインすると、もどったときにアドレスから消えるので先にとっておく）
   function qpar(n) { let v = new URLSearchParams(location.search).get(n) || Q.get(n); if (!v) { try { const st = new URLSearchParams(location.search).get('liff.state'); if (st) v = new URLSearchParams(decodeURIComponent(st).split('?')[1] || '').get(n); } catch (e) {} } return v || ''; }
@@ -4812,10 +4812,12 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
     const dens = Object.values(dmap);
     const groups = (HBP.myGroups || O.groups || []).map(g => ({ key: 'g:' + g.gid, id: g.gid, kind: 'g', name: g.name, sub: (g.members ? g.members + '人' : 'LINEグループ') + (g.ch === 'komugi' ? '・コムギ' : ''), last: g.lastAt, pic: g.pic || '' }));
     const official = J.office ? [] : [{ key: 'o:official', kind: 'o', name: 'ハタボ公式', sub: '窓口・使い方・ヒロに相談', last: 0, pic: '' }];
-    const all = [me].concat(people, dens, groups, official).filter(x => !q || (x.name + ' ' + x.sub).includes(q));
-    all.sort((a, b) => (pins.includes(b.key) - pins.includes(a.key)) || ((b.last || 0) - (a.last || 0)));
+    me.name = 'ハタボと話す'; me.sub = (typeof avName === 'function' && avName() ? avName() : 'ハタボ') + '（あなたのAI棒）' + (L[0] && L[0].title ? '・' + L[0].title : '');
+    const seenN = new Set(people.map(x => x.name)), en = ((HBP.goen && HBP.goen.nodes) || []).filter(n => !n.me && n.depth === 1 && !seenN.has(n.name)).map(n => ({ key: 'e:' + n.id, id: n.id, kind: 'e', name: n.name || 'ご縁の人', sub: 'ご縁・押すとその人向けのハタボ', last: n.lastAt || 0, pic: '' }));   // ご縁でつながっている人
+    const all = [me].concat(people, dens, groups, en, official).filter(x => !q || (x.name + ' ' + x.sub).includes(q));
+    all.sort((a, b) => ((b.kind === 'me') - (a.kind === 'me')) || (pins.includes(b.key) - pins.includes(a.key)) || ((b.last || 0) - (a.last || 0)));   // いちばん上はいつも「ハタボと話す」
     const MARK = { d: '<path d="M3 6h18v12H3z M3 7l9 6 9-6" stroke="currentColor" stroke-width="2" fill="none"/>', me: '<path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.6 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/>', p: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>', g: '<circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><path d="M2 20c0-3 3-5 6-5s6 2 6 5M12 20c0-3 3-5 6-5s4 1 4 3"/>' };
-    const TIP = { me: 'あなたのハタボ', p: '人', g: 'グループ', d: '伝言', o: '公式' }; MARK.o = MARK.me;
+    const TIP = { me: 'あなたのハタボ', p: '人', g: 'グループ', d: '伝言', o: '公式', e: 'ご縁' }; MARK.o = MARK.me; MARK.e = MARK.e || MARK.p;
     const av = x => x.kind === 'me' || x.kind === 'o' ? '<img src="award_mark.svg" alt="">' : x.pic ? `<img src="${esc(x.pic)}" alt="" referrerpolicy="no-referrer" loading="lazy">` : `<span>${esc(String(x.name || '?').slice(0, 1))}</span>`;
     const cur = HBP.page === 'person' ? 'p:' + HBP.pid : HBP.page === 'group' ? 'g:' + HBP.gid : '';
     hbpStrip(all, av);
@@ -4841,7 +4843,8 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   function hbpPin(key) { const P = store.get('hbPins', []), had = P.includes(key); store.set('hbPins', had ? P.filter(k => k !== key) : [key].concat(P).slice(0, 20)); toast(had ? 'ピン留めをはずしました' : 'いちばん上にピン留めしました'); hbpChats(); }
   function hbpOpenTalk(key) {
     const c = key.indexOf(':'), k = key.slice(0, c), id = key.slice(c + 1); hbpDrawer(false); if (k !== 'me') { hbpUnshell(); HBP.draft = ''; }
-    if (k === 'me') return hbpTalk('');
+    if (k === 'me') { if (J.focusKey && window.hbSetFocus) window.hbSetFocus('', ''); return hbpTalk(''); }
+    if (k === 'e') { const n = ((HBP.goen && HBP.goen.nodes) || []).find(x => x.id === id); hbpTalk(''); if (window.hbSetFocus) window.hbSetFocus(key, (n && n.name) || 'ご縁の人'); return; }   // ご縁の人：その人向けのハタボで話す
     if (k === 'o') { window.open('https://line.me/R/ti/p/@024curid', '_blank', 'noopener'); return; }
     $('hbpBody').classList.remove('sw-l', 'sw-r', 'sw-in'); void $('hbpBody').offsetWidth; $('hbpBody').classList.add('sw-in');
     if (k === 'p') { HBP.pid = id; HBP.goenOf = null; const T = (HBP.con && HBP.con.threads) || []; HBP.thr = { t: Object.assign({ turns: [] }, T.find(x => x.id === id) || {}), panel: {} }; HBP.page = 'person'; hbpRender(); hbpChats(); if (J.ready) { jrSend({ type: 'thr_open', id }); jrSend({ type: 'thr_goen', id }); } return; }
@@ -4926,25 +4929,32 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   const MCP_URL = 'https://butter-junior-722073142596.asia-northeast1.run.app/mcp';
   function hbTour() {
     const old = document.getElementById('hbTour'); if (old) old.remove();
-    const S = [
+    const PC = document.body.classList.contains('pcweb');
+    const S = PC ? [
       ['ようこそ', (J.office ? 'パソコンの管理画面とMyハタボです。' : 'パソコンのMyハタボです。') + 'はじめに、使い方をかんたんに案内します。1分ほどで終わります。', ''],
       ['話すときは、このボタン', 'パソコンでは、まわりの声に勝手に答えないように、<b>マイクは切ってあります</b>。話したいときは、画面の下のまんなかの丸いボタン（おして話す）を押してください。もう一度押すと止まります。', '#talkBtn'],
       ['文字でも頼めます', 'マイクを使わなくても、入力欄に書いて Enter で送れます。会議中や電車の中でも使えます。', '#hbAskIn'],
       ['画面の場所', 'トーク一覧・愛棒・ご縁・アカウントは、メニューから開きます。' + (J.office ? '事務局の管理画面は「アカウント」のいちばん上の「管理画面（事務局）」です。' : 'プランやキャラ設定、コネクタは「アカウント」にあります。'), ''],
       ['AIアプリとつなぐ（ハタボコネクト）', 'Claude などのAIアプリから、ハタボに覚えさせたり、キャラ設定を変えたりできます。<ol style="margin:8px 0 0;padding-left:20px;line-height:1.8"><li>Claude の「設定」→「コネクタ」（または「プラグイン」→「プラグインを参照」）→「追加」→「カスタムコネクタ」。チームのプランでは、オーナーが組織の設定から追加します</li><li>名前は「ハタボ」、URL は下のものを貼って追加</li><li>「連携」を押して、<b>LINEでつなぐ</b>（スマホでQRを読んで「つなぐ」）か <b>Googleでつなぐ</b></li><li>Claude で「ハタボのキャラ設定を見せて」と頼んで、返事がくればできあがり</li></ol><div style="display:flex;gap:8px;align-items:center;margin-top:10px"><code style="flex:1;min-width:0;overflow:auto;white-space:nowrap;background:#F3F5F9;border-radius:10px;padding:8px 10px;font-size:12px">' + MCP_URL + '</code><button type="button" id="tourCopy" style="border:0;border-radius:999px;background:#16233F;color:#fff;font-weight:800;padding:9px 14px;cursor:pointer">コピー</button></div>', ''],
       ['準備できました', 'ハタボと話してみましょう。「ハタボと話してみる」を押すと、マイクがオンになります。あとから案内を見るときは「アカウント」→「使い方の案内」です。', '']
+    ] : [
+      ['ようこそ', 'スマホのハタボです。使い方をかんたんに案内します。30秒ほどで終わります。', ''],
+      ['話すときは、まんなかのボタン', '下のまんなかの丸いボタン（話す）を押すと、ハタボが聞いて、声で答えます。もう一度押すと止まります。文字でも話せます。', '#talkBtn'],
+      ['左は、つながっている人', 'トーク画面の左に、つながっている人のアイコンが並びます。押すと、その人向けのハタボに切りかわって、その人とのやりとりを踏まえて相談にのります。もどすときは、上の「×」。', '#cvStrip'],
+      ['ホームとトーク一覧', '下の「ホーム」からトーク一覧が開きます。いちばん上が「ハタボと話す」、その下につながっている人が並びます。愛棒・ご縁・アカウントも下のタブから。', ''],
+      ['準備できました', 'さっそく話しかけてみましょう。あとから案内を見るときは「アカウント」→「使い方の案内」です。', '']
     ];
     let i = 0; const d = document.createElement('div'); d.id = 'hbTour';
     d.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:rgba(8,12,24,.55);display:grid;place-items:center;padding:20px';
     const mark = sel => { document.querySelectorAll('.hbTourMark').forEach(e => { e.classList.remove('hbTourMark'); e.style.outline = ''; e.style.outlineOffset = ''; e.style.position = e.dataset.tpos || ''; e.style.zIndex = e.dataset.tz || ''; }); const e = sel && document.querySelector(sel); if (e && e.offsetParent) { e.classList.add('hbTourMark'); e.dataset.tpos = e.style.position; e.dataset.tz = e.style.zIndex; e.style.outline = '4px solid #F7D774'; e.style.outlineOffset = '4px'; if (getComputedStyle(e).position === 'static') e.style.position = 'relative'; e.style.zIndex = '2147483001'; } };
-    const end = talk => { mark(''); d.remove(); if (talk) store.set('hbPcTour', 2); else { try { sessionStorage.setItem('hb.tourSkip', '1'); } catch (e) {} } if (talk && J.micOff) $('cvMicSw').click(); };   // 「あとで見る」は、次に開いたときにまた出す
+    const end = talk => { mark(''); d.remove(); if (talk) store.set('hbPcTour', 2); else { try { sessionStorage.setItem('hb.tourSkip', '1'); } catch (e) {} } if (talk && J.micOff && PC) $('cvMicSw').click(); };   // 「あとで見る」は、次に開いたときにまた出す
     const draw = () => {
       const [t, b, sel] = S[i], last = i === S.length - 1;
       d.innerHTML = '<div role="dialog" aria-modal="true" aria-label="使い方の案内" style="background:#fff;color:#141A2A;border-radius:20px;max-width:520px;width:100%;max-height:86vh;overflow:auto;padding:24px 24px 20px;box-shadow:0 24px 70px rgba(0,0,0,.45);font-size:14.5px;line-height:1.75">'
         + '<div style="font-size:12px;font-weight:800;color:#2E86BD;letter-spacing:.08em">使い方の案内　' + (i + 1) + ' / ' + S.length + '<span style="float:right;color:#9AA3B5;font-weight:600">版 ' + (window.HB_VER || '') + '</span></div><h3 style="margin:6px 0 8px;font-size:20px">' + t + '</h3><div>' + b + '</div>'
         + '<div style="display:flex;gap:10px;justify-content:space-between;align-items:center;margin-top:20px"><button type="button" data-t="skip" style="border:0;background:none;color:#5B6478;font-weight:700;cursor:pointer;padding:8px 4px">あとで見る</button><span style="display:flex;gap:8px">'
         + (i ? '<button type="button" data-t="back" style="border:1px solid #C9D0DC;background:#fff;color:#16233F;border-radius:999px;padding:10px 18px;font-weight:800;cursor:pointer">もどる</button>' : '')
-        + '<button type="button" data-t="next" style="border:0;background:' + (last ? '#06C755' : '#16233F') + ';color:#fff;border-radius:999px;padding:10px 22px;font-weight:800;cursor:pointer">' + (last ? 'ハタボと話してみる' : 'つぎへ') + '</button></span></div></div>';
+        + '<button type="button" data-t="next" style="border:0;background:' + (last ? '#06C755' : '#16233F') + ';color:#fff;border-radius:999px;padding:10px 22px;font-weight:800;cursor:pointer">' + (last ? (PC ? 'ハタボと話してみる' : 'はじめる') : 'つぎへ') + '</button></span></div></div>';
       mark(sel);
       const cp = d.querySelector('#tourCopy'); if (cp) cp.onclick = () => { try { navigator.clipboard.writeText(MCP_URL); toast('URLをコピーしました'); } catch (e) {} };
       d.querySelectorAll('[data-t]').forEach(x => x.onclick = () => { const k = x.dataset.t; if (k === 'skip') end(false); else if (k === 'back') { i--; draw(); } else if (last) end(true); else { i++; draw(); } });
@@ -4958,13 +4968,14 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
     let st = $('cvStrip'); if (!st) { st = document.createElement('nav'); st.id = 'cvStrip'; st.setAttribute('aria-label', 'つながっている人'); document.body.append(st);
       const fc = document.createElement('div'); fc.id = 'cvFocus'; fc.innerHTML = '<b></b><button type="button" aria-label="ふつうのハタボにもどす">×</button>'; document.body.append(fc);
       fc.querySelector('button').onclick = () => setFocus('', '');
-      st.addEventListener('click', e => { const b = e.target.closest('[data-fk]'); if (!b) return; if (b.dataset.fk === 'me:me' || b.dataset.fk === J.focusKey) setFocus('', ''); else setFocus(b.dataset.fk, b.dataset.fn); }); }
+      st.addEventListener('click', e => { const b = e.target.closest('[data-fk]'); if (!b) return; if (b.dataset.fk === J.focusKey) setFocus('', ''); else setFocus(b.dataset.fk, b.dataset.fn); }); }
     const G = ((HBP.goen && HBP.goen.nodes) || []).filter(n => !n.me && n.depth === 1).map(n => ({ key: 'e:' + n.id, id: n.id, kind: 'e', name: n.name || 'ご縁の人', last: n.lastAt || 0, pic: '' }));   // ご縁でつながっている人も並べる
     list = list.concat(G);
-    const seen = new Set(), L0 = list.filter(x => x.kind !== 'o').filter(x => { const n = x.kind === 'me' ? 'me' : String(x.name || x.key); if (seen.has(n)) return false; seen.add(n); return true; }).sort((a, b) => (b.kind === 'me') - (a.kind === 'me')).slice(0, 30);   // 自分のハタボがいちばん上
+    const seen = new Set(), L0 = list.filter(x => x.kind !== 'o' && x.kind !== 'me' /* 左の帯は人だけ。自分のハタボはトーク一覧のいちばん上から */).filter(x => { const n = x.kind === 'me' ? 'me' : String(x.name || x.key); if (seen.has(n)) return false; seen.add(n); return true; }).sort((a, b) => (b.kind === 'me') - (a.kind === 'me')).slice(0, 30);   // 自分のハタボがいちばん上
     st.innerHTML = L0.map(x => `<button type="button" class="${x.key === (J.focusKey || 'me:me') ? 'on' : ''}" data-fk="${esc(x.key)}" data-fn="${esc(x.name || '')}" aria-label="${esc(x.kind === 'me' ? 'ふつうのハタボ' : x.name + 'さん向けのハタボ')}" title="${esc(x.kind === 'me' ? 'ふつうのハタボ' : x.name + 'さん向け')}">${avf(x)}${x.unread ? '<u></u>' : ''}</button>`).join('');
-    document.body.classList.toggle('hasStrip', L0.length > 1);
+    document.body.classList.toggle('hasStrip', L0.length > 0);
   }
+  window.hbSetFocus = (k, n) => setFocus(k, n);
   function setFocus(key, name) {
     J.focusKey = key || ''; J.focusName = name || '';
     document.body.classList.toggle('hasFocus', !!key);
@@ -4977,7 +4988,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   // ハタボ・コムギのミニアプリ：「〜と話す」を押さなくても、開いたらそのままつなぐ（声を出す許可は、最初に画面をさわったときにもらう）
   if (HATABO_APP && LIFF && !STAGE) { setTimeout(() => { const so = $('startOverlay'); if (so && !so.hidden) $('startBtn').click(); }, 300); document.addEventListener('pointerdown', () => { try { AC(); } catch (e) {} }, { once: true, capture: true }); }
   { const tb = $('hbpTabs'); if (tb && !tb.querySelector('.hbp-help')) { const hb = document.createElement('button'); hb.type = 'button'; hb.className = 'hbp-help'; hb.style.display = 'none'; hb.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 1 1 3.4 2.3c-.6.3-1 .8-1 1.5v.6M12 17h.01"/></svg><span>使い方</span>'; hb.onclick = e => { e.stopPropagation(); hbTour(); }; const ac = tb.querySelector('.hbp-acct'); tb.insertBefore(hb, ac || null); } }   // 左のメニューに「使い方」
-  { const tourOnce = () => { let sk = ''; try { sk = sessionStorage.getItem('hb.tourSkip') || ''; } catch (e) {} if (document.body.classList.contains('pcweb') && !store.get('hbPcTour', 0) && !sk && !document.getElementById('hbTour')) hbTour(); };
+  { const tourOnce = () => { let sk = ''; try { sk = sessionStorage.getItem('hb.tourSkip') || ''; } catch (e) {} if ((document.body.classList.contains('pcweb') || HATABO_APP) && !store.get('hbPcTour', 0) && !sk && !document.getElementById('hbTour')) hbTour(); /* パソコンもスマホも、はじめて開いたら */ };
     document.addEventListener('jrready', () => setTimeout(tourOnce, 600), { once: true });
     setTimeout(tourOnce, 4000);   // サーバーとつながるのを待たずに、開いて少ししたら出す
     document.addEventListener('click', e => { if (e.target.closest && e.target.closest('#hbTourBtn')) { e.preventDefault(); hbTour(); } }, true); }   // 「使い方の案内」は、どの画面から押しても開く
