@@ -533,7 +533,7 @@ async function loadInbox(code) {
   return memInbox.get(code) || [];
 }
 async function saveInbox(code, items) {
-  items = items.slice(0, 50);
+  items = items.slice(0, 100);   // 自分が送った伝言も入るので、100件まで
   try { if (deps.db) return void await deps.db.collection('inbox').doc(code).set({ items, at: Date.now() }); } catch (e) { console.error('inbox save', String(e.message).slice(0, 120)); }
   memInbox.set(code, items);
 }
@@ -545,11 +545,18 @@ async function postInbox(code, item, chId) {
   await saveInbox(code, items);
   const head = item.kind === 'goen' ? 'ご縁' : (item.fromName || 'ご縁の人') + 'さんから伝言';
   // まず、ホーム画面のハタボ（ウェブアプリ）に通知とバッジ。届いたら、LINEのまとめには入れない（LINEの通数を使わない）
-  const pushed = await pushTo(code, { title: head, body: String(item.text).slice(0, 120), badge: items.filter(x => !x.read).length, tag: 'inbox' }).catch(() => 0);
+  const pushed = await pushTo(code, { title: head, body: String(item.text).slice(0, 120), badge: items.filter(x => !x.read).length, tag: 'inbox', from: item.from || '' }).catch(() => 0);
   if (pushed) return;
   const r = await getRef(code).catch(() => null), to = r && /^g:U[0-9a-f]{32}$/.test(r.owner || '') ? r.owner.slice(2) : '';
   // 通知を受け取っていない人だけ、LINEへは、すぐ送らずに1日1回のまとめに入れる（/cron/digest）
   if (to) await queueDigest(to, chId === 'komugi' ? 'komugi' : 'hatabo', '［' + head + '］' + String(item.text).slice(0, 300));
+}
+/** 自分が送った伝言も、自分の箱に残す（相手ごとの吹き出しで見るため。既読あつかい） */
+async function inboxMine(me, to, text) {
+  if (!me || !to || !text) return;
+  const items = await loadInbox(me), r = await getRef(to).catch(() => null);
+  items.unshift({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), at: Date.now(), read: true, kind: 'msg', mine: true, to, toName: (r && r.name) || '', text: String(text).slice(0, 500) });
+  await saveInbox(me, items);
 }
 /* ===== ホーム画面のハタボ（ウェブアプリ）への通知：LINEの通数を使わない。鍵（VAPID）がなければ何もしない ===== */
 let webpush = null;
@@ -577,7 +584,7 @@ async function pushTo(code, p) {
   const subs = await pushSubs(code); if (!subs.length) return 0;
   let ok = 0; const keep = [];
   for (const s of subs) {
-    const url = s.home ? s.home.replace(/([?&])page=[^&]*/, '$1').replace(/[?&]$/, '') + (s.home.includes('?') ? '&' : '?') + 'page=' + (p.page || 'inbox') : '';
+    const url = s.home ? s.home.replace(/([?&])page=[^&]*/, '$1').replace(/[?&]$/, '') + (s.home.includes('?') ? '&' : '?') + 'page=' + (p.page || 'inbox') + (p.from ? '&with=' + encodeURIComponent(p.from) : '') : '';
     try { await w.sendNotification({ endpoint: s.endpoint, keys: s.keys }, JSON.stringify(Object.assign({}, p, { url })), { TTL: 86400, urgency: 'normal' }); ok++; keep.push(s); }
     catch (e) { if (e.statusCode === 404 || e.statusCode === 410) continue; keep.push(s); console.error('push', e.statusCode || '', String(e.message).slice(0, 120)); }
   }
@@ -2771,6 +2778,7 @@ function session(ws) {
     let body = text.slice(i + String(hit.name).replace(/さん$/, '').length).replace(/^(さん|くん|ちゃん|様|さま)?(に|へ)[、,\s]*/, '').replace(/(って|と)?(伝えて|つたえて|伝言して|でんごんして|言っといて|いっといて|送っといて|おくっといて)[。！!]*\s*$/, '').trim();
     if (body.length < 2) { speakOnly(T(hit.name + 'さんに、なんて伝えるボー？'), 'think'); return true; }
     await postInbox(hit.code, { kind: 'msg', from: S.myRef, fromName: S.me || 'ご縁の人', text: body });
+    await inboxMine(S.myRef, hit.code, body).catch(() => {});
     send({ type: 'note_saved', kind: 'dengon' });
     speakOnly(T(hit.name + 'さんのAI棒に、伝言をとどけたボー。'), 'smile');
     return true;
@@ -3523,13 +3531,14 @@ function session(ws) {
         const to = String(m.to || ''), t = String(m.text || '').trim().slice(0, 500);
         if (!t || !(await canTalk(S.myRef, to))) return send({ type: 'notice', why: 'inbox', detail: 'ご縁でつながった人と友だちにだけ送れます' });
         await postInbox(to, { kind: 'msg', from: S.myRef, fromName: S.me || 'ご縁の人', text: t });
+        await inboxMine(S.myRef, to, t);
         return send({ type: 'inbox', items: await loadInbox(S.myRef), people: (await goenPeople(S.myRef).catch(() => [])).slice(0, 60), sent: true });
       }
       if (m.type === 'push_key') return send({ type: 'push_key', key: wpLib() ? ENV.VAPID_PUBLIC : '' });   // ホーム画面のハタボの通知：鍵を渡す
       if (m.type === 'push_sub') { const ok = !S.guest && !S.visit && await pushAdd(S.myRef, m.sub, m.home); return send({ type: 'push', ok, on: ok, why: ok ? '' : (S.myRef ? 'bad' : 'login') }); }
       if (m.type === 'push_off') { if (S.myRef) await pushRemove(S.myRef, String(m.endpoint || '')); return send({ type: 'push', ok: true, on: false }); }
       if (m.type === 'push_test') { const un = (await loadInbox(S.myRef).catch(() => [])).filter(x => !x.read).length; const n = await pushTo(S.myRef, { title: 'ハタボ', body: 'テストの通知です。押すと伝言をひらきます。', badge: un || 1, tag: 'test' }).catch(() => 0); return send({ type: 'push', ok: !!n, on: !!n, test: true }); }
-      if (m.type === 'inbox_read') { const items = await loadInbox(S.myRef); items.forEach(x => { x.read = true; }); await saveInbox(S.myRef, items); return send({ type: 'inbox', items, people: (await goenPeople(S.myRef).catch(() => [])).slice(0, 60) }); }
+      if (m.type === 'inbox_read') { const items = await loadInbox(S.myRef), ids = Array.isArray(m.ids) ? m.ids.map(String) : null; items.forEach(x => { if (!ids || ids.includes(x.id)) x.read = true; }); /* ids があれば、その伝言だけ（開いた相手の分） */ await saveInbox(S.myRef, items); return send({ type: 'inbox', items, people: (await goenPeople(S.myRef).catch(() => [])).slice(0, 60) }); }
       if (m.type === 'note_del') { const items = (await loadNotes(S.owner)).filter(x => x.id !== String(m.id || '')); await saveNotes(S.owner, items); return send(await myPage(S)); }
     } catch (e) { send({ type: 'notice', why: 'server', detail: String(e.message).slice(0, 80) }); }
   });
@@ -4115,4 +4124,4 @@ if (require.main === module) {
   deps.init();
   createServer().listen(ENV.PORT, () => console.log('butter-junior on :' + ENV.PORT));
 }
-module.exports = { pushTo, pushAdd, pushSubs, saveCol, loadCol, groupSeen, groupPush, groupsOut, PLAN_TABLE, hoursOpen, threadUpsert, webSign, webVerify, MCP_TOOLS, cmVideo, brandOut, rankOf, RANKS, cloneRule, cloneOpen, CLONE_CAP, createServer, deps, ENV, splitter, takeEmotion, clean, PHOTO_RE, VIDEO_RE, session, calledJunior, calledJam, hearingStart, hearingCheckAll, handleStripeEvent, stripeSigOk, funnelOf, getRef, putRef, checkoutFor };
+module.exports = { inboxMine, loadInbox: id => loadInbox(id), pushTo, pushAdd, pushSubs, saveCol, loadCol, groupSeen, groupPush, groupsOut, PLAN_TABLE, hoursOpen, threadUpsert, webSign, webVerify, MCP_TOOLS, cmVideo, brandOut, rankOf, RANKS, cloneRule, cloneOpen, CLONE_CAP, createServer, deps, ENV, splitter, takeEmotion, clean, PHOTO_RE, VIDEO_RE, session, calledJunior, calledJam, hearingStart, hearingCheckAll, handleStripeEvent, stripeSigOk, funnelOf, getRef, putRef, checkoutFor };

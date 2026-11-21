@@ -18,5 +18,7 @@ const srv = https.createServer({ key: fs.readFileSync(path.join(dir, 'key.pem'))
   assert.strictEqual(await S.pushTo('nobody', { title: 'x' }), 0);
   assert.ok(await S.pushAdd('r2', { endpoint: 'https://fcm.googleapis.com/fcm/send/abc', keys: key() }, 'https://evil.example/'));
   assert.strictEqual((await S.pushSubs('r2'))[0].home, '', 'よその開き先は入れない');
-  srv.close(); console.log('OK：ホーム画面のハタボの通知（登録・送信・掃除）'); process.exit(0);
+  await S.inboxMine('me1', 'you1', 'こんにちは');
+  const mine = await S.loadInbox('me1'); assert.ok(mine[0].mine && mine[0].read && mine[0].to === 'you1', '送った伝言も自分の箱に（既読）');
+  srv.close(); console.log('OK：ホーム画面のハタボの通知（登録・送信・掃除）・送った伝言を残す'); process.exit(0);
 });

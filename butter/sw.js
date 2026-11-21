@@ -10,7 +10,7 @@ self.addEventListener('push', e => {
     icon: 'https://www.hatha-lab.com/icon-192.png',
     tag: d.tag || 'inbox',
     renotify: true,
-    data: { url: d.url || '', page: d.page || 'inbox' }
+    data: { url: d.url || '', page: d.page || 'inbox', from: d.from || '' }
   })];
   const nav = self.navigator;
   if (typeof d.badge === 'number' && nav && nav.setAppBadge) jobs.push(d.badge > 0 ? nav.setAppBadge(d.badge) : nav.clearAppBadge());
@@ -21,7 +21,7 @@ self.addEventListener('notificationclick', e => {
   const scope = self.registration.scope, d = e.notification.data || {};
   const url = String(d.url || '').startsWith(scope) ? d.url : scope + '?page=' + (d.page || 'inbox');
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(cs => {
-    for (const c of cs) if (c.url.startsWith(scope)) { c.postMessage({ type: 'open', page: d.page || 'inbox' }); return c.focus(); }
+    for (const c of cs) if (c.url.startsWith(scope)) { c.postMessage({ type: 'open', page: d.page || 'inbox', from: d.from || '' }); return c.focus(); }
     return self.clients.openWindow(url);
   }));
 });
