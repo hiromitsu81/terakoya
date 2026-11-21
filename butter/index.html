@@ -791,6 +791,21 @@ body.pcweb #talkOaBtn, body.pcweb .pinbar { display: none !important; }
 /* ===== トーク画面（自分用）：Claudeと同じ作り。キャラの画面はプレゼン用。左右のスワイプで切りかえ ===== */
 .chatv{position:fixed;inset:0;z-index:40;display:none;flex-direction:column;background:#fff;color:#16233F;font-family:'Noto Sans JP','Noto Sans CJK JP',sans-serif}
 body.chatview .chatv{display:flex}
+/* スマホのトーク画面：左はしに、つながっている人のアイコン（押すと、その人向けのハタボに切りかわる） */
+#cvStrip{display:none}
+@media (max-width:899px){
+  body.chatview:not(.pcweb):not(.hbp-open).hasStrip #cvStrip{display:flex;flex-direction:column;align-items:center;gap:10px;position:fixed;left:0;top:64px;bottom:190px;width:56px;padding:6px 0;overflow-y:auto;z-index:80;background:rgba(8,12,20,.55);border-right:1px solid rgba(255,255,255,.08)}
+  body.chatview:not(.pcweb):not(.hbp-open).hasStrip #cvList{padding-left:62px!important}
+  body.chatview.hasFocus #cvList{padding-top:52px!important}
+  #cvStrip button{flex:none;width:42px;height:42px;border-radius:50%;border:2px solid transparent;padding:0;background:#1A2232;color:#fff;font:800 15px var(--display);position:relative;cursor:pointer;overflow:visible}
+  #cvStrip button img,#cvStrip button span{width:100%;height:100%;border-radius:50%;display:grid;place-items:center;object-fit:cover}
+  #cvStrip button.on{border-color:#7FD39E;box-shadow:0 0 0 3px rgba(127,211,158,.25)}
+  #cvStrip button u{position:absolute;right:-2px;top:-2px;width:10px;height:10px;border-radius:50%;background:#E5484D}
+  #cvFocus{display:none}
+  body.chatview.hasFocus #cvFocus{display:flex;align-items:center;gap:8px;position:fixed;left:64px;right:10px;top:66px;z-index:81;padding:7px 12px;border-radius:999px;background:rgba(127,211,158,.16);border:1px solid rgba(127,211,158,.5);color:#DFF5E7;font:700 12.5px var(--display)}
+  #cvFocus b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #cvFocus button{border:0;background:none;color:#DFF5E7;font-size:16px;cursor:pointer;padding:0 2px}
+}
 /* キャラを出さない窓口（たくちゃんの清掃ヒアリングなど）：トーク画面だけ */
 body.plain .vsw,body.plain .cvfab,body.plain .shareb,body.plain .gradeb,body.plain .stage,body.plain .meters{display:none!important}
 /* キャラなしの窓口：キャラのかわりに、エンブレムを画面いっぱいに（文字が読めるよう、うすく。回さない） */
@@ -2275,7 +2290,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   };
   // LINEミニアプリ（LIFF）で開かれたとき：?liff=1&g=<GASのデプロイID>&liffId=<LIFF ID>
   const Q = new URLSearchParams(location.search.replace(/^\?liff\.state=[^&]*&?/, '?'));
-  window.HB_VER = '11/21-1240';   // アプリの版（新しいアプリが届いているかの目じるし）
+  window.HB_VER = '11/21-1300';   // アプリの版（新しいアプリが届いているかの目じるし）
   try { console.log('HATHABO app', window.HB_VER); } catch (e) {}
   // ?page= や ?rid= を、そのまま・Q・LINEの liff.state の中から読む（PCのブラウザでLINEにログインすると、もどったときにアドレスから消えるので先にとっておく）
   function qpar(n) { let v = new URLSearchParams(location.search).get(n) || Q.get(n); if (!v) { try { const st = new URLSearchParams(location.search).get('liff.state'); if (st) v = new URLSearchParams(decodeURIComponent(st).split('?')[1] || '').get(n); } catch (e) {} } return v || ''; }
@@ -4805,6 +4820,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
     $('hbpTalks').innerHTML = all.length ? all.map(x => { const pin = pins.includes(x.key); return `<div class="hbt${x.key === cur ? ' on' : ''}${pin ? ' pinned' : ''}" data-tk="${esc(x.key)}" role="button" tabindex="0"><i class="hbt-av">${av(x)}<em class="hbt-mk ${x.kind}" title="${TIP[x.kind]}"><svg viewBox="0 0 24 24" width="10" height="10" fill="currentColor" aria-hidden="true">${MARK[x.kind]}</svg></em></i><span class="hbt-t"><b>${esc(x.name)}</b><small>${esc(x.sub || '')}</small></span><span class="hbt-r"><small>${day(x.last)}</small>${x.unread ? '<u>' + x.unread + '</u>' : ''}</span><button type="button" class="hbt-pin" data-pin="${esc(x.key)}" aria-label="${pin ? 'ピン留めをはずす' : 'ピン留め'}" title="${pin ? 'ピン留めをはずす' : 'いちばん上にピン留め'}"><svg viewBox="0 0 24 24" width="14" height="14" fill="${pin ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6l-1 6 4 4H6l4-4z M12 13v8"/></svg></button></div>`; }).join('') : '<p class="hbs-empty">見つかりません</p>';
   }
   function hbpStrip(list, avf) {   // スマホの左の帯：トークの相手のアイコンだけ（押すとそのトーク、帯を押すと一覧）
+    try { cvStrip(list, avf); } catch (e) {}
     const st = $('hbpStrip'); if (!st) return;
     st.innerHTML = '<button type="button" class="hbps-open" aria-label="トーク一覧を開く"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>' + (() => { const seen = new Set(); return list.filter(x => { const n = x.kind === 'me' ? 'me' : String(x.name || x.key); if (seen.has(n)) return false; seen.add(n); return true; }); })().slice(0, 9).map(x => `<button type="button" class="hbps-i${x.kind === 'me' ? ' me' : ''}" data-tk="${esc(x.key)}" aria-label="${esc(x.name)}">${avf(x)}${x.unread ? '<u></u>' : ''}</button>`).join('');
   }
@@ -4934,6 +4950,25 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
     document.body.appendChild(d); draw();
   }
   window.hbTour = hbTour;
+  /* --- スマホのトーク画面の左の帯：相手を押すと、自分のハタボが「その人向け」に切りかわる（その人とのやりとりを踏まえて話す） --- */
+  function cvStrip(list, avf) {
+    let st = $('cvStrip'); if (!st) { st = document.createElement('nav'); st.id = 'cvStrip'; st.setAttribute('aria-label', 'つながっている人'); document.body.append(st);
+      const fc = document.createElement('div'); fc.id = 'cvFocus'; fc.innerHTML = '<b></b><button type="button" aria-label="ふつうのハタボにもどす">×</button>'; document.body.append(fc);
+      fc.querySelector('button').onclick = () => setFocus('', '');
+      st.addEventListener('click', e => { const b = e.target.closest('[data-fk]'); if (!b) return; if (b.dataset.fk === 'me:me' || b.dataset.fk === J.focusKey) setFocus('', ''); else setFocus(b.dataset.fk, b.dataset.fn); }); }
+    const seen = new Set(), L0 = list.filter(x => x.kind !== 'o').filter(x => { const n = x.kind === 'me' ? 'me' : String(x.name || x.key); if (seen.has(n)) return false; seen.add(n); return true; }).sort((a, b) => (b.kind === 'me') - (a.kind === 'me')).slice(0, 30);   // 自分のハタボがいちばん上
+    st.innerHTML = L0.map(x => `<button type="button" class="${x.key === (J.focusKey || 'me:me') ? 'on' : ''}" data-fk="${esc(x.key)}" data-fn="${esc(x.name || '')}" aria-label="${esc(x.kind === 'me' ? 'ふつうのハタボ' : x.name + 'さん向けのハタボ')}" title="${esc(x.kind === 'me' ? 'ふつうのハタボ' : x.name + 'さん向け')}">${avf(x)}${x.unread ? '<u></u>' : ''}</button>`).join('');
+    document.body.classList.toggle('hasStrip', L0.length > 1);
+  }
+  function setFocus(key, name) {
+    J.focusKey = key || ''; J.focusName = name || '';
+    document.body.classList.toggle('hasFocus', !!key);
+    const fc = $('cvFocus'); if (fc) fc.querySelector('b').textContent = key ? name + 'さん向けのハタボ' : '';
+    document.querySelectorAll('#cvStrip [data-fk]').forEach(b => b.classList.toggle('on', b.dataset.fk === (key || 'me:me')));
+    if (J.ready) jrSend({ type: 'focus', key: J.focusKey, name: J.focusName });
+    toast(key ? name + 'さん向けのハタボに切りかえました' : 'ふつうのハタボにもどしました');
+  }
+  document.addEventListener('jrready', () => { if (J.focusKey) jrSend({ type: 'focus', key: J.focusKey, name: J.focusName }); if (HATABO_APP && !document.body.classList.contains('pcweb') && !HBP.con) jrSend({ type: 'console', as: store.get('conAs', 'office') }); });   // つなぎ直したときも、相手を覚えておく・一覧を読む
   // ハタボ・コムギのミニアプリ：「〜と話す」を押さなくても、開いたらそのままつなぐ（声を出す許可は、最初に画面をさわったときにもらう）
   if (HATABO_APP && LIFF && !STAGE) { setTimeout(() => { const so = $('startOverlay'); if (so && !so.hidden) $('startBtn').click(); }, 300); document.addEventListener('pointerdown', () => { try { AC(); } catch (e) {} }, { once: true, capture: true }); }
   { const tb = $('hbpTabs'); if (tb && !tb.querySelector('.hbp-help')) { const hb = document.createElement('button'); hb.type = 'button'; hb.className = 'hbp-help'; hb.style.display = 'none'; hb.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 1 1 3.4 2.3c-.6.3-1 .8-1 1.5v.6M12 17h.01"/></svg><span>使い方</span>'; hb.onclick = e => { e.stopPropagation(); hbTour(); }; const ac = tb.querySelector('.hbp-acct'); tb.insertBefore(hb, ac || null); } }   // 左のメニューに「使い方」
