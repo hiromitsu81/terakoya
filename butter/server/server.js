@@ -820,6 +820,7 @@ async function googleLogin(code, res, page, x) {
       await saveCol(gmailKey(email), 'gmail', { owner, email, at: Date.now(), via: 'google' });
     }
     await loadPerms(true); const perm = permOf(owner, email) || (office ? 'office' : '');
+    if (perm === 'top' && owner && ENV.TOP_EMAILS.includes(email) && !PERMS.list.some(x => x.email === email)) { PERMS.list.push({ email, perm: 'top', name: '最高管理者', owner: owner.replace(/^g:/, ''), at: Date.now(), by: 'TOP_EMAILS' }); await saveCol('all', 'perms', { list: PERMS.list }).catch(() => {}); }   // LINEで入っても最高管理者
     if (perm && owner) { const e = PERMS.list.find(x => x.email === email); if (e && !e.owner) { e.owner = owner.replace(/^g:/, ''); await saveCol('all', 'perms', { list: PERMS.list }).catch(() => {}); } }   // Googleで入った人のLINEのアカウントも、同じ役割にする
     const t = webSign({ owner, office: !!perm, perm, email, nu: isNew ? 1 : 0, exp: Date.now() + 12 * 3600000 });
     if (!t) return page('準備中です', 'ウェブのログインの鍵（WEB_SECRET）がまだ設定されていません。');
@@ -3154,6 +3155,7 @@ function session(ws) {
         }
         await loadPerms();
         send({ type: 'ready', perm: permNow(), noOwner: !!S.web && !S.owner, plain: hearing(), me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs, guest: !!S.guest, service: S.role === 'サービス相談', myRef: S.myRef || '', visit: S.visit ? { code: S.visit, name: S.visitHost } : null, avatar: S.avatar || '', komugi: !!S.komugi, mac: !!S.macSelf, office: isOffice(), web: !!S.web, srv: SERVER_REV, shopView: !!S.clone, bridge: !!S.bridge, superUntil: superUntil(S.owner), canPlan: !!(S.claude || superUntil(S.owner)), claude: !!S.claude, aiName: !S.visit && S.custom && S.custom.aiName || '' });
+        if ((S.avatar === 'hatabo' || S.avatar === 'komugi' || S.web) && convoKey() && !S.visit) { if ((S.history || []).length) send({ type: 'chat_turns', id: S.thr || '', turns: S.history.slice(-40) }); send(chatsOut()); }   // 開いたら、前の続き（ハタボとのやりとり）をトーク画面に出す
         if (S.visit) { const T = S.avatar === 'komugi' ? x => x.replace(/だボー/g, 'です').replace(/ボー/g, 'です') : S.avatar === 'hatabo' ? bizBo : bizBo; return speakOnly(T(S.visitSponsor ? S.visitHost + 'のAI棒だボー。なんでも聞いてほしいボー。' : S.visitHost + 'さんのAI棒だボー。話してくれたことは、' + S.visitHost + 'さんに伝言で届けるボー。'), 'excited'); }
         if (m.greet && (S.avatar === 'hatabo' || S.avatar === 'komugi') && !S.visit && !m.ref && !m.agent && (S.history.length || S.memo || (S.custom && S.custom.callMe))) m.greet = false;   // はじめての人だけ、呼び名を聞くために一度あいさつ   // ハタボ・コムギは、開いただけでは話さない（パソコンのブラウザでも。話すボタンから）
         if (m.greet && S.guest && S.consult) return recapGreet().then(deliverInbox).catch(() => {});      // 相談メモがある人には、振り返りからはじめる

@@ -1200,6 +1200,7 @@ html:not(.kmapp) body:not(.av-komugi) .hbpage.p-my #hbpTitle { visibility: hidde
   .hbpage.rail .hbp-brand img { height: 44px !important; }
   .hbpage.rail .hbp-brand { cursor: pointer; }
   .hbpage.rail .hbp-tabs > button[data-p="my"] { display: none !important; }   /* ホームは、いちばん上のマーク */
+  body.pcweb .hbpage .hbp-tabs > button[data-p="my"] { display: none !important; }
   .hbpage.rail .hbp-tabs > button.hbp-help { display: flex !important; }
   .hbpage.rail .hbp-tabs { padding: 18px 6px 14px !important; gap: 10px !important; border-right: 0 !important; background: transparent !important; align-items: center; }
   .hbpage.rail .hbp-tabs button { flex-direction: column !important; justify-content: center; gap: 6px !important; width: 84px; padding: 10px 4px !important; border-radius: 12px !important; font: 600 11.5px var(--display) !important; letter-spacing: .02em; color: var(--cmut) !important; background: transparent !important; }
@@ -2290,7 +2291,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   };
   // LINEミニアプリ（LIFF）で開かれたとき：?liff=1&g=<GASのデプロイID>&liffId=<LIFF ID>
   const Q = new URLSearchParams(location.search.replace(/^\?liff\.state=[^&]*&?/, '?'));
-  window.HB_VER = '11/21-1305';   // アプリの版（新しいアプリが届いているかの目じるし）
+  window.HB_VER = '11/21-1315';   // アプリの版（新しいアプリが届いているかの目じるし）
   try { console.log('HATHABO app', window.HB_VER); } catch (e) {}
   // ?page= や ?rid= を、そのまま・Q・LINEの liff.state の中から読む（PCのブラウザでLINEにログインすると、もどったときにアドレスから消えるので先にとっておく）
   function qpar(n) { let v = new URLSearchParams(location.search).get(n) || Q.get(n); if (!v) { try { const st = new URLSearchParams(location.search).get('liff.state'); if (st) v = new URLSearchParams(decodeURIComponent(st).split('?')[1] || '').get(n); } catch (e) {} } return v || ''; }
@@ -2304,6 +2305,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   const KOMUGI_APP = /^201268667[012]-/.test(LIFF_ID);   // コムギ専用のミニアプリ（公式LINE @858uraou）
   // 立ち上げはいつも、エンブレムのたまごから（つながる前に、ハタボやバターちゃんを一瞬も見せない）
   if (KOMUGI_APP) document.body.classList.add('av-komugi'); else if (/^20126760(32|33|35)-/.test(LIFF_ID)) document.body.classList.add('av-hatabo');
+  if ((KOMUGI_APP || /^20126760(32|33|35)-/.test(LIFF_ID)) && !(Q.get('stage'))) { try { if (store.get('hbView', 'chat') !== 'char') document.body.classList.add('chatview'); } catch (e) {} }   // 開いた瞬間からトーク画面（LINEの切りかえのあいだに、キャラやたまごを見せない）
   const HATABO_APP = /^20126760(32|33|35)-/.test(LIFF_ID) || KOMUGI_APP;
   const OA_ID = KOMUGI_APP ? '@858uraou' : '@024curid';
   const MINI_URL = KOMUGI_APP ? 'https://miniapp.line.me/2012686672-PRB9tb8H' : 'https://miniapp.line.me/2012676035-yCkx6tBu';
@@ -3465,7 +3467,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
       case 'reqs': HBP.reqs = m; if (!$('hbPage').hidden && HBP.page === 'reqs') hbpRender(); break;
       case 'gacha': HBP.gacha = m; if (!$('hbPage').hidden && HBP.page === 'gacha') hbpRender(); break;
       case 'friends': HBP.friends = m; if (!$('hbPage').hidden && (HBP.page === 'friends' || HBP.page === 'social')) hbpRender(); break;
-      case 'goen': HBP.goen = m; if (!$('hbPage').hidden && HBP.page === 'goen') hbpRender(); break;
+      case 'goen': HBP.goen = m; if (!$('hbPage').hidden && HBP.page === 'goen') hbpRender(); try { hbpChats(); } catch (e) {} break;
       case 'limit': HBP.limitHit = m.why || 'plan'; setTimeout(() => hbpOpen('ticket'), 1800); break;
       case 'mypage': clearTimeout(HBP.goT); if (m.driveMsg) toast(m.driveMsg); if (m.ticketOk || m.ticketNg) { HBP.tMsg = m.ticketOk || m.ticketNg; toast(HBP.tMsg); if (m.ticketOk) HBP.limitHit = ''; } HBP.data = m; try { store.set('hbpData', Object.assign({}, m, { notes: (m.notes || []).slice(0, 20), driveMsg: '', ticketOk: '', ticketNg: '' })); } catch (e) {} if (!$('hbPage').hidden) hbpRender(); break;
       case 'note_saved': toast({ minutes: '議事録を残したよ', memo: 'メモしたよ', doc: '書いた文章を残したよ', dengon: '伝言をとどけたよ' }[m.kind] || '残したよ'); if (!$('hbPage').hidden) jrSend({ type: 'mypage' }); break;
@@ -4957,6 +4959,8 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
       const fc = document.createElement('div'); fc.id = 'cvFocus'; fc.innerHTML = '<b></b><button type="button" aria-label="ふつうのハタボにもどす">×</button>'; document.body.append(fc);
       fc.querySelector('button').onclick = () => setFocus('', '');
       st.addEventListener('click', e => { const b = e.target.closest('[data-fk]'); if (!b) return; if (b.dataset.fk === 'me:me' || b.dataset.fk === J.focusKey) setFocus('', ''); else setFocus(b.dataset.fk, b.dataset.fn); }); }
+    const G = ((HBP.goen && HBP.goen.nodes) || []).filter(n => !n.me && n.depth === 1).map(n => ({ key: 'e:' + n.id, id: n.id, kind: 'e', name: n.name || 'ご縁の人', last: n.lastAt || 0, pic: '' }));   // ご縁でつながっている人も並べる
+    list = list.concat(G);
     const seen = new Set(), L0 = list.filter(x => x.kind !== 'o').filter(x => { const n = x.kind === 'me' ? 'me' : String(x.name || x.key); if (seen.has(n)) return false; seen.add(n); return true; }).sort((a, b) => (b.kind === 'me') - (a.kind === 'me')).slice(0, 30);   // 自分のハタボがいちばん上
     st.innerHTML = L0.map(x => `<button type="button" class="${x.key === (J.focusKey || 'me:me') ? 'on' : ''}" data-fk="${esc(x.key)}" data-fn="${esc(x.name || '')}" aria-label="${esc(x.kind === 'me' ? 'ふつうのハタボ' : x.name + 'さん向けのハタボ')}" title="${esc(x.kind === 'me' ? 'ふつうのハタボ' : x.name + 'さん向け')}">${avf(x)}${x.unread ? '<u></u>' : ''}</button>`).join('');
     document.body.classList.toggle('hasStrip', L0.length > 1);
@@ -4969,7 +4973,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
     if (J.ready) jrSend({ type: 'focus', key: J.focusKey, name: J.focusName });
     toast(key ? name + 'さん向けのハタボに切りかえました' : 'ふつうのハタボにもどしました');
   }
-  document.addEventListener('jrready', () => { if (J.focusKey) jrSend({ type: 'focus', key: J.focusKey, name: J.focusName }); if (HATABO_APP && !document.body.classList.contains('pcweb') && !HBP.con) jrSend({ type: 'console', as: store.get('conAs', 'office') }); });   // つなぎ直したときも、相手を覚えておく・一覧を読む
+  document.addEventListener('jrready', () => { if (J.focusKey) jrSend({ type: 'focus', key: J.focusKey, name: J.focusName }); if (HATABO_APP && !document.body.classList.contains('pcweb')) { if (!HBP.con) jrSend({ type: 'console', as: store.get('conAs', 'office') }); if (!HBP.goen) jrSend({ type: 'goen_tree' }); } });   // つなぎ直したときも、相手を覚えておく・一覧を読む
   // ハタボ・コムギのミニアプリ：「〜と話す」を押さなくても、開いたらそのままつなぐ（声を出す許可は、最初に画面をさわったときにもらう）
   if (HATABO_APP && LIFF && !STAGE) { setTimeout(() => { const so = $('startOverlay'); if (so && !so.hidden) $('startBtn').click(); }, 300); document.addEventListener('pointerdown', () => { try { AC(); } catch (e) {} }, { once: true, capture: true }); }
   { const tb = $('hbpTabs'); if (tb && !tb.querySelector('.hbp-help')) { const hb = document.createElement('button'); hb.type = 'button'; hb.className = 'hbp-help'; hb.style.display = 'none'; hb.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 1 1 3.4 2.3c-.6.3-1 .8-1 1.5v.6M12 17h.01"/></svg><span>使い方</span>'; hb.onclick = e => { e.stopPropagation(); hbTour(); }; const ac = tb.querySelector('.hbp-acct'); tb.insertBefore(hb, ac || null); } }   // 左のメニューに「使い方」
