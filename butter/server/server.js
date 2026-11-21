@@ -72,6 +72,7 @@ const ENV = {
   STRIPE_PRICES: (() => { try { return JSON.parse(process.env.STRIPE_PRICES || '{}'); } catch (e) { return {}; } })(),   // 予備：{"ris_Z_m":"price_…"}。なければ価格の lookup_key（ris_Z_m など）でさがす
   SITE_URL: process.env.SITE_URL || '',   // ハタボのサービスサイト（公開したらURLを入れる。トーク・カード・Myハタボから、ときどき案内する）
   OFFICE_OWNERS: (process.env.OFFICE_OWNERS || '').split(/[,\s]+/).map(s => s.trim().replace(/^g:/, '')).filter(Boolean),   // ハタボ事務局（ヒロさん）のLINEのID。事務局への声・問い合わせ・友だち追加などを1日1回まとめて届ける
+  TOP_EMAILS: (process.env.TOP_EMAILS || '').split(/[,\s]+/).map(s => s.trim().toLowerCase()).filter(Boolean),   // 最高管理者のGmail（役割の付け外しができる人。最初の1人だけここで決める）
   OFFICE_EMAILS: (process.env.OFFICE_EMAILS || '').split(/[,\s]+/).map(s => s.trim().toLowerCase()).filter(Boolean),   // Googleでログインしたら事務局の管理画面に入れるメール
   WEB_SECRET: process.env.WEB_SECRET || '',   // ウェブのログイン（Google）の印をつくる鍵。Cloud Runに直接入れる（なければGOOGLE_CLIENT_SECRETから作る）
   APP_URL: process.env.APP_URL || 'https://app.hatha-lab.com/?liff=1&g=AKfycbxe-O1pMup7kUMVKVkmQemYknVSyTSq1ub3bHJqPI8-0QIAYG7o2eXKI_yQIk9tHwPz&liffId=2012676035-yCkx6tBu',   // PCのブラウザで開くハタボ
@@ -783,13 +784,26 @@ function webVerify(t) {
   try { const p = JSON.parse(Buffer.from(b, 'base64url').toString()); return p && p.exp > Date.now() ? p : null; } catch (e) { return null; }
 }
 const isOfficeOwner = owner => !!owner && ENV.OFFICE_OWNERS.some(id => owner === id || owner === 'g:' + id);
+/** 管理画面の役割：最高管理者（すべて）・事務局（窓口・オーナー・お金）・開発（事務局の画面に入れるが、会話の中身とお金は伏せる） */
+const PERM_NAMES = { top: '最高管理者', office: '事務局', dev: '開発' };
+let PERMS = { list: [], log: [] }, PERMS_AT = 0;
+async function loadPerms(force) { if (!force && Date.now() - PERMS_AT < 60000) return PERMS; try { const r = await loadCol('all', 'perms'); PERMS = { list: Array.isArray(r.list) ? r.list : [], log: Array.isArray(r.log) ? r.log : [] }; PERMS_AT = Date.now(); } catch (e) {} return PERMS; }
+function permOf(owner, email) {
+  email = String(email || '').toLowerCase(); owner = String(owner || '');
+  if (email && ENV.TOP_EMAILS.includes(email)) return 'top';
+  const o = owner.replace(/^g:/, ''), e = PERMS.list.find(x => (email && x.email === email) || (o && x.owner && x.owner === o));
+  if (e && PERM_NAMES[e.perm]) return e.perm;
+  if ((email && ENV.OFFICE_EMAILS.includes(email)) || isOfficeOwner(owner)) return 'office';
+  return '';
+}
+const maskText = t => String(t || '').replace(/[^\s、。！？!?,.\n「」]/g, '●');   // 文字の動き（長さ・区切り）は見えるが、中身は伏せる
 async function googleLogin(code, res, page, x) {
   try {
     const r = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ code, client_id: ENV.GOOGLE_CLIENT_ID, client_secret: ENV.GOOGLE_CLIENT_SECRET, redirect_uri: ENV.PUBLIC_URL + '/google/callback', grant_type: 'authorization_code' }) });
     const j = await r.json(); let p = {}; try { p = JSON.parse(Buffer.from(String(j.id_token || '').split('.')[1], 'base64url').toString()); } catch (e) {}
     const email = String(p.email || '').toLowerCase();
     if (!email || p.email_verified === false) return page('ログインできませんでした', 'Googleのメールアドレスを確かめられませんでした。もう一度おためしください。');
-    const gm = await loadCol(gmailKey(email), 'gmail'); let owner = gm.owner || ''; const office = ENV.OFFICE_EMAILS.includes(email) || isOfficeOwner(owner);
+    const gm = await loadCol(gmailKey(email), 'gmail'); let owner = gm.owner || ''; const office = ENV.OFFICE_EMAILS.includes(email) || ENV.TOP_EMAILS.includes(email) || isOfficeOwner(owner) || (await loadPerms(), !!permOf(owner, email));
     const offId = /^U[0-9a-f]{32}$/.test(ENV.OFFICE_OWNERS[0] || '') ? ENV.OFFICE_OWNERS[0] : '';   // 本物のLINEのIDのときだけ使う（仮の値は使わない）
     if (gm.via === 'office' && owner !== offId) owner = '';   // 前に仮の値でつないだものは、つなぎ直す
     if (!owner && ENV.OFFICE_EMAILS.includes(email) && offId) {   // 事務局のGmailは、まだ連携していなくても事務局のLINEのアカウントとして入る（そのまま連携も残す）
@@ -801,7 +815,9 @@ async function googleLogin(code, res, page, x) {
       owner = 'g_' + gmailKey(email).slice(0, 24); isNew = true;
       await saveCol(gmailKey(email), 'gmail', { owner, email, at: Date.now(), via: 'google' });
     }
-    const t = webSign({ owner, office, email, nu: isNew ? 1 : 0, exp: Date.now() + 12 * 3600000 });
+    await loadPerms(true); const perm = permOf(owner, email) || (office ? 'office' : '');
+    if (perm && owner) { const e = PERMS.list.find(x => x.email === email); if (e && !e.owner) { e.owner = owner.replace(/^g:/, ''); await saveCol('all', 'perms', { list: PERMS.list }).catch(() => {}); } }   // Googleで入った人のLINEのアカウントも、同じ役割にする
+    const t = webSign({ owner, office: !!perm, perm, email, nu: isNew ? 1 : 0, exp: Date.now() + 12 * 3600000 });
     if (!t) return page('準備中です', 'ウェブのログインの鍵（WEB_SECRET）がまだ設定されていません。');
     res.writeHead(302, { Location: ENV.APP_URL + '&page=' + (office ? 'admin' : 'my') + '#wt=' + t }); res.end();
   } catch (e) { console.error('google login', String(e.message).slice(0, 160)); page('ログインできませんでした', 'もう一度おためしください。'); }
@@ -2062,7 +2078,9 @@ function session(ws) {
     S.feedbackSent = (S.feedbackSent || 0) + 1;
   }
   /** 事務局：要件の一覧と、採用したときのポイント（最初に出した人が半分、残りの半分をあとの人で分ける） */
-  const isOffice = () => !!S.webOffice || isOfficeOwner(S.owner);
+  const permNow = () => (S.web && S.web.perm) || permOf(S.owner, S.web && S.web.email) || (S.webOffice || isOfficeOwner(S.owner) ? 'office' : '');
+  const isOffice = () => !!permNow();
+  const isDev = () => permNow() === 'dev';   // 開発：事務局の画面に入れるが、会話の中身とお金は伏せる・書きこまない
   /** 役割つきの愛棒：一覧・作る・変える（止める・期限・役割・キャラ・メモ）。URLは変えずに中身だけ変えられる */
   async function onClones(m) {
     if (!S.myRef) return send({ type: 'clones', denied: true });
@@ -2116,7 +2134,7 @@ function session(ws) {
     if (!sc.office) return false;
     const r = await getRef(t.shop).catch(() => null); return !!(r && r.shareSelf);   // 本人が「事務局にも中身を見せる」をオンにしたときだけ
   }
-  const conReply = (t, sc) => !t.self && !String(t.visitor || '').startsWith('api:') && (sc.office || t.shop === S.myRef || sc.role[t.shop] === 'reply');
+  const conReply = (t, sc) => !isDev() && !t.self && !String(t.visitor || '').startsWith('api:') && (sc.office || t.shop === S.myRef || sc.role[t.shop] === 'reply');
   const tMeta = (t, body) => ({ id: t.id, pic: t.vpic || '', hasRef: !!t.vref, vref: t.vref || '', shop: t.shop, aibo: t.aibo, aiboName: t.aiboName, self: !!t.self, ch: t.ch, entry: t.entry, vname: t.vname, last: t.last, n: t.n || 0, unread: t.unread || 0, preview: body ? t.preview : '（中身は本人だけが見られます）', body: !!body, days: t.days || KEEP_DEFAULT });
   async function onConsole(m) {
     if ('as' in m) S.conAs = m.as === 'self' && S.myRef ? 'self' : 'office';
@@ -2174,7 +2192,8 @@ function session(ws) {
         panel.editAibo = sc.office || c.parent === S.myRef;
         panel.shared = ((await loadCol(t.shop, 'apireserve')).items || []).filter(x => x.aibo === t.aibo).slice(0, 20).map(x => ({ kind: 'reserve', title: x.name + 'さん・' + x.when + (x.people ? '・' + x.people + '人' : ''), at: x.at, status: x.status }));
       }
-      return send({ type: 'thread', t: Object.assign(tMeta(t, body), { unread: 0, turns: body ? (t.turns || []).map(x => ({ r: x.r, t: x.t, at: x.at })) : [], canReply: conReply(t, sc) }), panel });
+      const dv = isDev(), meta = tMeta(t, body); if (dv) { meta.preview = maskText(meta.preview); meta.vname = meta.vname ? String(meta.vname).slice(0, 1) + '…' : meta.vname; }
+      return send({ type: 'thread', t: Object.assign(meta, { unread: 0, turns: body ? (t.turns || []).map(x => ({ r: x.r, t: dv ? maskText(x.t) : x.t, at: x.at })) : [], canReply: conReply(t, sc), masked: dv }), panel: dv ? {} : panel });
     }
     if (m.type === 'mem_set' || m.type === 'mem_del') {   // 自分のハタボのメモリーを直す・消す（本人だけ）
       if (!S.myRef || !S.owner) return;
@@ -2245,7 +2264,7 @@ function session(ws) {
       settings: { keepDays: me.keepDays || KEEP_DEFAULT, shareSelf: !!me.shareSelf, staff: (me.staff || []).map(x => ({ ref: x.ref, name: x.name, role: x.role })) },
       staffOf: sc.shops.filter(x => x !== S.myRef).map(x => ({ shop: x, role: sc.role[x] })),
       groups: sc.office ? (await groupsOut()).map(({ adminId, ...g }) => g) : [], quota: sc.office ? { hatabo: await lineQuota('hatabo'), komugi: await lineQuota('komugi') } : null,
-      threads: list.slice(0, 300), aibos, consultLeft: sc.office ? 99 : Math.max(0, lim.voice - cday),
+      threads: list.slice(0, 300).map(x => isDev() ? Object.assign({}, x, { preview: maskText(x.preview), vname: x.vname ? String(x.vname).slice(0, 1) + '…' : x.vname }) : x), aibos, perm: permNow(), masked: isDev(), consultLeft: sc.office ? 99 : Math.max(0, lim.voice - cday),
       sums: { owners: sc.office ? refs.filter(r => !r.kind).length : 1, aibos: aibos.length, today: list.filter(t => isToday(t.last)).length, api: au, voices, unread: list.reduce((n, t) => n + (t.unread || 0), 0), viaUrl: list.filter(t => t.entry === 'url').length, viaFollow: list.filter(t => t.entry === 'follow').length }, msg });
   }
   /** Myハタボの「AIからつなぐ（API）」：キーを作る・止める、今月の使った分、届いた予約の希望 */
@@ -2274,7 +2293,8 @@ function session(ws) {
   async function onAdmin(m) {
     if (!isOffice()) return send({ type: 'admin', denied: true });
     let msg = '';
-    if (m.type === 'admin_set' && m.code) {
+    if (m.type === 'admin_set' && isDev()) msg = '開発の役割では変えられません';
+    else if (m.type === 'admin_set' && m.code) {
       const code = String(m.code).replace(/[^\w-]/g, '').slice(0, 20), cur = await getRef(code).catch(() => null);
       if (cur) {
         const up = {};
@@ -2294,7 +2314,27 @@ function session(ws) {
       at: r.at || 0, lastAt: r.lastAt || 0, active: r.active !== false, until: r.until || 0 }; }).sort((a, b) => (b.at || 0) - (a.at || 0));
     const sum = { people: rows.filter(x => x.kind === 'person').length, trial: rows.filter(x => x.stage === 'trial').length, contract: rows.filter(x => x.stage === 'contract').length, payFail: rows.filter(x => x.payFail).length, clones: rows.filter(x => x.kind === 'clone').length, groups: rows.filter(x => x.kind === 'group').length };
     sum.api = rows.reduce((n, x) => n + x.api, 0); sum.apiYen = rows.reduce((n, x) => n + x.apiYen, 0);
-    send({ type: 'admin', rows, sum, roles: Object.keys(ROLE_RULE), audit: ((await loadCol('office', 'audit')).items || []).slice(0, 30), msg });
+    if (isDev()) { rows.forEach(x => { x.apiYen = null; x.ownerName = x.ownerName ? String(x.ownerName).slice(0, 1) + '…' : ''; }); sum.apiYen = null; }
+    send({ type: 'admin', perm: permNow(), rows, sum, roles: Object.keys(ROLE_RULE), audit: ((await loadCol('office', 'audit')).items || []).slice(0, 30), msg });
+  }
+  /** 役割の付け外し（最高管理者だけ）。変えたことは記録に残す */
+  async function onPerms(m) {
+    await loadPerms(true);
+    if (permNow() !== 'top') return send({ type: 'perms', denied: true, perm: permNow() });
+    let msg = ''; const L = PERMS.list, log = PERMS.log;
+    const who = S.me || (S.web && S.web.email) || S.owner;
+    if (m.type === 'perm_set') {
+      const email = String(m.email || '').trim().toLowerCase().slice(0, 120), perm = String(m.perm || '');
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !PERM_NAMES[perm]) msg = 'メールと役割を確かめてください';
+      else { let e = L.find(x => x.email === email); if (!e) { e = { email, at: Date.now() }; L.push(e); } e.perm = perm; e.name = String(m.name || e.name || '').slice(0, 30); e.by = who; e.upd = Date.now();
+        const gm = await loadCol(gmailKey(email), 'gmail').catch(() => ({})); if (gm.owner && !e.owner) e.owner = String(gm.owner).replace(/^g:/, '');
+        log.unshift({ at: Date.now(), by: who, what: email + ' → ' + PERM_NAMES[perm] }); msg = email + ' を「' + PERM_NAMES[perm] + '」にしました'; }
+    } else if (m.type === 'perm_del') {
+      const email = String(m.email || '').toLowerCase(), i = L.findIndex(x => x.email === email);
+      if (i >= 0) { L.splice(i, 1); log.unshift({ at: Date.now(), by: who, what: email + ' の役割を外しました' }); msg = email + ' の役割を外しました'; }
+    }
+    if (m.type !== 'perms') { await saveCol('all', 'perms', { list: L, log: log.slice(0, 100) }); PERMS_AT = 0; await loadPerms(true); }
+    send({ type: 'perms', perm: 'top', names: PERM_NAMES, list: PERMS.list.map(x => ({ email: x.email, perm: x.perm, name: x.name || '', linked: !!x.owner, upd: x.upd || x.at || 0 })), top: ENV.TOP_EMAILS, office: ENV.OFFICE_EMAILS, log: PERMS.log.slice(0, 30), msg });
   }
   async function onReqs(m) {
     if (!isOffice()) return send({ type: 'reqs', denied: true });
@@ -3106,7 +3146,8 @@ function session(ws) {
           S.tellTo = to;
           S.system = S.system.replace(/ハタラボの担当（ヒロさん）|ハタラボのヒロさん/g, to).replace(/〈伝え先〉/g, to).replace(/ヒロさん/g, to);
         }
-        send({ type: 'ready', plain: hearing(), me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs, guest: !!S.guest, service: S.role === 'サービス相談', myRef: S.myRef || '', visit: S.visit ? { code: S.visit, name: S.visitHost } : null, avatar: S.avatar || '', komugi: !!S.komugi, mac: !!S.macSelf, office: isOffice(), web: !!S.web, srv: SERVER_REV, shopView: !!S.clone, bridge: !!S.bridge, superUntil: superUntil(S.owner), canPlan: !!(S.claude || superUntil(S.owner)), claude: !!S.claude, aiName: !S.visit && S.custom && S.custom.aiName || '' });
+        await loadPerms();
+        send({ type: 'ready', perm: permNow(), plain: hearing(), me: S.me, mode: S.mode, voice: S.voice || ENV.TTS_VOICE, profile: S.owner ? await loadProfile(S.owner).catch(() => null) : null, trio: S.trio, waitMs: S.waitMs, guest: !!S.guest, service: S.role === 'サービス相談', myRef: S.myRef || '', visit: S.visit ? { code: S.visit, name: S.visitHost } : null, avatar: S.avatar || '', komugi: !!S.komugi, mac: !!S.macSelf, office: isOffice(), web: !!S.web, srv: SERVER_REV, shopView: !!S.clone, bridge: !!S.bridge, superUntil: superUntil(S.owner), canPlan: !!(S.claude || superUntil(S.owner)), claude: !!S.claude, aiName: !S.visit && S.custom && S.custom.aiName || '' });
         if (S.visit) { const T = S.avatar === 'komugi' ? x => x.replace(/だボー/g, 'です').replace(/ボー/g, 'です') : S.avatar === 'hatabo' ? bizBo : bizBo; return speakOnly(T(S.visitSponsor ? S.visitHost + 'のAI棒だボー。なんでも聞いてほしいボー。' : S.visitHost + 'さんのAI棒だボー。話してくれたことは、' + S.visitHost + 'さんに伝言で届けるボー。'), 'excited'); }
         if (m.greet && (S.avatar === 'hatabo' || S.avatar === 'komugi') && !S.visit && !m.ref && !m.agent && (S.history.length || S.memo || (S.custom && S.custom.callMe))) m.greet = false;   // はじめての人だけ、呼び名を聞くために一度あいさつ   // ハタボ・コムギは、開いただけでは話さない（パソコンのブラウザでも。話すボタンから）
         if (m.greet && S.guest && S.consult) return recapGreet().then(deliverInbox).catch(() => {});      // 相談メモがある人には、振り返りからはじめる
@@ -3225,6 +3266,7 @@ function session(ws) {
       if (m.type === 'reqs' || m.type === 'req_adopt') return onReqs(m);
       if (m.type === 'clones' || m.type === 'clone_new' || m.type === 'clone_set') return onClones(m);
       if (m.type === 'admin' || m.type === 'admin_set') return onAdmin(m);
+      if (m.type === 'perms' || m.type === 'perm_set' || m.type === 'perm_del') return onPerms(m);
       if (m.type === 'api' || m.type === 'api_new' || m.type === 'api_stop' || m.type === 'api_resv') return onApi(m);
       if (['console', 'thr_goen', 'thr_open', 'thr_draft', 'thr_send', 'consult', 'mem_set', 'mem_del', 'aibo_set', 'con_set', 'staff_add', 'staff_del', 'con_url_new', 'con_url_set', 'grp_send'].includes(m.type)) return onConsole(m).catch(e => { console.error('console', m.type, String(e && e.stack || e).slice(0, 400)); send({ type: 'console', error: '管理画面の読みこみでエラーがおきました（' + String(e && e.message || e).slice(0, 80) + '）' }); });
       if (m.type === 'docs' || m.type === 'docs_set' || m.type === 'docs_share' || m.type === 'docs_copy') return onDocs(m);
