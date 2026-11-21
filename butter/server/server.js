@@ -212,8 +212,10 @@ async function ownerPush(owner, text) {
   return !!(r && r.ok);
 }
 /** 事務局の管理画面：紹介コードの一覧（人・役割つきの愛棒・グループ） */
+let refsCache = null;   // 事務局の画面は何度も一覧を読むので、30秒だけ覚えておく（変えたら消す）
 async function allRefs() {
-  try { if (deps.db) return (await deps.db.collection('refs').limit(2000).get()).docs.map(d => Object.assign({ code: d.id }, d.data())); } catch (e) { console.error('refs list', String(e.message).slice(0, 120)); }
+  if (refsCache && Date.now() - refsCache.at < 30000) return refsCache.v;
+  try { if (deps.db) { const v = (await deps.db.collection('refs').limit(2000).get()).docs.map(d => Object.assign({ code: d.id }, d.data())); refsCache = { v, at: Date.now() }; return v; } } catch (e) { console.error('refs list', String(e.message).slice(0, 120)); }
   return Array.from(memRefs.entries()).map(([code, v]) => Object.assign({ code }, v));
 }
 /* ===== 決済（Stripe）：支払いページ → 支払いが済んだ知らせ（Webhook）→ 契約 → 本人と事務局に知らせる ===== */
@@ -452,6 +454,7 @@ async function getRef(code) {
   return memRefs.get(code) || null;
 }
 async function putRef(code, data) {
+  refsCache = null;
   try { if (deps.db) return void await deps.db.collection('refs').doc(code).set(data, { merge: true }); } catch (e) {}
   memRefs.set(code, Object.assign(memRefs.get(code) || {}, data));
 }
@@ -677,6 +680,7 @@ async function loadCol(code, name) {
   return memCol.get(name + ':' + code) || {};
 }
 async function saveCol(code, name, data) {
+  if (name === 'threads') thrCache = null;
   try { if (deps.db) return void await deps.db.collection(name).doc(code).set(data, { merge: true }); } catch (e) { console.error(name + ' save', String(e.message).slice(0, 120)); }
   memCol.set(name + ':' + code, Object.assign(memCol.get(name + ':' + code) || {}, data));
 }
@@ -2250,16 +2254,17 @@ function session(ws) {
     const all = await threadsOf(sc.office ? null : sc.shops), list = [];
     const seen = all.filter(t => conSee(t, sc));
     await Promise.all(seen.slice(0, 40).map(async t => { t.vpic = await picOf(t.visitor).catch(() => ''); }));
-    for (const t of seen) list.push(tMeta(t, await conBody(t, sc)));
+    const bodies = await Promise.all(seen.map(t => conBody(t, sc).catch(() => false)));   // 1件ずつ待たずに、まとめて
+    seen.forEach((t, i) => list.push(tMeta(t, bodies[i])));
     const day0 = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10), isToday = x => x && new Date(x + 9 * 3600000).toISOString().slice(0, 10) === day0;
-    const refs = sc.office ? await allRefs() : [];
+    const [refs, auList, reqsDoc, cdayDoc] = await Promise.all([sc.office ? allRefs() : [], sc.office ? allApiUse(monthJ()) : null, sc.office ? loadCol('office', 'reqs') : {}, loadCol((S.myRef || 'office') + '_' + day0, 'consults')]);   // まとめて読む
     const mine = sc.office ? refs.filter(r => r.kind === 'clone' || r.kind === 'url') : [];
     if (!sc.office) for (const c of ((await loadCol(S.myRef, 'clones')).codes || []).slice(0, 60)) { const r = await getRef(c).catch(() => null); if (r) mine.push(Object.assign({ code: c }, r)); }
     const mini = LINE_CH.hatabo.mini;
     const aibos = mine.map(r => ({ code: r.code, kind: r.kind, name: r.name || '', role: r.role || '', area: r.area || '', listed: !!r.listed, open: r.kind === 'clone' ? cloneOpen(r) : r.active !== false && !(r.until && Date.now() > r.until), ownerName: r.ownerName || (r.kind === 'url' ? '事務局' : ''), keepDays: r.keepDays || 0, hours: r.hours || null, visits: r.visits || 0, until: r.until || 0, url: mini + '?ref=' + r.code, at: r.at || 0 })).sort((a, b) => (b.at || 0) - (a.at || 0));
-    const au = sc.office ? (await allApiUse(monthJ())).reduce((n, x) => n + (x.billable || 0), 0) : (S.myRef ? (await apiUsage(S.myRef)).billable : 0);
-    const voices = sc.office ? ((await loadCol('office', 'reqs')).items || []).filter(x => x.status !== 'done').length : 0;
-    const cday = (await loadCol((S.myRef || 'office') + '_' + day0, 'consults')).n || 0;
+    const au = sc.office ? (auList || []).reduce((n, x) => n + (x.billable || 0), 0) : (S.myRef ? (await apiUsage(S.myRef)).billable : 0);
+    const voices = sc.office ? ((reqsDoc || {}).items || []).filter(x => x.status !== 'done').length : 0;
+    const cday = (cdayDoc || {}).n || 0;
     send({ type: 'console', office: sc.office, canOffice: isOffice(), canSelf: !!S.myRef, as: sc.office ? 'office' : 'self', me: { name: S.me || me.name || '', ref: S.myRef || '', grade, rank: rankOf(me).label }, table: PLAN_TABLE, keepDefault: KEEP_DEFAULT, limits: lim,
       settings: { keepDays: me.keepDays || KEEP_DEFAULT, shareSelf: !!me.shareSelf, staff: (me.staff || []).map(x => ({ ref: x.ref, name: x.name, role: x.role })) },
       staffOf: sc.shops.filter(x => x !== S.myRef).map(x => ({ shop: x, role: sc.role[x] })),
@@ -3396,7 +3401,9 @@ async function threadUpsert(o) {
   await saveCol(id, 'threads', up);
   return up;
 }
-async function threadsOf(shops) {   // shops：null＝ぜんぶ（事務局）
+let thrCache = null;
+async function threadsOf(shops) {   // shops：null＝ぜんぶ（事務局）。ぜんぶのときは15秒だけ覚えておく（会話が書かれたら消す）
+  if (!shops && thrCache && Date.now() - thrCache.at < 15000) return thrCache.v.map(x => Object.assign({}, x));
   let rows = [];
   try {
     if (deps.db) {
@@ -3409,7 +3416,7 @@ async function threadsOf(shops) {   // shops：null＝ぜんぶ（事務局）
     if (now - (t.last || 0) > (t.days || KEEP_DEFAULT) * 86400000) { try { if (deps.db) await deps.db.collection('threads').doc(t.id).delete(); else memCol.delete('threads:' + t.id); } catch (e) {} continue; }   // 残す期間をすぎた会話は消す
     live.push(t);
   }
-  return live.sort((a, b) => (b.last || 0) - (a.last || 0));
+  const out = live.sort((a, b) => (b.last || 0) - (a.last || 0)); if (!shops) thrCache = { v: out, at: Date.now() }; return out.map(x => Object.assign({}, x));
 }
 const hoursOpen = h => {   // 営業時間：{open:'10:00', close:'21:00', closed:[3]}（日本時間・closedは曜日 0=日）
   if (!h || !h.open || !h.close) return true;
