@@ -3387,7 +3387,10 @@ const MCP_ANN = { search_aibo: ['愛棒をさがす', { readOnlyHint: true, dest
   request_reservation: ['予約の希望を伝える', { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true }],
   list_my_aibo: ['自分の愛棒を見る', { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }],
   update_my_aibo: ['自分の愛棒の設定を変える', { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false }],
-  get_usage: ['今月の使った回数を見る', { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }] };
+  get_usage: ['今月の使った回数を見る', { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }],
+  remember: ['自分のハタボに覚えさせる', { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false }],
+  recall: ['自分のハタボの記憶を見る', { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }],
+  add_note: ['メモを残す', { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false }] };
 const MCP_TOOLS = [
   { name: 'search_aibo', description: 'ハタボのネットワークで、公開されている愛棒（お店・会社・人のAIの窓口）をさがす。業種・困りごと・地域（区など）のことばで。', inputSchema: { type: 'object', properties: { query: { type: 'string', description: 'さがすことば（例：川崎 そば 予約）' }, area: { type: 'string', description: '地域（例：高津区）' } }, required: ['query'] } },
   { name: 'send_message', description: '愛棒に伝言を送る。持ち主のLINEに届く。だれからかが分かるように名前を入れる。', inputSchema: { type: 'object', properties: { aibo: { type: 'string', description: 'search_aibo で出た id' }, text: { type: 'string', description: '伝言（500字まで）' }, from_name: { type: 'string', description: '送る人の名前' } }, required: ['aibo', 'text', 'from_name'] } },
@@ -3395,9 +3398,13 @@ const MCP_TOOLS = [
   { name: 'list_my_aibo', description: '自分の愛棒（役割つき）の一覧と状態を見る。', inputSchema: { type: 'object', properties: {} } },
   { name: 'update_my_aibo', description: '自分の愛棒の設定を変える（名前・役割・だれ向け・地域・メモ・検索に出すか・受付中か）。変えた内容はMyハタボにもそのまま出る。', inputSchema: { type: 'object', properties: { aibo: { type: 'string' }, name: { type: 'string' }, role: { type: 'string', enum: CLONE_ROLES }, about: { type: 'string' }, area: { type: 'string' }, note: { type: 'string' }, listed: { type: 'boolean' }, active: { type: 'boolean' }, reserve: { type: 'boolean' } }, required: ['aibo'] } },
   { name: 'get_usage', description: '今月のAPIの使った回数と、料金の見こみを見る。', inputSchema: { type: 'object', properties: {} } },
+  { name: 'remember', description: '自分のハタボ（またはコムギ）に、次から生かすこと（好み・決まり・自分のこと）を覚えさせる。キャラごとに30こまで。LINEやMyハタボで話すときも、これを使って答える。本人が「覚えて」と言ったことだけを入れる。', inputSchema: { type: 'object', properties: { text: { type: 'string', description: '覚えること（120字まで。1つのことを1回で）' }, character: { type: 'string', enum: ['hatabo', 'komugi'], description: 'どのキャラに覚えさせるか（ふだんは hatabo）' } }, required: ['text'] } },
+  { name: 'recall', description: '自分のハタボ（またはコムギ）の記憶を見る：教わったこと、自分で気づいたこと、さいきんの会話のまとめ、メモ・議事録の新しいもの。', inputSchema: { type: 'object', properties: { character: { type: 'string', enum: ['hatabo', 'komugi'], description: 'どのキャラの記憶か（ふだんは hatabo）' }, notes: { type: 'integer', description: 'メモを何件まで見るか（0〜20、ふだん5）' } } } },
+  { name: 'add_note', description: 'Myハタボの「メモ・議事録」にメモを残す（本人だけが見られる。Googleと連携していればドライブにも）。', inputSchema: { type: 'object', properties: { title: { type: 'string', description: '題（30字まで）' }, text: { type: 'string', description: '中身（8000字まで）' }, kind: { type: 'string', enum: ['memo', 'minutes'], description: 'memo（メモ）か minutes（議事録）' } }, required: ['text'] } },
 ].map(t => Object.assign(t, { title: MCP_ANN[t.name][0], annotations: Object.assign({ title: MCP_ANN[t.name][0] }, MCP_ANN[t.name][1]), securitySchemes: [{ type: 'oauth2', scopes: ['hatabo'] }] }));
 /** ChatGPTからつながったとき：料金の話をしない（一覧の決まり）。使った回数の道具も出さない */
-const mcpToolsFor = K => K && K.np ? MCP_TOOLS.filter(t => t.name !== 'get_usage') : MCP_TOOLS;
+const MEM_TOOLS = ['remember', 'recall', 'add_note'];   // 自分の記憶とメモ：本人のログインだけ（審査用のデモには出さない）
+const mcpToolsFor = K => MCP_TOOLS.filter(t => !(K && K.np && t.name === 'get_usage') && !(K && (K.demo || !K.owner) && MEM_TOOLS.includes(t.name)));
 const npStrip = (K, o) => { if (!K || !K.np || !o || typeof o !== 'object') return o; const x = Object.assign({}, o); delete x.yen; delete x.price; return x; };
 async function mcpTool(K, name, a) {
   const txt = o => { o = npStrip(K, o); return { content: [{ type: 'text', text: typeof o === 'string' ? o : JSON.stringify(o, null, 1) }], structuredContent: typeof o === 'string' ? undefined : o }; };
@@ -3446,6 +3453,26 @@ async function mcpTool(K, name, a) {
     for (const c of codes.slice(0, 60)) { const r = await getRef(c).catch(() => null); if (r) items.push(Object.assign(aiboOut(c, r), { url: mini + '?ref=' + c, open: cloneOpen(r), listed: !!r.listed, note: r.note || '' })); }
     return txt({ aibo: items, note: name === 'update_my_aibo' ? '変えました。Myハタボにも出ています。' : '' });
   }
+  if (name === 'remember' || name === 'recall' || name === 'add_note') {   // 自分のハタボの記憶とメモ（持ち主本人だけ。ほかの人の分は触れない）
+    if (K.demo || !K.owner) return err('この道具は、ハタボにログインした本人だけが使えます。');
+    if (!apiRate('mem:' + K.id, 200, 86400000)) return err('今日の回数をこえました。明日またためしてください。');
+    const ch = a.character === 'komugi' ? 'komugi' : 'hatabo', key = K.owner + ':' + ch;
+    if (name === 'add_note') {
+      const body = String(a.text == null ? '' : a.text).replace(/\u0000/g, '').trim().slice(0, 8000); if (!body) return err('メモの中身が空です。');
+      const it = await addNote(K.owner, { kind: a.kind === 'minutes' ? 'minutes' : 'memo', title: apiClean(a.title, 30) || body.replace(/\s+/g, ' ').slice(0, 30), text: body });
+      return txt({ ok: true, id: it.id, title: it.title, drive: it.url || '', note: 'Myハタボの「メモ・議事録」に残しました。' });
+    }
+    const P = await loadPrefs(key), base = Array.isArray(P.lessons) ? P.lessons : ch === 'hatabo' ? ((await loadPrefs(K.owner)).lessons || []) : [];
+    if (name === 'remember') {
+      const fact = apiClean(a.text, 120); if (!fact) return err('覚えることが空です。');
+      const lessons = base.filter(x => x !== fact).concat(fact).slice(-30);
+      await savePrefs(key, { lessons });
+      return txt({ ok: true, character: ch, count: lessons.length, note: '覚えました。LINEやMyハタボで話すときも使います（次に開いたときから）。' });
+    }
+    const c = (await loadConvo(K.owner + ':family:' + ch)) || {}, n = Math.max(0, Math.min(20, Math.round(Number(a.notes == null ? 5 : a.notes) || 0)));
+    const notes = n ? (await loadNotes(K.owner)).slice(0, n).map(x => ({ id: x.id, kind: x.kind, title: x.title, at: new Date(x.at).toISOString().slice(0, 10), text: String(x.text || '').slice(0, 600) })) : [];
+    return txt({ character: ch, lessons: base, learned: Array.isArray(P.learned) ? P.learned : [], summary: String(c.summary || '').slice(0, 1500), notes });
+  }
   if (name === 'get_usage') { if (K.np) return err('その道具はありません：' + name); const u = await apiUsage(K.ref); return txt(Object.assign(u, { price: ENV.API_PRICE, note: '月' + ENV.API_PRICE.free + '回までは無料。こえた分は、さがす' + ENV.API_PRICE.search + '円・伝言' + ENV.API_PRICE.message + '円・予約の希望' + ENV.API_PRICE.reserve + '円（1回）' })); }
   return err('その道具はありません：' + name);
 }
@@ -3471,7 +3498,7 @@ async function mcpHttp(req, res) {
     if (m.id === undefined || m.id === null) return null;   // お知らせ（notifications/initialized など）には返事しない
     const ok = result => ({ jsonrpc: '2.0', id: m.id, result });
     if (m.method === 'initialize') return ok({ protocolVersion: (m.params && m.params.protocolVersion) || '2025-06-18', capabilities: { tools: {} }, serverInfo: { name: 'hatabo', title: 'ハタボ', version: '0.2.0', websiteUrl: 'https://www.hatha-lab.com/api.html', icons: [{ src: 'https://www.hatha-lab.com/icon-512.png', mimeType: 'image/png', sizes: ['512x512'] }] },
-      instructions: 'ハタボは、町のお店・会社・人の「愛棒（AIの窓口）」どうしをつなぐネットワークです。search_aibo でさがして、send_message で伝言、request_reservation で予約の希望を伝えます。LINEのIDなどの個人の情報は返しません。' });
+      instructions: 'ハタボは、町のお店・会社・人の「愛棒（AIの窓口）」どうしをつなぐネットワークです。search_aibo でさがして、send_message で伝言、request_reservation で予約の希望を伝えます。自分のハタボには、remember で覚えさせ、recall で記憶を見て、add_note でメモを残せます（本人が頼んだときだけ）。LINEのIDなどの個人の情報は返しません。' });
     if (m.method === 'ping') return ok({});
     if (m.method === 'tools/list') return ok({ tools: mcpToolsFor(K) });
     if (m.method === 'tools/call') { const p = m.params || {}; try { return ok(await mcpTool(K, String(p.name || ''), p.arguments)); } catch (e) { console.error('mcp tool', String(e.message).slice(0, 160)); return ok({ content: [{ type: 'text', text: 'うまくいきませんでした。少しあとでためしてください。' }], isError: true }); } }
