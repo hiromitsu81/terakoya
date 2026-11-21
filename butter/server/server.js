@@ -190,7 +190,17 @@ function cloneRule(cl) {
   L.push(cl.price ? '料金・値段の話をしてよい（決まっている範囲だけ。わからないことは確かめると言う）。' : '料金・値段の話はしない。聞かれたら「' + (cl.ownerName || 'オーナー') + 'さんから案内します」と言う。');
   L.push(cl.reserve ? '予約や申しこみの希望は、日時・人数・名前を聞いて、オーナーに伝える（確定はしない）。' : '予約や申しこみは受けない。オーナーにつなぐ。');
   if (cl.note) L.push('（オーナーからのメモ：' + String(cl.note).slice(0, 600) + '）');
-  return '\n\n' + L.join('');
+  return '\n\n' + L.join('') + cloneStyle(cl.custom);
+}
+/** 愛棒ごとの話し方（オーナーがMCPやMyハタボで決める）：話し方・長さ・方言・決まり。名前は愛棒の名前、呼び名・声・相手のことはここでは使わない */
+function cloneStyle(cu) {
+  if (!cu) return '';
+  const c = cleanCustom(cu), L = [];
+  if (c.tone !== 'char') L.push('話し方：' + TONES[c.tone] + '。');
+  if (c.len === 'short') L.push('答えはなるべく短く。'); else if (c.len === 'long') L.push('答えはくわしく、理由や手順もそえる。');
+  if (c.dialect !== 'char') L.push('ことば：' + DIALECTS[c.dialect] + 'のことばで話す（やりすぎない。伝わることが先）。');
+  if (c.rules) L.push('この窓口の決まり（オーナーが書いた）：' + c.rules);
+  return L.length ? '\n【この愛棒の話し方（オーナーが決めた。ハタラボの決まり・安全・正直さのほうがいつも先）】\n' + L.join('\n') : '';
 }
 const cloneOpen = cl => !!cl && cl.active !== false && !(cl.until && Date.now() > cl.until);
 /** オーナー本人のLINEへ知らせる（ハタボの公式LINE）。失敗しても止めない */
@@ -3390,7 +3400,9 @@ const MCP_ANN = { search_aibo: ['愛棒をさがす', { readOnlyHint: true, dest
   get_usage: ['今月の使った回数を見る', { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }],
   remember: ['自分のハタボに覚えさせる', { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false }],
   recall: ['自分のハタボの記憶を見る', { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }],
-  add_note: ['メモを残す', { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false }] };
+  add_note: ['メモを残す', { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false }],
+  get_character: ['キャラ設定を見る', { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }],
+  set_character: ['キャラ設定を変える', { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false }] };
 const MCP_TOOLS = [
   { name: 'search_aibo', description: 'ハタボのネットワークで、公開されている愛棒（お店・会社・人のAIの窓口）をさがす。業種・困りごと・地域（区など）のことばで。', inputSchema: { type: 'object', properties: { query: { type: 'string', description: 'さがすことば（例：川崎 そば 予約）' }, area: { type: 'string', description: '地域（例：高津区）' } }, required: ['query'] } },
   { name: 'send_message', description: '愛棒に伝言を送る。持ち主のLINEに届く。だれからかが分かるように名前を入れる。', inputSchema: { type: 'object', properties: { aibo: { type: 'string', description: 'search_aibo で出た id' }, text: { type: 'string', description: '伝言（500字まで）' }, from_name: { type: 'string', description: '送る人の名前' } }, required: ['aibo', 'text', 'from_name'] } },
@@ -3400,10 +3412,12 @@ const MCP_TOOLS = [
   { name: 'get_usage', description: '今月のAPIの使った回数と、料金の見こみを見る。', inputSchema: { type: 'object', properties: {} } },
   { name: 'remember', description: '自分のハタボ（またはコムギ）に、次から生かすこと（好み・決まり・自分のこと）を覚えさせる。キャラごとに30こまで。LINEやMyハタボで話すときも、これを使って答える。本人が「覚えて」と言ったことだけを入れる。', inputSchema: { type: 'object', properties: { text: { type: 'string', description: '覚えること（120字まで。1つのことを1回で）' }, character: { type: 'string', enum: ['hatabo', 'komugi'], description: 'どのキャラに覚えさせるか（ふだんは hatabo）' } }, required: ['text'] } },
   { name: 'recall', description: '自分のハタボ（またはコムギ）の記憶を見る：教わったこと、自分で気づいたこと、さいきんの会話のまとめ、メモ・議事録の新しいもの。', inputSchema: { type: 'object', properties: { character: { type: 'string', enum: ['hatabo', 'komugi'], description: 'どのキャラの記憶か（ふだんは hatabo）' }, notes: { type: 'integer', description: 'メモを何件まで見るか（0〜20、ふだん5）' } } } },
+  { name: 'get_character', description: 'キャラ設定（話し方・長さ・方言・決まり・呼び名など）を見る。aibo を入れるとその愛棒（役割つきの窓口）の設定、入れなければ自分のハタボ（またはコムギ）の設定。選べる値の一覧も返す。', inputSchema: { type: 'object', properties: { aibo: { type: 'string', description: '愛棒の id（list_my_aibo で見られる）。自分のハタボなら入れない' }, character: { type: 'string', enum: ['hatabo', 'komugi'], description: '自分のキャラのどちらか（ふだん hatabo）' } } } },
+  { name: 'set_character', description: 'キャラ設定を変える。入れた項目だけ変わる。aibo を入れるとその愛棒の話し方（相手ごとに変えたいとき：宿向けはていねい、友だち向けは博多弁など）、入れなければ自分のハタボ（またはコムギ）。前の設定は1つ前まで残すので、undo:true で戻せる。名前の変更はMyハタボから（はじめての名付けだけここでできる）。本人が頼んだときだけ使う。', inputSchema: { type: 'object', properties: { aibo: { type: 'string', description: '愛棒の id。自分のハタボなら入れない' }, character: { type: 'string', enum: ['hatabo', 'komugi'] }, tone: { type: 'string', enum: ['char', 'polite', 'frank', 'gentle', 'kansai'], description: '話し方（char＝キャラのまま、polite＝ていねい、frank＝友だちのように、gentle＝やさしくゆっくり、kansai＝関西弁）' }, len: { type: 'string', enum: ['char', 'short', 'long'], description: '答えの長さ' }, dialect: { type: 'string', enum: ['char', 'std', 'osaka', 'kyoto', 'nagoya', 'hiroshima', 'hakata', 'sendai', 'sapporo', 'okinawa'], description: '方言' }, rules: { type: 'string', description: '決まり・指示（1500字まで。空文字で消す）' }, about: { type: 'string', description: '自分のこと（自分のハタボだけ。600字まで）' }, call_me: { type: 'string', description: '自分の呼び名（自分のハタボだけ）' }, ai_name: { type: 'string', description: 'ハタボの名前（自分のハタボで、まだ名前がないときだけ）' }, undo: { type: 'boolean', description: 'true で1つ前の設定に戻す' } } } },
   { name: 'add_note', description: 'Myハタボの「メモ・議事録」にメモを残す（本人だけが見られる。Googleと連携していればドライブにも）。', inputSchema: { type: 'object', properties: { title: { type: 'string', description: '題（30字まで）' }, text: { type: 'string', description: '中身（8000字まで）' }, kind: { type: 'string', enum: ['memo', 'minutes'], description: 'memo（メモ）か minutes（議事録）' } }, required: ['text'] } },
 ].map(t => Object.assign(t, { title: MCP_ANN[t.name][0], annotations: Object.assign({ title: MCP_ANN[t.name][0] }, MCP_ANN[t.name][1]), securitySchemes: [{ type: 'oauth2', scopes: ['hatabo'] }] }));
 /** ChatGPTからつながったとき：料金の話をしない（一覧の決まり）。使った回数の道具も出さない */
-const MEM_TOOLS = ['remember', 'recall', 'add_note'];   // 自分の記憶とメモ：本人のログインだけ（審査用のデモには出さない）
+const MEM_TOOLS = ['remember', 'recall', 'add_note', 'get_character', 'set_character'];   // 自分の記憶とメモ：本人のログインだけ（審査用のデモには出さない）
 const mcpToolsFor = K => MCP_TOOLS.filter(t => !(K && K.np && t.name === 'get_usage') && !(K && (K.demo || !K.owner) && MEM_TOOLS.includes(t.name)));
 const npStrip = (K, o) => { if (!K || !K.np || !o || typeof o !== 'object') return o; const x = Object.assign({}, o); delete x.yen; delete x.price; return x; };
 async function mcpTool(K, name, a) {
@@ -3453,6 +3467,27 @@ async function mcpTool(K, name, a) {
     for (const c of codes.slice(0, 60)) { const r = await getRef(c).catch(() => null); if (r) items.push(Object.assign(aiboOut(c, r), { url: mini + '?ref=' + c, open: cloneOpen(r), listed: !!r.listed, note: r.note || '' })); }
     return txt({ aibo: items, note: name === 'update_my_aibo' ? '変えました。Myハタボにも出ています。' : '' });
   }
+  if (name === 'get_character' || name === 'set_character') {   // キャラ設定：自分のハタボ（持ち主×キャラ）か、自分の愛棒（役割つき）。本人だけ
+    if (K.demo || !K.owner) return err('この道具は、ハタボにログインした本人だけが使えます。');
+    if (name === 'set_character' && !apiRate('chr:' + K.id, 100, 86400000)) return err('今日の回数をこえました。明日またためしてください。');
+    const opts = { tone: TONES, len: LENS, dialect: DIALECTS };
+    const pick = (c, own) => { const o = { tone: c.tone, len: c.len, dialect: c.dialect, rules: c.rules }; if (own) Object.assign(o, { ai_name: c.aiName, call_me: c.callMe, about: c.about }); return o; };
+    const apply = (c, own) => { const n = Object.assign({}, c);
+      ['tone', 'len', 'dialect', 'rules'].forEach(k => { if (k in a) n[k] = a[k]; });
+      if (own) { if ('about' in a) n.about = a.about; if ('call_me' in a) n.callMe = a.call_me; if (a.ai_name && !c.aiName) n.aiName = a.ai_name; }
+      return cleanCustom(n); };
+    if (a.aibo) {
+      const code = apiClean(a.aibo, 20), codes = (await loadCol(K.ref, 'clones')).codes || []; if (!codes.includes(code)) return err('自分の愛棒の id を入れてください（list_my_aibo で見られます）。');
+      const r = await getRef(code); if (!r) return err('その愛棒はみつかりません。');
+      const cur = cleanCustom(r.custom || {});
+      if (name === 'set_character') { const nx = a.undo ? cleanCustom(r.customPrev || {}) : apply(cur, false); await putRef(code, { custom: nx, customPrev: cur }); return txt({ ok: true, aibo: code, name: r.name, character: pick(nx, false), note: (a.undo ? '1つ前の設定に戻しました。' : '変えました。') + 'この愛棒と話す人の、次の会話から使います。' }); }
+      return txt({ aibo: code, name: r.name, role: r.role || '汎用', about: r.label || '', character: pick(cur, false), options: opts });
+    }
+    const ch = a.character === 'komugi' ? 'komugi' : 'hatabo', key = K.owner + ':' + ch, P = await loadPrefs(key);
+    const cur = cleanCustom(P.custom || (ch === 'hatabo' ? (await loadPrefs(K.owner)).custom : null) || {});
+    if (name === 'set_character') { const nx = a.undo ? cleanCustom(P.customPrev || {}) : apply(cur, true); await savePrefs(key, { custom: nx, customPrev: cur }); return txt({ ok: true, character: ch, settings: pick(nx, true), note: (a.undo ? '1つ前の設定に戻しました。' : '変えました。') + '次にハタボを開いたときから使います。名前の変更はMyハタボの「キャラ設定」から。' }); }
+    return txt({ character: ch, settings: pick(cur, true), options: opts });
+  }
   if (name === 'remember' || name === 'recall' || name === 'add_note') {   // 自分のハタボの記憶とメモ（持ち主本人だけ。ほかの人の分は触れない）
     if (K.demo || !K.owner) return err('この道具は、ハタボにログインした本人だけが使えます。');
     if (!apiRate('mem:' + K.id, 200, 86400000)) return err('今日の回数をこえました。明日またためしてください。');
@@ -3498,7 +3533,7 @@ async function mcpHttp(req, res) {
     if (m.id === undefined || m.id === null) return null;   // お知らせ（notifications/initialized など）には返事しない
     const ok = result => ({ jsonrpc: '2.0', id: m.id, result });
     if (m.method === 'initialize') return ok({ protocolVersion: (m.params && m.params.protocolVersion) || '2025-06-18', capabilities: { tools: {} }, serverInfo: { name: 'hatabo', title: 'ハタボ', version: '0.2.0', websiteUrl: 'https://www.hatha-lab.com/api.html', icons: [{ src: 'https://www.hatha-lab.com/icon-512.png', mimeType: 'image/png', sizes: ['512x512'] }] },
-      instructions: 'ハタボは、町のお店・会社・人の「愛棒（AIの窓口）」どうしをつなぐネットワークです。search_aibo でさがして、send_message で伝言、request_reservation で予約の希望を伝えます。自分のハタボには、remember で覚えさせ、recall で記憶を見て、add_note でメモを残せます（本人が頼んだときだけ）。LINEのIDなどの個人の情報は返しません。' });
+      instructions: 'ハタボは、町のお店・会社・人の「愛棒（AIの窓口）」どうしをつなぐネットワークです。search_aibo でさがして、send_message で伝言、request_reservation で予約の希望を伝えます。自分のハタボには、remember で覚えさせ、recall で記憶を見て、add_note でメモを残せます。get_character・set_character で、自分のハタボや愛棒ごとの話し方（相手ごとの設定）を見て変えられます（本人が頼んだときだけ）。LINEのIDなどの個人の情報は返しません。' });
     if (m.method === 'ping') return ok({});
     if (m.method === 'tools/list') return ok({ tools: mcpToolsFor(K) });
     if (m.method === 'tools/call') { const p = m.params || {}; try { return ok(await mcpTool(K, String(p.name || ''), p.arguments)); } catch (e) { console.error('mcp tool', String(e.message).slice(0, 160)); return ok({ content: [{ type: 'text', text: 'うまくいきませんでした。少しあとでためしてください。' }], isError: true }); } }
