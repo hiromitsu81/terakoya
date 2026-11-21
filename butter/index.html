@@ -1805,6 +1805,13 @@ body.pwa #talkOaBtn, body.pwa .pinbar { display: none !important; }
 #pwSheet .pwarrow { width: 0; height: 0; border-left: 16px solid transparent; border-right: 16px solid transparent; border-top: 22px solid #62AD7F; animation: pwbob 1.2s ease-in-out infinite; }
 @keyframes pwbob { 50% { transform: translateY(10px); } }
 @media (prefers-reduced-motion: reduce) { #pwSheet .pwarrow { animation: none; } }
+
+/* ホーム画面のハタボ（iPhone）：下のすき間を白くしない。はかったすき間（--pwgap）の分、画面いっぱいの部品を下へのばす */
+html.pwa, html.pwa body { background: #0B0E15 !important; }
+html.pwa #pwSheet { bottom: calc(-1 * var(--pwgap, 0px)); padding-bottom: calc(max(20px, env(safe-area-inset-bottom)) + var(--pwgap, 0px)); }
+html.pwa .hbpage { bottom: calc(-1 * var(--pwgap, 0px)); }
+html.pwa .hbpage .hbp-tabs { padding-bottom: calc(6px + env(safe-area-inset-bottom) + var(--pwgap, 0px)); }
+html.pwa body:is(.av-hatabo, .av-komugi):not(.hbp-open):not(.plain) .hbbot { bottom: calc(-1 * var(--pwgap, 0px)); padding-bottom: calc(6px + env(safe-area-inset-bottom) + var(--pwgap, 0px)); }
 </style>
 </head>
 <body>
@@ -2422,7 +2429,10 @@ body.pwa #talkOaBtn, body.pwa .pinbar { display: none !important; }
   const WT = (() => { let t = ''; try { const h = new URLSearchParams(location.hash.slice(1)); t = h.get('wt') || ''; if (t) { sessionStorage.setItem('hb.wt', t); window.history.replaceState(null, '', location.pathname + location.search); } else t = sessionStorage.getItem('hb.wt') || ((matchMedia('(display-mode: standalone)').matches || navigator.standalone === true) ? localStorage.getItem('hb.dt') || '' : ''); } catch (e) {} return t.replace(/[^\w.-]/g, ''); })();   // ホーム画面のハタボ：LINEでつないだ入場券（180日）
   // パソコン（GoogleでログインしたPC・LINEアプリの外で開いたミニアプリ）は、つながる前に印をつけておく（あとから付けると、マイクや案内が間に合わない）
   const PWA_PHONE = (() => { try { return (matchMedia('(display-mode: standalone)').matches || navigator.standalone === true) && matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } })();   // ホーム画面から開いたスマホ：スマホの見た目のまま
-  if (PWA_PHONE) document.body.classList.add('pwa');
+  if (PWA_PHONE) { document.body.classList.add('pwa'); document.documentElement.classList.add('pwa'); }
+  // iPhoneのホーム画面のハタボ：画面の高さが上の時計の帯の分だけ短く伝わり、下にすき間ができることがある。そのすき間の高さをはかって、下の部品をのばす
+  function pwaGap() { if (!PWA_PHONE) return; let g = 0; try { const sh = Math.max(screen.height, screen.width), sw = Math.min(screen.height, screen.width); if (innerHeight > innerWidth && Math.abs(innerWidth - sw) < 2) g = Math.round(sh - innerHeight); } catch (e) {} if (!(g > 0 && g <= 120)) g = 0; document.documentElement.style.setProperty('--pwgap', g + 'px'); }
+  pwaGap(); addEventListener('resize', pwaGap); addEventListener('orientationchange', () => setTimeout(pwaGap, 300));
   try { if (!PWA_PHONE && (WT || (LIFF && !/\bLine\//i.test(navigator.userAgent)))) document.body.classList.add('pcweb'); } catch (e) {}
   // ハタボのミニアプリ（HATHA LAB）で開いたときは、つながる前からハタボの見た目にする（家族のバターちゃんは寺小屋の入口）
   const KOMUGI_APP = /^201268667[012]-/.test(LIFF_ID);   // コムギ専用のミニアプリ（公式LINE @858uraou）
