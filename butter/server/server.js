@@ -483,6 +483,7 @@ async function myPage(S) {
     kids: (mine && mine.kids) || 0, myRef: S.myRef || '', from: fromLabel || '',
     pts: (mine && mine.pts) || 0, rank: rankOf(mine), thanks: THANKS, tickets: (mine && mine.tickets) || 0, ticketPacks: TICKETS,
     unread: (inbox || []).filter(x => !x.read).length,
+    status: statusOf(mine, S.funnel || funnelOf(mine)), member: !!(mine && mine.member), chars: mine ? charsOfRef(mine).map(c => ({ ch: c, name: CHAR_NAME[c], aid: (S.myRef || '') + '-' + AID_MARK[c] })) : [],
     funnel: S.funnel || funnelOf(mine), payReady: stripeOn(), lineups: LINEUP, trialDays: TRIAL_DAYS, trialDaily: TRIAL_DAILY, trialFirst: TRIAL_FIRST,
     notes: (notes || []).slice(0, 50), summary: String(S.memo || '').slice(0, 3000) };
 }
@@ -800,7 +801,11 @@ function permOf(owner, email) {
   if ((email && ENV.OFFICE_EMAILS.includes(email)) || isOfficeOwner(owner)) return 'office';
   return '';
 }
-const maskText = t => String(t || '').replace(/[^\s、。！？!?,.\n「」]/g, '●');   // 文字の動き（長さ・区切り）は見えるが、中身は伏せる
+const maskText = t => String(t || '').replace(/[^\s、。！？!?,.\n「」]/g, '●');
+/* 人（紹介コード）ごとの状態とキャラ（AID）。状態：紹介中（ref）・お試し（trial）・契約（contract）・メンバー（member）・期限切れ・解約 */
+const CHAR_NAME = { hatabo: 'ハタボ', komugi: 'コムギ', junior: 'ジュニア' }, AID_MARK = { hatabo: 'H', komugi: 'K', junior: 'J' };
+const charsOfRef = r => { const c = Object.keys(r || {}).filter(k => /^ch_/.test(k) && r[k]).map(k => k.slice(3)).filter(k => CHAR_NAME[k]); if (!c.length && r && r.kind !== 'group' && r.kind !== 'clone') c.push(r.avatar === 'komugi' ? 'komugi' : 'hatabo'); if (r && r.kind === 'clone' && !c.length) c.push(r.avatar === 'komugi' ? 'komugi' : 'hatabo'); return c; };
+const statusOf = (r, f) => r && r.member ? 'member' : (f && f.stage) || 'ref';   // 文字の動き（長さ・区切り）は見えるが、中身は伏せる
 async function googleLogin(code, res, page, x) {
   try {
     const r = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ code, client_id: ENV.GOOGLE_CLIENT_ID, client_secret: ENV.GOOGLE_CLIENT_SECRET, redirect_uri: ENV.PUBLIC_URL + '/google/callback', grant_type: 'authorization_code' }) });
@@ -2310,20 +2315,47 @@ function session(ws) {
         if ('roleNote' in m) up.roleNote = String(m.roleNote || '').slice(0, 300);
         if (m.aisaiHelp) up.aisaiHelp = (cur.aisaiHelp || 0) + 1;
         if ('active' in m && cur.kind === 'clone') up.active = !!m.active;
+        if ('stage' in m) {   // 状態の切りかえ（紹介中・お試し・契約・メンバー・解約）
+          const st = String(m.stage || ''), now = Date.now();
+          if (st === 'member') up.member = true;
+          else if (['ref', 'trial', 'contract', 'cancel'].includes(st)) {
+            up.member = false; up.stage = st === 'ref' ? '' : st;
+            if (st === 'trial' && !(cur.stage === 'trial' && (cur.trialUntil || 0) > now)) { up.trialAt = now; up.trialUntil = now + TRIAL_DAYS * 86400000; if (!cur.lineup) { up.lineup = 'ris'; up.grade = 'Z'; } }
+            if (st === 'contract' && cur.stage !== 'contract') { up.contractAt = now; if (!cur.lineup) { up.lineup = 'ris'; up.grade = 'X'; } }
+            if (st === 'cancel') up.cancelAt = now;
+          }
+        }
         await putRef(code, up);
         const A = await loadCol('office', 'audit'), items = (A.items || []).slice(0, 199);
         items.unshift({ at: Date.now(), by: S.me || S.owner, code, what: JSON.stringify(up).slice(0, 200) });
         await saveCol('office', 'audit', { items }); msg = code + ' を変更しました';
       }
     }
-    const refs = await allRefs(), AU = new Map((await allApiUse(monthJ())).map(x => [x.ref, x]));
-    const rows = refs.map(r => { const f = funnelOf(r), rk = rankOf(r), au = AU.get(r.code) || {}; return { api: au.billable || 0, apiYen: au.yen || 0, apiDone: au.done || 0, code: r.code, kind: r.kind || 'person', name: r.name || '', ownerName: r.ownerName || '', parent: r.parent || '', stage: f.stage, lineup: f.lineupName || '', grade: f.grade || '',
+    const refs = await allRefs(), AU = new Map((await allApiUse(monthJ())).map(x => [x.ref, x])), NM = new Map(refs.map(r => [r.code, r.name || r.ownerName || '']));
+    const rows = refs.map(r => { const f = funnelOf(r), rk = rankOf(r), au = AU.get(r.code) || {}; return { chars: charsOfRef(r), pic: r.pic || '', member: !!r.member, status: statusOf(r, f), parentName: r.parent ? NM.get(r.parent) || '' : '', daysLeft: f.daysLeft || 0, trialUntil: f.trialUntil || 0, api: au.billable || 0, apiYen: au.yen || 0, apiDone: au.done || 0, code: r.code, kind: r.kind || 'person', name: r.name || '', ownerName: r.ownerName || '', parent: r.parent || '', stage: f.stage, lineup: f.lineupName || '', grade: f.grade || '',
       paid: !!r.paidAt, payFail: !!r.payFailAt, rank: rk.label, pts: r.pts || 0, ptsTotal: earned(r), kids: r.kids || 0, visits: r.visits || 0, role: r.role || '', roleNote: r.roleNote || '', aisaiHelp: r.aisaiHelp || 0, adopts: r.adopts || 0,
       at: r.at || 0, lastAt: r.lastAt || 0, active: r.active !== false, until: r.until || 0 }; }).sort((a, b) => (b.at || 0) - (a.at || 0));
     const sum = { people: rows.filter(x => x.kind === 'person').length, trial: rows.filter(x => x.stage === 'trial').length, contract: rows.filter(x => x.stage === 'contract').length, payFail: rows.filter(x => x.payFail).length, clones: rows.filter(x => x.kind === 'clone').length, groups: rows.filter(x => x.kind === 'group').length };
     sum.api = rows.reduce((n, x) => n + x.api, 0); sum.apiYen = rows.reduce((n, x) => n + x.apiYen, 0);
+    sum.member = rows.filter(x => x.member).length; sum.ref = rows.filter(x => x.kind === 'person' && x.status === 'ref').length;
     if (isDev()) { rows.forEach(x => { x.apiYen = null; x.ownerName = x.ownerName ? String(x.ownerName).slice(0, 1) + '…' : ''; }); sum.apiYen = null; }
+    if (m.type === 'admin_person') return onAdminPerson(m, refs, rows);
     send({ type: 'admin', perm: permNow(), rows, sum, roles: Object.keys(ROLE_RULE), audit: ((await loadCol('office', 'audit')).items || []).slice(0, 30), msg });
+  }
+  /** 事務局：人ごとの詳しいページ。状態・プラン・持っているキャラ（AID）ごとの会話・その人の愛棒とご縁 */
+  async function onAdminPerson(m, refs, rows) {
+    const code = String(m.code || '').replace(/[^\w-]/g, '').slice(0, 20), row = rows.find(x => x.code === code), r = refs.find(x => x.code === code);
+    if (!row || !r) return send({ type: 'admin_person', code, none: true });
+    const dv = isDev(), o = String(r.owner || ''), ids = [...new Set([o, o.replace(/^g:/, ''), o && !/^g:/.test(o) ? 'g:' + o : ''].filter(Boolean))];
+    const aids = [];
+    for (const ch of row.chars.length ? row.chars : ['hatabo']) {
+      let c = null, key = '';
+      for (const id of ids) { for (const k of [id + ':guest:' + ch, id + ':' + ch]) { const x = await loadConvo(k).catch(() => null); if (x && Array.isArray(x.turns) && x.turns.length && (!c || (x.at || 0) > (c.at || 0))) { c = x; key = k; } } }
+      const turns = c ? cleanTurns(c.turns).slice(-30).map(t => ({ r: t.role === 'user' ? 'u' : 'a', t: dv ? maskText(String(t.content || '').slice(0, 400)) : String(t.content || '').slice(0, 400) })) : [];
+      aids.push({ aid: code + '-' + AID_MARK[ch], ch, name: CHAR_NAME[ch] || ch, n: c ? (c.turns || []).length : 0, last: c ? c.at || 0 : r['ch_' + ch] || 0, chats: c && Array.isArray(c.threads) ? c.threads.length : 0, turns });
+    }
+    const kids = rows.filter(x => x.parent === code).map(x => ({ code: x.code, name: x.name || x.ownerName || '', kind: x.kind, status: x.status, label: x.kind === 'clone' ? x.roleNote || '' : '' }));
+    send({ type: 'admin_person', code, row, aids, kids, masked: dv, canEdit: !dv });
   }
   /** 役割の付け外し（最高管理者だけ）。変えたことは記録に残す */
   async function onPerms(m) {
@@ -2979,6 +3011,7 @@ function session(ws) {
         S.mode = m.mode === 'business' ? 'business' : 'family';
         S.voice = /^ja-JP-[\w-]+$/.test(m.voice || '') ? m.voice : '';
         S.auth = m.idToken ? { idToken: String(m.idToken) } : { pass: String(m.pass || '') };
+        try { const pl = m.idToken ? JSON.parse(Buffer.from(String(m.idToken).split('.')[1], 'base64url').toString()) : {}; S.pic = /^https:\/\/[\w.-]+\.line-scdn\.net\//.test(pl.picture || '') ? String(pl.picture).slice(0, 300) : ''; } catch (e) { S.pic = ''; }   // LINEのアイコン（事務局の一覧に出す）
         S.ref = String(m.ref || '').replace(/[^\w-]/g, '').slice(0, 20);
         S.agent = ['service', 'seminar-biz', 'seminar-partner'].includes(m.agent) ? m.agent : '';
         S.visit = String(m.visit || '').replace(/[^\w-]/g, '').slice(0, 20);   // ご縁の図から、その人のAI棒と話す   // 公式LINEのリッチメニューの「ハタボに相談」：サイトと同じサービス相談
@@ -3048,7 +3081,7 @@ function session(ws) {
           // 紹介の期限：前の紹介から90日たっても、お試しも契約もしていなければ、いま紹介してくれた人に切りかえる
           if (mine && mine.parent && S.ref && S.ref !== mine.parent && S.ref !== S.myRef && !mine.stage && Date.now() - parentAt > REF_DAYS * 86400000) { parent = S.ref; parentAt = Date.now(); reRef = true; console.log('ref renew', S.myRef, mine.parent, '->', parent); }
           S.refFrom = parent;
-          await putRef(S.myRef, { owner: S.owner, name: S.me || (mine && mine.name) || '', parent, parentAt, at: (mine && mine.at) || Date.now() });
+          await putRef(S.myRef, Object.assign({ owner: S.owner, name: S.me || (mine && mine.name) || '', parent, parentAt, at: (mine && mine.at) || Date.now(), ['ch_' + charOf()]: Date.now() }, S.pic && (!mine || mine.pic !== S.pic) ? { pic: S.pic } : {}));   // どのキャラで話したか（AID）と、LINEのアイコン
           // 初めて来た人（と、紹介が切りかわった人）なら、紹介した人の「ご縁」を1つふやす
           if ((!mine || reRef) && parent) { const up = await getRef(parent).catch(() => null); await putRef(parent, { kids: ((up && up.kids) || 0) + 1 }).catch(() => {}); }
           if (reRef) S.newVisit = true;
@@ -3295,7 +3328,7 @@ function session(ws) {
       if (m.type === 'ticket') return onTicket(m);
       if (m.type === 'reqs' || m.type === 'req_adopt') return onReqs(m);
       if (m.type === 'clones' || m.type === 'clone_new' || m.type === 'clone_set') return onClones(m);
-      if (m.type === 'admin' || m.type === 'admin_set') return onAdmin(m);
+      if (m.type === 'admin' || m.type === 'admin_set' || m.type === 'admin_person') return onAdmin(m);
       if (m.type === 'perms' || m.type === 'perm_set' || m.type === 'perm_del') return onPerms(m);
       if (m.type === 'api' || m.type === 'api_new' || m.type === 'api_stop' || m.type === 'api_resv') return onApi(m);
       if (['console', 'thr_goen', 'thr_open', 'thr_draft', 'thr_send', 'consult', 'mem_set', 'mem_del', 'aibo_set', 'con_set', 'staff_add', 'staff_del', 'con_url_new', 'con_url_set', 'grp_send'].includes(m.type)) return onConsole(m).catch(e => { console.error('console', m.type, String(e && e.stack || e).slice(0, 400)); send({ type: 'console', error: '管理画面の読みこみでエラーがおきました（' + String(e && e.message || e).slice(0, 80) + '）' }); });
