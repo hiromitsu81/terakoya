@@ -2277,6 +2277,8 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   const LIFF_ID = Q.get('liffId') || store.get('liffId', '');
   // サイトの「ログイン」→ Googleでログインしたとき：#wt=（12時間の印）。アドレスからは消して、このタブの中だけで持つ
   const WT = (() => { let t = ''; try { const h = new URLSearchParams(location.hash.slice(1)); t = h.get('wt') || ''; if (t) { sessionStorage.setItem('hb.wt', t); window.history.replaceState(null, '', location.pathname + location.search); } else t = sessionStorage.getItem('hb.wt') || ''; } catch (e) {} return t.replace(/[^\w.-]/g, ''); })();
+  // パソコン（GoogleでログインしたPC・LINEアプリの外で開いたミニアプリ）は、つながる前に印をつけておく（あとから付けると、マイクや案内が間に合わない）
+  try { if (WT || (LIFF && !/\bLine\//i.test(navigator.userAgent))) document.body.classList.add('pcweb'); } catch (e) {}
   // ハタボのミニアプリ（HATHA LAB）で開いたときは、つながる前からハタボの見た目にする（家族のバターちゃんは寺小屋の入口）
   const KOMUGI_APP = /^201268667[012]-/.test(LIFF_ID);   // コムギ専用のミニアプリ（公式LINE @858uraou）
   // 立ち上げはいつも、エンブレムのたまごから（つながる前に、ハタボやバターちゃんを一瞬も見せない）
