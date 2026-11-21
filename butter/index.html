@@ -2271,6 +2271,8 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   };
   // LINEミニアプリ（LIFF）で開かれたとき：?liff=1&g=<GASのデプロイID>&liffId=<LIFF ID>
   const Q = new URLSearchParams(location.search.replace(/^\?liff\.state=[^&]*&?/, '?'));
+  // ?page= や ?rid= を、そのまま・Q・LINEの liff.state の中から読む（PCのブラウザでLINEにログインすると、もどったときにアドレスから消えるので先にとっておく）
+  function qpar(n) { let v = new URLSearchParams(location.search).get(n) || Q.get(n); if (!v) { try { const st = new URLSearchParams(location.search).get('liff.state'); if (st) v = new URLSearchParams(decodeURIComponent(st).split('?')[1] || '').get(n); } catch (e) {} } return v || ''; }
   const LIFF = Q.get('liff') === '1';
   const LIFF_ID = Q.get('liffId') || store.get('liffId', '');
   // サイトの「ログイン」→ Googleでログインしたとき：#wt=（12時間の印）。アドレスからは消して、このタブの中だけで持つ
@@ -3301,7 +3303,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
       // 本番用では、ログインのあと戻る住所をLINEに登録したエンドポイントURLにまかせる（今のページの住所を渡すと、ずれて400になる）
       if (!liff.isLoggedIn()) {
         let tried = false; try { tried = sessionStorage.getItem('butter.login') === '1'; sessionStorage.setItem('butter.login', '1'); } catch (e) {}
-        if (!tried) { try { const pg = (new URLSearchParams(location.search).get('page') || '').replace(/[^a-z]/g, ''); if (pg) sessionStorage.setItem('hb.start', pg); } catch (e) {} liff.login(); return; }
+        if (!tried) { try { const pg = qpar('page').replace(/[^a-z]/g, ''); if (pg) sessionStorage.setItem('hb.start', pg); const rd = qpar('rid').replace(/[^\w-]/g, ''); if (rd) sessionStorage.setItem('hb.rid', rd); } catch (e) {} liff.login(); return; }
         throw new Error('LINEのログインができませんでした');
       }
       try { sessionStorage.removeItem('butter.login'); } catch (e) {}
@@ -4863,7 +4865,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   const HBP_START = (() => { const g = n => { let v = new URLSearchParams(location.search).get(n) || Q.get(n); if (!v) { try { const st = new URLSearchParams(location.search).get('liff.state'); if (st) v = new URLSearchParams(decodeURIComponent(st).split('?')[1] || '').get(n); } catch (e) {} } return v; }; return String(g('page') || '').replace(/[^a-z]/g, ''); })();
   const HB_START = HBP_START || (() => { try { const v = sessionStorage.getItem('hb.start') || ''; sessionStorage.removeItem('hb.start'); return v; } catch (e) { return ''; } })();
   // サイトの「ログイン」から来たとき：事務局は管理画面、オーナーはMyハタボへ（つながってから分ける）
-  const OAUTH_RID = (() => { let v = new URLSearchParams(location.search).get('rid') || Q.get('rid'); if (!v) { try { const st = new URLSearchParams(location.search).get('liff.state'); if (st) v = new URLSearchParams(decodeURIComponent(st).split('?')[1] || '').get('rid'); } catch (e) {} } return String(v || '').replace(/[^\w-]/g, '').slice(0, 64); })();
+  const OAUTH_RID = (() => { let v = new URLSearchParams(location.search).get('rid') || Q.get('rid'); if (!v) { try { const st = new URLSearchParams(location.search).get('liff.state'); if (st) v = new URLSearchParams(decodeURIComponent(st).split('?')[1] || '').get('rid'); } catch (e) {} } if (!v) { try { v = sessionStorage.getItem('hb.rid') || ''; sessionStorage.removeItem('hb.rid'); } catch (e) {} } return String(v || '').replace(/[^\w-]/g, '').slice(0, 64); })();
   if (HB_START === 'oauth') document.addEventListener('jrready', () => { if (OAUTH_RID) jrSend({ type: 'oauth_info', rid: OAUTH_RID }); }, { once: true });
   else   if (HB_START === 'login' || HB_START === 'admin') { hbpOpen('my'); document.addEventListener('jrready', () => { if (J.office) hbpOpen('console'); else if (HB_START === 'admin') toast('管理画面は事務局だけです。Myハタボを開きました'); }, { once: true }); }
   else if (HB_START && HB_START !== 'talk') hbpOpen(HB_START);
