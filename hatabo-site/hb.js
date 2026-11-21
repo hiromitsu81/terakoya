@@ -245,3 +245,6 @@ cn.forEach(function(e){io2.observe(e)});
 (function(){var L=document.querySelectorAll('.uiduo,.ui4');if(!L.length)return;L.forEach(function(e){e.classList.add('uianim')});
 function go(e){if(e.classList.contains('on'))return;e.classList.add('on');if(e.classList.contains('uiduo')){e.classList.add('speak');setTimeout(function(){e.classList.remove('speak')},3800)}}
 if(!('IntersectionObserver' in window)){L.forEach(go);return}var io=new IntersectionObserver(function(es){es.forEach(function(x){if(x.isIntersecting){go(x.target);io.unobserve(x.target)}})},{threshold:.28});L.forEach(function(e){io.observe(e)})})();
+
+/* 画面紹介の動き：見えているときだけ「play」（画面の外では止める） */
+(function(){var L=document.querySelectorAll('.uiduo');if(!L.length||!('IntersectionObserver' in window))return;var io=new IntersectionObserver(function(es){es.forEach(function(e){e.target.classList.toggle('play',e.isIntersecting)})},{threshold:.2});L.forEach(function(e){io.observe(e)})})();
