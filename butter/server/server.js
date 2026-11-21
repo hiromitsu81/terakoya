@@ -59,6 +59,9 @@ const ENV = {
   GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || '',
   PUBLIC_URL: (process.env.PUBLIC_URL || 'https://butter-junior-722073142596.asia-northeast1.run.app').replace(/\/$/, ''),
   HATABO_LINE_TOKEN: process.env.HATABO_LINE_TOKEN || '',
+  VAPID_PUBLIC: process.env.VAPID_PUBLIC || '',     // ホーム画面のハタボ（ウェブアプリ）への通知の鍵。npx web-push generate-vapid-keys で作る
+  VAPID_PRIVATE: process.env.VAPID_PRIVATE || '',
+  VAPID_SUBJECT: process.env.VAPID_SUBJECT || 'mailto:info@hatha-lab.com',
   HATABO_CHANNEL_SECRET: process.env.HATABO_CHANNEL_SECRET || '',   // 公式LINEのWebhook（友だち追加のあいさつカード）の署名チェック用   // ハタボ公式LINE（Messaging API）。あれば、伝言をLINEにも届ける
   // 一時的にスーパー上位：LINEのユーザーID:期限（例 Uxxxx:2026-12-31）。期限を過ぎたら自動で標準にもどる
   // サイトから来た人（?ref=site など）は、汎用のハタボをスーパー上位で（長文もClaudeと同じように）
@@ -540,9 +543,46 @@ async function postInbox(code, item, chId) {
   const items = await loadInbox(code);
   items.unshift(Object.assign({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), at: Date.now(), read: false }, item));
   await saveInbox(code, items);
+  const head = item.kind === 'goen' ? 'ご縁' : (item.fromName || 'ご縁の人') + 'さんから伝言';
+  // まず、ホーム画面のハタボ（ウェブアプリ）に通知とバッジ。届いたら、LINEのまとめには入れない（LINEの通数を使わない）
+  const pushed = await pushTo(code, { title: head, body: String(item.text).slice(0, 120), badge: items.filter(x => !x.read).length, tag: 'inbox' }).catch(() => 0);
+  if (pushed) return;
   const r = await getRef(code).catch(() => null), to = r && /^g:U[0-9a-f]{32}$/.test(r.owner || '') ? r.owner.slice(2) : '';
-  // LINEへは、すぐ送らずに1日1回のまとめに入れる（/cron/digest）
-  if (to) { const head = item.kind === 'goen' ? 'ご縁' : (item.fromName || 'ご縁の人') + 'さんから伝言'; await queueDigest(to, chId === 'komugi' ? 'komugi' : 'hatabo', '［' + head + '］' + String(item.text).slice(0, 300)); }
+  // 通知を受け取っていない人だけ、LINEへは、すぐ送らずに1日1回のまとめに入れる（/cron/digest）
+  if (to) await queueDigest(to, chId === 'komugi' ? 'komugi' : 'hatabo', '［' + head + '］' + String(item.text).slice(0, 300));
+}
+/* ===== ホーム画面のハタボ（ウェブアプリ）への通知：LINEの通数を使わない。鍵（VAPID）がなければ何もしない ===== */
+let webpush = null;
+function wpLib() {
+  if (webpush !== null) return webpush;
+  webpush = false;
+  if (!ENV.VAPID_PUBLIC || !ENV.VAPID_PRIVATE) return webpush;
+  try { const w = require('web-push'); w.setVapidDetails(ENV.VAPID_SUBJECT, ENV.VAPID_PUBLIC, ENV.VAPID_PRIVATE); webpush = w; } catch (e) { console.error('web-push', String(e.message).slice(0, 120)); }
+  return webpush;
+}
+const PUSH_HOME_RE = /^https:\/\/(app\.hatha-lab\.com|hatha-lab\.github\.io|hiromitsu81\.github\.io)\//;
+async function pushSubs(code) { if (!code) return []; const d = await loadCol(code, 'push').catch(() => ({})); return Array.isArray(d.subs) ? d.subs : []; }
+/** 通知の受け取り先を足す（1人5台まで。同じ端末は入れかえ） */
+async function pushAdd(code, sub, home) {
+  if (!code || !sub || !/^https:\/\//.test(String(sub.endpoint || '')) || !sub.keys || !sub.keys.p256dh || !sub.keys.auth) return false;
+  const one = { endpoint: String(sub.endpoint).slice(0, 800), keys: { p256dh: String(sub.keys.p256dh).slice(0, 200), auth: String(sub.keys.auth).slice(0, 100) }, home: PUSH_HOME_RE.test(String(home || '')) ? String(home).slice(0, 600) : '', at: Date.now() };
+  const subs = (await pushSubs(code)).filter(x => x.endpoint !== one.endpoint);
+  await saveCol(code, 'push', { subs: [one].concat(subs).slice(0, 5) });
+  return true;
+}
+async function pushRemove(code, endpoint) { const subs = await pushSubs(code); await saveCol(code, 'push', { subs: endpoint ? subs.filter(x => x.endpoint !== endpoint) : [] }); }
+/** 通知を送る。届いた端末の数を返す（0なら、LINEのまとめにまわす）。もう使えない端末は消す */
+async function pushTo(code, p) {
+  const w = wpLib(); if (!w || !code) return 0;
+  const subs = await pushSubs(code); if (!subs.length) return 0;
+  let ok = 0; const keep = [];
+  for (const s of subs) {
+    const url = s.home ? s.home.replace(/([?&])page=[^&]*/, '$1').replace(/[?&]$/, '') + (s.home.includes('?') ? '&' : '?') + 'page=' + (p.page || 'inbox') : '';
+    try { await w.sendNotification({ endpoint: s.endpoint, keys: s.keys }, JSON.stringify(Object.assign({}, p, { url })), { TTL: 86400, urgency: 'normal' }); ok++; keep.push(s); }
+    catch (e) { if (e.statusCode === 404 || e.statusCode === 410) continue; keep.push(s); console.error('push', e.statusCode || '', String(e.message).slice(0, 120)); }
+  }
+  if (keep.length !== subs.length) await saveCol(code, 'push', { subs: keep });
+  return ok;
 }
 /* ===== 1日1回のまとめ通知：伝言・案件・ご縁・ポイント・友だち追加・事務局への声を、人ごとにためて、朝まとめてLINEへ ===== */
 async function queueDigest(lineId, ch, text) {
@@ -3485,6 +3525,10 @@ function session(ws) {
         await postInbox(to, { kind: 'msg', from: S.myRef, fromName: S.me || 'ご縁の人', text: t });
         return send({ type: 'inbox', items: await loadInbox(S.myRef), people: (await goenPeople(S.myRef).catch(() => [])).slice(0, 60), sent: true });
       }
+      if (m.type === 'push_key') return send({ type: 'push_key', key: wpLib() ? ENV.VAPID_PUBLIC : '' });   // ホーム画面のハタボの通知：鍵を渡す
+      if (m.type === 'push_sub') { const ok = !S.guest && !S.visit && await pushAdd(S.myRef, m.sub, m.home); return send({ type: 'push', ok, on: ok, why: ok ? '' : (S.myRef ? 'bad' : 'login') }); }
+      if (m.type === 'push_off') { if (S.myRef) await pushRemove(S.myRef, String(m.endpoint || '')); return send({ type: 'push', ok: true, on: false }); }
+      if (m.type === 'push_test') { const un = (await loadInbox(S.myRef).catch(() => [])).filter(x => !x.read).length; const n = await pushTo(S.myRef, { title: 'ハタボ', body: 'テストの通知です。押すと伝言をひらきます。', badge: un || 1, tag: 'test' }).catch(() => 0); return send({ type: 'push', ok: !!n, on: !!n, test: true }); }
       if (m.type === 'inbox_read') { const items = await loadInbox(S.myRef); items.forEach(x => { x.read = true; }); await saveInbox(S.myRef, items); return send({ type: 'inbox', items, people: (await goenPeople(S.myRef).catch(() => [])).slice(0, 60) }); }
       if (m.type === 'note_del') { const items = (await loadNotes(S.owner)).filter(x => x.id !== String(m.id || '')); await saveNotes(S.owner, items); return send(await myPage(S)); }
     } catch (e) { send({ type: 'notice', why: 'server', detail: String(e.message).slice(0, 80) }); }
@@ -4071,4 +4115,4 @@ if (require.main === module) {
   deps.init();
   createServer().listen(ENV.PORT, () => console.log('butter-junior on :' + ENV.PORT));
 }
-module.exports = { saveCol, loadCol, groupSeen, groupPush, groupsOut, PLAN_TABLE, hoursOpen, threadUpsert, webSign, webVerify, MCP_TOOLS, cmVideo, brandOut, rankOf, RANKS, cloneRule, cloneOpen, CLONE_CAP, createServer, deps, ENV, splitter, takeEmotion, clean, PHOTO_RE, VIDEO_RE, session, calledJunior, calledJam, hearingStart, hearingCheckAll, handleStripeEvent, stripeSigOk, funnelOf, getRef, putRef, checkoutFor };
+module.exports = { pushTo, pushAdd, pushSubs, saveCol, loadCol, groupSeen, groupPush, groupsOut, PLAN_TABLE, hoursOpen, threadUpsert, webSign, webVerify, MCP_TOOLS, cmVideo, brandOut, rankOf, RANKS, cloneRule, cloneOpen, CLONE_CAP, createServer, deps, ENV, splitter, takeEmotion, clean, PHOTO_RE, VIDEO_RE, session, calledJunior, calledJam, hearingStart, hearingCheckAll, handleStripeEvent, stripeSigOk, funnelOf, getRef, putRef, checkoutFor };
