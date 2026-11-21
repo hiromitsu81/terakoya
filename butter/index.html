@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8"><meta name="hb-ver" content="11/21-1600">
+<meta charset="utf-8"><meta name="hb-ver" content="11/21-1615">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
 <title>福まねき特戦隊｜バターちゃん</title>
@@ -5002,7 +5002,11 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   // サイトの「ログイン」から来たとき：事務局は管理画面、オーナーはMyハタボへ（つながってから分ける）
   const OAUTH_RID = (() => { let v = new URLSearchParams(location.search).get('rid') || Q.get('rid'); if (!v) { try { const st = new URLSearchParams(location.search).get('liff.state'); if (st) v = new URLSearchParams(decodeURIComponent(st).split('?')[1] || '').get('rid'); } catch (e) {} } try { const sv = sessionStorage.getItem('hb.rid') || ''; sessionStorage.removeItem('hb.rid'); if (!v) v = sv; } catch (e) {} return String(v || '').replace(/[^\w-]/g, '').slice(0, 64); })();
   if (HB_START === 'oauth') document.addEventListener('jrready', () => { if (OAUTH_RID) jrSend({ type: 'oauth_info', rid: OAUTH_RID }); }, { once: true });
-  else   if (HB_START === 'login' || HB_START === 'admin') { hbpOpen('my'); document.addEventListener('jrready', () => { if (J.office) hbpOpen('console'); else if (HB_START === 'admin') toast('管理画面は事務局だけです。Myハタボを開きました'); }, { once: true }); }
+  else   if (HB_START === 'office' || HB_START === 'admin') {   // 事務局の入口（/office）：開くとすぐ、全員の一覧（事務局の管理画面）
+    document.body.classList.add('officemode'); try { document.title = 'HATHABO 事務局'; } catch (e) {} hbpOpen('admin');
+    document.addEventListener('jrready', () => { if (!J.office) { document.body.classList.remove('officemode'); toast('このアカウントは事務局ではありません。Myハタボを開きました'); hbpOpen('my'); } else if (!HBP.admin) jrSend({ type: 'admin' }); }, { once: true });
+  }
+  else if (HB_START === 'login') hbpOpen('my');   // ふつうのログイン（サイトのMyハタボから）：自分のMyハタボ
   else if (HB_START && HB_START !== 'talk') hbpOpen(HB_START);
   // ミニアプリのトップは、Myハタボのホーム（?page=talk・紹介URL（?ref=）・台本モードのときは、これまでどおり話す画面）
   else if (!HB_START && (document.body.classList.contains('av-hatabo') || document.body.classList.contains('av-komugi')) && !Q.get('ref') && !new URLSearchParams(location.search).get('ref') && !Q.get('stage') && !new URLSearchParams(location.search).get('stage')) { if (window.hbSetView) window.hbSetView('chat'); }   // ミニアプリを開いたら、すぐトーク画面（ホームは下のタブから）
