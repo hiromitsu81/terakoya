@@ -1781,6 +1781,30 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
 .ibcomp button { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 50%; background: #2F7D55; color: #fff; cursor: pointer; }
 .ibcomp button svg { width: 20px; height: 20px; }
 body.pwa #talkOaBtn, body.pwa .pinbar { display: none !important; }
+
+/* ホーム画面のハタボ：入場券（LINEでつなぐ）と、置き方の画面 */
+#pwSheet { position: fixed; inset: 0; z-index: 2147483000; display: grid; place-items: center; padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom)); background: #0B0E15; overflow-y: auto; }
+#pwSheet[hidden] { display: none; }
+#pwSheet .pwcard { width: 100%; max-width: 400px; display: grid; gap: 14px; justify-items: center; text-align: center; color: #E8EBF0; font-family: var(--body); }
+#pwSheet h2 { margin: 0; font: 900 22px var(--display); color: #fff; }
+#pwSheet p { margin: 0; font-size: 15px; line-height: 1.7; color: #D5DAE3; }
+#pwSheet .pwlogo { width: 72px; height: 72px; border-radius: 18px; }
+#pwSheet .pwwhy { padding: 8px 12px; border-radius: 12px; background: rgba(236,125,143,.15); color: #F4B3BE; font-size: 13px; }
+#pwSheet .pwnum { font: 900 46px/1 var(--display); letter-spacing: .25em; padding: 14px 18px 14px 28px; border-radius: 18px; background: #141925; border: 1px solid rgba(255,255,255,.12); color: #fff; }
+#pwSheet .pwbtn { display: block; width: 100%; padding: 16px; border: 0; border-radius: 999px; background: #06C755; color: #fff; font: 900 17px var(--display); text-decoration: none; cursor: pointer; }
+#pwSheet .pwbtn[disabled] { opacity: .6; }
+#pwSheet .pwsub { width: 100%; padding: 12px; border: 1px solid rgba(255,255,255,.2); border-radius: 999px; background: none; color: #E8EBF0; font: 800 15px var(--display); cursor: pointer; }
+#pwSheet .pwnote { font-size: 13px; color: #A3AAB7; }
+#pwSheet .pwnote a { color: #9FD9B4; }
+#pwSheet .pwok { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: #2F7D55; color: #fff; font: 900 32px var(--display); }
+#pwSheet .pwsteps { margin: 0; padding: 0; list-style: none; counter-reset: s; display: grid; gap: 10px; width: 100%; text-align: left; }
+#pwSheet .pwsteps li { counter-increment: s; position: relative; padding: 12px 14px 12px 52px; border-radius: 14px; background: #141925; border: 1px solid rgba(255,255,255,.1); font-size: 15px; line-height: 1.55; color: #E8EBF0; }
+#pwSheet .pwsteps li::before { content: counter(s); position: absolute; left: 12px; top: 10px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: #62AD7F; color: #0B0E15; font: 900 14px var(--display); }
+#pwSheet .pwsteps b { color: #fff; }
+#pwSheet .pwsteps small { display: block; margin-top: 2px; color: #A3AAB7; font-size: 12px; }
+#pwSheet .pwarrow { width: 0; height: 0; border-left: 16px solid transparent; border-right: 16px solid transparent; border-top: 22px solid #62AD7F; animation: pwbob 1.2s ease-in-out infinite; }
+@keyframes pwbob { 50% { transform: translateY(10px); } }
+@media (prefers-reduced-motion: reduce) { #pwSheet .pwarrow { animation: none; } }
 </style>
 </head>
 <body>
@@ -2395,7 +2419,7 @@ body.pwa #talkOaBtn, body.pwa .pinbar { display: none !important; }
   const OFFM = () => document.body.classList.contains('officemode') && !!J.office;   // 事務局の入口から入ったときだけ、事務局の一覧・タブ・管理画面
   const liffApi = n => { try { return !!(window.liff && liff.isApiAvailable && liff.isApiAvailable(n)); } catch (e) { return false; } };   // Googleで入ったとき（LINEのログインをしない）は liff が始まっていないので、聞くとエラーになる
   // サイトの「ログイン」→ Googleでログインしたとき：#wt=（12時間の印）。アドレスからは消して、このタブの中だけで持つ
-  const WT = (() => { let t = ''; try { const h = new URLSearchParams(location.hash.slice(1)); t = h.get('wt') || ''; if (t) { sessionStorage.setItem('hb.wt', t); window.history.replaceState(null, '', location.pathname + location.search); } else t = sessionStorage.getItem('hb.wt') || ''; } catch (e) {} return t.replace(/[^\w.-]/g, ''); })();
+  const WT = (() => { let t = ''; try { const h = new URLSearchParams(location.hash.slice(1)); t = h.get('wt') || ''; if (t) { sessionStorage.setItem('hb.wt', t); window.history.replaceState(null, '', location.pathname + location.search); } else t = sessionStorage.getItem('hb.wt') || ((matchMedia('(display-mode: standalone)').matches || navigator.standalone === true) ? localStorage.getItem('hb.dt') || '' : ''); } catch (e) {} return t.replace(/[^\w.-]/g, ''); })();   // ホーム画面のハタボ：LINEでつないだ入場券（180日）
   // パソコン（GoogleでログインしたPC・LINEアプリの外で開いたミニアプリ）は、つながる前に印をつけておく（あとから付けると、マイクや案内が間に合わない）
   const PWA_PHONE = (() => { try { return (matchMedia('(display-mode: standalone)').matches || navigator.standalone === true) && matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } })();   // ホーム画面から開いたスマホ：スマホの見た目のまま
   if (PWA_PHONE) document.body.classList.add('pwa');
@@ -3418,6 +3442,8 @@ body.pwa #talkOaBtn, body.pwa .pinbar { display: none !important; }
   }
   async function liffBoot() {
     if (!LIFF) return;
+    if (PWA_PHONE && !WT) return pwaPairScreen();   // ホーム画面のハタボ：LINEでつなぐ（ログインでSafariに飛ばさない）
+    if (!PWA_PHONE && Q.get('pwa') === 'add' && !/ Line\//i.test(navigator.userAgent)) return pwaAddGuide();   // LINEの「ホーム画面に置く」で開いたブラウザ：置き方だけ見せる（ここではログインしない）
     hint.textContent = 'まんなかの「おして話す」をおして、バターちゃんに話しかけてね。';
     try {
       await new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'https://static.line-scdn.net/liff/edge/2/sdk.js'; sc.onload = res; sc.onerror = rej; document.head.append(sc); });
@@ -3425,6 +3451,7 @@ body.pwa #talkOaBtn, body.pwa .pinbar { display: none !important; }
       if (!LIFF_ID) throw new Error('LIFF IDがありません');
       // パソコンのブラウザでは liff.init がそのままLINEのログインへ飛ぶので、その前に開く画面（page）とつなぐ番号（rid）をとっておく
       try { const pg0 = qpar('page').replace(/[^a-z]/g, ''), rd0 = qpar('rid').replace(/[^\w-]/g, ''); if (pg0) sessionStorage.setItem('hb.start', pg0); if (rd0) sessionStorage.setItem('hb.rid', rd0); } catch (e) {}
+      try { const pc0 = qpar('pc').replace(/[^0-9a-f]/g, ''); if (pc0) sessionStorage.setItem('hb.pc', pc0); } catch (e) {}   // ホーム画面のハタボをつなぐ番号
       await liff.init({ liffId: LIFF_ID, withLoginOnExternalBrowser: true });
       // 本番用では、ログインのあと戻る住所をLINEに登録したエンドポイントURLにまかせる（今のページの住所を渡すと、ずれて400になる）
       if (!liff.isLoggedIn()) {
@@ -3531,6 +3558,7 @@ body.pwa #talkOaBtn, body.pwa .pinbar { display: none !important; }
   }, 15000);
   function jrOn(m) {
     switch (m.type) {
+      case 'pwa_pair': pwaPairMsg(m); break;
       case 'push_key': PUSH.key = m.key || ''; if (!$('hbPage').hidden && HBP.page === 'inbox') hbpRender(); break;
       case 'push': PUSH.on = !!m.on; PUSH.msg = m.ok ? (m.test ? 'テストの通知を送りました。' : '') : m.why === 'login' ? 'ログインしてから、もう一度押してください。' : m.test ? '通知が届きませんでした。いちど「通知をオフにする」を押して、オンにしなおしてください。' : '通知の登録ができませんでした。'; if (m.ok && !m.test && m.on) toast('通知をオンにしました'); if (!$('hbPage').hidden && HBP.page === 'inbox') hbpRender(); break;
       case 'inbox': { const sig = (m.items || []).map(x => x.id).join(','); if (!m.sent && HBP.ibWith && sig === HBP.ibSig && HBP.inbox) { HBP.inbox = m; pwaBadge((m.items || []).filter(x => !x.read).length); try { hbpChats(); } catch (e) {} break; } HBP.ibSig = sig; } HBP.inbox = m; pwaBadge((m.items || []).filter(x => !x.read).length); try { hbpChats(); } catch (e) {} if (m.sent) toast('伝言をとどけたよ'); if (!$('hbPage').hidden && HBP.page === 'inbox') { if (m.sent || !HBP.inboxShown) { HBP.inboxShown = true; hbpRender(); } } break;
@@ -3670,7 +3698,7 @@ body.pwa #talkOaBtn, body.pwa .pinbar { display: none !important; }
       case 'error':
         document.body.classList.remove('connecting');
         if (m.code === 'closed') { J.dead = true; hint.textContent = 'いま窓口はお休み中です。また今度お話ししましょう。'; addBubble('ジュニア', 'いま窓口はお休み中です。ヒロさんには直接ご連絡ください。', 'her'); }
-        if (m.code === 'auth') { J.dead = true; J.authFail = true; if (WT) { try { sessionStorage.removeItem('hb.wt'); } catch (e) {} hint.textContent = 'ログインの期限が切れました。サイトの「ログイン」から入りなおしてください。'; toast('ログインの期限が切れました'); setTimeout(() => { location.href = 'https://www.hatha-lab.com/login.html'; }, 2500); } else hint.textContent = 'LINEの確認が切れたよ。まんなかのボタンを押すと開き直すよ。'; }
+        if (m.code === 'auth') { J.dead = true; J.authFail = true; if (WT && PWA_PHONE) { try { localStorage.removeItem('hb.dt'); sessionStorage.removeItem('hb.wt'); } catch (e) {} pwaPairScreen(m.detail || 'もう一度、LINEでつないでください'); } else if (WT) { try { sessionStorage.removeItem('hb.wt'); } catch (e) {} hint.textContent = 'ログインの期限が切れました。サイトの「ログイン」から入りなおしてください。'; toast('ログインの期限が切れました'); setTimeout(() => { location.href = 'https://www.hatha-lab.com/login.html'; }, 2500); } else hint.textContent = 'LINEの確認が切れたよ。まんなかのボタンを押すと開き直すよ。'; }
         // それ以外のエラーでは前の話し方にしない（切れたら、つなぎなおす）
         break;
     }
@@ -4215,7 +4243,7 @@ body.pwa #talkOaBtn, body.pwa .pinbar { display: none !important; }
             <div class="hbc hbwide acctrows"><div class="k">APP</div><h3>アプリ</h3><div class="hbrows">${B.map(row).join('')}<label class="hbrow hbsw"><div><b>触覚フィードバック</b><span>話すボタンを押したとき、ブルッと震える（対応しているスマホだけ）</span></div><input type="checkbox" id="hbHap" ${store.get('hbHaptic', true) ? 'checked' : ''}></label></div></div>
             <div class="hbc hbwide acctrows"><div class="k">MORE</div><h3>そのほか</h3><div class="hbrows">${C.map(row).join('')}<button type="button" class="hbrow" id="hbTourBtn"><div><b>使い方の案内</b><span>話すボタン・画面の場所・AIアプリとつなぐ（ハタボコネクト）</span></div><i>›</i></button><button type="button" class="hbrow hblogout" id="hbLogout"><div><b>ログアウト</b><span>この端末からログアウトします・アプリの版 ${window.HB_VER || ''}</span></div><i>›</i></button></div></div>`; })()}`;
       { const hp = document.getElementById('hbHap'); if (hp) hp.onchange = () => { store.set('hbHaptic', hp.checked); if (hp.checked && window.hbBuzz) window.hbBuzz(); }; }
-      $('hbLogout').onclick = () => { if (!confirm('この端末からログアウトします。よろしいですか？')) return; try { ['hbpData', 'hbPins', 'srv'].forEach(k => store.set(k, null)); } catch (e) {} try { if (window.liff && liff.isLoggedIn && liff.isLoggedIn()) liff.logout(); } catch (e) {} try { sessionStorage.clear(); } catch (e) {} toast('ログアウトしました'); setTimeout(() => { location.replace('https://www.hatha-lab.com/mypage.html?out=1'); }, 600); };   // ログアウトしたら、サイトのMyハタボへもどる
+      $('hbLogout').onclick = () => { if (!confirm('この端末からログアウトします。よろしいですか？')) return; if (PWA_PHONE) { try { jrSend({ type: 'pwa_logout' }); localStorage.removeItem('hb.dt'); } catch (e) {} } try { ['hbpData', 'hbPins', 'srv'].forEach(k => store.set(k, null)); } catch (e) {} try { if (window.liff && liff.isLoggedIn && liff.isLoggedIn()) liff.logout(); } catch (e) {} try { sessionStorage.clear(); } catch (e) {} toast('ログアウトしました'); setTimeout(() => { location.replace(PWA_PHONE ? location.pathname + location.search : 'https://www.hatha-lab.com/mypage.html?out=1'); }, 600); };   // ログアウトしたら、サイトのMyハタボへもどる
     } else if (p === 'more') {
       const R = [['console', '管理画面', '会話・愛棒・窓口・お金・設定（PC・タブレットでも）'], ['share', '紹介する', 'ハタボのカードを友だちに。ご縁がひろがります'], ['notes', 'メモ・議事録', '話して残したメモと議事録'], ['gacha', 'AI棒ガチャ', '1日1回むりょう'], ['friends', '友だち', 'ガチャで出会った人・ご縁の人'], ['grow', '育てた' + nm, 'レベル・覚えたこと・引きつぎ'], ['aisai', 'AISAI・愛祭', 'オーナーズクラブ・ランク・アワード'], ['plan', 'プラン・支払い', 'お試し・お支払い'], ['times', 'ハタボタイムズ', 'お知らせ・使い方'], ['api', 'AIからつなぐ（API）', 'ChatGPT・Gemini・Claude・Grokから使う'], ['settings', '設定', 'キャラ・連携・公開設定・PCで使う']];
       body.innerHTML = `<div class="hbc"><div class="k">MENU</div><h3>もっと</h3>${R.map(([k, t, d0]) => `<button type="button" class="hbrow" data-go="${k}"><div><b>${t}</b><span>${d0}</span></div><i>›</i></button>`).join('')}</div>`;
@@ -5158,6 +5186,65 @@ body.pwa #talkOaBtn, body.pwa .pinbar { display: none !important; }
   $('hbpScrim').addEventListener('click', () => hbpDrawer(false));
   // 右上の表示モード：トーク（文字で話す）／キャラ（キャラを大きく。プロジェクターでのプレゼンや交流会）
   $('hbpMode').addEventListener('click', e => { const b = e.target.closest('[data-mode]'); if (!b) return; hbpClose(); if (window.hbSetView) window.hbSetView(b.dataset.mode); });
+  /* ===== ホーム画面のハタボの入場券：ここで数字を出し、LINEのハタボで本人が確かめると、この端末に入場券（180日）が届く ===== */
+  const PAIR = { code: '', num: '', exp: 0, t: 0, pc: '' };
+  const apiBase = () => (/^(localhost|127\.)/.test(SRV) ? 'http://' : 'https://') + SRV;
+  function pwaSheet(html) { let d = document.getElementById('pwSheet'); if (!d) { d = document.createElement('div'); d.id = 'pwSheet'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true'); document.body.append(d); } d.innerHTML = '<div class="pwcard">' + html + '</div>'; d.hidden = false; return d; }
+  function pwaSheetClose() { const d = document.getElementById('pwSheet'); if (d) d.hidden = true; }
+  async function pwaPairNew() {
+    try { const r = await fetch(apiBase() + '/pwa/pair', { method: 'POST' }); const j = await r.json(); if (!r.ok || !j.code) throw new Error(j.error || 'pair'); Object.assign(PAIR, { code: j.code, num: j.num, exp: j.exp }); localStorage.setItem('hb.pair', JSON.stringify({ code: j.code, num: j.num, exp: j.exp })); return true; }
+    catch (e) { return false; }
+  }
+  async function pwaPairCheck() {
+    if (!PAIR.code || document.hidden) return;
+    try {
+      const j = await (await fetch(apiBase() + '/pwa/check?c=' + PAIR.code, { cache: 'no-store' })).json();
+      if (j.state === 'ok' && j.token) { clearInterval(PAIR.t); try { localStorage.setItem('hb.dt', j.token); localStorage.removeItem('hb.pair'); } catch (e) {} pwaSheet('<div class="pwok">✓</div><h2>つながりました</h2><p>ハタボを開いています…</p>'); setTimeout(() => location.replace(location.pathname + location.search.replace(/([?&])(pc|page|with)=[^&]*/g, '$1').replace(/[?&]+$/, '')), 600); }
+      else if (j.state === 'gone') { PAIR.code = ''; try { localStorage.removeItem('hb.pair'); } catch (e) {} pwaPairScreen(); }
+    } catch (e) {}
+  }
+  async function pwaPairScreen(why) {
+    clearInterval(PAIR.t);
+    document.body.classList.add('pwapair');
+    try { const st = JSON.parse(localStorage.getItem('hb.pair') || '{}'); if (st.code && st.exp > Date.now() + 60000) Object.assign(PAIR, st); } catch (e) {}
+    if (!PAIR.code) { pwaSheet('<h2>ハタボにつなぐ</h2><p>じゅんびしています…</p>'); if (!(await pwaPairNew())) { pwaSheet('<h2>ハタボにつなぐ</h2><p>つながりませんでした。電波のよいところで、もう一度ためしてください。</p><button type="button" class="pwbtn" id="pwRetry">もう一度</button>'); $('pwRetry').onclick = () => pwaPairScreen(why); return; } }
+    const url = MINI_URL + '?page=pair&pc=' + PAIR.code, alt = 'line://app/' + (LIFF_ID || '2012676035-yCkx6tBu') + '?page=pair&pc=' + PAIR.code;
+    pwaSheet('<img class="pwlogo" src="award_mark.svg" alt=""><h2>ハタボにつなぐ</h2>'
+      + (why ? '<p class="pwwhy">' + esc(why) + '</p>' : '')
+      + '<p>LINEのハタボで、下の数字を確かめて「つなぐ」を押すと、このハタボに入れます。IDもパスワードも要りません。</p>'
+      + '<div class="pwnum" aria-label="つなぐ数字">' + esc(PAIR.num) + '</div>'
+      + '<a class="pwbtn" href="' + esc(url) + '">LINEでつなぐ</a>'
+      + '<p class="pwnote">つないだら、このホーム画面のハタボにもどってください。自動で入ります。<br><a href="' + esc(alt) + '">LINEが開かないときは、こちら</a></p>');
+    PAIR.t = setInterval(pwaPairCheck, 2500);
+  }
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && document.body.classList.contains('pwapair')) pwaPairCheck(); });
+  /** LINEのハタボの側：番号を確かめて、本人が「つなぐ」 */
+  function pwaPairConfirm() {
+    let pc = qpar('pc'); try { pc = pc || sessionStorage.getItem('hb.pc') || ''; sessionStorage.removeItem('hb.pc'); } catch (e) {}
+    PAIR.pc = String(pc || '').replace(/[^0-9a-f]/g, '');
+    if (!PAIR.pc) return;
+    pwaSheet('<h2>ホーム画面のハタボをつなぐ</h2><p>確かめています…</p>');
+    jrSend({ type: 'pwa_pair_info', pc: PAIR.pc });
+  }
+  function pwaPairMsg(m) {
+    const close = '<button type="button" class="pwsub" id="pwClose">とじる</button>';
+    const bindClose = () => { const c = $('pwClose'); if (c) c.onclick = () => { pwaSheetClose(); try { if (window.liff && liff.isInClient && liff.isInClient() && m.step === 'done') liff.closeWindow(); } catch (e) {} }; };
+    if (m.step === 'info') {
+      pwaSheet('<h2>ホーム画面のハタボをつなぐ</h2><p>ホーム画面のハタボに出ている数字は、これですか？</p><div class="pwnum">' + esc(m.num) + '</div><p class="pwnote">自分のスマホで「LINEでつなぐ」を押したときだけ、つないでください。ほかの人から送られてきたときは、つながないでください。</p><button type="button" class="pwbtn" id="pwYes">同じなので、つなぐ</button>' + close.replace('とじる', 'やめる'));
+      $('pwYes').onclick = () => { $('pwYes').disabled = true; $('pwYes').textContent = 'つないでいます…'; jrSend({ type: 'pwa_pair', pc: PAIR.pc }); };
+    } else if (m.step === 'done') pwaSheet('<div class="pwok">✓</div><h2>つながりました</h2><p>ホーム画面のハタボにもどってください。自動で入ります。</p>' + close);
+    else pwaSheet('<h2>つなげませんでした</h2><p>' + esc(m.detail || 'もう一度ためしてください') + '</p>' + close);
+    bindClose();
+  }
+  /** LINEから「ホーム画面に置く」で開いたブラウザ：置き方だけ見せる（Androidはボタンひとつ） */
+  let pwaBip = null;
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); pwaBip = e; const b = document.getElementById('pwInstall'); if (b) b.hidden = false; });
+  function pwaAddGuide() {
+    document.body.classList.add('pwapair');
+    if (pwaIOS()) pwaSheet('<img class="pwlogo" src="award_mark.svg" alt=""><h2>ハタボをホーム画面に置く</h2><p>置くと、伝言が届いたときに通知とアイコンの数字でお知らせします。</p><ol class="pwsteps"><li>画面の下の<b>共有ボタン</b>（四角から上向きの矢印）を押す</li><li>「<b>ホーム画面に追加</b>」を押す<small>見つからないときは、少し下にずらすか「もっと見る」</small></li><li>右上の「<b>追加</b>」を押す</li><li>ホーム画面にできた<b>ハタボ</b>を開いて、「LINEでつなぐ」</li></ol><div class="pwarrow" aria-hidden="true"></div>');
+    else { pwaSheet('<img class="pwlogo" src="award_mark.svg" alt=""><h2>ハタボをホーム画面に置く</h2><p>置くと、伝言が届いたときに通知とアイコンの数字でお知らせします。</p><button type="button" class="pwbtn" id="pwInstall"' + (pwaBip ? '' : ' hidden') + '>ホーム画面に追加</button><p class="pwnote">ボタンが出ないときは、右上のメニュー（︙）から「ホーム画面に追加」または「アプリをインストール」を選んでください。追加したら、ホーム画面のハタボを開いて「LINEでつなぐ」を押します。</p>');
+      $('pwInstall').onclick = async () => { if (!pwaBip) return; pwaBip.prompt(); await pwaBip.userChoice.catch(() => {}); pwaBip = null; $('pwInstall').hidden = true; }; }
+  }
   /* ===== ホーム画面のハタボ：伝言の通知とアイコンの数字（LINEの通数を使わない）。LINEの中では、ブラウザで開いてホーム画面に追加してもらう ===== */
   const PUSH = { key: '', on: false, busy: false, msg: '' };
   const pwaStandalone = () => { try { return matchMedia('(display-mode: standalone)').matches || navigator.standalone === true; } catch (e) { return false; } };
@@ -5166,7 +5253,7 @@ body.pwa #talkOaBtn, body.pwa .pinbar { display: none !important; }
   const pushReady = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
   function pwaBadge(n) { try { if (navigator.setAppBadge) (n > 0 ? navigator.setAppBadge(n) : navigator.clearAppBadge()).catch(() => {}); } catch (e) {} }
   function pwaHome() { const u = new URL(location.href); u.hash = ''; ['page', 'rid', 'code', 'state', 'liffClientId', 'liffRedirectUri', 'liff.state'].forEach(k => u.searchParams.delete(k)); return u.toString(); }
-  function pwaOutUrl() { return 'https://app.hatha-lab.com/?liff=1&g=' + encodeURIComponent(Q.get('g') || 'AKfycbxe-O1pMup7kUMVKVkmQemYknVSyTSq1ub3bHJqPI8-0QIAYG7o2eXKI_yQIk9tHwPz') + '&liffId=' + encodeURIComponent(LIFF_ID || '2012676035-yCkx6tBu') + '&page=inbox'; }
+  function pwaOutUrl() { return 'https://app.hatha-lab.com/?liff=1&g=' + encodeURIComponent(Q.get('g') || 'AKfycbxe-O1pMup7kUMVKVkmQemYknVSyTSq1ub3bHJqPI8-0QIAYG7o2eXKI_yQIk9tHwPz') + '&liffId=' + encodeURIComponent(LIFF_ID || '2012676035-yCkx6tBu') + '&pwa=add'; }
   function pwaB64(b) { const s = atob((b + '='.repeat((4 - b.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(s, c => c.charCodeAt(0)); }
   async function pushInit() {
     if (!('serviceWorker' in navigator) || pwaInLine()) return;
@@ -5191,7 +5278,7 @@ body.pwa #talkOaBtn, body.pwa .pinbar { display: none !important; }
   }
   function hbPushCard() {
     let t, b = '';
-    if (pwaInLine()) { t = 'ハタボをホーム画面に置くと、伝言が届いたときに、通知とアイコンの数字でお知らせします（LINEのメッセージは使いません）。'; b = '<button type="button" class="hbbtn" id="pwOpen">ブラウザで開いて、ホーム画面に追加する</button>'; }
+    if (pwaInLine()) { t = 'ハタボをホーム画面に置くと、伝言が届いたときに、通知とアイコンの数字でお知らせします（LINEのメッセージは使いません）。'; b = '<button type="button" class="hbbtn" id="pwOpen">ハタボをホーム画面に置く</button>'; }
     else if (pwaIOS() && !pwaStandalone()) t = 'Safariの下の共有ボタン（四角から上向きの矢印）→「ホーム画面に追加」をしてください。追加したら、ホーム画面のハタボを開いて、ここで通知をオンにします。';
     else if (!pushReady()) t = 'このブラウザは通知に対応していません。iPhoneはSafari、AndroidはChromeで開いてください。';
     else if (PUSH.on) { t = '通知はオンです。伝言が届くと、通知とアイコンの数字でお知らせします。'; b = '<div class="hbnact"><button type="button" class="hbtag" id="pwTest">テストの通知を送る</button><button type="button" class="hbtag" id="pwOff">通知をオフにする</button></div>'; }
@@ -5250,7 +5337,8 @@ body.pwa #talkOaBtn, body.pwa .pinbar { display: none !important; }
   try { const w0 = String(Q.get('with') || '').replace(/[^\w-]/g, '').slice(0, 40); if (w0) HBP.ibWith = w0; } catch (e) {}   // 通知から開いたとき：その人との伝言   // とっておいた印は、使っても使わなくても消す
   // サイトの「ログイン」から来たとき：事務局は管理画面、オーナーはMyハタボへ（つながってから分ける）
   const OAUTH_RID = (() => { let v = new URLSearchParams(location.search).get('rid') || Q.get('rid'); if (!v) { try { const st = new URLSearchParams(location.search).get('liff.state'); if (st) v = new URLSearchParams(decodeURIComponent(st).split('?')[1] || '').get('rid'); } catch (e) {} } try { const sv = sessionStorage.getItem('hb.rid') || ''; sessionStorage.removeItem('hb.rid'); if (!v) v = sv; } catch (e) {} return String(v || '').replace(/[^\w-]/g, '').slice(0, 64); })();
-  if (HB_START === 'oauth') document.addEventListener('jrready', () => { if (OAUTH_RID) jrSend({ type: 'oauth_info', rid: OAUTH_RID }); }, { once: true });
+  if (HB_START === 'pair') document.addEventListener('jrready', () => pwaPairConfirm(), { once: true });   // ホーム画面のハタボをつなぐ（LINEのハタボで確かめる）
+  else if (HB_START === 'oauth') document.addEventListener('jrready', () => { if (OAUTH_RID) jrSend({ type: 'oauth_info', rid: OAUTH_RID }); }, { once: true });
   else   if (HB_START === 'office' || HB_START === 'admin') {   // 事務局の入口（/office）：開くとすぐ、全員の一覧（事務局の管理画面）
     document.body.classList.add('officemode'); try { document.title = 'HATHABO 事務局'; const ic = document.querySelector('link[rel="icon"]'); if (ic) ic.href = ic.href.replace(/%23F4F6F9/g, '%23FFF1B8').replace(/%23C9CED6/g, '%23E7C25A').replace(/%238E95A1/g, '%23B8892A').replace(/%235E6572/g, '%237A5614'); } catch (e) {}   // 事務局は金、Myハタボは銀のファビコン J.focusKey = 'chief'; J.focusName = 'ハタボ事務局長'; hbpOpen('ohome');
     document.addEventListener('jrready', () => { if (!J.office) { document.body.classList.remove('officemode'); J.focusKey = ''; J.focusName = ''; toast('このアカウントは事務局ではありません。Myハタボを開きました'); hbpOpen('my'); } else if (!HBP.admin) jrSend({ type: 'admin' }); }, { once: true });
@@ -5480,7 +5568,7 @@ body.pwa #talkOaBtn, body.pwa .pinbar { display: none !important; }
   // ハタボ・コムギのミニアプリ：「〜と話す」を押さなくても、開いたらそのままつなぐ（声を出す許可は、最初に画面をさわったときにもらう）
   if (HATABO_APP && LIFF && !STAGE) { setTimeout(() => { const so = $('startOverlay'); if (so && !so.hidden) $('startBtn').click(); }, 300); document.addEventListener('pointerdown', () => { try { AC(); } catch (e) {} }, { once: true, capture: true }); }
   { const tb = $('hbpTabs'); if (tb && !tb.querySelector('.hbp-help')) { const hb = document.createElement('button'); hb.type = 'button'; hb.className = 'hbp-help'; hb.style.display = 'none'; hb.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 1 1 3.4 2.3c-.6.3-1 .8-1 1.5v.6M12 17h.01"/></svg><span>使い方</span>'; hb.onclick = e => { e.stopPropagation(); hbTour(); }; const ac = tb.querySelector('.hbp-acct'); tb.insertBefore(hb, ac || null); } }   // 左のメニューに「使い方」
-  { const tourOnce = () => { let sk = ''; try { sk = sessionStorage.getItem('hb.tourSkip') || ''; } catch (e) {} if ((document.body.classList.contains('pcweb') || HATABO_APP) && !store.get('hbPcTour', 0) && !store.get('hbGuideMet', 0) && !sk && !document.getElementById('hbFirst')) hbFirstRun(); /* パソコンもスマホも、はじめて開いたら */ };
+  { const tourOnce = () => { let sk = ''; try { sk = sessionStorage.getItem('hb.tourSkip') || ''; } catch (e) {} if (!PWA_PHONE && !document.body.classList.contains('pwapair') && (document.body.classList.contains('pcweb') || HATABO_APP) && !store.get('hbPcTour', 0) && !store.get('hbGuideMet', 0) && !sk && !document.getElementById('hbFirst')) hbFirstRun(); /* パソコンもスマホも、はじめて開いたら */ };
     document.addEventListener('jrready', () => setTimeout(tourOnce, 600), { once: true });
     setTimeout(tourOnce, 4000);   // サーバーとつながるのを待たずに、開いて少ししたら出す
     document.addEventListener('click', e => { if (e.target.closest && e.target.closest('#hbTourBtn')) { e.preventDefault(); hbTour(); } }, true); }   // 「使い方の案内」は、どの画面から押しても開く

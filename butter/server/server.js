@@ -558,6 +558,55 @@ async function inboxMine(me, to, text) {
   items.unshift({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), at: Date.now(), read: true, kind: 'msg', mine: true, to, toName: (r && r.name) || '', text: String(text).slice(0, 500) });
   await saveInbox(me, items);
 }
+/* ===== ホーム画面のハタボの入場券：ホーム画面のハタボが「つなぐ番号」を出し、LINEのハタボで本人が確かめると、その端末だけの入場券（180日）を渡す。
+   IDもパスワードも打たない。ホーム画面のハタボの外（Safari）にログインで飛ばさない ===== */
+const PAIR_MIN = 10, DEV_DAYS = 180, pairHits = new Map();
+const devKey = owner => String(owner || '').replace(/[\/]/g, '_').slice(0, 200);
+async function pairNew(ip) {
+  const now = Date.now(), h = (pairHits.get(ip) || []).filter(t => now - t < 600000);
+  if (h.length >= 20) return null;   // 同じところから10分に20回まで
+  h.push(now); pairHits.set(ip, h); if (pairHits.size > 2000) pairHits.clear();
+  const code = crypto.randomBytes(16).toString('hex'), num = String(crypto.randomInt(1000, 10000));
+  await saveCol(code, 'pwapair', { num, exp: now + PAIR_MIN * 60000, token: '', used: false, at: now });
+  return { code, num, exp: now + PAIR_MIN * 60000 };
+}
+async function pairGet(code) {
+  if (!/^[0-9a-f]{32}$/.test(String(code || ''))) return null;
+  const d = await loadCol(code, 'pwapair'); return d && d.exp ? d : null;
+}
+/** ホーム画面のハタボが見に来る：つながっていたら入場券を一度だけ渡す */
+async function pairCheck(code) {
+  const d = await pairGet(code);
+  if (!d || d.used || d.exp < Date.now()) return { state: 'gone' };
+  const token = String(d.token || '');
+  if (!token) return { state: 'wait' };
+  await saveCol(code, 'pwapair', { token: '', used: true });
+  return { state: 'ok', token };
+}
+/** LINEのハタボで本人が「つなぐ」を押した：その人の入場券を作る */
+async function pairBind(code, owner) {
+  const d = await pairGet(code);
+  if (!owner || !d || d.used || d.token || d.exp < Date.now()) return false;
+  const jti = crypto.randomBytes(9).toString('hex'), exp = Date.now() + DEV_DAYS * 86400000;
+  const token = webSign({ owner, dev: 1, jti, exp });
+  if (!token) return false;
+  const k = devKey(owner), cur = await loadCol(k, 'pwadev').catch(() => ({}));
+  await saveCol(k, 'pwadev', { list: [{ jti, at: Date.now(), exp }].concat((cur.list || []).filter(x => x.exp > Date.now())).slice(0, 10) });
+  await saveCol(code, 'pwapair', { token });
+  return true;
+}
+async function devOk(W) { if (!W || !W.dev) return true; const d = await loadCol(devKey(W.owner), 'pwadev').catch(() => ({})); return (d.list || []).some(x => x.jti === W.jti); }
+async function devDrop(W) { if (!W || !W.dev) return; const k = devKey(W.owner), d = await loadCol(k, 'pwadev').catch(() => ({})); await saveCol(k, 'pwadev', { list: (d.list || []).filter(x => x.jti !== W.jti) }); }
+async function pwaHttp(req, res) {
+  const u = new URL(req.url, 'http://x'), o = req.headers.origin || '';
+  const H = { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' };
+  if (o && ENV.ALLOWED_ORIGINS.includes(o)) { H['Access-Control-Allow-Origin'] = o; H['Vary'] = 'Origin'; H['Access-Control-Allow-Methods'] = 'GET, POST'; H['Access-Control-Allow-Headers'] = 'Content-Type'; }
+  const J = (c, x) => { res.writeHead(c, H); res.end(JSON.stringify(x)); };
+  if (req.method === 'OPTIONS') return J(204, {});
+  if (u.pathname === '/pwa/pair' && req.method === 'POST') { const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim(); const r = await pairNew(ip); return r ? J(200, r) : J(429, { error: 'しばらくしてから、もう一度ためしてください' }); }
+  if (u.pathname === '/pwa/check') return J(200, await pairCheck(u.searchParams.get('c')));
+  return J(404, {});
+}
 /* ===== ホーム画面のハタボ（ウェブアプリ）への通知：LINEの通数を使わない。鍵（VAPID）がなければ何もしない ===== */
 let webpush = null;
 function wpLib() {
@@ -3183,11 +3232,12 @@ function session(ws) {
         S.peek = !!m.peek;               // 見るだけ（&test=peek）：紹介のつながり・アバターの記録を変えない          // 家族が「窓口の画面」を試すとき（&test=guest）
         const W = m.webToken ? webVerify(m.webToken) : null;
         if (m.webToken && !W) return fail('auth', 'ログインの期限が切れました。サイトの「ログイン」から入りなおしてください');
+        if (W && W.dev && !(await devOk(W))) return fail('auth', 'この端末のログインは取り消されました。LINEでつなぎなおしてください');
         if (W) {   // PCのブラウザでGoogleログイン：自分のハタボ（ふだんの窓口と同じ形）で、Myハタボと管理画面を使う
           S.web = W; S.auth = { web: true }; S.owner = String(W.owner || ''); S.webOffice = !!W.office; S.me = '';
           S.guest = true; S.mode = 'guest'; S.trio = false; S.slots = []; S.role = '汎用'; S.ref = ''; S.visit = ''; S.agent = '';
           S.avatar = S.app === 'komugi' ? 'komugi' : 'hatabo'; S.voice = AVS[S.avatar].voice();
-          S.system = AVS[S.avatar].persona() + '\n\n【いまの場面】PCのブラウザから、Googleでログインして開いています。Myハタボや管理の相談にのります。'; S.brainAt = Date.now();
+          S.system = AVS[S.avatar].persona() + (W.dev ? '\n\n【いまの場面】スマホのホーム画面に置いたハタボから開いています（LINEでつないだ本人）。伝言・Myハタボ・ふだんの相談にのります。' : '\n\n【いまの場面】PCのブラウザから、Googleでログインして開いています。Myハタボや管理の相談にのります。'); S.brainAt = Date.now();
         } else try { await loadBrain(); } catch (e) {
           if (e.code === 'auth' || e.code === 'pass') return fail('auth', String(e.message).slice(0, 80));
           if (e.code === 'closed') return fail('closed', 'いま窓口はお休み中');
@@ -3534,8 +3584,17 @@ function session(ws) {
         await inboxMine(S.myRef, to, t);
         return send({ type: 'inbox', items: await loadInbox(S.myRef), people: (await goenPeople(S.myRef).catch(() => [])).slice(0, 60), sent: true });
       }
+      if (m.type === 'pwa_pair_info' || m.type === 'pwa_pair') {   // LINEのハタボで、ホーム画面のハタボをつなぐ（本人のLINEのときだけ）
+        if (!S.owner || S.web || S.visit || S.peek) return send({ type: 'pwa_pair', step: 'ng', detail: 'LINEのハタボで開いてください' });
+        const d = await pairGet(m.pc);
+        if (!d || d.used || d.token || d.exp < Date.now()) return send({ type: 'pwa_pair', step: 'ng', detail: 'この番号は使えません。ホーム画面のハタボで、もう一度「LINEでつなぐ」を押してください' });
+        if (m.type === 'pwa_pair_info') return send({ type: 'pwa_pair', step: 'info', num: d.num });
+        const ok = await pairBind(String(m.pc), S.owner);
+        return send({ type: 'pwa_pair', step: ok ? 'done' : 'ng', detail: ok ? '' : 'つなげませんでした。もう一度ためしてください' });
+      }
+      if (m.type === 'pwa_logout') { await devDrop(S.web).catch(() => {}); return send({ type: 'pwa_logout', ok: true }); }
       if (m.type === 'push_key') return send({ type: 'push_key', key: wpLib() ? ENV.VAPID_PUBLIC : '' });   // ホーム画面のハタボの通知：鍵を渡す
-      if (m.type === 'push_sub') { const ok = !S.guest && !S.visit && await pushAdd(S.myRef, m.sub, m.home); return send({ type: 'push', ok, on: ok, why: ok ? '' : (S.myRef ? 'bad' : 'login') }); }
+      if (m.type === 'push_sub') { const ok = (!S.guest || !!S.web) && !S.visit && await pushAdd(S.myRef, m.sub, m.home); return send({ type: 'push', ok, on: ok, why: ok ? '' : (S.myRef ? 'bad' : 'login') }); }
       if (m.type === 'push_off') { if (S.myRef) await pushRemove(S.myRef, String(m.endpoint || '')); return send({ type: 'push', ok: true, on: false }); }
       if (m.type === 'push_test') { const un = (await loadInbox(S.myRef).catch(() => [])).filter(x => !x.read).length; const n = await pushTo(S.myRef, { title: 'ハタボ', body: 'テストの通知です。押すと伝言をひらきます。', badge: un || 1, tag: 'test' }).catch(() => 0); return send({ type: 'push', ok: !!n, on: !!n, test: true }); }
       if (m.type === 'inbox_read') { const items = await loadInbox(S.myRef), ids = Array.isArray(m.ids) ? m.ids.map(String) : null; items.forEach(x => { if (!ids || ids.includes(x.id)) x.read = true; }); /* ids があれば、その伝言だけ（開いた相手の分） */ await saveInbox(S.myRef, items); return send({ type: 'inbox', items, people: (await goenPeople(S.myRef).catch(() => [])).slice(0, 60) }); }
@@ -4107,6 +4166,7 @@ function createServer() {
     if (req.url.startsWith('/live/session')) return liveHttp(req, res).catch(e => { console.error('live', e); try { res.writeHead(500); res.end('{}'); } catch (x) {} });   // GPT-Live-1 の検証
     if (req.url.startsWith('/cron/faq')) { const u0 = new URL(req.url, 'http://x'), k = u0.searchParams.get('key'); if (!ENV.CRON_KEY || k !== ENV.CRON_KEY) { res.writeHead(403); return res.end('no'); } return faqDigest(Number(u0.searchParams.get('days')) || 7).then(o => { res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(o)); }).catch(e => { res.writeHead(500); res.end(String(e.message)); }); }
     if (req.url.startsWith('/cron/digest')) { const k = new URL(req.url, 'http://x').searchParams.get('key'); if (!ENV.CRON_KEY || k !== ENV.CRON_KEY) { res.writeHead(403); return res.end('no'); } return sendDigests().then(async n => { const h = await hearingCheckAll().catch(() => 0); res.writeHead(200, { 'Content-Type': 'text/plain' }); res.end('sent ' + n + (h ? ' / hearing ' + h : '')); }).catch(e => { res.writeHead(500); res.end(String(e.message)); }); }
+    if (req.url.startsWith('/pwa/')) return pwaHttp(req, res).catch(e => { console.error('pwa', String(e.message).slice(0, 160)); try { res.writeHead(500); res.end('{}'); } catch (x) {} });   // ホーム画面のハタボの入場券
     if (req.url.startsWith('/stripe/webhook') && req.method === 'POST') return stripeWebhook(req, res);
     if (req.url.startsWith('/line/webhook') && req.method === 'POST') return lineWebhook(req, res, /\/komugi/.test(req.url) ? 'komugi' : 'hatabo');   // /line/webhook/komugi はコムギの公式LINE
     if (req.url === '/' || req.url.startsWith('/health')) { res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' }); return res.end('バターちゃんジュニア：元気だよ'); }
@@ -4124,4 +4184,4 @@ if (require.main === module) {
   deps.init();
   createServer().listen(ENV.PORT, () => console.log('butter-junior on :' + ENV.PORT));
 }
-module.exports = { inboxMine, loadInbox: id => loadInbox(id), pushTo, pushAdd, pushSubs, saveCol, loadCol, groupSeen, groupPush, groupsOut, PLAN_TABLE, hoursOpen, threadUpsert, webSign, webVerify, MCP_TOOLS, cmVideo, brandOut, rankOf, RANKS, cloneRule, cloneOpen, CLONE_CAP, createServer, deps, ENV, splitter, takeEmotion, clean, PHOTO_RE, VIDEO_RE, session, calledJunior, calledJam, hearingStart, hearingCheckAll, handleStripeEvent, stripeSigOk, funnelOf, getRef, putRef, checkoutFor };
+module.exports = { pairNew, pairCheck, pairBind, devOk, devDrop, inboxMine, loadInbox: id => loadInbox(id), pushTo, pushAdd, pushSubs, saveCol, loadCol, groupSeen, groupPush, groupsOut, PLAN_TABLE, hoursOpen, threadUpsert, webSign, webVerify, MCP_TOOLS, cmVideo, brandOut, rankOf, RANKS, cloneRule, cloneOpen, CLONE_CAP, createServer, deps, ENV, splitter, takeEmotion, clean, PHOTO_RE, VIDEO_RE, session, calledJunior, calledJam, hearingStart, hearingCheckAll, handleStripeEvent, stripeSigOk, funnelOf, getRef, putRef, checkoutFor };
