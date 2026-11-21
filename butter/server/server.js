@@ -1839,6 +1839,7 @@ async function saveNotes(owner, items) {
 async function addNote(owner, n) {
   const items = await loadNotes(owner);
   const it = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kind: n.kind, title: String(n.title || '').slice(0, 60), text: String(n.text || '').slice(0, 12000), at: Date.now() };
+  if (n.thr) { it.thr = String(n.thr).slice(0, 40); it.thrTitle = String(n.thrTitle || '').slice(0, 40); }   // どの会話で作ったか（会話ごとに見る）
   // Googleと連携していて「自動で保存」がオンなら、本人のドライブにも
   try { const g = ENV.GOOGLE_CLIENT_ID ? await gGet(owner) : {}; if (g.refresh && g.auto !== false) it.url = await driveSave(owner, it.title, it.text) || ''; } catch (e) { console.error('drive auto', String(e.message).slice(0, 120)); }
   items.unshift(it);
@@ -2124,6 +2125,8 @@ function session(ws) {
     S.threads = [{ id: S.thr, at: old.at || Date.now(), last: Date.now(), title: old.title || thrTitle(turns) || '会話', turns }].concat(all.filter(t => t.id !== S.thr)).slice(0, 30);
     await saveConvo(key, { threads: S.threads, thr: S.thr });
   }
+  /** いまの会話（メモ・議事録に、どの会話で作ったかをつける） */
+  function noteThr() { if (!S.thr) S.thr = thrId(); const t = (S.threads || []).find(x => x.id === S.thr); return { thr: S.thr, thrTitle: (t && t.title) || '' }; }
   const chatsOut = () => ({ type: 'chats', cur: S.thr || '', list: (S.threads || []).map(t => ({ id: t.id, at: t.at, last: t.last, title: t.title })) });
   /** 会話の記録を読む：持ち主×キャラ。ハタボで、まだ分ける前の記録（キャラなしのID）しかないときは、それを引きつぐ（コムギの話はあとでのぞく） */
   async function loadMyConvo() {
@@ -2848,7 +2851,7 @@ function session(ws) {
     if (body.replace(/(いまの|今の|さっきの|それ|これ)/g, '').length < 4) { const last = [...S.history].reverse().find(m => m.role === 'assistant' && typeof m.content === 'string'); body = last ? last.content : ''; }
     if (!body) return speakOnly('まだメモすることがないみたい。メモしたいことを言ってね。', 'shy');
     try {
-      await addNote(S.owner, { kind: 'memo', title: body.replace(/\s+/g, ' ').slice(0, 30), text: body });
+      await addNote(S.owner, Object.assign({ kind: 'memo', title: body.replace(/\s+/g, ' ').slice(0, 30), text: body }, noteThr()));
       send({ type: 'note_saved', kind: 'memo' });
       speakOnly(S.avatar === 'komugi' ? 'メモ、しときました。Myハタボの「メモ・議事録」で、見られますけん。' : S.avatar === 'hatabo' ? 'メモしました。Myハタボの「メモ・議事録」で見られます。' : 'メモしました。Myハタボの「メモ・議事録」で見られます。', 'smile');
     } catch (e) { speakOnly('ごめん、メモがうまく残せなかった。', 'sad'); }
@@ -2868,7 +2871,7 @@ function session(ws) {
       });
       const t = (r.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
       const title = (t.split('\n')[0] || '議事録').replace(/^#+\s*/, '').slice(0, 40);
-      await addNote(S.owner, { kind: 'minutes', title: day + ' ' + title, text: t }).catch(() => {});
+      await addNote(S.owner, Object.assign({ kind: 'minutes', title: day + ' ' + title, text: t }, noteThr())).catch(() => {});
       if (S.guest) { send({ type: 'note_saved', kind: 'minutes' }); return speakOnly(S.avatar === 'komugi' ? '議事録、Myハタボの「メモ・議事録」に、残しときました。' : '議事録をまとめて、Myハタボの「メモ・議事録」に残したボー！', 'excited'); }
       const g = await gas(Object.assign({ action: 'minutes', mode: S.mode, pdf: !!pdf, title: day + ' ' + title, text: t }, S.auth));
       if (!g || !g.ok || !g.url) throw new Error((g && (g.detail || g.error)) || 'minutes');
@@ -3144,7 +3147,7 @@ function session(ws) {
       links.push({ url: (ENV.SITE_URL || 'https://www.hatha-lab.com'), title: 'ハタボのサービスサイトを見る' });
     }
     if (links.length && text) send({ type: 'links', gen, links: links.slice(0, 3) });
-    if (longMode && text && text.length > 200 && S.owner) addNote(S.owner, { kind: 'doc', title: (logText || '書いた文章').replace(/\s+/g, ' ').slice(0, 30), text }).then(() => send({ type: 'note_saved', kind: 'doc' })).catch(() => {});
+    if (longMode && text && text.length > 200 && S.owner) addNote(S.owner, Object.assign({ kind: 'doc', title: (logText || '書いた文章').replace(/\s+/g, ' ').slice(0, 30), text }, noteThr())).then(() => send({ type: 'note_saved', kind: 'doc' })).catch(() => {});
     if (S.trio && /[？?]\s*$/.test(text)) S.followUntil = Date.now() + 12000;   // ジュニアが質問した → つぎの1回は名前なしでも   // 空の返事は記録しない（次の会話がこわれるので）
     { const kp = S.macSelf || (S.app && !S.bridge && superUntil(S.owner)) ? 80 : plan.keep; if (S.history.length > kp) S.history = S.history.slice(-kp); }
     // 人ごとのAI代（獲得コストを後で出すため）：LINEのIDの紹介コードに足していく（円・1ドル150円）
