@@ -1980,7 +1980,7 @@ function session(ws) {
   // APIに渡す形：前半にキャッシュの印をつける（短すぎるときはAPIがキャッシュしないだけで、そのまま動く）
   // ハタボでは、運営の個人の名前を出さない（伝え先は、招待した人か「ハタボの事務局」）
   const tellFix = t => S.avatar === 'hatabo' && S.tellTo && !S.visit ? String(t).replace(/ハタラボの担当（ヒロさん）|ハタラボのヒロさん/g, S.tellTo).replace(/〈伝え先〉/g, S.tellTo).replace(/ヒロさん/g, S.tellTo) : t;
-  const focusBlock = () => !S.focus ? '' : '\n\n【いまの相手】持ち主は今、「' + S.focus.name + '」さん向けのハタボとして、あなたと話しています。' + S.focus.name + 'さんとのこれまでを踏まえて、返事の下書き・伝えること・次の一手をいっしょに考える。' + S.focus.name + 'さん本人に送るのは、持ち主が「送って」と言ったときだけ。' + (S.focus.ctx ? '\n［' + S.focus.name + 'さんとの最近のやりとり（古い順）］\n' + S.focus.ctx : '') + (S.focus.custom ? customBlock(S.focus.custom) : '');
+  const focusBlock = () => !S.focus ? '' : S.focus.guide ? '\n\n【いまの役目：案内役のハタボ】あなたは持ち主の「案内役」。ハタボのサービスの問い合わせに答え、持ち主の困りごと・やってみたいこと（仕事・お店・家族・地域など）を一つずつ短く聞き、合う使い方とプランを、押しつけずに説明する。そのうえで、持ち主の「自分のハタボ」をどう使っていくか（呼び名・話し方・覚えておくこと・つなぐアプリ・役割つきの愛棒）を、いっしょに決めていく。決めたことは「アカウント」の「キャラ設定」「コネクタ」など、どこで変えられるかも短く添える。1回の返事は短く、質問は1つずつ。' : '\n\n【いまの相手】持ち主は今、「' + S.focus.name + '」さん向けのハタボとして、あなたと話しています。' + S.focus.name + 'さんとのこれまでを踏まえて、返事の下書き・伝えること・次の一手をいっしょに考える。' + S.focus.name + 'さん本人に送るのは、持ち主が「送って」と言ったときだけ。' + (S.focus.ctx ? '\n［' + S.focus.name + 'さんとの最近のやりとり（古い順）］\n' + S.focus.ctx : '') + (S.focus.custom ? customBlock(S.focus.custom) : '');
   function sysBlocks(extra) { const [a, b] = sysParts(); return [{ type: 'text', text: tellFix(a), cache_control: { type: 'ephemeral' } }, { type: 'text', text: tellFix((b + (S.visit || S.role === 'サービス相談' || hearing() ? '' : customBlock(S.custom)) + focusBlock() + (extra || '') + lastFor() + (hearing() ? '' : lineupStyle(S))).trim()) || '。' }]; }
   // ハタボとコムギは、同じ人（同じLINEのID）でも話の記録・教わったことを分ける（コムギの話がハタボに出ないように）
   /* ===== IDの決まり（11/19）：キャラごとに変わるもの（会話の記録・教わったこと・気づいたこと・キャラ設定）は「持ち主×キャラ」で分ける =====
@@ -3191,6 +3191,7 @@ function session(ws) {
         if (isFinite(lat) && isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180) S.placeP = placeOf(lat, lon).then(p => { S.place = p; });
         return;
       }
+      if (m.type === 'guide_say') { if (!S.owner || S.visit || !quotaOk(S.owner)) return; return speakOnly(clean(String(m.text || '')).slice(0, 200), 'smile', 'ハタボ', true); }   // 使い方の案内：ハタボが声で読む（画面には案内の帯で出す）
       if (m.type === 'say') { if (S.guest || !quotaOk(S.owner || 'anon')) return; return speakOnly(clean(String(m.text || '')).slice(0, 200), 'smile', String(m.as || 'お知らせ').slice(0, 10), !!m.nobubble); }
       if (m.type === 'mode' && S.guest) return;
       if (m.type === 'mode') {
@@ -3212,6 +3213,7 @@ function session(ws) {
         const key = String(m.key || '').replace(/[^\w:@.\-ぁ-んァ-ン一-龥]/g, '').slice(0, 80), name = String(m.name || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 30);
         S.focusHist = S.focusHist || {}; S.focusHist[(S.focus && S.focus.key) || ''] = S.history; S.history = S.focusHist[key] || (key ? [] : S.history);
         if (!key) { S.focus = null; return send({ type: 'focus', key: '' }); }
+        if (key === 'guide') { S.focus = { key, name: '案内役のハタボ', guide: true }; return send({ type: 'focus', key, name: '案内役のハタボ' }); }
         let ctx = '';
         if (key.startsWith('p:') && S.owner) {
           const t = await loadCol(key.slice(2).replace(/[^\w]/g, '').slice(0, 40), 'threads').catch(() => ({}));
