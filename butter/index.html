@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8">
+<meta charset="utf-8"><meta name="hb-ver" content="11/21-1335">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
 <title>福まねき特戦隊｜バターちゃん</title>
@@ -2291,7 +2291,18 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   };
   // LINEミニアプリ（LIFF）で開かれたとき：?liff=1&g=<GASのデプロイID>&liffId=<LIFF ID>
   const Q = new URLSearchParams(location.search.replace(/^\?liff\.state=[^&]*&?/, '?'));
-  window.HB_VER = '11/21-1325';   // アプリの版（新しいアプリが届いているかの目じるし）
+  window.HB_VER = (document.querySelector('meta[name="hb-ver"]') || {}).content || '';   // アプリの版（いちばん上の <meta name="hb-ver"> で決める）
+  // 開いたら、いちばん新しい版かを確かめる（このページの先頭だけを読んで版を見る）。配信の途中が古い版を覚えていたら、アドレスに v= をつけて新しい版を読み直す（1つの版につき1回だけ）
+  (async () => { try {
+    const r = await fetch(location.pathname + '?vc=' + Date.now(), { cache: 'no-store' }); if (!r.ok || !r.body) return;
+    const rd = r.body.getReader(), dec = new TextDecoder(); let txt = '', m = null;
+    while (!m && txt.length < 20000) { const { value, done } = await rd.read(); if (done) break; txt += dec.decode(value, { stream: true }); m = txt.match(/<meta name="hb-ver" content="([^"]+)"/); }
+    try { rd.cancel(); } catch (e) {}
+    const nv = m && m[1]; if (!nv || nv === window.HB_VER) return;
+    let tried = ''; try { tried = sessionStorage.getItem('hb.verTried') || ''; } catch (e) {} if (tried === nv) return;
+    try { sessionStorage.setItem('hb.verTried', nv); } catch (e) {}
+    const u = new URL(location.href); u.searchParams.set('v', nv.replace(/[^\w-]/g, '')); location.replace(u.toString());
+  } catch (e) {} })();
   try { console.log('HATHABO app', window.HB_VER); } catch (e) {}
   // ?page= や ?rid= を、そのまま・Q・LINEの liff.state の中から読む（PCのブラウザでLINEにログインすると、もどったときにアドレスから消えるので先にとっておく）
   function qpar(n) { let v = new URLSearchParams(location.search).get(n) || Q.get(n); if (!v) { try { const st = new URLSearchParams(location.search).get('liff.state'); if (st) v = new URLSearchParams(decodeURIComponent(st).split('?')[1] || '').get(n); } catch (e) {} } return v || ''; }
