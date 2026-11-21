@@ -41,7 +41,15 @@ function client(port, hello) { return new Promise((resolve, reject) => {
   assert.ok(ini.j.result.serverInfo.name === 'hatabo' && ini.j.result.capabilities.tools, 'initialize');
   const nt = await fetch('http://127.0.0.1:' + port + P, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) });
   assert.strictEqual(nt.status, 202, 'お知らせは202');
-  const tl = await rpc(P, 'tools/list'); assert.ok(tl.j.result.tools.some(t => t.name === 'search_aibo') && tl.j.result.tools.length === 6, 'tools/list');
+  const tl = await rpc(P, 'tools/list'); assert.ok(tl.j.result.tools.some(t => t.name === 'search_aibo') && tl.j.result.tools.length === 9, 'tools/list');
+  const rm = await rpc(P, 'tools/call', { name: 'remember', arguments: { text: '打ち合わせは平日の夜がいい' } }); assert.ok(rm.j.result.structuredContent.ok && rm.j.result.structuredContent.character === 'hatabo', '覚えさせる');
+  await rpc(P, 'tools/call', { name: 'remember', arguments: { text: '博多の話題が好き', character: 'komugi' } });
+  const an = await rpc(P, 'tools/call', { name: 'add_note', arguments: { title: 'AIからのメモ', text: 'Claudeから残したメモ' } }); assert.ok(an.j.result.structuredContent.ok, 'メモを残す');
+  const rc = await rpc(P, 'tools/call', { name: 'recall', arguments: {} }).then(x => x.j.result.structuredContent);
+  assert.ok(rc.lessons.includes('打ち合わせは平日の夜がいい') && !rc.lessons.includes('博多の話題が好き') && rc.notes[0].title === 'AIからのメモ', '記憶を見る（キャラごとに分かれる）');
+  const rk = await rpc(P, 'tools/call', { name: 'recall', arguments: { character: 'komugi', notes: 0 } }).then(x => x.j.result.structuredContent);
+  assert.ok(rk.lessons.length === 1 && rk.lessons[0] === '博多の話題が好き' && rk.notes.length === 0, 'コムギの記憶');
+  assert.ok(!/U[0-9a-f]{32}/.test(JSON.stringify([rm.j, an.j, rc, rk])), '記憶の道具もLINEのIDを出さない');
   const sr = await rpc('/mcp', 'tools/call', { name: 'search_aibo', arguments: { query: 'そば', area: '高津区' } }, { Authorization: 'Bearer ' + key });
   const found = sr.j.result.structuredContent; assert.ok(found.found === 1 && found.aibo[0].id === cl.code && found.aibo[0].can_reserve, 'さがす（Bearerでも）');
   const all = JSON.stringify([ini.j, tl.j, sr.j]); assert.ok(!/U[0-9a-f]{32}/.test(all) && !/"owner":"g:/.test(all), 'LINEのIDは外に出さない');
