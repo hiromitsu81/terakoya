@@ -2271,6 +2271,8 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   };
   // LINEミニアプリ（LIFF）で開かれたとき：?liff=1&g=<GASのデプロイID>&liffId=<LIFF ID>
   const Q = new URLSearchParams(location.search.replace(/^\?liff\.state=[^&]*&?/, '?'));
+  window.HB_VER = '11/21-1215';   // アプリの版（新しいアプリが届いているかの目じるし）
+  try { console.log('HATHABO app', window.HB_VER); } catch (e) {}
   // ?page= や ?rid= を、そのまま・Q・LINEの liff.state の中から読む（PCのブラウザでLINEにログインすると、もどったときにアドレスから消えるので先にとっておく）
   function qpar(n) { let v = new URLSearchParams(location.search).get(n) || Q.get(n); if (!v) { try { const st = new URLSearchParams(location.search).get('liff.state'); if (st) v = new URLSearchParams(decodeURIComponent(st).split('?')[1] || '').get(n); } catch (e) {} } return v || ''; }
   const LIFF = Q.get('liff') === '1';
@@ -4075,7 +4077,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
           take(['google']); const C = Object.values(by);
           return `<div class="hbc hbwide acctrows"><div class="k">ACCOUNT</div><h3>アカウント</h3><div class="hbrows">${A.map(row).join('')}</div></div>
             <div class="hbc hbwide acctrows"><div class="k">APP</div><h3>アプリ</h3><div class="hbrows">${B.map(row).join('')}<label class="hbrow hbsw"><div><b>触覚フィードバック</b><span>話すボタンを押したとき、ブルッと震える（対応しているスマホだけ）</span></div><input type="checkbox" id="hbHap" ${store.get('hbHaptic', true) ? 'checked' : ''}></label></div></div>
-            <div class="hbc hbwide acctrows"><div class="k">MORE</div><h3>そのほか</h3><div class="hbrows">${C.map(row).join('')}<button type="button" class="hbrow" id="hbTourBtn"><div><b>使い方の案内</b><span>話すボタン・画面の場所・AIアプリとつなぐ（ハタボコネクト）</span></div><i>›</i></button><button type="button" class="hbrow hblogout" id="hbLogout"><div><b>ログアウト</b><span>この端末からログアウトします</span></div><i>›</i></button></div></div>`; })()}`;
+            <div class="hbc hbwide acctrows"><div class="k">MORE</div><h3>そのほか</h3><div class="hbrows">${C.map(row).join('')}<button type="button" class="hbrow" id="hbTourBtn"><div><b>使い方の案内</b><span>話すボタン・画面の場所・AIアプリとつなぐ（ハタボコネクト）</span></div><i>›</i></button><button type="button" class="hbrow hblogout" id="hbLogout"><div><b>ログアウト</b><span>この端末からログアウトします・アプリの版 ${window.HB_VER || ''}</span></div><i>›</i></button></div></div>`; })()}`;
       { const hp = document.getElementById('hbHap'); if (hp) hp.onchange = () => { store.set('hbHaptic', hp.checked); if (hp.checked && window.hbBuzz) window.hbBuzz(); }; }
       $('hbLogout').onclick = () => { if (!confirm('この端末からログアウトします。よろしいですか？')) return; try { ['hbpData', 'hbPins', 'srv'].forEach(k => store.set(k, null)); } catch (e) {} try { if (window.liff && liff.isLoggedIn && liff.isLoggedIn()) liff.logout(); } catch (e) {} try { sessionStorage.clear(); } catch (e) {} toast('ログアウトしました'); setTimeout(() => { location.replace('https://www.hatha-lab.com/mypage.html?out=1'); }, 600); };   // ログアウトしたら、サイトのMyハタボへもどる
     } else if (p === 'more') {
@@ -4916,7 +4918,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
     const draw = () => {
       const [t, b, sel] = S[i], last = i === S.length - 1;
       d.innerHTML = '<div role="dialog" aria-modal="true" aria-label="使い方の案内" style="background:#fff;color:#141A2A;border-radius:20px;max-width:520px;width:100%;max-height:86vh;overflow:auto;padding:24px 24px 20px;box-shadow:0 24px 70px rgba(0,0,0,.45);font-size:14.5px;line-height:1.75">'
-        + '<div style="font-size:12px;font-weight:800;color:#2E86BD;letter-spacing:.08em">使い方の案内　' + (i + 1) + ' / ' + S.length + '</div><h3 style="margin:6px 0 8px;font-size:20px">' + t + '</h3><div>' + b + '</div>'
+        + '<div style="font-size:12px;font-weight:800;color:#2E86BD;letter-spacing:.08em">使い方の案内　' + (i + 1) + ' / ' + S.length + '<span style="float:right;color:#9AA3B5;font-weight:600">版 ' + (window.HB_VER || '') + '</span></div><h3 style="margin:6px 0 8px;font-size:20px">' + t + '</h3><div>' + b + '</div>'
         + '<div style="display:flex;gap:10px;justify-content:space-between;align-items:center;margin-top:20px"><button type="button" data-t="skip" style="border:0;background:none;color:#5B6478;font-weight:700;cursor:pointer;padding:8px 4px">あとで見る</button><span style="display:flex;gap:8px">'
         + (i ? '<button type="button" data-t="back" style="border:1px solid #C9D0DC;background:#fff;color:#16233F;border-radius:999px;padding:10px 18px;font-weight:800;cursor:pointer">もどる</button>' : '')
         + '<button type="button" data-t="next" style="border:0;background:' + (last ? '#06C755' : '#16233F') + ';color:#fff;border-radius:999px;padding:10px 22px;font-weight:800;cursor:pointer">' + (last ? 'ハタボと話してみる' : 'つぎへ') + '</button></span></div></div>';
