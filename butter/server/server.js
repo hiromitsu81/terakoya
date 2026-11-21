@@ -2354,10 +2354,19 @@ function session(ws) {
       for (const x of rows) if (x.kind === 'person' && !x.mergedInto) { const nm = String(x.name || '').trim(); x.dups = nm ? rows.filter(y => y !== x && y.kind === 'person' && !y.mergedInto && String(y.name || '').trim() === nm).map(y => y.code) : []; }
       sum.people = rows.filter(x => x.kind === 'person' && !x.mergedInto).length;
     }
+    let self = [];   // 自分（LINE・Google・コムギで別になったIDも）。事務局のトーク一覧には出さない
+    try {
+      const bare = o => String(o || '').replace(/^g:/, ''), mine = new Set([bare(S.owner)].filter(Boolean));
+      const em = S.web && S.web.email; if (em) { const e = PERMS.list.find(x => x.email === em); if (e && e.owner) mine.add(bare(e.owner)); const gm = await loadCol(gmailKey(em), 'gmail').catch(() => ({})); if (gm.owner) mine.add(bare(gm.owner)); }
+      const sc = new Set(refs.filter(r => r.owner && mine.has(bare(r.owner))).map(r => r.code)); if (S.myRef) sc.add(S.myRef);
+      const nms = new Set(rows.filter(x => sc.has(x.code)).map(x => String(x.name || '').trim()).filter(Boolean));
+      rows.forEach(x => { if (x.kind === 'person' && nms.has(String(x.name || '').trim())) sc.add(x.code); if (x.mergedInto && sc.has(x.code)) sc.add(x.mergedInto); });
+      self = [...sc];
+    } catch (e) {}
     sum.member = rows.filter(x => x.member).length; sum.ref = rows.filter(x => x.kind === 'person' && x.status === 'ref').length;
     if (isDev()) { rows.forEach(x => { x.apiYen = null; x.ownerName = x.ownerName ? String(x.ownerName).slice(0, 1) + '…' : ''; }); sum.apiYen = null; }
     if (m.type === 'admin_person') return onAdminPerson(m, refs, rows);
-    send({ type: 'admin', perm: permNow(), rows: rows.filter(x => !x.mergedInto), sum, roles: Object.keys(ROLE_RULE), audit: ((await loadCol('office', 'audit')).items || []).slice(0, 30), msg });
+    send({ type: 'admin', perm: permNow(), self, rows: rows.filter(x => !x.mergedInto), sum, roles: Object.keys(ROLE_RULE), audit: ((await loadCol('office', 'audit')).items || []).slice(0, 30), msg });
   }
   /** 事務局：人ごとの詳しいページ。状態・プラン・持っているキャラ（AID）ごとの会話・その人の愛棒とご縁 */
   async function onAdminPerson(m, refs, rows) {
