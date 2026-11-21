@@ -2290,7 +2290,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   };
   // LINEミニアプリ（LIFF）で開かれたとき：?liff=1&g=<GASのデプロイID>&liffId=<LIFF ID>
   const Q = new URLSearchParams(location.search.replace(/^\?liff\.state=[^&]*&?/, '?'));
-  window.HB_VER = '11/21-1300';   // アプリの版（新しいアプリが届いているかの目じるし）
+  window.HB_VER = '11/21-1305';   // アプリの版（新しいアプリが届いているかの目じるし）
   try { console.log('HATHABO app', window.HB_VER); } catch (e) {}
   // ?page= や ?rid= を、そのまま・Q・LINEの liff.state の中から読む（PCのブラウザでLINEにログインすると、もどったときにアドレスから消えるので先にとっておく）
   function qpar(n) { let v = new URLSearchParams(location.search).get(n) || Q.get(n); if (!v) { try { const st = new URLSearchParams(location.search).get('liff.state'); if (st) v = new URLSearchParams(decodeURIComponent(st).split('?')[1] || '').get(n); } catch (e) {} } return v || ''; }
@@ -4950,6 +4950,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
     document.body.appendChild(d); draw();
   }
   window.hbTour = hbTour;
+  document.addEventListener('jrready', () => { if (J.wantTalk) { J.wantTalk = false; setTimeout(() => { const t = $('talkBtn'); if (t) t.click(); }, 300); } });   // つながる前に「話す」を押していたら、つながったら聞く
   /* --- スマホのトーク画面の左の帯：相手を押すと、自分のハタボが「その人向け」に切りかわる（その人とのやりとりを踏まえて話す） --- */
   function cvStrip(list, avf) {
     let st = $('cvStrip'); if (!st) { st = document.createElement('nav'); st.id = 'cvStrip'; st.setAttribute('aria-label', 'つながっている人'); document.body.append(st);
@@ -5569,7 +5570,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   setHint();
   $('talkBtn').addEventListener('click', () => {
     if (J.authFail) { location.reload(); return; }
-    if (SRV && LIFF && !J.fallback && !J.ready) { jrConnect(); return; }    // つないでいる最中は、前の話し方を始めない
+    if (SRV && LIFF && !J.fallback && !J.ready) { jrConnect(); J.wantTalk = true; toast('ハタボにつないでいます。つながったら、そのまま聞きます'); return; }    // つないでいる最中は、前の話し方を始めない（つながったら自動で聞く）
     if (!J.dead && J.ready && J.micOff) { $('cvMicSw').click(); return; }   // マイクなしのときは、押すとマイクありにもどす
     if (!J.dead && J.ready) { J.paused = !J.paused; if (J.paused) { J.queue = []; jrStopAudio(); jrSend({ type: 'barge' }); setState('idle'); } else setState('listening'); jrBtn(); return; }
     talkOnce();
