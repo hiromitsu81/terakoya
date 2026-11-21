@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8"><meta name="hb-ver" content="11/21-1410">
+<meta charset="utf-8"><meta name="hb-ver" content="11/21-1425">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
 <title>福まねき特戦隊｜バターちゃん</title>
@@ -4827,13 +4827,14 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
     const dens = Object.values(dmap);
     const groups = (HBP.myGroups || O.groups || []).map(g => ({ key: 'g:' + g.gid, id: g.gid, kind: 'g', name: g.name, sub: (g.members ? g.members + '人' : 'LINEグループ') + (g.ch === 'komugi' ? '・コムギ' : ''), last: g.lastAt, pic: g.pic || '' }));
     const official = J.office ? [] : [{ key: 'o:official', kind: 'o', name: 'ハタボ公式', sub: '窓口・使い方・ヒロに相談', last: 0, pic: '' }];
-    me.name = 'ハタボと話す'; me.sub = (typeof avName === 'function' && avName() ? avName() : 'ハタボ') + '（あなたのAI棒）' + (L[0] && L[0].title ? '・' + L[0].title : '');
-    const seenN = new Set(people.map(x => x.name)), en = ((HBP.goen && HBP.goen.nodes) || []).filter(n => !n.me && n.depth === 1 && !seenN.has(n.name)).map(n => ({ key: 'e:' + n.id, id: n.id, kind: 'e', name: n.name || 'ご縁の人', sub: 'ご縁・押すとその人向けのハタボ', last: n.lastAt || 0, pic: '' }));   // ご縁でつながっている人
-    const all = [me].concat(people, dens, groups, en, official).filter(x => !q || (x.name + ' ' + x.sub).includes(q));
-    all.sort((a, b) => ((b.kind === 'me') - (a.kind === 'me')) || (pins.includes(b.key) - pins.includes(a.key)) || ((b.last || 0) - (a.last || 0)));   // いちばん上はいつも「ハタボと話す」
+    me.name = 'わたしのハタボ'; me.sub = 'あなた専用。キャラ設定はここだけ' + (L[0] && L[0].title ? '・' + L[0].title : '');
+    const guide = { key: 'guide:guide', kind: 'gd', name: 'ハタボ事務局案内係', sub: '使い方・サービスの相談（設定は事務局が決めています）', last: 0, pic: '' };
+    const seenN = new Set(people.map(x => x.name)), en = ((HBP.goen && HBP.goen.nodes) || []).filter(n => !n.me && n.depth === 1 && !seenN.has(n.name)).map(n => ({ key: 'e:' + n.id, id: n.id, kind: 'e', name: (n.name || 'ご縁の人') + 'のAI棒', sub: 'ご縁・押すと、その人のAI棒と話す', last: n.lastAt || 0, pic: '' }));   // ご縁でつながっている人
+    const all = [me, guide].concat(people, dens, groups, en, official).filter(x => !q || (x.name + ' ' + x.sub).includes(q));
+    all.sort((a, b) => ((b.kind === 'me') - (a.kind === 'me')) || ((b.kind === 'gd') - (a.kind === 'gd')) || (pins.includes(b.key) - pins.includes(a.key)) || ((b.last || 0) - (a.last || 0)));   // いちばん上はいつも「ハタボと話す」
     const MARK = { d: '<path d="M3 6h18v12H3z M3 7l9 6 9-6" stroke="currentColor" stroke-width="2" fill="none"/>', me: '<path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.6 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/>', p: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>', g: '<circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><path d="M2 20c0-3 3-5 6-5s6 2 6 5M12 20c0-3 3-5 6-5s4 1 4 3"/>' };
-    const TIP = { me: 'あなたのハタボ', p: '人', g: 'グループ', d: '伝言', o: '公式', e: 'ご縁' }; MARK.o = MARK.me; MARK.e = MARK.e || MARK.p;
-    const av = x => x.kind === 'me' || x.kind === 'o' ? '<img src="award_mark.svg" alt="">' : x.pic ? `<img src="${esc(x.pic)}" alt="" referrerpolicy="no-referrer" loading="lazy">` : `<span>${esc(String(x.name || '?').slice(0, 1))}</span>`;
+    const TIP = { me: 'わたしのハタボ', gd: '事務局案内係', p: '人', g: 'グループ', d: '伝言', o: '公式', e: 'ご縁' }; MARK.o = MARK.me; MARK.gd = MARK.me; MARK.e = MARK.e || MARK.p;
+    const av = x => x.kind === 'me' || x.kind === 'o' || x.kind === 'gd' ? '<img src="award_mark.svg" alt="">' : x.pic ? `<img src="${esc(x.pic)}" alt="" referrerpolicy="no-referrer" loading="lazy">` : `<span>${esc(String(x.name || '?').slice(0, 1))}</span>`;
     const cur = HBP.page === 'person' ? 'p:' + HBP.pid : HBP.page === 'group' ? 'g:' + HBP.gid : '';
     hbpStrip(all, av);
     $('hbpTalks').innerHTML = all.length ? all.map(x => { const pin = pins.includes(x.key); return `<div class="hbt${x.key === cur ? ' on' : ''}${pin ? ' pinned' : ''}" data-tk="${esc(x.key)}" role="button" tabindex="0"><i class="hbt-av">${av(x)}<em class="hbt-mk ${x.kind}" title="${TIP[x.kind]}"><svg viewBox="0 0 24 24" width="10" height="10" fill="currentColor" aria-hidden="true">${MARK[x.kind]}</svg></em></i><span class="hbt-t"><b>${esc(x.name)}</b><small>${esc(x.sub || '')}</small></span><span class="hbt-r"><small>${day(x.last)}</small>${x.unread ? '<u>' + x.unread + '</u>' : ''}</span><button type="button" class="hbt-pin" data-pin="${esc(x.key)}" aria-label="${pin ? 'ピン留めをはずす' : 'ピン留め'}" title="${pin ? 'ピン留めをはずす' : 'いちばん上にピン留め'}"><svg viewBox="0 0 24 24" width="14" height="14" fill="${pin ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6l-1 6 4 4H6l4-4z M12 13v8"/></svg></button></div>`; }).join('') : '<p class="hbs-empty">見つかりません</p>';
@@ -4859,7 +4860,8 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   function hbpOpenTalk(key) {
     const c = key.indexOf(':'), k = key.slice(0, c), id = key.slice(c + 1); hbpDrawer(false); if (k !== 'me') { hbpUnshell(); HBP.draft = ''; }
     if (k === 'me') { if (J.focusKey && window.hbSetFocus) window.hbSetFocus('', ''); return hbpTalk(''); }
-    if (k === 'e') { const n = ((HBP.goen && HBP.goen.nodes) || []).find(x => x.id === id); hbpTalk(''); if (window.hbSetFocus) window.hbSetFocus(key, (n && n.name) || 'ご縁の人'); return; }   // ご縁の人：その人向けのハタボで話す
+    if (k === 'guide') { hbpTalk(''); if (window.hbSetFocus) window.hbSetFocus('guide', 'ハタボ事務局案内係'); return; }   // 事務局案内係（設定は変えられない）
+    if (k === 'e') { if (window.hbpVisit) window.hbpVisit(id); return; }   // ご縁の人のAI棒と話す（左の帯から押すと、その人向けの「わたしのハタボ」の分身）
     if (k === 'o') { window.open('https://line.me/R/ti/p/@024curid', '_blank', 'noopener'); return; }
     $('hbpBody').classList.remove('sw-l', 'sw-r', 'sw-in'); void $('hbpBody').offsetWidth; $('hbpBody').classList.add('sw-in');
     if (k === 'p') { HBP.pid = id; HBP.goenOf = null; const T = (HBP.con && HBP.con.threads) || []; HBP.thr = { t: Object.assign({ turns: [] }, T.find(x => x.id === id) || {}), panel: {} }; HBP.page = 'person'; hbpRender(); hbpChats(); if (J.ready) { jrSend({ type: 'thr_open', id }); jrSend({ type: 'thr_goen', id }); } return; }
@@ -4978,10 +4980,10 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   }
   window.hbTour = hbTour;
   /* --- ご縁のガチャ：卵から、最初は「うちのハタボ（案内役）」、そのあとはご縁の人のハタボが出てくる。出てきたハタボとは、キャラの画面で話す --- */
-  function guideOn() { hbpClose(); if (window.hbSetView) window.hbSetView('char'); setFocus('guide', '案内役のハタボ'); }
+  function guideOn() { hbpClose(); if (window.hbSetView) window.hbSetView('char'); setFocus('guide', 'ハタボ事務局案内係'); }
   function hbGacha() {
     const met = store.get('hbGuideMet', 0), G = ((HBP.goen && HBP.goen.nodes) || []).filter(n => !n.me && n.depth === 1);
-    const who = !met || !G.length ? { kind: 'guide', name: 'うちのハタボ', sub: '案内役。ハタボの使い方やサービスのこと、あなたの課題をいっしょに考えます', img: 'award_mark.svg' } : (n => ({ kind: 'goen', id: n.id, name: n.name || 'ご縁の人', sub: 'ご縁の人のハタボ。あいさつや相談をしてみよう', img: '' }))(G[Math.random() * G.length | 0]);
+    const who = !met || !G.length ? { kind: 'guide', name: 'ハタボ事務局案内係', sub: '案内役。ハタボの使い方やサービスのこと、あなたの課題をいっしょに考えます', img: 'award_mark.svg' } : (n => ({ kind: 'goen', id: n.id, name: n.name || 'ご縁の人', sub: 'ご縁の人のハタボ。あいさつや相談をしてみよう', img: '' }))(G[Math.random() * G.length | 0]);
     const o = document.createElement('div'); o.className = 'hbegg';
     o.innerHTML = `<div class="hbegg-in"><p class="hbegg-k">GOEN GACHA</p><h3>${!met ? 'はじめのハタボが、生まれるよ' : 'ご縁のハタボが、出てくるよ'}</h3><button type="button" class="hbegg-e" aria-label="卵をタップして割る"><span class="eg t"></span><span class="eg b"></span>${who.img ? `<img src="${who.img}" alt="">` : `<span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:92px;height:92px;border-radius:50%;background:#1A2232;color:#fff;display:grid;place-items:center;font:900 38px var(--display)">${esc(who.name.slice(0, 1))}</span>`}</button><p class="hbegg-h">卵をタップしてね</p><button type="button" class="hbbtn hbegg-go" hidden>${esc(who.name)}と話す</button><button type="button" class="hbegg-x" aria-label="とじる">×</button></div>`;
     document.body.append(o); requestAnimationFrame(() => o.classList.add('in'));
@@ -5038,7 +5040,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
       st.addEventListener('click', e => { const b = e.target.closest('[data-fk]'); if (!b) return; if (b.dataset.fk === J.focusKey) setFocus('', ''); else setFocus(b.dataset.fk, b.dataset.fn); }); }
     const G = ((HBP.goen && HBP.goen.nodes) || []).filter(n => !n.me && n.depth === 1).map(n => ({ key: 'e:' + n.id, id: n.id, kind: 'e', name: n.name || 'ご縁の人', last: n.lastAt || 0, pic: '' }));   // ご縁でつながっている人も並べる
     list = list.concat(G);
-    const seen = new Set(), L0 = list.filter(x => x.kind !== 'o' && x.kind !== 'me' /* 左の帯は人だけ。自分のハタボはトーク一覧のいちばん上から */).filter(x => { const n = x.kind === 'me' ? 'me' : String(x.name || x.key); if (seen.has(n)) return false; seen.add(n); return true; }).sort((a, b) => (b.kind === 'me') - (a.kind === 'me')).slice(0, 30);   // 自分のハタボがいちばん上
+    const seen = new Set(), L0 = list.filter(x => x.kind !== 'o' && x.kind !== 'me' && x.kind !== 'gd' /* 左の帯は人だけ。自分のハタボはトーク一覧のいちばん上から */).filter(x => { const n = x.kind === 'me' ? 'me' : String(x.name || x.key); if (seen.has(n)) return false; seen.add(n); return true; }).sort((a, b) => (b.kind === 'me') - (a.kind === 'me')).slice(0, 30);   // 自分のハタボがいちばん上
     st.innerHTML = L0.map(x => `<button type="button" class="${x.key === (J.focusKey || 'me:me') ? 'on' : ''}" data-fk="${esc(x.key)}" data-fn="${esc(x.name || '')}" aria-label="${esc(x.kind === 'me' ? 'ふつうのハタボ' : x.name + 'さん向けのハタボ')}" title="${esc(x.kind === 'me' ? 'ふつうのハタボ' : x.name + 'さん向け')}">${avf(x)}${x.unread ? '<u></u>' : ''}</button>`).join('');
     document.body.classList.toggle('hasStrip', L0.length > 0);
   }
@@ -5046,10 +5048,10 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   function setFocus(key, name) {
     J.focusKey = key || ''; J.focusName = name || '';
     document.body.classList.toggle('hasFocus', !!key);
-    const fc = $('cvFocus'); if (fc) fc.querySelector('b').textContent = key === 'guide' ? '案内役のハタボと話しています' : key ? name + 'さん向けのハタボ' : '';
+    const fc = $('cvFocus'); if (fc) fc.querySelector('b').textContent = key === 'guide' ? 'ハタボ事務局案内係と話しています' : key ? name + 'さん向けの、わたしのハタボの分身' : '';
     document.querySelectorAll('#cvStrip [data-fk]').forEach(b => b.classList.toggle('on', b.dataset.fk === (key || 'me:me')));
     if (J.ready) jrSend({ type: 'focus', key: J.focusKey, name: J.focusName });
-    toast(key === 'guide' ? '案内役のハタボです。困っていることを、そのまま話してください' : key ? name + 'さん向けのハタボに切りかえました' : 'ふつうのハタボにもどしました');
+    toast(key === 'guide' ? 'ハタボ事務局案内係です。困っていることを、そのまま話してください' : key ? name + 'さん向けのハタボに切りかえました' : 'ふつうのハタボにもどしました');
   }
   document.addEventListener('jrready', () => { if (J.focusKey) jrSend({ type: 'focus', key: J.focusKey, name: J.focusName }); if (HATABO_APP && !document.body.classList.contains('pcweb')) { if (!HBP.con) jrSend({ type: 'console', as: store.get('conAs', 'office') }); if (!HBP.goen) jrSend({ type: 'goen_tree' }); } });   // つなぎ直したときも、相手を覚えておく・一覧を読む
   // ハタボ・コムギのミニアプリ：「〜と話す」を押さなくても、開いたらそのままつなぐ（声を出す許可は、最初に画面をさわったときにもらう）
