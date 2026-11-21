@@ -3416,8 +3416,12 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
         if (m.gone) { addBubble('おしらせ', 'つなぐ時間が切れました。AIアプリから、もう一度つないでください。', 'her'); break; }
         if (m.error) { toast(m.error); break; }
         if (m.done) { addBubble('おしらせ', (m.name || 'AIアプリ') + ' とハタボをつなぎました。もとの画面（パソコンなど）にもどってください。自動で進みます。', 'her'); break; }
-        if (confirm((m.name || 'AIアプリ') + ' を、ハタボにつなぎますか？\n\nできること：お店や人の愛棒をさがす、伝言や予約の希望を送る、自分の愛棒を見る・変える。\nLINEのIDや家族の会話は渡しません。')) jrSend({ type: 'oauth_ok', rid: OAUTH_RID });
-        else addBubble('おしらせ', 'つなぐのをやめました。', 'her');
+        { const nm = String(m.name || 'AIアプリ').replace(/[<>&"]/g, ''); const old = document.getElementById('oaAsk'); if (old) old.remove();   // LINEの中では confirm() が出ないことがあるので、画面の中にボタンを出す
+          const d = document.createElement('div'); d.id = 'oaAsk'; d.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(10,16,30,.72);display:grid;place-items:center;padding:20px';
+          d.innerHTML = '<div style="background:#fff;color:#141A2A;border-radius:20px;max-width:380px;width:100%;padding:24px 22px;font-family:inherit;box-shadow:0 20px 60px rgba(0,0,0,.4)"><b style="display:block;font-size:18px;line-height:1.5;margin-bottom:10px">' + nm + ' を、ハタボにつなぎますか？</b><p style="font-size:14px;line-height:1.7;margin:0 0 6px">できること：お店や人の愛棒をさがす、伝言や予約の希望を送る、自分の愛棒を見る・変える。</p><p style="font-size:12.5px;color:#5B6478;margin:0 0 18px">LINEのIDや家族の会話は渡しません。</p><button type="button" id="oaYes" style="width:100%;min-height:52px;border:0;border-radius:999px;background:#06C755;color:#fff;font-size:16px;font-weight:800;margin-bottom:10px">つなぐ</button><button type="button" id="oaNo" style="width:100%;min-height:46px;border:1px solid #C9D0DC;border-radius:999px;background:#fff;color:#5B6478;font-size:14px;font-weight:700">やめる</button></div>';
+          document.body.appendChild(d);
+          d.querySelector('#oaYes').onclick = () => { d.remove(); jrSend({ type: 'oauth_ok', rid: OAUTH_RID }); toast('つないでいます…'); };
+          d.querySelector('#oaNo').onclick = () => { d.remove(); addBubble('おしらせ', 'つなぐのをやめました。', 'her'); }; }
         break; }
       case 'google_url': try { if (window.liff && liff.openWindow) liff.openWindow({ url: m.url, external: true }); else window.open(m.url, '_blank'); } catch (e) { location.href = m.url; } toast('ブラウザでGoogleにログインしてね。終わったらLINEにもどってきてね'); setTimeout(() => jrSend({ type: 'google_status' }), 20000); break;
       case 'docs': HBP.docs = m; if (!$('hbPage').hidden && HBP.page === 'docs') hbpRender(); break;
