@@ -246,5 +246,11 @@ cn.forEach(function(e){io2.observe(e)});
 function go(e){if(e.classList.contains('on'))return;e.classList.add('on');if(e.classList.contains('uiduo')){e.classList.add('speak');setTimeout(function(){e.classList.remove('speak')},3800)}}
 if(!('IntersectionObserver' in window)){L.forEach(go);return}var io=new IntersectionObserver(function(es){es.forEach(function(x){if(x.isIntersecting){go(x.target);io.unobserve(x.target)}})},{threshold:.28});L.forEach(function(e){io.observe(e)})})();
 
-/* 画面紹介の動き：見えているときだけ「play」（画面の外では止める） */
-(function(){var L=document.querySelectorAll('.uiduo');if(!L.length||!('IntersectionObserver' in window))return;var io=new IntersectionObserver(function(es){es.forEach(function(e){e.target.classList.toggle('play',e.isIntersecting)})},{threshold:.2});L.forEach(function(e){io.observe(e)})})();
+/* 画面紹介の動き：字幕つきの4場面をくり返す（見えているときだけ） */
+(function(){var L=document.querySelectorAll('.uiduo');if(!L.length)return;
+var T=['お客さんの問い合わせが、トークに届く','ハタボが読んで、返事の下書きをつくる','「送って」と言うだけ。ボタンひとつでも送れる','送ったことも予定も、スマホにも届く'];
+L.forEach(function(d){var cap=d.querySelector('.mv-cap');if(!cap)return;var tt=cap.querySelector('.mv-t'),nn=cap.querySelector('.mv-n'),k=0,timer=0,late=0;
+function show(){var c=k;d.classList.remove('s1','s2','s3','s4','late');d.classList.add('s'+(c+1));cap.classList.add('sw');setTimeout(function(){tt.textContent=T[c];nn.textContent=(c+1)+' / 4';cap.classList.remove('sw')},220);clearTimeout(late);late=setTimeout(function(){d.classList.add('late')},1500);k=(k+1)%4}
+function go(on){d.classList.toggle('play',on);clearInterval(timer);if(on){show();timer=setInterval(show,3400)}else{d.classList.remove('s1','s2','s3','s4','late')}}
+if(!('IntersectionObserver' in window)){go(true);return}
+new IntersectionObserver(function(es){go(es[0].isIntersecting)},{threshold:.25}).observe(d)})})();
