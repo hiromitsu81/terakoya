@@ -3577,7 +3577,12 @@ const MCP_ANN = { search_aibo: ['愛棒をさがす', { readOnlyHint: true, dest
   recall: ['自分のハタボの記憶を見る', { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }],
   add_note: ['メモを残す', { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false }],
   get_character: ['キャラ設定を見る', { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }],
-  set_character: ['キャラ設定を変える', { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false }] };
+  set_character: ['キャラ設定を変える', { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false }],
+  office_overview: ['事務局：いまの数字', { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }],
+  office_people: ['事務局：人の一覧', { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }],
+  office_person: ['事務局：人のくわしいこと', { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }],
+  office_draft_message: ['事務局：送る前の下書き', { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false }],
+  office_send_message: ['事務局：確かめた下書きを送る', { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true }] };
 const MCP_TOOLS = [
   { name: 'search_aibo', description: 'ハタボのネットワークで、公開されている愛棒（お店・会社・人のAIの窓口）をさがす。業種・困りごと・地域（区など）のことばで。', inputSchema: { type: 'object', properties: { query: { type: 'string', description: 'さがすことば（例：川崎 そば 予約）' }, area: { type: 'string', description: '地域（例：高津区）' } }, required: ['query'] } },
   { name: 'send_message', description: '愛棒に伝言を送る。持ち主のLINEに届く。だれからかが分かるように名前を入れる。', inputSchema: { type: 'object', properties: { aibo: { type: 'string', description: 'search_aibo で出た id' }, text: { type: 'string', description: '伝言（500字まで）' }, from_name: { type: 'string', description: '送る人の名前' } }, required: ['aibo', 'text', 'from_name'] } },
@@ -3590,12 +3595,67 @@ const MCP_TOOLS = [
   { name: 'get_character', description: 'キャラ設定（話し方・長さ・方言・決まり・呼び名など）を見る。aibo を入れるとその愛棒（役割つきの窓口）の設定、入れなければ自分のハタボ（またはコムギ）の設定。選べる値の一覧も返す。', inputSchema: { type: 'object', properties: { aibo: { type: 'string', description: '愛棒の id（list_my_aibo で見られる）。自分のハタボなら入れない' }, character: { type: 'string', enum: ['hatabo', 'komugi'], description: '自分のキャラのどちらか（ふだん hatabo）' } } } },
   { name: 'set_character', description: 'キャラ設定を変える。入れた項目だけ変わる。aibo を入れるとその愛棒の話し方（相手ごとに変えたいとき：宿向けはていねい、友だち向けは博多弁など）、入れなければ自分のハタボ（またはコムギ）。前の設定は1つ前まで残すので、undo:true で戻せる。名前の変更はMyハタボから（はじめての名付けだけここでできる）。本人が頼んだときだけ使う。', inputSchema: { type: 'object', properties: { aibo: { type: 'string', description: '愛棒の id。自分のハタボなら入れない' }, character: { type: 'string', enum: ['hatabo', 'komugi'] }, tone: { type: 'string', enum: ['char', 'polite', 'frank', 'gentle', 'kansai'], description: '話し方（char＝キャラのまま、polite＝ていねい、frank＝友だちのように、gentle＝やさしくゆっくり、kansai＝関西弁）' }, len: { type: 'string', enum: ['char', 'short', 'long'], description: '答えの長さ' }, dialect: { type: 'string', enum: ['char', 'std', 'osaka', 'kyoto', 'nagoya', 'hiroshima', 'hakata', 'sendai', 'sapporo', 'okinawa'], description: '方言' }, rules: { type: 'string', description: '決まり・指示（1500字まで。空文字で消す）' }, about: { type: 'string', description: '自分のこと（自分のハタボだけ。600字まで）' }, call_me: { type: 'string', description: '自分の呼び名（自分のハタボだけ）' }, ai_name: { type: 'string', description: 'ハタボの名前（自分のハタボで、まだ名前がないときだけ）' }, undo: { type: 'boolean', description: 'true で1つ前の設定に戻す' } } } },
   { name: 'add_note', description: 'Myハタボの「メモ・議事録」にメモを残す（本人だけが見られる。Googleと連携していればドライブにも）。', inputSchema: { type: 'object', properties: { title: { type: 'string', description: '題（30字まで）' }, text: { type: 'string', description: '中身（8000字まで）' }, kind: { type: 'string', enum: ['memo', 'minutes'], description: 'memo（メモ）か minutes（議事録）' } }, required: ['text'] } },
+  // 事務局の道具（ハタボ事務局長）：役割と権限で「最高管理者・事務局・開発」の人にだけ出す。開発は見るだけ（会話の中身とお金は伏せ、送れない）
+  { name: 'office_overview', description: '【事務局だけ】ハタボ事務局のいまの数字：人数、紹介中・お試し・契約・メンバー、紹介→お試し→契約の割合、お試しがもうすぐ終わる人、支払いの失敗、返事待ちの会話、今月のAPI。', inputSchema: { type: 'object', properties: {} } },
+  { name: 'office_people', description: '【事務局だけ】人（アカウント）の一覧。状態（ref=紹介中・trial=お試し・contract=契約・member=メンバー）、キャラ（hatabo・komugi）、名前のことばで絞れる。', inputSchema: { type: 'object', properties: { status: { type: 'string', enum: ['', 'ref', 'trial', 'contract', 'member', 'expired', 'cancel'] }, char: { type: 'string', enum: ['', 'hatabo', 'komugi'] }, query: { type: 'string', description: '名前などのことば' } } } },
+  { name: 'office_person', description: '【事務局だけ】1人のくわしいこと（状態・プラン・紹介した人・キャラ・最近の会話）。code は office_people の code。', inputSchema: { type: 'object', properties: { code: { type: 'string' } }, required: ['code'] } },
+  { name: 'office_draft_message', description: '【事務局だけ】人にLINEで送る文面の下書きを作る（まだ送らない）。返ってきた相手と文面を、かならず使っている人に見せて、OKをもらってから office_send_message を呼ぶ。to は office_people の code。', inputSchema: { type: 'object', properties: { to: { type: 'string' }, text: { type: 'string', description: '送る文面（1000字まで）' } }, required: ['to', 'text'] } },
+  { name: 'office_send_message', description: '【事務局だけ・開発はできない】office_draft_message の下書きを、ハタボの公式LINEから送る。使っている人が相手と文面を見てOKと言ったときだけ呼ぶ。送ったものは事務局の記録と相手とのトークに残る。', inputSchema: { type: 'object', properties: { draft_id: { type: 'string' }, confirmed: { type: 'boolean', description: '使っている人がOKと言ったら true' } }, required: ['draft_id', 'confirmed'] } },
 ].map(t => Object.assign(t, { title: MCP_ANN[t.name][0], annotations: Object.assign({ title: MCP_ANN[t.name][0] }, MCP_ANN[t.name][1]), securitySchemes: [{ type: 'oauth2', scopes: ['hatabo'] }] }));
 /** ChatGPTからつながったとき：料金の話をしない（一覧の決まり）。使った回数の道具も出さない */
 const MEM_TOOLS = ['remember', 'recall', 'add_note', 'get_character', 'set_character'];   // 自分の記憶とメモ：本人のログインだけ（審査用のデモには出さない）
-const mcpToolsFor = K => MCP_TOOLS.filter(t => !(K && K.np && t.name === 'get_usage') && !(K && (K.demo || !K.owner) && MEM_TOOLS.includes(t.name)));
+const mcpToolsFor = K => MCP_TOOLS.filter(t => !(K && K.np && t.name === 'get_usage') && !(K && (K.demo || !K.owner) && MEM_TOOLS.includes(t.name)) && (!/^office_/.test(t.name) || (K && K.perm && !K.demo && !(K.perm === 'dev' && t.name === 'office_send_message'))));
+/** 事務局の道具の中身（管理画面と同じ決まり：開発は会話の中身とお金を伏せる） */
+async function officeRows() {
+  const refs = await allRefs(), NM = new Map(refs.map(r => [r.code, r.name || r.ownerName || '']));
+  return refs.filter(r => (r.kind || 'person') === 'person' && !r.sameAs).map(r => { const f = funnelOf(r); return { code: r.code, name: r.name || '', status: statusOf(r, f), chars: charsOfRef(r), plan: f.lineupName ? f.lineupName + ' ' + (f.grade || '') : '', trial_days_left: f.stage === 'trial' ? f.daysLeft : undefined, pay_failed: !!r.payFailAt || undefined, introduced_by: r.parent ? NM.get(r.parent) || '' : '', started: r.at ? new Date(r.at).toISOString().slice(0, 10) : '', last: r.lastAt ? new Date(r.lastAt).toISOString().slice(0, 10) : '', owner: r.owner || '' }; });
+}
+async function officeTool(K, name, a, txt, err) {
+  const dev = K.perm === 'dev', rows = await officeRows(), pub = x => { const y = Object.assign({}, x); delete y.owner; return y; };
+  if (name === 'office_overview') {
+    const c = k => rows.filter(x => x.status === k).length, tr = rows.filter(x => ['trial', 'contract', 'expired', 'cancel'].includes(x.status)).length, base = rows.filter(x => x.status !== 'member').length, pc = (x, y) => y ? Math.round(x / y * 100) + '%' : '-';
+    const thr = (await threadsOf(null).catch(() => [])).filter(t => t.unread).slice(0, 10).map(t => (t.vname || 'お客さま') + '（' + (t.aiboName || '') + '）');
+    const AU = await allApiUse(monthJ()).catch(() => []), api = AU.reduce((n, x) => n + (x.billable || 0), 0), yen = AU.reduce((n, x) => n + (x.yen || 0), 0);
+    return txt({ date: new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10), people: rows.length, ref: c('ref'), trial: c('trial'), contract: c('contract'), member: c('member'), expired: c('expired'), cancel: c('cancel'),
+      funnel: { registered: base, reached_trial: tr, contract: c('contract'), to_trial: pc(tr, base), trial_to_contract: pc(c('contract'), tr), overall: pc(c('contract'), base) },
+      trial_ending_soon: rows.filter(x => x.status === 'trial' && x.trial_days_left <= 2).map(x => x.name + '（あと' + x.trial_days_left + '日）'), pay_failed: rows.filter(x => x.pay_failed).map(x => x.name), waiting_reply: thr,
+      api_this_month: api, api_yen: dev ? undefined : yen, role: PERM_NAMES[K.perm], note: dev ? '開発の役割なので、お金と会話の中身は伏せています。' : '' });
+  }
+  if (name === 'office_people') {
+    const st = apiClean(a.status, 10), ch = apiClean(a.char, 10), q = apiClean(a.query, 40);
+    const L = rows.filter(x => (!st || x.status === st) && (!ch || x.chars.includes(ch)) && (!q || (x.name + ' ' + x.code + ' ' + x.introduced_by).includes(q))).sort((x, y) => String(y.last || y.started).localeCompare(String(x.last || x.started)));
+    return txt({ count: L.length, people: L.slice(0, 80).map(pub) });
+  }
+  if (name === 'office_person') {
+    const x = rows.find(y => y.code === apiClean(a.code, 20)); if (!x) return err('その code の人はいません。office_people で見てください。');
+    const o = String(x.owner).replace(/^g:/, ''), convos = [];
+    for (const chn of x.chars) { let best = null; for (const id of [o, 'g:' + o]) for (const k of [id + ':guest:' + chn, id + ':' + chn]) { const cv = await loadConvo(k).catch(() => null); if (cv && Array.isArray(cv.turns) && cv.turns.length && (!best || (cv.at || 0) > (best.at || 0))) best = cv; }
+      convos.push({ char: CHAR_NAME[chn], turns: best ? best.turns.length : 0, recent: best ? cleanTurns(best.turns).slice(-10).map(t => (t.role === 'user' ? '本人' : CHAR_NAME[chn]) + '：' + (dev ? maskText(String(t.content || '').slice(0, 200)) : String(t.content || '').slice(0, 200))) : [] }); }
+    return txt(Object.assign(pub(x), { conversations: convos, can_line: /^U[0-9a-f]{32}$/.test(o) }));
+  }
+  if (name === 'office_draft_message') {
+    const x = rows.find(y => y.code === apiClean(a.to, 20)), text = apiClean(a.text, 1000); if (!x) return err('送る相手がみつかりません。office_people の code を入れてください。'); if (!text) return err('文面が空です。');
+    const id = 'd' + crypto.randomBytes(6).toString('hex'); await saveCol(id, 'mcpdraft', { by: K.owner, to: x.code, name: x.name, text, at: Date.now(), exp: Date.now() + 3600000 });
+    return txt({ draft_id: id, to: x.name, channel: 'LINE（ハタボの公式LINEから）', text: '【ハタボ事務局より】\n' + text, can_send: !dev && /^U[0-9a-f]{32}$/.test(String(x.owner).replace(/^g:/, '')), note: dev ? '開発の役割では送れません。事務局の人に頼んでください。' : 'まだ送っていません。相手と文面を使っている人に見せて、OKなら office_send_message（confirmed: true）で送ります。' });
+  }
+  if (name === 'office_send_message') {
+    if (dev) return err('開発の役割では送れません。');
+    if (a.confirmed !== true) return err('使っている人のOKをもらってから、confirmed: true で呼んでください。');
+    const id = apiClean(a.draft_id, 20).replace(/[^\w]/g, ''), D = id ? await loadCol(id, 'mcpdraft') : {}; if (!D.to || D.by !== K.owner || Date.now() > (D.exp || 0)) return err('下書きがみつからないか、期限（1時間）が切れました。もう一度 office_draft_message から。');
+    if (D.sent) return err('この下書きは、もう送っています。');
+    const r = await getRef(D.to).catch(() => null); if (!r) return err('相手がみつかりません。');
+    const ok = await ownerPush(r.owner, '【ハタボ事務局より】\n' + D.text).catch(() => false);
+    await saveCol(id, 'mcpdraft', { sent: Date.now(), ok: !!ok });
+    const A = await loadCol('office', 'sent').catch(() => ({})), items = (A.items || []).slice(0, 199); items.unshift({ at: Date.now(), by: 'コネクト（' + (PERM_NAMES[K.perm] || '') + '）', to: D.to, name: D.name, text: D.text, ok: !!ok }); await saveCol('office', 'sent', { items }).catch(() => {});
+    try { const o = String(r.owner).replace(/^g:/, ''), T = (await threadsOf(null)).find(t => String(t.visitor || '').replace(/^g:/, '') === o); if (T) await saveCol(T.id, 'threads', { turns: (T.turns || []).concat([{ r: 'shop', t: D.text, at: Date.now(), by: 'コネクト' }]).slice(-60), last: Date.now() }); } catch (e) {}
+    return ok ? txt({ ok: true, to: D.name, note: 'LINEに送りました。事務局の記録と、相手とのトークに残しました。' }) : err('LINEに送れませんでした（相手がハタボの公式LINEを友だち追加していない、など）。');
+  }
+  return err('その道具はありません：' + name);
+}
 const npStrip = (K, o) => { if (!K || !K.np || !o || typeof o !== 'object') return o; const x = Object.assign({}, o); delete x.yen; delete x.price; return x; };
 async function mcpTool(K, name, a) {
+  if (/^office_/.test(name)) { const txt = o => ({ content: [{ type: 'text', text: typeof o === 'string' ? o : JSON.stringify(o, null, 1) }], structuredContent: typeof o === 'string' ? undefined : o }), err = t => ({ content: [{ type: 'text', text: t }], isError: true });
+    if (!K.perm || K.demo || (K.perm === 'dev' && name === 'office_send_message')) return err('その道具はありません：' + name); return officeTool(K, name, a && typeof a === 'object' ? a : {}, txt, err); }
   const txt = o => { o = npStrip(K, o); return { content: [{ type: 'text', text: typeof o === 'string' ? o : JSON.stringify(o, null, 1) }], structuredContent: typeof o === 'string' ? undefined : o }; };
   const err = t => ({ content: [{ type: 'text', text: t }], isError: true });
   a = a && typeof a === 'object' ? a : {};
@@ -3699,6 +3759,7 @@ async function mcpHttp(req, res) {
     const T = await loadCol(oaHash(at), 'oauthtok');
     if (T.owner && Date.now() < (T.exp || 0)) { const R = await loadCol(T.kid, 'oauthrt'); if (R.active !== false) K = { id: 'oa_' + String(T.kid).slice(0, 24), ref: T.demo ? DEMO_OWNER : await myRefFor(T.owner), owner: T.owner, via: 'oauth', client: T.client, np: !!T.np, demo: !!T.demo }; }
   }
+  if (K && K.owner && !K.demo) { try { await loadPerms(); K.perm = permOf(K.owner, '') || ''; } catch (e) {} }   // 事務局の道具を出すか（役割と権限で決める）
   if (!K) { res.setHeader('WWW-Authenticate', 'Bearer resource_metadata="' + ENV.MCP_BASE + '/.well-known/oauth-protected-resource/mcp", scope="hatabo"'); return out(401, { jsonrpc: '2.0', id: null, error: { code: -32001, message: 'ハタボにログインしてください（APIキーかOAuth）。APIキーはMyハタボの「AIからつなぐ」で作れます。' } }); }
   if (!apiRate('k:' + K.id, 60, 60000)) return out(429, { jsonrpc: '2.0', id: null, error: { code: -32002, message: '呼び出しが多すぎます。1分ほど待ってください。' } });
   let body = ''; for await (const c of req) { body += c; if (body.length > 65536) return out(413, { error: 'too large' }); }
@@ -3708,7 +3769,7 @@ async function mcpHttp(req, res) {
     if (m.id === undefined || m.id === null) return null;   // お知らせ（notifications/initialized など）には返事しない
     const ok = result => ({ jsonrpc: '2.0', id: m.id, result });
     if (m.method === 'initialize') return ok({ protocolVersion: (m.params && m.params.protocolVersion) || '2025-06-18', capabilities: { tools: {} }, serverInfo: { name: 'hatabo', title: 'ハタボ', version: '0.2.0', websiteUrl: 'https://www.hatha-lab.com/api.html', icons: [{ src: 'https://www.hatha-lab.com/icon-512.png', mimeType: 'image/png', sizes: ['512x512'] }] },
-      instructions: 'ハタボは、町のお店・会社・人の「愛棒（AIの窓口）」どうしをつなぐネットワークです。search_aibo でさがして、send_message で伝言、request_reservation で予約の希望を伝えます。自分のハタボには、remember で覚えさせ、recall で記憶を見て、add_note でメモを残せます。get_character・set_character で、自分のハタボや愛棒ごとの話し方（相手ごとの設定）を見て変えられます（本人が頼んだときだけ）。LINEのIDなどの個人の情報は返しません。' });
+      instructions: (K.perm && !K.demo ? '【あなたはハタボ事務局長としても動けます（役割：' + (PERM_NAMES[K.perm] || '') + '）】office_overview でいまの数字、office_people・office_person で人を見て、次にやることをすすめる。連絡は office_draft_message で下書き→相手と文面を見せてOKをもらう→office_send_message で送る。勝手に送らない。' + (K.perm === 'dev' ? '開発の役割なので見るだけ（送れない・会話の中身とお金は伏せる）。' : '') + '\n' : '') + 'ハタボは、町のお店・会社・人の「愛棒（AIの窓口）」どうしをつなぐネットワークです。search_aibo でさがして、send_message で伝言、request_reservation で予約の希望を伝えます。自分のハタボには、remember で覚えさせ、recall で記憶を見て、add_note でメモを残せます。get_character・set_character で、自分のハタボや愛棒ごとの話し方（相手ごとの設定）を見て変えられます（本人が頼んだときだけ）。LINEのIDなどの個人の情報は返しません。' });
     if (m.method === 'ping') return ok({});
     if (m.method === 'tools/list') return ok({ tools: mcpToolsFor(K) });
     if (m.method === 'tools/call') { const p = m.params || {}; try { return ok(await mcpTool(K, String(p.name || ''), p.arguments)); } catch (e) { console.error('mcp tool', String(e.message).slice(0, 160)); return ok({ content: [{ type: 'text', text: 'うまくいきませんでした。少しあとでためしてください。' }], isError: true }); } }
