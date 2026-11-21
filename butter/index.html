@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8"><meta name="hb-ver" content="11/21-1720">
+<meta charset="utf-8"><meta name="hb-ver" content="11/21-1800">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
 <title>福まねき特戦隊｜バターちゃん</title>
@@ -1305,6 +1305,20 @@ html:not(.kmapp) body:not(.av-komugi) .hbpage.p-my #hbpTitle { visibility: hidde
 }
 
 .hbs-k { display: flex; align-items: center; justify-content: space-between; }
+.oh-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 14px; }
+.oh-card { display: grid; gap: 2px; text-align: left; padding: 14px 16px; border-radius: 14px; border: 1px solid rgba(127,140,160,.3); background: rgba(127,140,160,.08); color: inherit; cursor: pointer; font: inherit; }
+.oh-card b { font: 800 30px/1.1 var(--display); } .oh-card span { font: 700 12.5px var(--body); opacity: .85; } .oh-card small { font-size: 11px; opacity: .7; }
+.oh-card.ref b { color: #AEB6C6; } .oh-card.trial b { color: #F0B04A; } .oh-card.contract b { color: #5CC488; } .oh-card.member b { color: #86A5E6; } .oh-card.warn { border-color: #C0574F; } .oh-card.warn b { color: #E07A70; }
+.oh-card:hover { border-color: #C9A24A; }
+.oh-flow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.oh-flow button { flex: 1 1 120px; display: grid; gap: 2px; padding: 14px; border-radius: 14px; border: 1px solid rgba(127,140,160,.3); background: rgba(63,163,106,.08); color: inherit; cursor: pointer; font: inherit; text-align: center; }
+.oh-flow button b { font: 800 28px var(--display); } .oh-flow button span { font-size: 12px; opacity: .85; }
+.oh-flow i { font-style: normal; display: grid; justify-items: center; font: 800 18px var(--display); color: #C9A24A; } .oh-flow i small { font: 700 12px var(--body); }
+.oh-todo { display: block; width: 100%; text-align: left; margin-top: 6px; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(201,162,74,.45); background: rgba(201,162,74,.08); color: inherit; font: 600 13px var(--body); cursor: pointer; }
+.oh-menu { display: flex; flex-wrap: wrap; gap: 8px; } .oh-menu button { padding: 8px 14px; border-radius: 18px; border: 1px solid rgba(127,140,160,.45); background: transparent; color: inherit; font: 700 12.5px var(--body); cursor: pointer; }
+.cv-send { margin: 8px 0; padding: 12px 14px; border-radius: 14px; border: 1.5px solid #C9A24A; background: rgba(201,162,74,.08); font-size: 13.5px; line-height: 1.7; }
+.cv-send .k { font: 800 11px var(--display); letter-spacing: .06em; color: #C9A24A; } .cv-send textarea { width: 100%; box-sizing: border-box; margin: 6px 0; padding: 8px; border-radius: 8px; border: 1px solid rgba(127,140,160,.4); background: rgba(0,0,0,.15); color: inherit; font: inherit; min-height: 90px; }
+.cv-send .row { display: flex; gap: 8px; flex-wrap: wrap; } .cv-send button { padding: 7px 16px; border-radius: 16px; border: 1px solid rgba(127,140,160,.5); background: transparent; color: inherit; font: 700 12.5px var(--body); cursor: pointer; } .cv-send button.go { background: #3FA36A; border-color: #3FA36A; color: #fff; }
 .hbs-kind { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 8px 8px; }
 .hbs-kind button { border: 1px solid rgba(127,140,160,.4); background: transparent; color: inherit; border-radius: 14px; padding: 3px 12px; font: 700 12px var(--body); cursor: pointer; opacity: .8; }
 .hbs-kind button.on { background: #3FA36A; border-color: #3FA36A; color: #fff; opacity: 1; }
@@ -3503,6 +3517,8 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
       case 'consult': if (!m.ok) { toast(m.why || '相談できませんでした'); break; } hbpClose(); toast('相談役につなぎました。声でつづけて話せます（今日の残り' + m.left + '回）'); jrSend({ type: 'text', text: m.prompt }); break;
       case 'api': HBP.api = m; if (m.msg) toast(m.msg); if (!$('hbPage').hidden && HBP.page === 'api') hbpRender(); break;
       case 'admin': HBP.admin = m; if (m.msg) toast(m.msg); try { hbpChats(); } catch (e) {} if (!$('hbPage').hidden && (HBP.page === 'admin' || HBP.page === 'aids')) hbpRender(); if (HBP.page === 'uperson' && HBP.ucode && m.msg && J.ready) jrSend({ type: 'admin_person', code: HBP.ucode }); break;
+      case 'send_cards': (m.cards || []).forEach(c => hbSendCard(c)); break;
+      case 'chief_sent': { const el = document.querySelector('.cv-send[data-sid="' + m.id + '"]'); if (el) { el.querySelector('.st').textContent = m.ok ? '✓ ' + (m.name || '') + 'さんのLINEに送りました' : '送れませんでした：' + (m.why || ''); el.querySelectorAll('button,textarea').forEach(x => x.disabled = !!m.ok); } toast(m.ok ? '送りました' : (m.why || '送れませんでした')); break; }
       case 'admin_person': if (m.code === HBP.ucode) { HBP.uper = m; if (!$('hbPage').hidden && HBP.page === 'uperson') hbpRender(); } break;
       case 'perms': HBP.perms = m; if (m.msg) toast(m.msg); if (!$('hbPage').hidden && HBP.page === 'perms') hbpRender(); break;
       case 'reqs': HBP.reqs = m; if (!$('hbPage').hidden && HBP.page === 'reqs') hbpRender(); break;
@@ -3972,8 +3988,9 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   setInterval(() => { try { if (!J.ready || !$('hbPage') || $('hbPage').hidden) return; const p = HBP.page, k = { clones: 'clones', admin: 'admin', reqs: 'reqs', api: 'api', console: 'console' }[p]; if (k && !HBP[k] && Date.now() - (HBP['ask_' + k] || 0) > 4000) { HBP['ask_' + k] = Date.now(); jrSend({ type: k }); } } catch (e) {} }, 1500);
   function hbpRender() { try { hbpRender0(); } catch (e) { console.error('render', e); try { $('hbpBody').innerHTML = '<div class="hbc"><p>この画面を出せませんでした：' + esc(String((e && e.message) || e)) + '</p><p class="hbmuted" style="font-size:11px">この文をそのまま送ってください</p></div>'; } catch (x) {} } }
   function hbpRender0() {
+    if (HBP.page === 'my' && document.body.classList.contains('officemode')) HBP.page = 'ohome';   // 事務局の入口：ホームは事務局の概要
     const p = HBP.page, d = HBP.data, nm = avName() || 'ハタボ';
-    $('hbpTitle').textContent = { plugins: 'プラグイン', connectors: 'コネクタ', voice: '音声と音声入力', byok: '自分のClaudeで動かす', person: 'トーク', group: 'グループ', voice: 'ボイス', acct: 'アカウント', more: 'もっと', console: '管理画面', api: 'AIからつなぐ（API）', clones: '愛棒', admin: '事務局の管理画面', aids: 'AIDの一覧', uperson: 'アカウント', settings: '設定', google: 'Googleアカウント連携', social: '公開設定', custom: 'キャラ設定', ticket: '追加チケット', my: 'Myハタボ', notes: 'メモ・議事録', grow: '育てた' + nm, goen: 'ご縁のひろがり', inbox: '伝言', gacha: 'AI棒ガチャ', friends: '友だち', plan: 'プラン・支払い', aisai: 'AISAI・愛祭', times: 'ハタボタイムズ', share: '紹介する' }[p] || 'Myハタボ';
+    $('hbpTitle').textContent = { plugins: 'プラグイン', connectors: 'コネクタ', voice: '音声と音声入力', byok: '自分のClaudeで動かす', person: 'トーク', group: 'グループ', voice: 'ボイス', acct: 'アカウント', more: 'もっと', console: '管理画面', api: 'AIからつなぐ（API）', clones: '愛棒', admin: '事務局の管理画面', ohome: '事務局のホーム', aids: 'AIDの一覧', uperson: 'アカウント', settings: '設定', google: 'Googleアカウント連携', social: '公開設定', custom: 'キャラ設定', ticket: '追加チケット', my: 'Myハタボ', notes: 'メモ・議事録', grow: '育てた' + nm, goen: 'ご縁のひろがり', inbox: '伝言', gacha: 'AI棒ガチャ', friends: '友だち', plan: 'プラン・支払い', aisai: 'AISAI・愛祭', times: 'ハタボタイムズ', share: '紹介する' }[p] || 'Myハタボ';
     const tabOf = ({ my: 'my', clones: 'clones', goen: 'goen', person: '', group: '' })[p] ?? 'acct';
     const ACCT = { plugins: 1, connectors: 1, byok: 1, acct: 1, settings: 1, google: 1, plan: 1, api: 1, ticket: 1, voice: 1, custom: 1, more: 1, notes: 1, share: 1, gacha: 1, friends: 1, grow: 1, aisai: 1, times: 1, console: 1, inbox: 1 };
     if (d) { { const lim = Math.max(1, d.limit || 1), lp = d.unlimited ? 100 : Math.round(Math.max(0, lim - (d.today || 0)) / lim * 100); document.querySelectorAll('.hbacg i').forEach(x => { x.style.width = lp + '%'; x.parentNode.className = 'hbacg' + (lp < 20 ? ' low' : lp < 50 ? ' mid' : ''); }); }
@@ -3989,7 +4006,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
     const body = $('hbpBody');
     body.classList.remove('wide'); body.classList.remove('con'); body.classList.remove('chatpg');
     if (p === 'console') return conRender(body);
-    if (!d && p !== 'times' && p !== 'perms' && p !== 'share' && p !== 'aisai' && p !== 'goen' && p !== 'inbox' && p !== 'gacha' && p !== 'friends' && p !== 'custom' && p !== 'settings' && p !== 'google' && p !== 'social' && p !== 'docs' && p !== 'reqs' && p !== 'clones' && p !== 'admin' && p !== 'aids' && p !== 'uperson' && p !== 'api' && p !== 'more' && p !== 'voice' && p !== 'person' && p !== 'group' && p !== 'byok' && p !== 'connectors' && p !== 'plugins') { body.innerHTML = '<div class="hbc"><p>よみこみ中です…</p></div>'; return; }
+    if (!d && p !== 'times' && p !== 'perms' && p !== 'share' && p !== 'aisai' && p !== 'goen' && p !== 'inbox' && p !== 'gacha' && p !== 'friends' && p !== 'custom' && p !== 'settings' && p !== 'google' && p !== 'social' && p !== 'docs' && p !== 'reqs' && p !== 'clones' && p !== 'admin' && p !== 'ohome' && p !== 'aids' && p !== 'uperson' && p !== 'api' && p !== 'more' && p !== 'voice' && p !== 'person' && p !== 'group' && p !== 'byok' && p !== 'connectors' && p !== 'plugins') { body.innerHTML = '<div class="hbc"><p>よみこみ中です…</p></div>'; return; }
     const n = x => Number(x || 0).toLocaleString('ja-JP');
     if (p === 'my') {
       const left = Math.max(0, d.limit - d.today), pct = Math.min(100, Math.round(d.today / Math.max(1, d.limit) * 100));
@@ -4260,6 +4277,29 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
       body.querySelectorAll('[data-anote]').forEach(i => i.onchange = () => aset(i.dataset.anote, { roleNote: i.value }));
       body.querySelectorAll('[data-ahelp]').forEach(b => b.onclick = () => aset(b.dataset.ahelp, { aisaiHelp: true }));
       body.querySelectorAll('[data-aact]').forEach(b => b.onclick = () => aset(b.dataset.aact, { active: b.dataset.on === '1' }));
+    } else if (p === 'ohome') {   // 事務局のホーム：数字の概要。押すとその一覧へ
+      const A = HBP.admin;
+      if (!A) { body.innerHTML = '<div class="hbc"><p>よみこみ中…</p></div>'; if (J.ready) jrSend({ type: 'admin' }); return; }
+      if (A.denied) { body.innerHTML = '<div class="hbc"><p>事務局だけが見られる画面です。</p></div>'; return; }
+      body.classList.add('wide');
+      const P = (A.rows || []).filter(r => r.kind === 'person' && !(A.self || []).includes(r.code)), cnt = k => P.filter(r => (r.status || r.stage || 'ref') === k).length, s = A.sum || {};
+      const nRef = P.filter(r => (r.status || 'ref') !== 'member').length, nTr = P.filter(r => ['trial', 'contract', 'expired', 'cancel'].includes(r.status || r.stage)).length, nCo = cnt('contract'), pc = (a, b) => b ? Math.round(a / b * 100) + '%' : '—';
+      const soon = P.filter(r => r.status === 'trial' && r.daysLeft && r.daysLeft <= 2), fail = P.filter(r => r.payFail), unread = ((HBP.con && HBP.con.threads) || []).filter(t => t.unread && !t.mine), mon = new Date(); mon.setDate(1); mon.setHours(0, 0, 0, 0);
+      const fresh = P.filter(r => (r.at || 0) >= mon.getTime()).length, recent = P.slice().sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, 6), dt = t => t ? new Date(t).toLocaleDateString('ja-JP') : '';
+      const card = (go, big, label, sub, cls) => `<button type="button" class="oh-card ${cls || ''}" data-oh="${go}"><b>${big}</b><span>${label}</span>${sub ? `<small>${sub}</small>` : ''}</button>`;
+      body.innerHTML = `<div class="hbc oh-hero"><div class="k">HATHABO OFFICE</div><h3>事務局のホーム</h3><p class="hbmuted">${new Date().toLocaleDateString('ja-JP', { month: 'long', day: 'numeric', weekday: 'short' })}・押すと、その人たちの一覧が開きます</p>
+          <div class="oh-grid">${card('all', n(P.length), 'アカウント', '今月の新規 ' + n(fresh) + '人')}${card('ref', n(cnt('ref')), '紹介中', '', 'ref')}${card('trial', n(cnt('trial')), 'お試し', soon.length ? 'もうすぐ終わる ' + soon.length + '人' : '', 'trial')}${card('contract', n(nCo), '契約', '', 'contract')}${card('member', n(cnt('member')), 'メンバー', '', 'member')}${card('pay', n(fail.length), '支払いの失敗', '', fail.length ? 'warn' : '')}${s.apiYen != null ? card('api', n(s.api), '今月のAPI（回）', '約' + n(s.apiYen) + '円') : ''}${card('unread', n(unread.length), '返事待ちの会話', '', unread.length ? 'warn' : '')}</div></div>
+        <div class="hbc"><div class="k">FUNNEL</div><h3>紹介 → お試し → 契約</h3><div class="oh-flow">
+          <button type="button" data-oh="all"><b>${n(nRef)}</b><span>紹介されて登録</span></button><i>→<small>${pc(nTr, nRef)}</small></i>
+          <button type="button" data-oh="trialall"><b>${n(nTr)}</b><span>お試しまで進んだ</span></button><i>→<small>${pc(nCo, nTr)}</small></i>
+          <button type="button" data-oh="contract"><b>${n(nCo)}</b><span>契約</span></button></div>
+          <p class="hbmuted" style="font-size:12px;margin-top:10px">紹介から契約まで ${pc(nCo, nRef)}。メンバー（チーム）は数えていません。</p></div>
+        <div class="hbc"><div class="k">TODAY</div><h3>今日やること</h3>${[].concat(soon.map(r => ['u:' + r.code, String(r.name || '（名前なし）').replace(/さん$/, '') + 'さんのお試しが、あと' + r.daysLeft + '日で終わります']), fail.map(r => ['u:' + r.code, String(r.name || '（名前なし）').replace(/さん$/, '') + 'さんの支払いが失敗しています']), unread.slice(0, 5).map(t => ['p:' + t.id, String(t.vname || 'お客さま').replace(/さん$/, '') + 'さんから返事待ちの会話があります'])).map(([k, l]) => `<button type="button" class="oh-todo" data-tk2="${esc(k)}">${esc(l)}</button>`).join('') || '<p class="hbmuted">いま急いでやることはありません。</p>'}</div>
+        <div class="hbc"><div class="k">RECENT</div><h3>新しく来た人</h3>${recent.map(r => `<div class="hbrow"><div><button type="button" class="adname" data-auser="${esc(r.code)}">${esc(r.name || '（名前なし）')}</button><span>${dt(r.at)}${r.parentName ? '・' + esc(r.parentName) + 'さんの紹介' : ''}</span></div></div>`).join('') || '<p class="hbmuted">まだありません。</p>'}</div>
+        <div class="hbc"><div class="k">MENU</div><h3>管理のメニュー</h3><div class="oh-menu"><button type="button" data-go="admin">オーナー一覧</button><button type="button" data-go="aids">AIDの一覧</button><button type="button" data-go="console">窓口の会話</button><button type="button" data-go="reqs">事務局への声</button>${J.perm === 'top' ? '<button type="button" data-go="perms">役割と権限</button>' : ''}</div></div>`;
+      body.querySelectorAll('[data-oh]').forEach(b => b.onclick = () => { const k = b.dataset.oh; HBP.adminQ = ''; HBP.adminK = k === 'pay' ? 'pay' : 'person'; HBP.adminS = ['ref', 'trial', 'contract', 'member'].includes(k) ? k : ''; if (k === 'api') HBP.adminK = ''; if (k === 'unread') { HBP.page = 'console'; if (J.ready) jrSend({ type: 'console', as: 'office' }); return hbpRender(); } if (k === 'trialall') HBP.adminS = ''; HBP.page = 'admin'; hbpRender(); hbpChats(); });
+      body.querySelectorAll('[data-tk2]').forEach(b => b.onclick = () => hbpOpenTalk(b.dataset.tk2));
+      body.querySelectorAll('[data-auser]').forEach(b => b.onclick = () => hbpOpenUser(b.dataset.auser));
     } else if (p === 'aids') {   // AIDの一覧：人×キャラ（ハタボ・コムギ…）を1行ずつ
       const A = HBP.admin;
       if (!A) { body.innerHTML = '<div class="hbc"><p>よみこみ中…</p></div>'; if (J.ready) jrSend({ type: 'admin' }); return; }
@@ -4905,12 +4945,13 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
     const groups = hbSafe(() => (HBP.myGroups || O.groups || []).map(g => ({ chars: [g.ch === 'komugi' ? 'komugi' : 'hatabo'], key: 'g:' + g.gid, id: g.gid, kind: 'g', name: g.name, sub: (g.members ? g.members + '人' : 'LINEグループ') + (g.ch === 'komugi' ? '・コムギ' : ''), last: g.lastAt, pic: g.pic || '' })), []);
     const official = J.office ? [] : [{ key: 'o:official', kind: 'o', name: 'ハタボ公式', sub: '窓口・使い方・ヒロに相談', last: 0, pic: '' }];
     me.name = 'わたしのハタボ'; me.sub = 'あなた専用。キャラ設定はここだけ' + (L[0] && L[0].title ? '・' + L[0].title : '');
+    const OFC = document.body.classList.contains('officemode') && J.office !== false; if (OFC) { me.name = 'ハタボ事務局長'; me.sub = '事務局の相談役・数字の確認・連絡の下書き'; }   // 事務局の入口：いちばん上は事務局長
     const guide = { key: 'guide:guide', kind: 'gd', name: 'ハタボ事務局案内係', sub: '使い方・サービスの相談（設定は事務局が決めています）', last: 0, pic: '' };
     const seenN = new Set(people.map(x => x.name)), en = hbSafe(() => ((HBP.goen && HBP.goen.nodes) || []).filter(n => !n.me && n.depth === 1 && !seenN.has(n.name)).map(n => ({ key: 'e:' + n.id, id: n.id, kind: 'e', name: (n.name || 'ご縁の人') + 'のAI棒', sub: 'ご縁・押すと、その人のAI棒と話す', last: n.lastAt || 0, pic: '' })), []);   // ご縁でつながっている人
     const ags = hbSafe(() => ((HBP.clones && HBP.clones.items) || []).filter(x => x.label).map(x => ({ chars: [x.avatar === 'komugi' ? 'komugi' : 'hatabo'], key: 'ag:' + x.code, id: x.code, kind: 'ag', name: x.label + '向けエージェント', sub: ((x.visits || 0) > 0 ? '✓ ひもづき済み' : 'まだひもづいていません') + '・文字と音声', last: x.lastAt || x.at || 0, pic: '' })), []);   // 友だちに送るエージェント（わたしのハタボの分身）
     const STN = { ref: '紹介中', trial: 'お試し', contract: '契約', member: 'メンバー', expired: '期限切れ', cancel: '解約' }, CHN = { hatabo: 'ハタボ', komugi: 'コムギ', junior: 'ジュニア' };
-    const users = hbSafe(() => J.office && HBP.admin && !HBP.admin.denied ? (HBP.admin.rows || []).filter(r => r.kind === 'person' && r.code !== J.myRef && !(HBP.admin.self || []).includes(r.code)).map(r => ({ key: 'u:' + r.code, id: r.code, kind: 'u', name: r.name || r.ownerName || '（名前なし）', sub: (r.chars || []).map(c => CHN[c] || c).join('・') + ((r.merged || []).length ? '・ID ' + (r.merged.length + 1) + 'つ' : '') + ((r.dups || []).length ? '・同じ名前あり' : '') + (r.parentName ? '・' + r.parentName + 'さんの紹介' : '') + (r.status === 'trial' && r.daysLeft ? '・あと' + r.daysLeft + '日' : ''), last: r.lastAt || r.at || 0, pic: r.pic || '', st: r.status || r.stage || 'ref', chars: r.chars || [], tag: STN[r.status || r.stage || 'ref'] || '' })) : [], []);   // 事務局：お客さま・メンバーを1人1行で
-    const all = [me].concat(store.get('hbGuideMet', 0) ? [guide] : [], ags, users, people, dens, groups, en).filter(x => !q || (x.name + ' ' + x.sub + ' ' + (x.tag || '')).includes(q));   // 事務局案内係は、ガチャで出会ってから一覧に。ハタボ公式は出さない
+    const users = hbSafe(() => J.office && HBP.admin && !HBP.admin.denied ? (HBP.admin.rows || []).filter(r => r.kind === 'person' && r.code !== J.myRef && !(HBP.admin.self || []).includes(r.code)).map(r => ({ key: 'u:' + r.code, id: r.code, kind: 'u', name: r.name || r.ownerName || '（名前なし）', sub: (r.chars || []).map(c => CHN[c] || c).join('・') + ((r.merged || []).length ? '・ID ' + (r.merged.length + 1) + 'つ' : '') + ((r.dups || []).length ? '・同じ名前あり' : '') + (r.parentName ? '・' + r.parentName + 'さんの紹介' : '') + (r.status === 'trial' && r.daysLeft ? '・あと' + r.daysLeft + '日' : ''), last: r.lastAt || r.at || 0, pic: r.pic || '', mac: !!r.mac, st: r.status || r.stage || 'ref', chars: r.chars || [], tag: STN[r.status || r.stage || 'ref'] || '' })) : [], []);   // 事務局：お客さま・メンバーを1人1行で
+    const all = [me].concat(store.get('hbGuideMet', 0) && !OFC ? [guide] : [], ags, users, people, dens, groups, en).filter(x => !q || (x.name + ' ' + x.sub + ' ' + (x.tag || '')).includes(q));   // 事務局案内係は、ガチャで出会ってから一覧に。ハタボ公式は出さない
     { // キャラ（左の列・スマホは一覧の上）と、個別・グループのしぼりこみ
       const hasK = all.some(x => (x.chars || []).includes('komugi')) || J.mac || document.body.classList.contains('av-komugi'), showCh = hasK || J.office, chf = showCh ? HBP.chf || '' : '', tkf = HBP.tkf || '';
       const CH = [['', '全部', '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>'], ['hatabo', 'ハタボ', '<img src="award_mark.svg" alt="">'], ['komugi', 'コムギ', '<img src="komugi.jpg" alt="">']];
@@ -4919,7 +4960,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
       const kd = $('hbpKind'); if (kd) { kd.innerHTML = [['', 'すべて'], ['solo', '個別'], ['group', 'グループ']].map(([k, l]) => `<button type="button" role="tab" aria-selected="${tkf === k}" class="${tkf === k ? 'on' : ''}" data-tkf="${k}">${l}</button>`).join('') + (showCh ? CH.slice(1).map(([k, l, ic]) => `<button type="button" class="chf${chf === k ? ' on' : ''}" data-chf2="${k}">${ic}${l}</button>`).join('') : ''); if (!kd.dataset.w) { kd.dataset.w = 1; kd.addEventListener('click', e => { const b = e.target.closest('[data-tkf],[data-chf2]'); if (!b) return; if (b.dataset.chf2 != null) HBP.chf = HBP.chf === b.dataset.chf2 ? '' : b.dataset.chf2; else HBP.tkf = b.dataset.tkf; hbpChats(); }); } }
       for (let i = all.length - 1; i >= 0; i--) { const x = all[i]; if (chf && x.chars && x.chars.length && !x.chars.includes(chf)) { all.splice(i, 1); continue; } if (chf === 'komugi' && (x.kind === 'gd')) { all.splice(i, 1); continue; } if (tkf === 'group' && x.kind !== 'g') { all.splice(i, 1); continue; } if (tkf === 'solo' && x.kind === 'g') all.splice(i, 1); }
     }
-    all.sort((a, b) => ((b.kind === 'me') - (a.kind === 'me')) || ((b.kind === 'gd') - (a.kind === 'gd')) || (pins.includes(b.key) - pins.includes(a.key)) || ((b.last || 0) - (a.last || 0)));   // いちばん上はいつも「ハタボと話す」
+    all.sort((a, b) => ((b.kind === 'me') - (a.kind === 'me')) || (HBP.chf === 'komugi' ? (!!b.mac - !!a.mac) : 0) || ((b.kind === 'gd') - (a.kind === 'gd')) || (pins.includes(b.key) - pins.includes(a.key)) || ((b.last || 0) - (a.last || 0)));   // いちばん上はいつも「ハタボと話す」
     const MARK = { d: '<path d="M3 6h18v12H3z M3 7l9 6 9-6" stroke="currentColor" stroke-width="2" fill="none"/>', me: '<path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.6 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/>', p: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>', g: '<circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><path d="M2 20c0-3 3-5 6-5s6 2 6 5M12 20c0-3 3-5 6-5s4 1 4 3"/>' };
     const TIP = { ag: 'エージェント', me: 'わたしのハタボ', gd: '事務局案内係', p: '人', g: 'グループ', d: '伝言', o: '公式', e: 'ご縁', u: 'アカウント' }; MARK.u = MARK.p; MARK.o = MARK.me; MARK.gd = MARK.me; MARK.ag = MARK.me; MARK.e = MARK.e || MARK.p;
     const av = x => x.kind === 'me' || x.kind === 'o' || x.kind === 'gd' || x.kind === 'ag' ? '<img src="award_mark.svg" alt="">' : x.pic ? `<img src="${esc(x.pic)}" alt="" referrerpolicy="no-referrer" loading="lazy">` : `<span>${esc(String(x.name || '?').slice(0, 1))}</span>`;
@@ -4947,9 +4988,19 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   }
   function hbpOpenUser(code) { HBP.ucode = code; HBP.uper = null; HBP.page = 'uperson'; $('hbPage').hidden = false; document.body.classList.remove('hbshell'); document.body.classList.add('hbp-open'); hbpRender(); hbpChats(); if (J.ready) jrSend({ type: 'admin_person', code }); }
   window.hbpOpenUser = hbpOpenUser;
+  window.hbSendCard = c => hbSendCard(c);
+  function hbSendCard(c) {   // 事務局長が作った「送る前のカード」。送るのは人が「送る」を押したときだけ
+    const L = $('cvList'); if (!L) return; const id = 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), el = document.createElement('div');
+    el.className = 'cv-send'; el.dataset.sid = id;
+    el.innerHTML = `<div class="k">送る前のカード</div><div>送る相手：<b>${esc(c.name || '（相手が見つかりません）')}</b>・${c.ch === 'line' ? 'LINE（ハタボの公式LINEから）' : esc(c.ch)}${c.to && !c.canLine ? '<br><small style="color:#E07A70">この人はLINEのIDがわからないので、送れないかもしれません</small>' : ''}</div><textarea aria-label="送る文面">${esc(c.text)}</textarea><div class="row"><button type="button" class="go"${c.to ? '' : ' disabled'}>送る</button><button type="button" class="no">やめる</button></div><small class="st hbmuted"></small>`;
+    el.querySelector('.go').onclick = () => { const t = el.querySelector('textarea').value.trim(); if (!t) return toast('文面が空です'); el.querySelector('.go').disabled = true; el.querySelector('.st').textContent = '送っています…'; jrSend({ type: 'chief_send', id, to: c.to, text: t }); };
+    el.querySelector('.no').onclick = () => { el.querySelector('.st').textContent = 'やめました'; el.querySelectorAll('button,textarea').forEach(x => x.disabled = true); };
+    L.append(el); try { el.scrollIntoView({ block: 'end', behavior: 'smooth' }); } catch (e) {}
+  }
   function hbpPin(key) { const P = (store.get('hbPins', []) || []), had = P.includes(key); store.set('hbPins', had ? P.filter(k => k !== key) : [key].concat(P).slice(0, 20)); toast(had ? 'ピン留めをはずしました' : 'いちばん上にピン留めしました'); hbpChats(); }
   function hbpOpenTalk(key) {
     const c = key.indexOf(':'), k = key.slice(0, c), id = key.slice(c + 1); hbpDrawer(false); if (k !== 'me') { hbpUnshell(); HBP.draft = ''; }
+    if (k === 'me' && document.body.classList.contains('officemode')) { hbpTalk(''); if (J.focusKey !== 'chief' && window.hbSetFocus) window.hbSetFocus('chief', 'ハタボ事務局長'); return; }   // 事務局の入口：事務局長と話す
     if (k === 'me') { if (J.focusKey && window.hbSetFocus) window.hbSetFocus('', ''); return hbpTalk(''); }
     if (k === 'ag') { const it = ((HBP.clones && HBP.clones.items) || []).find(x => x.code === id); if (it && window.hbOpenAgent) window.hbOpenAgent(it); return; }
     if (k === 'guide') { hbpTalk(''); if (window.hbSetFocus) window.hbSetFocus('guide', 'ハタボ事務局案内係'); return; }   // 事務局案内係（設定は変えられない）
@@ -4991,7 +5042,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   function hbpOpen(p) {
     if (!HBP.data) { try { const c = store.get('hbpData', null); if (c && c.type === 'mypage') HBP.data = c; } catch (e) {} }   // 前回の内容をすぐ出して、届いたら新しくする
     if (p === 'clones') setTimeout(() => { if (document.body.classList.contains('av-hatabo') || document.body.classList.contains('av-komugi')) hbEgg(false); }, 900);   // 卵は「愛棒」を開いたときだけ
-    HBP.page = p || 'my'; hbTheme(); $('hbPage').hidden = false; document.body.classList.remove('hbshell'); document.body.classList.add('hbp-open'); hbpRender(); hbpChats(); if (HBP.page === 'console' && J.ready) jrSend({ type: 'console', as: store.get('conAs', 'office') }); if (HBS.friend === null) hbpFriend();
+    HBP.page = (p || 'my') === 'my' && document.body.classList.contains('officemode') ? 'ohome' : p || 'my'; hbTheme(); $('hbPage').hidden = false; document.body.classList.remove('hbshell'); document.body.classList.add('hbp-open'); hbpRender(); hbpChats(); if (HBP.page === 'console' && J.ready) jrSend({ type: 'console', as: store.get('conAs', 'office') }); if (HBS.friend === null) hbpFriend();
     hbpFetchAll();
   }
   function hbpShellW() { document.body.style.setProperty('--shellw', $('hbPage').classList.contains('noside') ? '96px' : '364px'); }
@@ -5031,8 +5082,8 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   const OAUTH_RID = (() => { let v = new URLSearchParams(location.search).get('rid') || Q.get('rid'); if (!v) { try { const st = new URLSearchParams(location.search).get('liff.state'); if (st) v = new URLSearchParams(decodeURIComponent(st).split('?')[1] || '').get('rid'); } catch (e) {} } try { const sv = sessionStorage.getItem('hb.rid') || ''; sessionStorage.removeItem('hb.rid'); if (!v) v = sv; } catch (e) {} return String(v || '').replace(/[^\w-]/g, '').slice(0, 64); })();
   if (HB_START === 'oauth') document.addEventListener('jrready', () => { if (OAUTH_RID) jrSend({ type: 'oauth_info', rid: OAUTH_RID }); }, { once: true });
   else   if (HB_START === 'office' || HB_START === 'admin') {   // 事務局の入口（/office）：開くとすぐ、全員の一覧（事務局の管理画面）
-    document.body.classList.add('officemode'); try { document.title = 'HATHABO 事務局'; } catch (e) {} hbpOpen('admin');
-    document.addEventListener('jrready', () => { if (!J.office) { document.body.classList.remove('officemode'); toast('このアカウントは事務局ではありません。Myハタボを開きました'); hbpOpen('my'); } else if (!HBP.admin) jrSend({ type: 'admin' }); }, { once: true });
+    document.body.classList.add('officemode'); try { document.title = 'HATHABO 事務局'; } catch (e) {} J.focusKey = 'chief'; J.focusName = 'ハタボ事務局長'; hbpOpen('ohome');
+    document.addEventListener('jrready', () => { if (!J.office) { document.body.classList.remove('officemode'); J.focusKey = ''; J.focusName = ''; toast('このアカウントは事務局ではありません。Myハタボを開きました'); hbpOpen('my'); } else if (!HBP.admin) jrSend({ type: 'admin' }); }, { once: true });
   }
   else if (HB_START === 'login') hbpOpen('my');   // ふつうのログイン（サイトのMyハタボから）：自分のMyハタボ
   else if (HB_START && HB_START !== 'talk') hbpOpen(HB_START);
@@ -5200,11 +5251,11 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
     name = String(name || '').replace(/(さん|様|さま|くん|ちゃん)$/, '') ;   // 「〇〇さんさん」にならないように
     J.focusKey = key || ''; J.focusName = name || '';
     document.body.classList.toggle('hasFocus', !!key);
-    const fc = $('cvFocus'); if (fc) fc.querySelector('b').textContent = key === 'guide' ? 'ハタボ事務局案内係と話しています' : key ? name + 'さん向けの、わたしのハタボの分身' : '';
+    const fc = $('cvFocus'); if (fc) fc.querySelector('b').textContent = key === 'chief' ? 'ハタボ事務局長と話しています' : key === 'guide' ? 'ハタボ事務局案内係と話しています' : key ? name + 'さん向けの、わたしのハタボの分身' : '';
     document.querySelectorAll('#cvStrip [data-fk]').forEach(b => b.classList.toggle('on', b.dataset.fk === (key || 'me:me')));
     if (J.ready) jrSend({ type: 'focus', key: J.focusKey, name: J.focusName });
     try { agentBar(); } catch (e) {}
-    toast(key === 'guide' ? 'ハタボ事務局案内係です。困っていることを、そのまま話してください' : key ? name + 'さん向けのハタボに切りかえました' : 'ふつうのハタボにもどしました');
+    toast(key === 'chief' ? 'ハタボ事務局長です。数字の確認や、連絡の下書きを頼めます' : key === 'guide' ? 'ハタボ事務局案内係です。困っていることを、そのまま話してください' : key ? name + 'さん向けのハタボに切りかえました' : 'ふつうのハタボにもどしました');
   }
   document.addEventListener('jrready', () => { if (J.focusKey) jrSend({ type: 'focus', key: J.focusKey, name: J.focusName }); if (HATABO_APP && !HBP.clones) jrSend({ type: 'clones' }); if (HATABO_APP && !document.body.classList.contains('pcweb')) { if (!HBP.con) jrSend({ type: 'console', as: store.get('conAs', 'office') }); if (!HBP.goen) jrSend({ type: 'goen_tree' }); } });   // つなぎ直したときも、相手を覚えておく・一覧を読む
   // ハタボ・コムギのミニアプリ：「〜と話す」を押さなくても、開いたらそのままつなぐ（声を出す許可は、最初に画面をさわったときにもらう）

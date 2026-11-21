@@ -1990,7 +1990,8 @@ function session(ws) {
   // APIに渡す形：前半にキャッシュの印をつける（短すぎるときはAPIがキャッシュしないだけで、そのまま動く）
   // ハタボでは、運営の個人の名前を出さない（伝え先は、招待した人か「ハタボの事務局」）
   const tellFix = t => S.avatar === 'hatabo' && S.tellTo && !S.visit ? String(t).replace(/ハタラボの担当（ヒロさん）|ハタラボのヒロさん/g, S.tellTo).replace(/〈伝え先〉/g, S.tellTo).replace(/ヒロさん/g, S.tellTo) : t;
-  const focusBlock = () => !S.focus ? '' : S.focus.guide ? '\n\n【いまの役目：ハタボ事務局案内係】あなたは「ハタボ事務局案内係」（事務局が決めた案内役。持ち主のキャラ設定は使わず、ていねいな標準の話し方）。ハタボのサービスの問い合わせに答え、持ち主の困りごと・やってみたいこと（仕事・お店・家族・地域など）を一つずつ短く聞き、合う使い方とプランを、押しつけずに説明する。そのうえで、持ち主の「自分のハタボ」をどう使っていくか（呼び名・話し方・覚えておくこと・つなぐアプリ・役割つきの愛棒）を、いっしょに決めていく。決めたことは「アカウント」の「キャラ設定」「コネクタ」など、どこで変えられるかも短く添える。1回の返事は短く、質問は1つずつ。' : '\n\n【いまの相手】持ち主は今、「' + S.focus.name + '」さん向けのハタボとして、あなたと話しています。' + S.focus.name + 'さんとのこれまでを踏まえて、返事の下書き・伝えること・次の一手をいっしょに考える。' + S.focus.name + 'さん本人に送るのは、持ち主が「送って」と言ったときだけ。' + (S.focus.ctx ? '\n［' + S.focus.name + 'さんとの最近のやりとり（古い順）］\n' + S.focus.ctx : '') + (S.focus.custom ? customBlock(S.focus.custom) : '');
+  const CHIEF_TEXT = '\n\n【いまの役目：ハタボ事務局長】あなたは「ハタボ事務局長」。ハタボ事務局の管理画面にいる相談役で、事務局に入った人（ヒロさんや、ほかの事務局・開発のメンバー）を助ける。持ち主のキャラ設定は使わず、ていねいで落ち着いた話し方。できること：①下の数字を読んで、いまの状況（紹介→お試し→契約の流れ、お試しが終わりそうな人、支払いの失敗など）を短く伝え、次にやることを1〜2つすすめる ②管理画面の使い方（人のページで状態を切りかえる、同じ人のIDをまとめる、AIDの一覧、役割と権限、事務局の入口は app.hatha-lab.com/office/）を案内する ③「〇〇さんにこれを送って」と頼まれたら、送る文面を短く作って読み上げ、「画面に送る前のカードを出しました。確かめて『送る』を押してください」と言う（あなたが自分で送ったとは言わない。送るのは人がカードの「送る」を押したときだけ）。メールでの送信は準備中で、いまはLINEだけ送れる。わからない数字や、ここにない人のことは作らない。1回の返事は短く。';
+  const focusBlock = () => !S.focus ? '' : S.focus.chief ? CHIEF_TEXT + (S.focus.ctx ? '\n' + S.focus.ctx : '') : S.focus.guide ? '\n\n【いまの役目：ハタボ事務局案内係】あなたは「ハタボ事務局案内係」（事務局が決めた案内役。持ち主のキャラ設定は使わず、ていねいな標準の話し方）。ハタボのサービスの問い合わせに答え、持ち主の困りごと・やってみたいこと（仕事・お店・家族・地域など）を一つずつ短く聞き、合う使い方とプランを、押しつけずに説明する。そのうえで、持ち主の「自分のハタボ」をどう使っていくか（呼び名・話し方・覚えておくこと・つなぐアプリ・役割つきの愛棒）を、いっしょに決めていく。決めたことは「アカウント」の「キャラ設定」「コネクタ」など、どこで変えられるかも短く添える。1回の返事は短く、質問は1つずつ。' : '\n\n【いまの相手】持ち主は今、「' + S.focus.name + '」さん向けのハタボとして、あなたと話しています。' + S.focus.name + 'さんとのこれまでを踏まえて、返事の下書き・伝えること・次の一手をいっしょに考える。' + S.focus.name + 'さん本人に送るのは、持ち主が「送って」と言ったときだけ。' + (S.focus.ctx ? '\n［' + S.focus.name + 'さんとの最近のやりとり（古い順）］\n' + S.focus.ctx : '') + (S.focus.custom ? customBlock(S.focus.custom) : '');
   function sysBlocks(extra) { const [a, b] = sysParts(); return [{ type: 'text', text: tellFix(a), cache_control: { type: 'ephemeral' } }, { type: 'text', text: tellFix((b + (S.visit || S.role === 'サービス相談' || hearing() || (S.focus && S.focus.guide) ? '' : customBlock(S.custom)) + focusBlock() + (extra || '') + lastFor() + (hearing() ? '' : lineupStyle(S))).trim()) || '。' }]; }
   // ハタボとコムギは、同じ人（同じLINEのID）でも話の記録・教わったことを分ける（コムギの話がハタボに出ないように）
   /* ===== IDの決まり（11/19）：キャラごとに変わるもの（会話の記録・教わったこと・気づいたこと・キャラ設定）は「持ち主×キャラ」で分ける =====
@@ -2000,7 +2001,7 @@ function session(ws) {
   const charSfx = () => charOf() === 'junior' ? '' : ':' + charOf();
   const ownKey = owner => owner + charSfx();          // 持ち主×キャラ
   const convoBase = () => !S.owner || S.visit ? '' : S.guest ? S.owner + ':guest' : S.mode === 'family' ? S.owner + ':family' : '';
-  const focusSfx = () => !S.focus ? '' : S.focus.guide ? ':guide' : ':f:' + S.focus.key;   // 相手ごとの分身・事務局案内係は、会話の記録を分ける
+  const focusSfx = () => !S.focus ? '' : S.focus.guide ? ':guide' : S.focus.chief ? ':chief' : ':f:' + S.focus.key;   // 相手ごとの分身・事務局案内係は、会話の記録を分ける
   const convoKey = () => { const b = convoBase(); return b ? b + charSfx() + focusSfx() : ''; };
   /** チャット（会話のまとまり）：ChatGPTの「新しいチャット」と一覧。覚えたこと（まとめ）は全部のチャットでつながる */
   const thrId = () => 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
@@ -2354,6 +2355,7 @@ function session(ws) {
       const macs = rows.filter(x => x.kind === 'person' && isMac((refBy.get(x.code) || {}).owner)).sort((a, b) => (a.at || 0) - (b.at || 0));
       const target = x => { const r = refBy.get(x.code) || {}; if (r.sameAs && byCode.get(r.sameAs) && !(refBy.get(r.sameAs) || {}).sameAs) return r.sameAs; if (macs.length > 1 && macs[0] !== x && macs.includes(x)) return macs[0].code; return ''; };
       for (const x of rows) { const t = target(x); if (!t) continue; const P = byCode.get(t); x.mergedInto = t; P.merged = (P.merged || []).concat([{ code: x.code, chars: x.chars, auto: !(refBy.get(x.code) || {}).sameAs }]); P.chars = [...new Set(P.chars.concat(x.chars))]; P.lastAt = Math.max(P.lastAt || 0, x.lastAt || 0); P.visits = (P.visits || 0) + (x.visits || 0); P.kids = (P.kids || 0) + (x.kids || 0); if (!P.pic && x.pic) P.pic = x.pic; }
+      for (const x of rows) if (x.kind === 'person' && isMac((refBy.get(x.code) || {}).owner)) x.mac = true;   // コムギの持ち主（馬越さん）
       for (const x of rows) if (x.kind === 'person' && !x.mergedInto) { const nm = String(x.name || '').trim(); x.dups = nm ? rows.filter(y => y !== x && y.kind === 'person' && !y.mergedInto && String(y.name || '').trim() === nm).map(y => y.code) : []; }
       sum.people = rows.filter(x => x.kind === 'person' && !x.mergedInto).length;
     }
@@ -2370,6 +2372,25 @@ function session(ws) {
     if (isDev()) { rows.forEach(x => { x.apiYen = null; x.ownerName = x.ownerName ? String(x.ownerName).slice(0, 1) + '…' : ''; }); sum.apiYen = null; }
     if (m.type === 'admin_person') return onAdminPerson(m, refs, rows);
     send({ type: 'admin', perm: permNow(), self, rows: rows.filter(x => !x.mergedInto), sum, roles: Object.keys(ROLE_RULE), audit: ((await loadCol('office', 'audit')).items || []).slice(0, 30), msg });
+  }
+  /** 事務局長：頼まれた「〇〇さんに送って」を、送る前のカード（相手・文面）にする。送るのは人が「送る」を押したときだけ */
+  async function chiefDraft(asked, said) {
+    const refs = (await allRefs()).filter(r => (r.kind || 'person') === 'person' && r.owner && !r.sameAs);
+    const ppl = refs.sort((a, b) => (b.lastAt || b.at || 0) - (a.lastAt || a.at || 0)).slice(0, 120).map(r => r.code + '：' + (r.name || '（名前なし）')).join('\n');
+    const r = await deps.claude.messages.create({ model: ENV.MODEL, max_tokens: 600, system: 'ハタボ事務局の連絡係。頼まれたことから、送る相手と、相手に送る文面を決める。相手は一覧の中からだけ選ぶ（いなければ空）。文面はハタボ事務局からのLINEとして、ていねいに短く（300字まで）。JSONだけを返す。',
+      messages: [{ role: 'user', content: '【人の一覧（コード：名前）】\n' + ppl + '\n\n【頼まれたこと】' + asked + '\n【事務局長の返事】' + said + '\n\nJSONだけ：{"sends":[{"to":"コード","text":"文面"}]}。送る話でなければ {"sends":[]}' }] });
+    const t = (r.content || []).filter(b => b.type === 'text').map(b => b.text).join(''); let j = {}; try { j = JSON.parse(t.slice(t.indexOf('{'), t.lastIndexOf('}') + 1)); } catch (e) { return; }
+    const cards = (j.sends || []).slice(0, 5).map(x => { const rr = refs.find(y => y.code === String(x.to || '')); return { to: rr ? rr.code : '', name: rr ? rr.name || '（名前なし）' : '', ch: 'line', text: String(x.text || '').slice(0, 1000), canLine: !!(rr && /^U[0-9a-f]{32}$/.test(String(rr.owner).replace(/^g:/, ''))) }; }).filter(c => c.text);
+    if (cards.length) send({ type: 'send_cards', cards });
+  }
+  async function onChiefSend(m) {
+    if (!isOffice() || isDev()) return send({ type: 'chief_sent', ok: false, why: 'この役割では送れません' });
+    const code = String(m.to || '').replace(/[^\w-]/g, '').slice(0, 20), text = String(m.text || '').replace(/[\u0000-\u0008]/g, '').trim().slice(0, 1000), r = code ? await getRef(code).catch(() => null) : null;
+    if (!r || !text) return send({ type: 'chief_sent', ok: false, id: m.id, why: '送る相手か文面がありません' });
+    const ok = await ownerPush(r.owner, '【ハタボ事務局より】\n' + text).catch(() => false);
+    const A = await loadCol('office', 'sent').catch(() => ({})), items = (A.items || []).slice(0, 199); items.unshift({ at: Date.now(), by: S.me || (S.web && S.web.email) || '', to: code, name: r.name || '', text, ok: !!ok }); await saveCol('office', 'sent', { items }).catch(() => {});
+    try { const o = String(r.owner).replace(/^g:/, ''), T = (await threadsOf(null)).find(t => String(t.visitor || '').replace(/^g:/, '') === o); if (T) await saveCol(T.id, 'threads', { turns: (T.turns || []).concat([{ r: 'shop', t: text, at: Date.now(), by: S.me || '' }]).slice(-60), last: Date.now() }); } catch (e) {}   // 相手とのトークにも残す
+    send({ type: 'chief_sent', ok: !!ok, id: m.id, name: r.name || '', why: ok ? '' : 'LINEに送れませんでした（相手がハタボの公式LINEを友だち追加していない、など）' });
   }
   /** 事務局：人ごとの詳しいページ。状態・プラン・持っているキャラ（AID）ごとの会話・その人の愛棒とご縁 */
   async function onAdminPerson(m, refs, rows) {
@@ -2988,6 +3009,7 @@ function session(ws) {
       if (S.newTurns >= 6 || (S.guest && TELL_RE.test(logText || '') && S.newTurns >= 2)) summarize();
     }
     if (text && logText && !noRecord) threadLog(logText, text).catch(e => console.error('thread', String(e.message).slice(0, 120)));
+    if (text && logText && S.focus && S.focus.chief && isOffice() && /送|伝え|連絡|知らせ|メッセージ|LINE|ライン|メール/.test(logText)) chiefDraft(logText, text).catch(e => console.error('chief draft', String(e.message).slice(0, 120)));   // 事務局長：送る前のカード
   }
   /** 管理画面の会話に残す：愛棒の窓口（持ち主が見る）・事務局が役割をつけたURL（事務局が見る）・自分のハタボ（自分。事務局には件数と日時だけ） */
   async function threadLog(said, reply) {
@@ -3279,6 +3301,14 @@ function session(ws) {
         const oldK = convoKey(); if (oldK) await saveConvo(oldK, { turns: (S.history || []).slice(-keepN()), newTurns: S.newTurns || 0, at: Date.now() }).catch(() => {});   // いまの相手との会話をしまう
         const loadFor = async () => { const k2 = convoKey(); const c = k2 ? await loadConvo(k2).catch(() => null) : null; S.history = c && Array.isArray(c.turns) ? noKomugi(cleanTurns(c.turns)) : []; S.newTurns = 0; send({ type: 'chat_turns', id: '', turns: S.history.slice(-40) }); };   // 切りかえたら、その相手との会話に入れかえる
         if (!key) { S.focus = null; await loadFor(); return send({ type: 'focus', key: '' }); }
+        if (key === 'chief' && isOffice()) {   // 事務局の入口：いちばん上の「ハタボ事務局長」（事務局の相談役。数字を知っていて、連絡の下書きを作る）
+          let ctx = ''; try { const refs = (await allRefs()).filter(r => (r.kind || 'person') === 'person'), now = Date.now(), F = refs.map(r => ({ r, f: funnelOf(r) })), st = x => statusOf(x.r, x.f);
+            const n = k => F.filter(x => st(x) === k).length, soon = F.filter(x => x.f.stage === 'trial' && x.f.daysLeft <= 2).map(x => x.r.name || x.r.code), fail = F.filter(x => x.r.payFailAt).map(x => x.r.name || x.r.code);
+            ctx = '［いまの数字（' + new Date(now + 9 * 3600000).toISOString().slice(0, 10) + '）］人 ' + refs.length + '・紹介中 ' + n('ref') + '・お試し ' + n('trial') + '・契約 ' + n('contract') + '・メンバー ' + n('member') + '・期限切れ ' + n('expired') + '・解約 ' + n('cancel') + (soon.length ? '\nお試しがあと2日以内に終わる人：' + soon.slice(0, 10).join('、') : '') + (fail.length ? '\n支払いが失敗している人：' + fail.slice(0, 10).join('、') : '') +
+              '\n［人の一覧（名前・状態）］' + F.sort((a, b) => (b.r.lastAt || b.r.at || 0) - (a.r.lastAt || a.r.at || 0)).slice(0, 60).map(x => (x.r.name || '（名前なし）') + '・' + ({ ref: '紹介中', trial: 'お試し', contract: '契約', member: 'メンバー', expired: '期限切れ', cancel: '解約' })[st(x)]).join(' / ');
+          } catch (e) {}
+          S.focus = { key, name: 'ハタボ事務局長', chief: true, ctx }; await loadFor(); return send({ type: 'focus', key, name: 'ハタボ事務局長' });
+        }
         if (key === 'guide') { S.focus = { key, name: 'ハタボ事務局案内係', guide: true }; await loadFor(); return send({ type: 'focus', key, name: 'ハタボ事務局案内係' }); }
         let ctx = '';
         if (key.startsWith('c:') && S.myRef) {   // 友だちに送るエージェント（わたしのハタボの分身）を、持ち主が育てる
@@ -3360,6 +3390,7 @@ function session(ws) {
       if (m.type === 'reqs' || m.type === 'req_adopt') return onReqs(m);
       if (m.type === 'clones' || m.type === 'clone_new' || m.type === 'clone_set') return onClones(m);
       if (m.type === 'admin' || m.type === 'admin_set' || m.type === 'admin_person') return onAdmin(m);
+      if (m.type === 'chief_send') return onChiefSend(m);
       if (m.type === 'perms' || m.type === 'perm_set' || m.type === 'perm_del') return onPerms(m);
       if (m.type === 'api' || m.type === 'api_new' || m.type === 'api_stop' || m.type === 'api_resv') return onApi(m);
       if (['console', 'thr_goen', 'thr_open', 'thr_draft', 'thr_send', 'consult', 'mem_set', 'mem_del', 'aibo_set', 'con_set', 'staff_add', 'staff_del', 'con_url_new', 'con_url_set', 'grp_send'].includes(m.type)) return onConsole(m).catch(e => { console.error('console', m.type, String(e && e.stack || e).slice(0, 400)); send({ type: 'console', error: '管理画面の読みこみでエラーがおきました（' + String(e && e.message || e).slice(0, 80) + '）' }); });
