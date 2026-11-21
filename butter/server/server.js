@@ -2208,7 +2208,7 @@ function session(ws) {
     S.feedbackSent = (S.feedbackSent || 0) + 1;
   }
   /** 事務局：要件の一覧と、採用したときのポイント（最初に出した人が半分、残りの半分をあとの人で分ける） */
-  const permNow = () => (S.web && S.web.perm) || permOf(S.owner, S.web && S.web.email) || (S.webOffice || isOfficeOwner(S.owner) ? 'office' : '');
+  const permNow = () => (S.app === 'komugi' || S.avatar === 'komugi') ? '' : (S.web && S.web.perm) || permOf(S.owner, S.web && S.web.email) || (S.webOffice || isOfficeOwner(S.owner) ? 'office' : '');
   const isOffice = () => !!permNow();
   const isDev = () => permNow() === 'dev';   // 開発：事務局の画面に入れるが、会話の中身とお金は伏せる・書きこまない
   /** 役割つきの愛棒：一覧・作る・変える（止める・期限・役割・キャラ・メモ）。URLは変えずに中身だけ変えられる */
@@ -3352,7 +3352,7 @@ function session(ws) {
           if (k && !S.komugi && S.avatar === 'komugi') { S.komugi = true; S.system += komugiBlock(await komugiNews()); }
           // コムギ：馬越さん本人なら制限なしの相棒。馬越さんの紹介の人には、馬越さんへの橋渡し役に徹する
           if (S.avatar === 'komugi' && !S.visit) {
-            if (isMac(S.owner) || isKomugiOwner(S.owner)) { S.macSelf = true; const nw = await komugiNews(); S.system += docsBlock(await docsLoad(S.owner).catch(() => ({})), false) + (isMac(S.owner) ? MAC_SELF_BLOCK : ownerSelfBlock(komugiOwnerName(S.owner) || String(S.me || 'ヒロ').replace(/さん$/, ''))) + '\n\n【いま入っているコムギ通信（紹介の人に案内する分）】\n' + (nw || '（まだ入っていない）'); }
+            if (isMac(S.owner)) { S.macSelf = true; /* コムギの持ち主は馬越さんだけ。ヒロさんたち（KOMUGI_OWNERS）は、馬越さんの紹介の人と同じ受け側 */ const nw = await komugiNews(); S.system += docsBlock(await docsLoad(S.owner).catch(() => ({})), false) + (isMac(S.owner) ? MAC_SELF_BLOCK : ownerSelfBlock(komugiOwnerName(S.owner) || String(S.me || 'ヒロ').replace(/さん$/, ''))) + '\n\n【いま入っているコムギ通信（紹介の人に案内する分）】\n' + (nw || '（まだ入っていない）'); }
             else { S.bridge = true; S.system += KOMUGI_BRIDGE + docsBlock(await docsLoad(macOwnerKey()).catch(() => ({})), true); if (!S.komugi) { S.komugi = true; S.system += komugiBlock(await komugiNews()); } }
           }
           // 紹介の手数料のため：馬越さん（コムギ）経由で来た人に、紹介者「mac」を一度だけしるす（あとで契約を数える）

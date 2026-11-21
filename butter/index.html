@@ -5161,7 +5161,7 @@ body.cl .hbpage .gdrive #gUnlink { background: rgba(255,255,255,.08) !important;
     const car = `<div class="hbcar"><div class="hbcar-h"><b>おすすめ・新しい機能</b><span><button type="button" data-cmv="-1" aria-label="前へ">‹</button><button type="button" data-cmv="1" aria-label="次へ">›</button></span></div><div class="hbcar-tr" id="hbCar">${HB_PICKS.map(([go, t, d0]) => `<button type="button" class="hbcar-c" data-go="${go}"><b>${esc(t)}</b><span>${esc(d0)}</span></button>`).join('')}</div></div>`;
     const inv = `<div class="hbinv"><button type="button" class="hbinv-m" data-go="share"><i aria-hidden="true">🎁</i><span><b>友だちを招待して、一緒に試そう</b><small>招待した友だちとは、最初からご縁でつながります。招待のお礼（お試しの日数・ポイント）は準備中です。</small></span><em>招待する ›</em></button><button type="button" class="hbinv-g" id="hbEggBtn"><i aria-hidden="true">🥚</i><span><b>愛棒ガチャ</b><small>卵から、あなたの愛棒が生まれる</small></span></button></div>`;
     const clh = `<div class="clhero"><div class="clmark"><img src="award_mark.svg" alt=""></div><h1>${esc(clGreet() + (nm0 ? '、' + nm0 + 'さん' : ''))}</h1><p>なんでも聞いてください</p></div>`;
-    return `<div class="hbhero">${clh}${inv}${ban}${ask}${car}</div>`;
+    return `<div class="hbhero">${clh}${inv}${HATABO_APP ? '' : ban}${ask}${HATABO_APP ? '' : car}</div>`;
   }
   document.addEventListener('click', e => { const b = e.target.closest('[data-cmv]'); if (!b) return; const c = $('hbCar'); if (c) c.scrollBy({ left: Number(b.dataset.cmv) * Math.max(240, c.clientWidth * 0.8), behavior: 'smooth' }); });
   function hbpTalk(text, mic) {   // ホームの入力欄から：トーク画面に出て、そのまま話す
@@ -5343,7 +5343,7 @@ body.cl .hbpage .gdrive #gUnlink { background: rgba(255,255,255,.08) !important;
     if (k === 'me') { if (J.focusKey && window.hbSetFocus) window.hbSetFocus('', ''); return hbpTalk(''); }
     if (k === 'ag') { const it = ((HBP.clones && HBP.clones.items) || []).find(x => x.code === id); if (it && window.hbOpenAgent) window.hbOpenAgent(it); return; }
     if (k === 'guide') { hbpTalk(''); if (window.hbSetFocus) window.hbSetFocus('guide', 'ハタボ事務局案内係'); return; }   // 事務局案内係（設定は変えられない）
-    if (k === 'e') { if (window.hbpVisit) window.hbpVisit(id); return; }   // ご縁の人のAI棒と話す（左の帯から押すと、その人向けの「わたしのハタボ」の分身）
+    if (k === 'e') { const nb = document.querySelector('#hbpTalks [data-tk="' + key + '"] b'); J.visitName = nb ? nb.textContent.trim() : ''; if (window.hbSetView) window.hbSetView('chat'); if (window.hbpVisit) window.hbpVisit(id); return; }   // ご縁の人のAI棒と話す（左の帯から押すと、その人向けの「わたしのハタボ」の分身）
     if (k === 'o') { window.open('https://line.me/R/ti/p/@024curid', '_blank', 'noopener'); return; }
     $('hbpBody').classList.remove('sw-l', 'sw-r', 'sw-in'); void $('hbpBody').offsetWidth; $('hbpBody').classList.add('sw-in');
     if (k === 'p') { HBP.pid = id; HBP.goenOf = null; const T = (HBP.con && HBP.con.threads) || []; HBP.thr = { t: Object.assign({ turns: [] }, T.find(x => x.id === id) || {}), panel: {} }; HBP.page = 'person'; hbpRender(); hbpChats(); if (J.ready) { jrSend({ type: 'thr_open', id }); jrSend({ type: 'thr_goen', id }); } return; }
@@ -6396,6 +6396,7 @@ body.cl .hbpage .gdrive #gUnlink { background: rgba(255,255,255,.08) !important;
       if (HBP.page === 'inbox') return '伝言';
       const t = $('hbpTitle'); return (t && t.textContent.trim()) || 'ハタボ';
     }
+    if (J.visit) return J.visitName || (($('visitName') || {}).textContent || '').trim() || 'ご縁の人のAI棒';
     if (J.focusName) return J.focusName;
     const C = HBP.chats || {}, t = (C.list || []).find(x => x.id === C.cur); return (t && t.title) || 'ハタボ';
   }

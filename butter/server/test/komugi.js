@@ -49,12 +49,13 @@ function client(port, hello) {
   for (let i = 0; i < 4; i++) { m.ws.send(JSON.stringify({ type: 'text', text: '調べて' + i })); await new Promise(r => setTimeout(r, 300)); }
   require('fs').writeFileSync('/tmp/sys_mac.txt', lastSys); assert(!m.msgs.some(x => x.type === 'limit'), 'マー君は制限なし');
   assert(/馬越 雅哉さん本人/.test(lastSys) && !/HUB役（いちばん大事）/.test(lastSys), 'マー君には相棒の決まり');
-  // ヒロさん（KOMUGI_OWNERS）：マー君と同じ使い方。制限なし・橋渡しなし・相手はヒロさん
+  // ヒロさん（KOMUGI_OWNERS）：11/21から、コムギではマー君の紹介の人と同じ受け側（橋渡し）。事務局の情報は出さない
   const h = await client(port, { type: 'hello', idToken: 'hiro', app: 'komugi' });
-  await h.until(x => x.type === 'ready');
+  const rh = await h.until(x => x.type === 'ready');
+  assert(!rh.office, 'コムギのアプリでは事務局の情報を出さない');
   for (let i = 0; i < 4; i++) { h.ws.send(JSON.stringify({ type: 'text', text: '相談' + i })); await new Promise(r => setTimeout(r, 300)); }
   assert(!h.msgs.some(x => x.type === 'limit'), 'ヒロさんも制限なし');
-  assert(/ヒロさん本人/.test(lastSys) && !/馬越 雅哉さん本人/.test(lastSys) && !/HUB役（いちばん大事）/.test(lastSys), 'ヒロさんにも相棒の決まり（相手はヒロさん）');
+  assert(!/ヒロさん本人/.test(lastSys) && !/馬越 雅哉さん本人/.test(lastSys) && /HUB役（いちばん大事）/.test(lastSys), 'ヒロさんのコムギは受け側（マー君への橋渡し）');
   // 自分あてではない話（まわりの会話）には「[聞くだけ]」：声も吹き出しも出さない
   const os0 = deps.claude.messages.stream;
   deps.claude.messages.stream = p => ({ async *[Symbol.asyncIterator]() { yield { type: 'content_block_delta', delta: { type: 'text_delta', text: '[聞くだけ]' } }; }, finalMessage: async () => ({ usage: {}, stop_reason: 'end_turn' }), abort() {} });
