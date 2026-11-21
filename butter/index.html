@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8"><meta name="hb-ver" content="11/21-1425">
+<meta charset="utf-8"><meta name="hb-ver" content="11/21-1450">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
 <title>福まねき特戦隊｜バターちゃん</title>
@@ -809,6 +809,7 @@ body.av-hatabo #satoBanner, body.av-hatabo .guestnote{display:none!important}
   #cvFocus b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #cvFocus button{border:0;background:none;color:#DFF5E7;font-size:16px;cursor:pointer;padding:0 2px}
 }
+@media (min-width:900px){body.chatview.hasFocus #cvFocus{display:flex;align-items:center;gap:8px;position:fixed;right:24px;top:66px;z-index:81;padding:7px 14px;border-radius:999px;background:rgba(127,211,158,.16);border:1px solid rgba(127,211,158,.5);color:#DFF5E7;font:700 13px var(--display)}#cvFocus button{border:0;background:none;color:#DFF5E7;font-size:16px;cursor:pointer}}
 /* キャラを出さない窓口（たくちゃんの清掃ヒアリングなど）：トーク画面だけ */
 body.plain .vsw,body.plain .cvfab,body.plain .shareb,body.plain .gradeb,body.plain .stage,body.plain .meters{display:none!important}
 /* キャラなしの窓口：キャラのかわりに、エンブレムを画面いっぱいに（文字が読めるよう、うすく。回さない） */
@@ -1678,6 +1679,8 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
 @media (max-width: 899px) { .hbinv { grid-template-columns: 1fr; } }
 .hbegg { position: fixed; inset: 0; z-index: 130; display: grid; place-items: center; background: rgba(4,6,10,.94); opacity: 0; transition: opacity .25s; }
 .hbegg.in { opacity: 1; }
+.hbegg.spin .hbegg-e { animation: hbEggSpin 1.4s cubic-bezier(.3,.1,.3,1) both; }
+@keyframes hbEggSpin { 0% { transform: rotate(0) scale(1); filter: drop-shadow(0 0 0 rgba(255,236,190,0)); } 60% { transform: rotate(900deg) scale(1.08); filter: drop-shadow(0 0 22px rgba(255,236,190,.9)); } 100% { transform: rotate(1080deg) scale(1); filter: drop-shadow(0 0 8px rgba(255,236,190,.6)); } }
 .hbegg-in { position: relative; text-align: center; color: #fff; padding: 26px 22px; width: min(92vw, 380px); }
 .hbegg-k { margin: 0; font: 700 11px/1 var(--display); letter-spacing: .3em; color: #9FD8B5; } .hbegg-in h3 { margin: 8px 0 18px; font-size: 20px; }
 .hbegg-e { position: relative; width: 170px; height: 210px; border: 0; background: transparent; cursor: pointer; margin: 0 auto; display: block; }
@@ -3467,7 +3470,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
         break; }
       case 'google_url': try { if (window.liff && liff.openWindow) liff.openWindow({ url: m.url, external: true }); else window.open(m.url, '_blank'); } catch (e) { location.href = m.url; } toast('ブラウザでGoogleにログインしてね。終わったらLINEにもどってきてね'); setTimeout(() => jrSend({ type: 'google_status' }), 20000); break;
       case 'docs': HBP.docs = m; if (!$('hbPage').hidden && HBP.page === 'docs') hbpRender(); break;
-      case 'clones': HBP.clones = m; if (m.msg) toast(m.msg); if (!$('hbPage').hidden && HBP.page === 'clones') hbpRender(); break;
+      case 'clones': HBP.clones = m; try { document.dispatchEvent(new Event('hbclones')); hbpChats(); } catch (e) {} if (m.msg && !J.agentWant) toast(m.msg); if (!$('hbPage').hidden && HBP.page === 'clones') hbpRender(); break;
       case 'console': if (m.error) { HBP.conErr = m.error; if (!HBP.con) { if (HBP.page === 'console') hbpRender(); } else toast(m.error); break; } HBP.conErr = ''; if (m.denied) { HBP.con = { denied: true }; } else { HBP.con = m; if (m.msg) toast(m.msg); } conBadge(); try { hbpChats(); } catch (e) {} if (!$('hbPage').hidden && HBP.page === 'console') hbpRender(); break;
       case 'thread': if (m.denied) { toast('この会話は見られません'); break; } HBP.thr = m; if (HBP.con && HBP.con.threads) { const x = HBP.con.threads.find(t => t.id === m.t.id); if (x) x.unread = 0; conBadge(); } if (!$('hbPage').hidden && (HBP.page === 'console' || HBP.page === 'person')) hbpRender(); break;
       case 'thr_goen': if (m.id === HBP.pid) { HBP.goenOf = m; if (!$('hbPage').hidden && HBP.page === 'person') hbpRender(); } break;
@@ -4830,11 +4833,12 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
     me.name = 'わたしのハタボ'; me.sub = 'あなた専用。キャラ設定はここだけ' + (L[0] && L[0].title ? '・' + L[0].title : '');
     const guide = { key: 'guide:guide', kind: 'gd', name: 'ハタボ事務局案内係', sub: '使い方・サービスの相談（設定は事務局が決めています）', last: 0, pic: '' };
     const seenN = new Set(people.map(x => x.name)), en = ((HBP.goen && HBP.goen.nodes) || []).filter(n => !n.me && n.depth === 1 && !seenN.has(n.name)).map(n => ({ key: 'e:' + n.id, id: n.id, kind: 'e', name: (n.name || 'ご縁の人') + 'のAI棒', sub: 'ご縁・押すと、その人のAI棒と話す', last: n.lastAt || 0, pic: '' }));   // ご縁でつながっている人
-    const all = [me, guide].concat(people, dens, groups, en, official).filter(x => !q || (x.name + ' ' + x.sub).includes(q));
+    const ags = ((HBP.clones && HBP.clones.items) || []).filter(x => x.label).map(x => ({ key: 'ag:' + x.code, id: x.code, kind: 'ag', name: x.label + '向けエージェント', sub: ((x.visits || 0) > 0 ? '✓ ひもづき済み' : 'まだひもづいていません') + '・文字と音声', last: x.lastAt || x.at || 0, pic: '' }));   // 友だちに送るエージェント（わたしのハタボの分身）
+    const all = [me].concat(store.get('hbGuideMet', 0) ? [guide] : [], ags, people, dens, groups, en)   // 事務局案内係は、ガチャで出会ってから一覧に。ハタボ公式は出さない.filter(x => !q || (x.name + ' ' + x.sub).includes(q));
     all.sort((a, b) => ((b.kind === 'me') - (a.kind === 'me')) || ((b.kind === 'gd') - (a.kind === 'gd')) || (pins.includes(b.key) - pins.includes(a.key)) || ((b.last || 0) - (a.last || 0)));   // いちばん上はいつも「ハタボと話す」
     const MARK = { d: '<path d="M3 6h18v12H3z M3 7l9 6 9-6" stroke="currentColor" stroke-width="2" fill="none"/>', me: '<path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.6 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/>', p: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>', g: '<circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><path d="M2 20c0-3 3-5 6-5s6 2 6 5M12 20c0-3 3-5 6-5s4 1 4 3"/>' };
-    const TIP = { me: 'わたしのハタボ', gd: '事務局案内係', p: '人', g: 'グループ', d: '伝言', o: '公式', e: 'ご縁' }; MARK.o = MARK.me; MARK.gd = MARK.me; MARK.e = MARK.e || MARK.p;
-    const av = x => x.kind === 'me' || x.kind === 'o' || x.kind === 'gd' ? '<img src="award_mark.svg" alt="">' : x.pic ? `<img src="${esc(x.pic)}" alt="" referrerpolicy="no-referrer" loading="lazy">` : `<span>${esc(String(x.name || '?').slice(0, 1))}</span>`;
+    const TIP = { ag: 'エージェント', me: 'わたしのハタボ', gd: '事務局案内係', p: '人', g: 'グループ', d: '伝言', o: '公式', e: 'ご縁' }; MARK.o = MARK.me; MARK.gd = MARK.me; MARK.ag = MARK.me; MARK.e = MARK.e || MARK.p;
+    const av = x => x.kind === 'me' || x.kind === 'o' || x.kind === 'gd' || x.kind === 'ag' ? '<img src="award_mark.svg" alt="">' : x.pic ? `<img src="${esc(x.pic)}" alt="" referrerpolicy="no-referrer" loading="lazy">` : `<span>${esc(String(x.name || '?').slice(0, 1))}</span>`;
     const cur = HBP.page === 'person' ? 'p:' + HBP.pid : HBP.page === 'group' ? 'g:' + HBP.gid : '';
     hbpStrip(all, av);
     $('hbpTalks').innerHTML = all.length ? all.map(x => { const pin = pins.includes(x.key); return `<div class="hbt${x.key === cur ? ' on' : ''}${pin ? ' pinned' : ''}" data-tk="${esc(x.key)}" role="button" tabindex="0"><i class="hbt-av">${av(x)}<em class="hbt-mk ${x.kind}" title="${TIP[x.kind]}"><svg viewBox="0 0 24 24" width="10" height="10" fill="currentColor" aria-hidden="true">${MARK[x.kind]}</svg></em></i><span class="hbt-t"><b>${esc(x.name)}</b><small>${esc(x.sub || '')}</small></span><span class="hbt-r"><small>${day(x.last)}</small>${x.unread ? '<u>' + x.unread + '</u>' : ''}</span><button type="button" class="hbt-pin" data-pin="${esc(x.key)}" aria-label="${pin ? 'ピン留めをはずす' : 'ピン留め'}" title="${pin ? 'ピン留めをはずす' : 'いちばん上にピン留め'}"><svg viewBox="0 0 24 24" width="14" height="14" fill="${pin ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6l-1 6 4 4H6l4-4z M12 13v8"/></svg></button></div>`; }).join('') : '<p class="hbs-empty">見つかりません</p>';
@@ -4860,6 +4864,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   function hbpOpenTalk(key) {
     const c = key.indexOf(':'), k = key.slice(0, c), id = key.slice(c + 1); hbpDrawer(false); if (k !== 'me') { hbpUnshell(); HBP.draft = ''; }
     if (k === 'me') { if (J.focusKey && window.hbSetFocus) window.hbSetFocus('', ''); return hbpTalk(''); }
+    if (k === 'ag') { const it = ((HBP.clones && HBP.clones.items) || []).find(x => x.code === id); if (it && window.hbOpenAgent) window.hbOpenAgent(it); return; }
     if (k === 'guide') { hbpTalk(''); if (window.hbSetFocus) window.hbSetFocus('guide', 'ハタボ事務局案内係'); return; }   // 事務局案内係（設定は変えられない）
     if (k === 'e') { if (window.hbpVisit) window.hbpVisit(id); return; }   // ご縁の人のAI棒と話す（左の帯から押すと、その人向けの「わたしのハタボ」の分身）
     if (k === 'o') { window.open('https://line.me/R/ti/p/@024curid', '_blank', 'noopener'); return; }
@@ -4877,7 +4882,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
     $('hbpTalks').addEventListener('touchend', () => clearTimeout(lp)); }
   $('hbpSearch').addEventListener('input', () => hbpChats());
   $('hbpChats').addEventListener('click', e => { const b = e.target.closest('[data-chat]'); if (!b) return; jrSend({ type: 'chat_open', id: b.dataset.chat }); hbpDrawer(false); hbpTalk(''); });
-  $('hbpNew').addEventListener('click', () => { jrSend({ type: 'chat_new' }); hbpDrawer(false); hbpTalk(''); toast('新しいチャットをはじめました'); });
+  $('hbpNew').addEventListener('click', () => hbNewMenu());   // 自分のハタボと新しく話す／友だちに送るエージェントを作る
   // スマホ：左の2列（メニューと会話の一覧）を、左上のボタンで引き出しに
   setTimeout(() => { const sm = $('hbpSideMenu'); if (sm && !sm.querySelector('.hbs-conn')) sm.insertAdjacentHTML('beforeend', '<div class="hbs-k">つなぐ</div><div class="hbs-conn">' + document.querySelector('#hbpTabs .hbp-conn').innerHTML + '</div>'); }, 0);
   $('hbpSideMenu').innerHTML = [...document.querySelectorAll('#hbpTabs > button')].filter(b => !['inbox', 'more'].includes(b.dataset.p)).map(b => `<button type="button" data-p="${b.dataset.p}">${b.querySelector('svg, img.hbvt-logo') ? b.querySelector('svg, img.hbvt-logo').outerHTML.replace('class="hbvt-logo"', 'class="hbsm-logo" width="20" height="20"') : b.dataset.p === 'acct' ? '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>' : ''}<span>${esc(b.dataset.p === 'acct' ? 'アカウント' : b.dataset.p === 'talk' ? '話す（自分のハタボ）' : b.textContent.trim())}</span></button>`).join('');
@@ -4980,7 +4985,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   }
   window.hbTour = hbTour;
   /* --- ご縁のガチャ：卵から、最初は「うちのハタボ（案内役）」、そのあとはご縁の人のハタボが出てくる。出てきたハタボとは、キャラの画面で話す --- */
-  function guideOn() { hbpClose(); if (window.hbSetView) window.hbSetView('char'); setFocus('guide', 'ハタボ事務局案内係'); }
+  function guideOn() { store.set('hbGuideMet', 1); store.set('hbPcTour', 2); try { hbpChats(); } catch (e) {} hbpTalk(''); setFocus('guide', 'ハタボ事務局案内係'); setTimeout(() => { const r = document.querySelector('#hbpTalks [data-tk="guide:guide"]'); if (r) { r.style.transition = 'background .6s'; r.style.background = 'rgba(127,211,158,.25)'; setTimeout(() => { r.style.background = ''; }, 1600); } }, 200); }   // 一覧に案内係が加わって、トーク画面で話す
   function hbGacha() {
     const met = store.get('hbGuideMet', 0), G = ((HBP.goen && HBP.goen.nodes) || []).filter(n => !n.me && n.depth === 1);
     const who = !met || !G.length ? { kind: 'guide', name: 'ハタボ事務局案内係', sub: '案内役。ハタボの使い方やサービスのこと、あなたの課題をいっしょに考えます', img: 'award_mark.svg' } : (n => ({ kind: 'goen', id: n.id, name: n.name || 'ご縁の人', sub: 'ご縁の人のハタボ。あいさつや相談をしてみよう', img: '' }))(G[Math.random() * G.length | 0]);
@@ -4988,11 +4993,65 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
     o.innerHTML = `<div class="hbegg-in"><p class="hbegg-k">GOEN GACHA</p><h3>${!met ? 'はじめのハタボが、生まれるよ' : 'ご縁のハタボが、出てくるよ'}</h3><button type="button" class="hbegg-e" aria-label="卵をタップして割る"><span class="eg t"></span><span class="eg b"></span>${who.img ? `<img src="${who.img}" alt="">` : `<span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:92px;height:92px;border-radius:50%;background:#1A2232;color:#fff;display:grid;place-items:center;font:900 38px var(--display)">${esc(who.name.slice(0, 1))}</span>`}</button><p class="hbegg-h">卵をタップしてね</p><button type="button" class="hbbtn hbegg-go" hidden>${esc(who.name)}と話す</button><button type="button" class="hbegg-x" aria-label="とじる">×</button></div>`;
     document.body.append(o); requestAnimationFrame(() => o.classList.add('in'));
     const close = () => { o.classList.remove('in'); setTimeout(() => o.remove(), 250); };
-    o.querySelector('.hbegg-e').onclick = () => { if (o.classList.contains('open')) return; o.classList.add('shake'); setTimeout(() => { o.classList.remove('shake'); o.classList.add('open'); o.querySelector('.hbegg-h').textContent = who.name + 'が出てきました！ ' + who.sub; o.querySelector('.hbegg-go').hidden = false; try { if (window.hbBuzz) window.hbBuzz(); } catch (e) {} }, 900); };
+    o.querySelector('.hbegg-e').onclick = () => { if (o.classList.contains('open') || o.classList.contains('spin')) return; o.querySelector('.hbegg-h').textContent = 'ぐるぐる…'; o.classList.add('spin'); setTimeout(() => { o.classList.remove('spin'); o.classList.add('open'); o.querySelector('.hbegg-h').textContent = who.name + 'が出ました！ ' + who.sub; o.querySelector('.hbegg-go').hidden = false; try { if (window.hbBuzz) window.hbBuzz(); } catch (e) {} }, 1450); };
     o.querySelector('.hbegg-x').onclick = close;
     o.querySelector('.hbegg-go').onclick = () => { close(); if (who.kind === 'guide') { store.set('hbGuideMet', 1); guideOn(); } else if (window.hbpVisit) { if (window.hbSetView) window.hbSetView('char'); window.hbpVisit(who.id); } };
   }
   window.hbGacha = hbGacha;
+  /* --- はじめて開いた人：画面を暗くして「ガチャを引く」だけを光らせる --- */
+  function hbFirstRun(n) {
+    if (!n) hbpOpen('my');
+    setTimeout(() => {
+      const t = document.getElementById('hbChar'); if (!t || !t.offsetParent) { if ((n || 0) < 20) hbFirstRun((n || 0) + 1); return; }   // ホームが出るまで待つ
+      if (document.getElementById('hbFirst')) return;
+      try { t.scrollIntoView({ block: 'center' }); } catch (e) {}
+      const r = t.getBoundingClientRect(), o = document.createElement('div'); o.id = 'hbFirst';
+      o.style.cssText = 'position:fixed;inset:0;z-index:2147483000;pointer-events:none';
+      o.innerHTML = '<div style="position:fixed;left:' + (r.left - 10) + 'px;top:' + (r.top - 10) + 'px;width:' + (r.width + 20) + 'px;height:' + (r.height + 20) + 'px;border-radius:22px;box-shadow:0 0 0 9999px rgba(6,10,20,.78),0 0 0 3px #F7D774,0 0 36px 10px rgba(247,215,116,.55);animation:hbFirstPulse 1.6s ease-in-out infinite"></div><div style="position:fixed;left:50%;top:' + Math.max(16, r.top - 96) + 'px;transform:translateX(-50%);color:#fff;text-align:center;font:800 18px/1.5 var(--display);width:min(90vw,420px)">ようこそ！ まずは「ガチャを引く」を押してみてください<small style="display:block;font:600 13px/1.6 var(--display);color:#C9D2E3;margin-top:4px">卵から、使い方を案内してくれるハタボが出てきます</small></div><button type="button" style="pointer-events:auto;position:fixed;right:16px;top:16px;border:0;border-radius:999px;background:rgba(255,255,255,.14);color:#fff;font-weight:700;padding:8px 14px;cursor:pointer">あとで</button>';
+      if (!document.getElementById('hbFirstCss')) { const st = document.createElement('style'); st.id = 'hbFirstCss'; st.textContent = '@keyframes hbFirstPulse{0%,100%{box-shadow:0 0 0 9999px rgba(6,10,20,.78),0 0 0 3px #F7D774,0 0 24px 6px rgba(247,215,116,.4)}50%{box-shadow:0 0 0 9999px rgba(6,10,20,.78),0 0 0 3px #F7D774,0 0 44px 14px rgba(247,215,116,.7)}}'; document.head.append(st); }
+      document.body.append(o);
+      const done = () => { o.remove(); document.removeEventListener('click', onC, true); };
+      const onC = e => { if (e.target.closest('#hbChar')) done(); };
+      document.addEventListener('click', onC, true);
+      o.querySelector('button').onclick = () => { done(); try { sessionStorage.setItem('hb.tourSkip', '1'); } catch (x) {} };
+    }, 700);
+  }
+  window.hbFirstRun = hbFirstRun;
+  /* --- 新しいチャット：自分のハタボと新しく話す／友だちに送るエージェント（わたしのハタボの分身）を作る --- */
+  function hbNewMenu() {
+    const o = document.createElement('div'); o.id = 'hbNewMenu';
+    o.style.cssText = 'position:fixed;inset:0;z-index:2147483001;background:rgba(8,12,24,.55);display:grid;place-items:center;padding:20px';
+    o.innerHTML = '<div role="dialog" aria-modal="true" style="background:#fff;color:#141A2A;border-radius:20px;max-width:420px;width:100%;padding:22px;font:500 14.5px/1.7 var(--display);box-shadow:0 24px 70px rgba(0,0,0,.45)"><b style="display:block;font-size:18px;margin-bottom:12px">新しいチャット</b>'
+      + '<button type="button" data-n="talk" style="width:100%;text-align:left;border:1px solid #DDE3EC;border-radius:14px;background:#fff;padding:12px 14px;margin-bottom:10px;cursor:pointer"><b style="display:block">自分のハタボと新しく話す</b><span style="font-size:12.5px;color:#5B6478">わたしのハタボと、新しい話題をはじめます</span></button>'
+      + '<button type="button" data-n="agent" style="width:100%;text-align:left;border:1px solid #2F8A55;border-radius:14px;background:#F2FAF5;padding:12px 14px;margin-bottom:8px;cursor:pointer"><b style="display:block;color:#2F8A55">友だちに送るエージェントを作る</b><span style="font-size:12.5px;color:#5B6478">わたしのハタボの分身が、その人向けの案内役になります。リンクを送ると、相手は文字と声で話せます</span></button>'
+      + '<form id="hbNewAg" hidden style="margin-top:6px"><input class="hbin" id="hbNewName" placeholder="相手の名前（例：佐藤さん）" maxlength="30" required style="width:100%;margin-bottom:8px;color:#141A2A;background:#F6F8FB"><input class="hbin" id="hbNewFor" placeholder="どんな案内をする？（例：お店の予約、サービスの紹介）" maxlength="60" style="width:100%;margin-bottom:10px;color:#141A2A;background:#F6F8FB"><button type="submit" style="width:100%;min-height:46px;border:0;border-radius:999px;background:#2F8A55;color:#fff;font-weight:800;cursor:pointer">作る</button></form>'
+      + '<button type="button" data-n="x" style="width:100%;border:0;background:none;color:#5B6478;font-weight:700;padding:8px;margin-top:4px;cursor:pointer">やめる</button></div>';
+    document.body.append(o);
+    o.querySelector('[data-n=talk]').onclick = () => { o.remove(); setFocus('', ''); jrSend({ type: 'chat_new' }); hbpDrawer(false); hbpTalk(''); toast('新しいチャットをはじめました'); };
+    o.querySelector('[data-n=agent]').onclick = () => { o.querySelector('#hbNewAg').hidden = false; o.querySelector('#hbNewName').focus(); };
+    o.querySelector('[data-n=x]').onclick = () => o.remove();
+    o.querySelector('#hbNewAg').onsubmit = e => { e.preventDefault(); const nm = o.querySelector('#hbNewName').value.trim(), fr = o.querySelector('#hbNewFor').value.trim(); if (!nm) return;
+      J.agentWant = nm; jrSend({ type: 'clone_new', name: nm + '向け', label: nm, role: '汎用', note: fr ? nm + 'さんへの案内：' + fr : '' }); o.remove(); toast('エージェントを作っています…'); };
+  }
+  window.hbNewMenu = hbNewMenu;
+  // エージェントができたら：その分身のトーク画面へ（持ち主が育てる）。下に「文字と音声」「ひもづき」と、リンクのボタン
+  document.addEventListener('hbclones', () => { const C = HBP.clones; if (!J.agentWant || !C || !C.items) return; const it = C.items.find(x => x.label === J.agentWant) || C.items[0]; J.agentWant = ''; if (!it) return; openAgent(it); });
+  function openAgent(it) { J.agent = { code: it.code, name: it.label || it.name, url: it.url, linked: (it.visits || 0) > 0, made: false }; hbpTalk(''); setFocus('c:' + it.code, (it.label || it.name)); agentBar(); }
+  window.hbOpenAgent = openAgent;
+  function agentBar() {
+    let b = $('cvAgentBar'); const A = J.agent && J.focusKey === 'c:' + J.agent.code ? J.agent : null;
+    if (!b) { b = document.createElement('div'); b.id = 'cvAgentBar'; b.style.cssText = 'display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;font:700 12px/1.4 var(--display);color:#CFE9D8;margin:6px 0 2px'; const f = $('cvForm'); if (f && f.parentNode) f.parentNode.insertBefore(b, f.nextSibling); else document.body.append(b); }
+    b.hidden = !A; if (!A) { document.querySelectorAll('[data-share]').forEach(x => { if (x.dataset.lbl) { x.textContent = x.dataset.lbl; } }); return; }
+    b.innerHTML = '<span style="padding:3px 10px;border-radius:999px;background:rgba(127,211,158,.16)">文字と音声で話せます</span><span style="padding:3px 10px;border-radius:999px;background:' + (A.linked ? 'rgba(127,211,158,.3)' : 'rgba(255,255,255,.1)') + '">' + (A.linked ? '✓ ひもづき済み' : 'まだひもづいていません') + '</span>';
+    document.querySelectorAll('[data-share]').forEach(x => { if (!x.dataset.lbl) x.dataset.lbl = x.textContent; x.textContent = A.made ? '紹介する' : 'リンクを生成する'; });
+  }
+  // 右下の「紹介する」：エージェントと話しているときは、そのエージェントのリンク（はじめは「リンクを生成する」）
+  document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-share]'); const A = J.agent && J.focusKey === 'c:' + J.agent.code ? J.agent : null; if (!b || !A) return; e.preventDefault(); e.stopImmediatePropagation();
+    if (!A.made) { A.made = true; try { navigator.clipboard.writeText(A.url); } catch (x) {} toast(A.name + 'さん向けのリンクを作って、コピーしました'); agentBar(); return; }
+    const text = A.name + 'さんへ。わたしのハタボの分身です。ここから文字や声で話せます。\n' + A.url;
+    try { if (window.liff && liff.isApiAvailable && liff.isApiAvailable('shareTargetPicker')) { liff.shareTargetPicker([{ type: 'text', text }]).catch(() => {}); return; } } catch (x) {}
+    try { if (navigator.share) { navigator.share({ text }).catch(() => {}); return; } } catch (x) {}
+    try { navigator.clipboard.writeText(text); toast('紹介の文とリンクをコピーしました'); } catch (x) {} }, true);
   /* --- ハタボに案内してもらう：ハタボが声で話しながら、説明しているところを光らせる --- */
   function hbGuideTour(mode) {
     if (!mode) {   // はじめに「声で案内」か「文字だけ」かを選ぶ（まわりに人がいる・声を出せない人もいるので）
@@ -5040,24 +5099,26 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
       st.addEventListener('click', e => { const b = e.target.closest('[data-fk]'); if (!b) return; if (b.dataset.fk === J.focusKey) setFocus('', ''); else setFocus(b.dataset.fk, b.dataset.fn); }); }
     const G = ((HBP.goen && HBP.goen.nodes) || []).filter(n => !n.me && n.depth === 1).map(n => ({ key: 'e:' + n.id, id: n.id, kind: 'e', name: n.name || 'ご縁の人', last: n.lastAt || 0, pic: '' }));   // ご縁でつながっている人も並べる
     list = list.concat(G);
-    const seen = new Set(), L0 = list.filter(x => x.kind !== 'o' && x.kind !== 'me' && x.kind !== 'gd' /* 左の帯は人だけ。自分のハタボはトーク一覧のいちばん上から */).filter(x => { const n = x.kind === 'me' ? 'me' : String(x.name || x.key); if (seen.has(n)) return false; seen.add(n); return true; }).sort((a, b) => (b.kind === 'me') - (a.kind === 'me')).slice(0, 30);   // 自分のハタボがいちばん上
+    const seen = new Set(), L0 = list.filter(x => x.kind !== 'o' && x.kind !== 'me' && x.kind !== 'gd' && x.kind !== 'ag' /* 左の帯は人だけ。自分のハタボはトーク一覧のいちばん上から */).filter(x => { const n = x.kind === 'me' ? 'me' : String(x.name || x.key); if (seen.has(n)) return false; seen.add(n); return true; }).sort((a, b) => (b.kind === 'me') - (a.kind === 'me')).slice(0, 30);   // 自分のハタボがいちばん上
     st.innerHTML = L0.map(x => `<button type="button" class="${x.key === (J.focusKey || 'me:me') ? 'on' : ''}" data-fk="${esc(x.key)}" data-fn="${esc(x.name || '')}" aria-label="${esc(x.kind === 'me' ? 'ふつうのハタボ' : x.name + 'さん向けのハタボ')}" title="${esc(x.kind === 'me' ? 'ふつうのハタボ' : x.name + 'さん向け')}">${avf(x)}${x.unread ? '<u></u>' : ''}</button>`).join('');
     document.body.classList.toggle('hasStrip', L0.length > 0);
   }
   window.hbSetFocus = (k, n) => setFocus(k, n);
   function setFocus(key, name) {
+    name = String(name || '').replace(/(さん|様|さま|くん|ちゃん)$/, '') ;   // 「〇〇さんさん」にならないように
     J.focusKey = key || ''; J.focusName = name || '';
     document.body.classList.toggle('hasFocus', !!key);
     const fc = $('cvFocus'); if (fc) fc.querySelector('b').textContent = key === 'guide' ? 'ハタボ事務局案内係と話しています' : key ? name + 'さん向けの、わたしのハタボの分身' : '';
     document.querySelectorAll('#cvStrip [data-fk]').forEach(b => b.classList.toggle('on', b.dataset.fk === (key || 'me:me')));
     if (J.ready) jrSend({ type: 'focus', key: J.focusKey, name: J.focusName });
+    try { agentBar(); } catch (e) {}
     toast(key === 'guide' ? 'ハタボ事務局案内係です。困っていることを、そのまま話してください' : key ? name + 'さん向けのハタボに切りかえました' : 'ふつうのハタボにもどしました');
   }
-  document.addEventListener('jrready', () => { if (J.focusKey) jrSend({ type: 'focus', key: J.focusKey, name: J.focusName }); if (HATABO_APP && !document.body.classList.contains('pcweb')) { if (!HBP.con) jrSend({ type: 'console', as: store.get('conAs', 'office') }); if (!HBP.goen) jrSend({ type: 'goen_tree' }); } });   // つなぎ直したときも、相手を覚えておく・一覧を読む
+  document.addEventListener('jrready', () => { if (J.focusKey) jrSend({ type: 'focus', key: J.focusKey, name: J.focusName }); if (HATABO_APP && !HBP.clones) jrSend({ type: 'clones' }); if (HATABO_APP && !document.body.classList.contains('pcweb')) { if (!HBP.con) jrSend({ type: 'console', as: store.get('conAs', 'office') }); if (!HBP.goen) jrSend({ type: 'goen_tree' }); } });   // つなぎ直したときも、相手を覚えておく・一覧を読む
   // ハタボ・コムギのミニアプリ：「〜と話す」を押さなくても、開いたらそのままつなぐ（声を出す許可は、最初に画面をさわったときにもらう）
   if (HATABO_APP && LIFF && !STAGE) { setTimeout(() => { const so = $('startOverlay'); if (so && !so.hidden) $('startBtn').click(); }, 300); document.addEventListener('pointerdown', () => { try { AC(); } catch (e) {} }, { once: true, capture: true }); }
   { const tb = $('hbpTabs'); if (tb && !tb.querySelector('.hbp-help')) { const hb = document.createElement('button'); hb.type = 'button'; hb.className = 'hbp-help'; hb.style.display = 'none'; hb.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 1 1 3.4 2.3c-.6.3-1 .8-1 1.5v.6M12 17h.01"/></svg><span>使い方</span>'; hb.onclick = e => { e.stopPropagation(); hbTour(); }; const ac = tb.querySelector('.hbp-acct'); tb.insertBefore(hb, ac || null); } }   // 左のメニューに「使い方」
-  { const tourOnce = () => { let sk = ''; try { sk = sessionStorage.getItem('hb.tourSkip') || ''; } catch (e) {} if ((document.body.classList.contains('pcweb') || HATABO_APP) && !store.get('hbPcTour', 0) && !sk && !document.getElementById('hbTour')) hbTour(); /* パソコンもスマホも、はじめて開いたら */ };
+  { const tourOnce = () => { let sk = ''; try { sk = sessionStorage.getItem('hb.tourSkip') || ''; } catch (e) {} if ((document.body.classList.contains('pcweb') || HATABO_APP) && !store.get('hbPcTour', 0) && !store.get('hbGuideMet', 0) && !sk && !document.getElementById('hbFirst')) hbFirstRun(); /* パソコンもスマホも、はじめて開いたら */ };
     document.addEventListener('jrready', () => setTimeout(tourOnce, 600), { once: true });
     setTimeout(tourOnce, 4000);   // サーバーとつながるのを待たずに、開いて少ししたら出す
     document.addEventListener('click', e => { if (e.target.closest && e.target.closest('#hbTourBtn')) { e.preventDefault(); hbTour(); } }, true); }   // 「使い方の案内」は、どの画面から押しても開く

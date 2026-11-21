@@ -3217,6 +3217,10 @@ function session(ws) {
         if (!key) { S.focus = null; await loadFor(); return send({ type: 'focus', key: '' }); }
         if (key === 'guide') { S.focus = { key, name: 'ハタボ事務局案内係', guide: true }; await loadFor(); return send({ type: 'focus', key, name: 'ハタボ事務局案内係' }); }
         let ctx = '';
+        if (key.startsWith('c:') && S.myRef) {   // 友だちに送るエージェント（わたしのハタボの分身）を、持ち主が育てる
+          const cl = await getRef(key.slice(2).replace(/[^\w-]/g, '').slice(0, 20)).catch(() => null);
+          if (cl && cl.parent === S.myRef) ctx = '（この分身は「' + (cl.label || name) + '」向けの案内役。相手に渡すリンクから相手が話しに来る。いまは持ち主と、この分身が相手に何をどう案内するかを決めている）' + (cl.note ? '\n［この分身のメモ］' + cl.note : '');
+        }
         if (key.startsWith('p:') && S.owner) {
           const t = await loadCol(key.slice(2).replace(/[^\w]/g, '').slice(0, 40), 'threads').catch(() => ({}));
           if (t && t.id && (t.shop === S.myRef || isOffice()) && !isDev()) ctx = (t.turns || []).slice(-14).map(x => (x.r === 'user' || x.r === 'visitor' ? name + 'さん' : x.r === 'shop' ? 'あなた' : 'ハタボ') + '：' + String(x.t || '').slice(0, 200)).join('\n');
