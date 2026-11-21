@@ -804,7 +804,11 @@ function permOf(owner, email) {
 const maskText = t => String(t || '').replace(/[^\s、。！？!?,.\n「」]/g, '●');
 /* 人（紹介コード）ごとの状態とキャラ（AID）。状態：紹介中（ref）・お試し（trial）・契約（contract）・メンバー（member）・期限切れ・解約 */
 const CHAR_NAME = { hatabo: 'ハタボ', komugi: 'コムギ', junior: 'ジュニア' }, AID_MARK = { hatabo: 'H', komugi: 'K', junior: 'J' };
-const charsOfRef = r => { const c = Object.keys(r || {}).filter(k => /^ch_/.test(k) && r[k]).map(k => k.slice(3)).filter(k => CHAR_NAME[k]); if (!c.length && r && r.kind !== 'group' && r.kind !== 'clone') c.push(r.avatar === 'komugi' ? 'komugi' : 'hatabo'); if (r && r.kind === 'clone' && !c.length) c.push(r.avatar === 'komugi' ? 'komugi' : 'hatabo'); return c; };
+const charsOfRef = r => {   // 話したキャラの記録（ch_）があればそれ。なければ、コムギの持ち主（馬越さん・KOMUGI_OWNERS）やアバターから見分ける
+  const c = Object.keys(r || {}).filter(k => /^ch_/.test(k) && r[k]).map(k => k.slice(3)).filter(k => CHAR_NAME[k]);
+  if (!c.length && r && r.kind !== 'group') c.push(isMac(r.owner) || isKomugiOwner(r.owner) || r.avatar === 'komugi' ? 'komugi' : 'hatabo');
+  return c;
+};
 const statusOf = (r, f) => r && r.member ? 'member' : (f && f.stage) || 'ref';   // 文字の動き（長さ・区切り）は見えるが、中身は伏せる
 async function googleLogin(code, res, page, x) {
   try {
@@ -2316,6 +2320,10 @@ function session(ws) {
         if ('roleNote' in m) up.roleNote = String(m.roleNote || '').slice(0, 300);
         if (m.aisaiHelp) up.aisaiHelp = (cur.aisaiHelp || 0) + 1;
         if ('active' in m && cur.kind === 'clone') up.active = !!m.active;
+        if ('sameAs' in m && cur.kind !== 'clone' && cur.kind !== 'group') {   // 同じ人の別のID（コムギとハタボでLINEのIDが変わる など）を、1人にまとめる・分ける
+          const to = String(m.sameAs || '').replace(/[^\w-]/g, '').slice(0, 20), tr = to && to !== code ? await getRef(to).catch(() => null) : null;
+          if (!to) up.sameAs = ''; else if (tr && !tr.sameAs && (tr.kind || 'person') === 'person') up.sameAs = to;
+        }
         if ('stage' in m) {   // 状態の切りかえ（紹介中・お試し・契約・メンバー・解約）
           const st = String(m.stage || ''), now = Date.now();
           if (st === 'member') up.member = true;
@@ -2338,25 +2346,35 @@ function session(ws) {
       at: r.at || 0, lastAt: r.lastAt || 0, active: r.active !== false, until: r.until || 0 }; }).sort((a, b) => (b.at || 0) - (a.at || 0));
     const sum = { people: rows.filter(x => x.kind === 'person').length, trial: rows.filter(x => x.stage === 'trial').length, contract: rows.filter(x => x.stage === 'contract').length, payFail: rows.filter(x => x.payFail).length, clones: rows.filter(x => x.kind === 'clone').length, groups: rows.filter(x => x.kind === 'group').length };
     sum.api = rows.reduce((n, x) => n + x.api, 0); sum.apiYen = rows.reduce((n, x) => n + x.apiYen, 0);
+    { // 同じ人をまとめる：事務局がまとめたもの（sameAs）と、馬越さんのID（MAC_OWNERS）どうしは1行に
+      const byCode = new Map(rows.map(x => [x.code, x])), refBy = new Map(refs.map(r => [r.code, r]));
+      const macs = rows.filter(x => x.kind === 'person' && isMac((refBy.get(x.code) || {}).owner)).sort((a, b) => (a.at || 0) - (b.at || 0));
+      const target = x => { const r = refBy.get(x.code) || {}; if (r.sameAs && byCode.get(r.sameAs) && !(refBy.get(r.sameAs) || {}).sameAs) return r.sameAs; if (macs.length > 1 && macs[0] !== x && macs.includes(x)) return macs[0].code; return ''; };
+      for (const x of rows) { const t = target(x); if (!t) continue; const P = byCode.get(t); x.mergedInto = t; P.merged = (P.merged || []).concat([{ code: x.code, chars: x.chars, auto: !(refBy.get(x.code) || {}).sameAs }]); P.chars = [...new Set(P.chars.concat(x.chars))]; P.lastAt = Math.max(P.lastAt || 0, x.lastAt || 0); P.visits = (P.visits || 0) + (x.visits || 0); P.kids = (P.kids || 0) + (x.kids || 0); if (!P.pic && x.pic) P.pic = x.pic; }
+      for (const x of rows) if (x.kind === 'person' && !x.mergedInto) { const nm = String(x.name || '').trim(); x.dups = nm ? rows.filter(y => y !== x && y.kind === 'person' && !y.mergedInto && String(y.name || '').trim() === nm).map(y => y.code) : []; }
+      sum.people = rows.filter(x => x.kind === 'person' && !x.mergedInto).length;
+    }
     sum.member = rows.filter(x => x.member).length; sum.ref = rows.filter(x => x.kind === 'person' && x.status === 'ref').length;
     if (isDev()) { rows.forEach(x => { x.apiYen = null; x.ownerName = x.ownerName ? String(x.ownerName).slice(0, 1) + '…' : ''; }); sum.apiYen = null; }
     if (m.type === 'admin_person') return onAdminPerson(m, refs, rows);
-    send({ type: 'admin', perm: permNow(), rows, sum, roles: Object.keys(ROLE_RULE), audit: ((await loadCol('office', 'audit')).items || []).slice(0, 30), msg });
+    send({ type: 'admin', perm: permNow(), rows: rows.filter(x => !x.mergedInto), sum, roles: Object.keys(ROLE_RULE), audit: ((await loadCol('office', 'audit')).items || []).slice(0, 30), msg });
   }
   /** 事務局：人ごとの詳しいページ。状態・プラン・持っているキャラ（AID）ごとの会話・その人の愛棒とご縁 */
   async function onAdminPerson(m, refs, rows) {
     const code = String(m.code || '').replace(/[^\w-]/g, '').slice(0, 20), row = rows.find(x => x.code === code), r = refs.find(x => x.code === code);
     if (!row || !r) return send({ type: 'admin_person', code, none: true });
-    const dv = isDev(), o = String(r.owner || ''), ids = [...new Set([o, o.replace(/^g:/, ''), o && !/^g:/.test(o) ? 'g:' + o : ''].filter(Boolean))];
-    const aids = [];
-    for (const ch of row.chars.length ? row.chars : ['hatabo']) {
+    const dv = isDev(), aids = [];
+    const parts = [r].concat((row.merged || []).map(mm => refs.find(y => y.code === mm.code)).filter(Boolean));   // まとめた別のIDも
+    for (const rr of parts) { const o = String(rr.owner || ''), ids = [...new Set([o, o.replace(/^g:/, ''), o && !/^g:/.test(o) ? 'g:' + o : ''].filter(Boolean))], code = rr.code;
+    for (const ch of charsOfRef(rr)) {
       let c = null, key = '';
       for (const id of ids) { for (const k of [id + ':guest:' + ch, id + ':' + ch]) { const x = await loadConvo(k).catch(() => null); if (x && Array.isArray(x.turns) && x.turns.length && (!c || (x.at || 0) > (c.at || 0))) { c = x; key = k; } } }
       const turns = c ? cleanTurns(c.turns).slice(-30).map(t => ({ r: t.role === 'user' ? 'u' : 'a', t: dv ? maskText(String(t.content || '').slice(0, 400)) : String(t.content || '').slice(0, 400) })) : [];
-      aids.push({ aid: code + '-' + AID_MARK[ch], ch, name: CHAR_NAME[ch] || ch, n: c ? (c.turns || []).length : 0, last: c ? c.at || 0 : r['ch_' + ch] || 0, chats: c && Array.isArray(c.threads) ? c.threads.length : 0, turns });
-    }
+      aids.push({ aid: code + '-' + AID_MARK[ch], ch, name: CHAR_NAME[ch] || ch, n: c ? (c.turns || []).length : 0, last: c ? c.at || 0 : rr['ch_' + ch] || 0, chats: c && Array.isArray(c.threads) ? c.threads.length : 0, turns });
+    } }
     const kids = rows.filter(x => x.parent === code).map(x => ({ code: x.code, name: x.name || x.ownerName || '', kind: x.kind, status: x.status, label: x.kind === 'clone' ? x.roleNote || '' : '' }));
-    send({ type: 'admin_person', code, row, aids, kids, masked: dv, canEdit: !dv });
+    const dups = (row.dups || []).map(c => rows.find(y => y.code === c)).filter(Boolean).map(y => ({ code: y.code, name: y.name || y.ownerName || '', chars: y.chars, status: y.status, at: y.at || 0, lastAt: y.lastAt || 0 }));
+    send({ type: 'admin_person', code, row, aids, kids, dups, merged: row.merged || [], masked: dv, canEdit: !dv });
   }
   /** 役割の付け外し（最高管理者だけ）。変えたことは記録に残す */
   async function onPerms(m) {
