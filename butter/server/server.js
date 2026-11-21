@@ -1979,7 +1979,8 @@ function session(ws) {
   // APIに渡す形：前半にキャッシュの印をつける（短すぎるときはAPIがキャッシュしないだけで、そのまま動く）
   // ハタボでは、運営の個人の名前を出さない（伝え先は、招待した人か「ハタボの事務局」）
   const tellFix = t => S.avatar === 'hatabo' && S.tellTo && !S.visit ? String(t).replace(/ハタラボの担当（ヒロさん）|ハタラボのヒロさん/g, S.tellTo).replace(/〈伝え先〉/g, S.tellTo).replace(/ヒロさん/g, S.tellTo) : t;
-  function sysBlocks(extra) { const [a, b] = sysParts(); return [{ type: 'text', text: tellFix(a), cache_control: { type: 'ephemeral' } }, { type: 'text', text: tellFix((b + (S.visit || S.role === 'サービス相談' || hearing() ? '' : customBlock(S.custom)) + (extra || '') + lastFor() + (hearing() ? '' : lineupStyle(S))).trim()) || '。' }]; }
+  const focusBlock = () => !S.focus ? '' : '\n\n【いまの相手】持ち主は今、「' + S.focus.name + '」さん向けのハタボとして、あなたと話しています。' + S.focus.name + 'さんとのこれまでを踏まえて、返事の下書き・伝えること・次の一手をいっしょに考える。' + S.focus.name + 'さん本人に送るのは、持ち主が「送って」と言ったときだけ。' + (S.focus.ctx ? '\n［' + S.focus.name + 'さんとの最近のやりとり（古い順）］\n' + S.focus.ctx : '') + (S.focus.custom ? customBlock(S.focus.custom) : '');
+  function sysBlocks(extra) { const [a, b] = sysParts(); return [{ type: 'text', text: tellFix(a), cache_control: { type: 'ephemeral' } }, { type: 'text', text: tellFix((b + (S.visit || S.role === 'サービス相談' || hearing() ? '' : customBlock(S.custom)) + focusBlock() + (extra || '') + lastFor() + (hearing() ? '' : lineupStyle(S))).trim()) || '。' }]; }
   // ハタボとコムギは、同じ人（同じLINEのID）でも話の記録・教わったことを分ける（コムギの話がハタボに出ないように）
   /* ===== IDの決まり（11/19）：キャラごとに変わるもの（会話の記録・教わったこと・気づいたこと・キャラ設定）は「持ち主×キャラ」で分ける =====
      キャラ：junior（バターちゃんジュニア）・hatabo（ハタボ）・komugi（コムギ）。ジュニアは前からの持ち主のIDのまま、ハタボは「持ち主:hatabo」、コムギは「持ち主:komugi」。
@@ -3205,6 +3206,19 @@ function session(ws) {
       if (m.type === 'ping') return send({ type: 'pong' });
       if (m.type === 'mypage') return send(await myPage(S));
       if (m.type === 'goen_tree') return send(await goenTree(S));
+      if (m.type === 'focus') {   // スマホの左の帯で相手を押した：自分のハタボを「その人向け」に切りかえる（会話の流れも相手ごとに分ける）
+        const key = String(m.key || '').replace(/[^\w:@.\-ぁ-んァ-ン一-龥]/g, '').slice(0, 80), name = String(m.name || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 30);
+        S.focusHist = S.focusHist || {}; S.focusHist[(S.focus && S.focus.key) || ''] = S.history; S.history = S.focusHist[key] || (key ? [] : S.history);
+        if (!key) { S.focus = null; return send({ type: 'focus', key: '' }); }
+        let ctx = '';
+        if (key.startsWith('p:') && S.owner) {
+          const t = await loadCol(key.slice(2).replace(/[^\w]/g, '').slice(0, 40), 'threads').catch(() => ({}));
+          if (t && t.id && (t.shop === S.myRef || isOffice()) && !isDev()) ctx = (t.turns || []).slice(-14).map(x => (x.r === 'user' || x.r === 'visitor' ? name + 'さん' : x.r === 'shop' ? 'あなた' : 'ハタボ') + '：' + String(x.t || '').slice(0, 200)).join('\n');
+        }
+        const pf = S.owner ? await loadPrefs(ownKey(S.owner) + ':f:' + key).catch(() => ({})) : {};
+        S.focus = { key, name, ctx, custom: pf && pf.custom ? pf.custom : null };
+        return send({ type: 'focus', key, name });
+      }
       if (m.type === 'funnel') return onFunnel(m);
       if (m.type === 'gacha') return onGacha(m);
       if (m.type === 'google_status') { const g = await gGet(S.owner); return send({ type: 'google', ready: !!ENV.GOOGLE_CLIENT_ID, linked: !!g.refresh, email: g.email || '', auto: g.auto !== false }); }
