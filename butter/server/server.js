@@ -1980,8 +1980,8 @@ function session(ws) {
   // APIに渡す形：前半にキャッシュの印をつける（短すぎるときはAPIがキャッシュしないだけで、そのまま動く）
   // ハタボでは、運営の個人の名前を出さない（伝え先は、招待した人か「ハタボの事務局」）
   const tellFix = t => S.avatar === 'hatabo' && S.tellTo && !S.visit ? String(t).replace(/ハタラボの担当（ヒロさん）|ハタラボのヒロさん/g, S.tellTo).replace(/〈伝え先〉/g, S.tellTo).replace(/ヒロさん/g, S.tellTo) : t;
-  const focusBlock = () => !S.focus ? '' : S.focus.guide ? '\n\n【いまの役目：案内役のハタボ】あなたは持ち主の「案内役」。ハタボのサービスの問い合わせに答え、持ち主の困りごと・やってみたいこと（仕事・お店・家族・地域など）を一つずつ短く聞き、合う使い方とプランを、押しつけずに説明する。そのうえで、持ち主の「自分のハタボ」をどう使っていくか（呼び名・話し方・覚えておくこと・つなぐアプリ・役割つきの愛棒）を、いっしょに決めていく。決めたことは「アカウント」の「キャラ設定」「コネクタ」など、どこで変えられるかも短く添える。1回の返事は短く、質問は1つずつ。' : '\n\n【いまの相手】持ち主は今、「' + S.focus.name + '」さん向けのハタボとして、あなたと話しています。' + S.focus.name + 'さんとのこれまでを踏まえて、返事の下書き・伝えること・次の一手をいっしょに考える。' + S.focus.name + 'さん本人に送るのは、持ち主が「送って」と言ったときだけ。' + (S.focus.ctx ? '\n［' + S.focus.name + 'さんとの最近のやりとり（古い順）］\n' + S.focus.ctx : '') + (S.focus.custom ? customBlock(S.focus.custom) : '');
-  function sysBlocks(extra) { const [a, b] = sysParts(); return [{ type: 'text', text: tellFix(a), cache_control: { type: 'ephemeral' } }, { type: 'text', text: tellFix((b + (S.visit || S.role === 'サービス相談' || hearing() ? '' : customBlock(S.custom)) + focusBlock() + (extra || '') + lastFor() + (hearing() ? '' : lineupStyle(S))).trim()) || '。' }]; }
+  const focusBlock = () => !S.focus ? '' : S.focus.guide ? '\n\n【いまの役目：ハタボ事務局案内係】あなたは「ハタボ事務局案内係」（事務局が決めた案内役。持ち主のキャラ設定は使わず、ていねいな標準の話し方）。ハタボのサービスの問い合わせに答え、持ち主の困りごと・やってみたいこと（仕事・お店・家族・地域など）を一つずつ短く聞き、合う使い方とプランを、押しつけずに説明する。そのうえで、持ち主の「自分のハタボ」をどう使っていくか（呼び名・話し方・覚えておくこと・つなぐアプリ・役割つきの愛棒）を、いっしょに決めていく。決めたことは「アカウント」の「キャラ設定」「コネクタ」など、どこで変えられるかも短く添える。1回の返事は短く、質問は1つずつ。' : '\n\n【いまの相手】持ち主は今、「' + S.focus.name + '」さん向けのハタボとして、あなたと話しています。' + S.focus.name + 'さんとのこれまでを踏まえて、返事の下書き・伝えること・次の一手をいっしょに考える。' + S.focus.name + 'さん本人に送るのは、持ち主が「送って」と言ったときだけ。' + (S.focus.ctx ? '\n［' + S.focus.name + 'さんとの最近のやりとり（古い順）］\n' + S.focus.ctx : '') + (S.focus.custom ? customBlock(S.focus.custom) : '');
+  function sysBlocks(extra) { const [a, b] = sysParts(); return [{ type: 'text', text: tellFix(a), cache_control: { type: 'ephemeral' } }, { type: 'text', text: tellFix((b + (S.visit || S.role === 'サービス相談' || hearing() || (S.focus && S.focus.guide) ? '' : customBlock(S.custom)) + focusBlock() + (extra || '') + lastFor() + (hearing() ? '' : lineupStyle(S))).trim()) || '。' }]; }
   // ハタボとコムギは、同じ人（同じLINEのID）でも話の記録・教わったことを分ける（コムギの話がハタボに出ないように）
   /* ===== IDの決まり（11/19）：キャラごとに変わるもの（会話の記録・教わったこと・気づいたこと・キャラ設定）は「持ち主×キャラ」で分ける =====
      キャラ：junior（バターちゃんジュニア）・hatabo（ハタボ）・komugi（コムギ）。ジュニアは前からの持ち主のIDのまま、ハタボは「持ち主:hatabo」、コムギは「持ち主:komugi」。
@@ -1990,7 +1990,8 @@ function session(ws) {
   const charSfx = () => charOf() === 'junior' ? '' : ':' + charOf();
   const ownKey = owner => owner + charSfx();          // 持ち主×キャラ
   const convoBase = () => !S.owner || S.visit ? '' : S.guest ? S.owner + ':guest' : S.mode === 'family' ? S.owner + ':family' : '';
-  const convoKey = () => { const b = convoBase(); return b ? b + charSfx() : ''; };
+  const focusSfx = () => !S.focus ? '' : S.focus.guide ? ':guide' : ':f:' + S.focus.key;   // 相手ごとの分身・事務局案内係は、会話の記録を分ける
+  const convoKey = () => { const b = convoBase(); return b ? b + charSfx() + focusSfx() : ''; };
   /** チャット（会話のまとまり）：ChatGPTの「新しいチャット」と一覧。覚えたこと（まとめ）は全部のチャットでつながる */
   const thrId = () => 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
   const thrTitle = turns => { const u = (turns || []).find(m => m.role === 'user' && !/^（/.test(String(m.content || ''))); return u ? String(u.content).replace(/\s+/g, ' ').slice(0, 40) : ''; };
@@ -3211,9 +3212,10 @@ function session(ws) {
       if (m.type === 'goen_tree') return send(await goenTree(S));
       if (m.type === 'focus') {   // スマホの左の帯で相手を押した：自分のハタボを「その人向け」に切りかえる（会話の流れも相手ごとに分ける）
         const key = String(m.key || '').replace(/[^\w:@.\-ぁ-んァ-ン一-龥]/g, '').slice(0, 80), name = String(m.name || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 30);
-        S.focusHist = S.focusHist || {}; S.focusHist[(S.focus && S.focus.key) || ''] = S.history; S.history = S.focusHist[key] || (key ? [] : S.history);
-        if (!key) { S.focus = null; return send({ type: 'focus', key: '' }); }
-        if (key === 'guide') { S.focus = { key, name: '案内役のハタボ', guide: true }; return send({ type: 'focus', key, name: '案内役のハタボ' }); }
+        const oldK = convoKey(); if (oldK) await saveConvo(oldK, { turns: (S.history || []).slice(-keepN()), newTurns: S.newTurns || 0, at: Date.now() }).catch(() => {});   // いまの相手との会話をしまう
+        const loadFor = async () => { const k2 = convoKey(); const c = k2 ? await loadConvo(k2).catch(() => null) : null; S.history = c && Array.isArray(c.turns) ? noKomugi(cleanTurns(c.turns)) : []; S.newTurns = 0; send({ type: 'chat_turns', id: '', turns: S.history.slice(-40) }); };   // 切りかえたら、その相手との会話に入れかえる
+        if (!key) { S.focus = null; await loadFor(); return send({ type: 'focus', key: '' }); }
+        if (key === 'guide') { S.focus = { key, name: 'ハタボ事務局案内係', guide: true }; await loadFor(); return send({ type: 'focus', key, name: 'ハタボ事務局案内係' }); }
         let ctx = '';
         if (key.startsWith('p:') && S.owner) {
           const t = await loadCol(key.slice(2).replace(/[^\w]/g, '').slice(0, 40), 'threads').catch(() => ({}));
@@ -3221,6 +3223,7 @@ function session(ws) {
         }
         const pf = S.owner ? await loadPrefs(ownKey(S.owner) + ':f:' + key).catch(() => ({})) : {};
         S.focus = { key, name, ctx, custom: pf && pf.custom ? pf.custom : null };
+        await loadFor();
         return send({ type: 'focus', key, name });
       }
       if (m.type === 'funnel') return onFunnel(m);
