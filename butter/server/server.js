@@ -2268,7 +2268,10 @@ function session(ws) {
     const seen = all.filter(t => conSee(t, sc));
     await Promise.all(seen.slice(0, 40).map(async t => { t.vpic = await picOf(t.visitor).catch(() => ''); }));
     const bodies = await Promise.all(seen.map(t => conBody(t, sc).catch(() => false)));   // 1件ずつ待たずに、まとめて
-    seen.forEach((t, i) => list.push(tMeta(t, bodies[i])));
+    const bare = o => String(o || '').replace(/^g:/, ''), myO = new Set([bare(S.owner)].filter(Boolean)), myN = new Set([String(S.me || '').trim()].filter(Boolean));   // 見ている本人が窓口に話しかけたトーク（テスト）は「自分」の印
+    try { const em = S.web && S.web.email; if (em) { const e = PERMS.list.find(x => x.email === em); if (e && e.owner) myO.add(bare(e.owner)); const gm = await loadCol(gmailKey(em), 'gmail').catch(() => ({})); if (gm.owner) myO.add(bare(gm.owner)); }
+      if (S.myRef) { const mr = await getRef(S.myRef).catch(() => null); if (mr && mr.name) myN.add(String(mr.name).trim()); } } catch (e) {}
+    seen.forEach((t, i) => { const mt = tMeta(t, bodies[i]); if (myO.has(bare(t.visitor)) || (t.vref && t.vref === S.myRef) || myN.has(String(t.vname || '').trim())) mt.mine = true; list.push(mt); });
     const day0 = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10), isToday = x => x && new Date(x + 9 * 3600000).toISOString().slice(0, 10) === day0;
     const [refs, auList, reqsDoc, cdayDoc] = await Promise.all([sc.office ? allRefs() : [], sc.office ? allApiUse(monthJ()) : null, sc.office ? loadCol('office', 'reqs') : {}, loadCol((S.myRef || 'office') + '_' + day0, 'consults')]);   // まとめて読む
     const mine = sc.office ? refs.filter(r => r.kind === 'clone' || r.kind === 'url') : [];

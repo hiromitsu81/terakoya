@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8"><meta name="hb-ver" content="11/21-1700">
+<meta charset="utf-8"><meta name="hb-ver" content="11/21-1720">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
 <title>福まねき特戦隊｜バターちゃん</title>
@@ -4241,7 +4241,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
         <div class="hbc adtbl"><table><thead><tr><th>名前</th><th>種類</th><th>状態</th><th>ランク・pt</th><th>ご縁・開いた</th><th>役割（URLごと）</th><th>メモ</th><th>はじめた日</th><th></th></tr></thead><tbody>${rows.slice(0, 300).map(r => `<tr>
           <td>${r.kind === 'person' ? `<button type="button" class="adname" data-auser="${esc(r.code)}"><b>${esc(r.name || r.ownerName || '（名前なし）')}</b></button>` : `<b>${esc(r.name || r.ownerName || '（名前なし）')}</b>`} ${(r.chars || []).map(c => `<i class="hbch ${esc(c)}" title="${esc(CHN[c] || c)}">${esc((CHN[c] || c).slice(0, 1))}</i>`).join('')}<br><small class="hbmuted">${esc(r.code)}${r.kind === 'clone' && r.ownerName ? '・' + esc(r.ownerName) + 'さんの愛棒' : ''}</small></td>
           <td>${K[r.kind] || esc(r.kind)}${r.kind === 'clone' ? (r.active ? '' : '（止）') : ''}</td>
-          <td><i class="hbst ${esc(r.status || r.stage || 'ref')}">${esc(ST[r.status || r.stage || 'ref'] || '')}</i>${r.status === 'trial' && r.daysLeft ? '<br><small>あと' + n(r.daysLeft) + '日</small>' : ''}${r.parentName ? '<br><small>' + esc(r.parentName) + 'さんの紹介</small>' : ''}${r.lineup ? '<br><small>' + esc(r.lineup) + ' ' + esc(r.grade) + '</small>' : ''}${r.payFail ? '<br><b style="color:#C0392B">支払い失敗</b>' : ''}</td>
+          <td>${r.kind === 'person' ? `<i class="hbst ${esc(r.status || r.stage || 'ref')}">${esc(ST[r.status || r.stage || 'ref'] || '')}</i>` : ''}${r.status === 'trial' && r.daysLeft ? '<br><small>あと' + n(r.daysLeft) + '日</small>' : ''}${r.parentName ? '<br><small>' + esc(r.parentName) + 'さんの紹介</small>' : ''}${r.lineup ? '<br><small>' + esc(r.lineup) + ' ' + esc(r.grade) + '</small>' : ''}${r.payFail ? '<br><b style="color:#C0392B">支払い失敗</b>' : ''}</td>
           <td>${esc(r.rank)}<br><small>${n(r.ptsTotal)}pt（残り${n(r.pts)}）${r.adopts ? '・採用' + n(r.adopts) : ''}${r.aisaiHelp ? '・愛祭' + n(r.aisaiHelp) : ''}</small></td>
           <td>${n(r.kids)}人・${n(r.visits)}回${r.api || r.apiDone ? '<br><small>API ' + n(r.api) + '回・' + n(r.apiYen) + '円</small>' : ''}</td>
           <td><select class="hbin" data-arole="${esc(r.code)}"><option value="">（シートのまま）</option>${(A.roles || []).map(x => `<option ${x === r.role ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></td>
@@ -4898,7 +4898,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
     // トーク一覧（LINEの形）：自分のハタボ・窓口に話しかけた人・LINEグループ。ピン留めが上、あとは新しい順
     const O = HBP.con && !HBP.con.denied ? HBP.con : {}, pins = (store.get('hbPins', []) || []), q = ($('hbpSearch').value || '').trim();
     const me = { key: 'me:me', kind: 'me', name: (typeof avName === 'function' && avName()) || 'ハタボ', sub: L[0] ? L[0].title : 'あなたのAI棒', last: L[0] ? (L[0].last || L[0].at) : 0, pic: '' };
-    const people = hbSafe(() => (O.threads || []).map(t => ({ key: 'p:' + t.id, id: t.id, kind: 'p', name: t.vname || 'お客さま', sub: (t.aiboName ? '→ ' + t.aiboName + '　' : '') + (t.body === false ? '' : String(t.preview || '')), last: t.last, unread: t.unread || 0, pic: t.pic || '' })), []);
+    const mineN = (O.threads || []).filter(t => t.mine).length, people = hbSafe(() => (O.threads || []).filter(t => !t.mine || store.get('hbShowMine', 0)).map(t => ({ key: 'p:' + t.id, id: t.id, kind: 'p', name: t.vname || 'お客さま', sub: (t.aiboName ? '→ ' + t.aiboName + '　' : '') + (t.body === false ? '' : String(t.preview || '')), last: t.last, unread: t.unread || 0, pic: t.pic || '' })), []);
     const dmap = {}; hbSafe(() => ((HBP.inbox && HBP.inbox.items) || []).forEach(x => { const k = x.from || x.fromName || '?'; const r = dmap[k] || (dmap[k] = { key: 'd:' + k, id: k, kind: 'd', name: x.fromName || 'ご縁の人', sub: '', last: 0, unread: 0, pic: '' }); if ((x.at || 0) >= r.last) { r.last = x.at || 0; r.sub = '伝言：' + String(x.text || '').slice(0, 40); } if (!x.read) r.unread++; }), null);
 
     const dens = Object.values(dmap);
@@ -4926,6 +4926,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
     const cur = HBP.page === 'person' ? 'p:' + HBP.pid : HBP.page === 'group' ? 'g:' + HBP.gid : HBP.page === 'uperson' ? 'u:' + HBP.ucode : '';
     hbpStrip(all, av);
     $('hbpTalks').innerHTML = all.length ? all.map(x => { const pin = pins.includes(x.key); return `<div class="hbt${x.key === cur ? ' on' : ''}${pin ? ' pinned' : ''}" data-tk="${esc(x.key)}" role="button" tabindex="0"><i class="hbt-av">${av(x)}<em class="hbt-mk ${x.kind}" title="${TIP[x.kind]}"><svg viewBox="0 0 24 24" width="10" height="10" fill="currentColor" aria-hidden="true">${MARK[x.kind]}</svg></em></i><span class="hbt-t"><b>${esc(x.name)}</b><small>${esc(x.sub || '')}</small></span><span class="hbt-r">${x.kind === 'u' ? `<span class="hbt-bd"><i class="hbst ${esc(x.st)}">${esc(x.tag)}</i>${x.chars.map(c => `<i class="hbch ${esc(c)}" title="${esc(CHN[c] || c)}">${esc((CHN[c] || c).slice(0, 1))}</i>`).join('')}</span>` : ''}<small>${day(x.last)}</small>${x.unread ? '<u>' + x.unread + '</u>' : ''}</span><button type="button" class="hbt-pin" data-pin="${esc(x.key)}" aria-label="${pin ? 'ピン留めをはずす' : 'ピン留め'}" title="${pin ? 'ピン留めをはずす' : 'いちばん上にピン留め'}"><svg viewBox="0 0 24 24" width="14" height="14" fill="${pin ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6l-1 6 4 4H6l4-4z M12 13v8"/></svg></button></div>`; }).join('') : '<p class="hbs-empty">見つかりません</p>';
+    if (mineN) $('hbpTalks').insertAdjacentHTML('beforeend', `<button type="button" class="hbs-mine-t" id="hbpMineT" style="display:block;margin:8px auto 4px;border:0;background:transparent;color:var(--cmut);font:600 11.5px var(--body);text-decoration:underline;cursor:pointer">${store.get('hbShowMine', 0) ? '自分が窓口に話しかけた会話（テスト）をかくす' : '自分が窓口に話しかけた会話（テスト）' + mineN + '件を出す'}</button>`);
   }
   function hbpStrip(list, avf) {   // スマホの左の帯：トークの相手のアイコンだけ（押すとそのトーク、帯を押すと一覧）
     try { cvStrip(list, avf); } catch (e) {}
@@ -4960,7 +4961,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
     if (k === 'd') { HBP.page = 'inbox'; HBP.inboxShown = false; hbpRender(); hbpChats(); if (J.ready) jrSend({ type: 'inbox' }); return; }
     if (k === 'g') { HBP.gid = id; HBP.page = 'group'; hbpRender(); hbpChats(); if (J.ready) jrSend({ type: 'group_log', gid: id }); }
   }
-  $('hbpTalks').addEventListener('click', e => { if (Date.now() - (HBP.lpDone || 0) < 600) return; const pb = e.target.closest('[data-pin]'); if (pb) { e.stopPropagation(); return hbpPin(pb.dataset.pin); } const r = e.target.closest('[data-tk]'); if (r) hbpOpenTalk(r.dataset.tk); });
+  $('hbpTalks').addEventListener('click', e => { if (e.target.closest('#hbpMineT')) { store.set('hbShowMine', store.get('hbShowMine', 0) ? 0 : 1); return hbpChats(); } if (Date.now() - (HBP.lpDone || 0) < 600) return; const pb = e.target.closest('[data-pin]'); if (pb) { e.stopPropagation(); return hbpPin(pb.dataset.pin); } const r = e.target.closest('[data-tk]'); if (r) hbpOpenTalk(r.dataset.tk); });
   $('hbpTalks').addEventListener('keydown', e => { const r = e.target.closest('[data-tk]'); if (r && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); hbpOpenTalk(r.dataset.tk); } });
   $('hbpTalks').addEventListener('contextmenu', e => { const r = e.target.closest('[data-tk]'); if (!r) return; e.preventDefault(); hbpPin(r.dataset.tk); });
   { let lp = 0, moved = false;   // スマホ：長押しでピン留め
