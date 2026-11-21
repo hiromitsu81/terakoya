@@ -3519,6 +3519,14 @@ function session(ws) {
         const items = (L.items || []).slice(-300).map(x => ({ at: x.at, name: x.name || '', bot: !!x.bot, text: x.text || (x.kind === 'audio' ? '（音声メッセージ）' : x.kind === 'image' ? '（写真）' : x.kind === 'video' ? '（動画）' : x.kind === 'file' ? '（ファイル ' + (x.file || '') + '）' : x.kind === 'sticker' ? '（スタンプ）' : '') }));
         return send({ type: 'group_log', gid: g.gid, rec: g.rec, items });
       }
+      if (m.type === 'chat_rename') {   // 会話の名前を変える（右上の点3つから）
+        const key = convoKey(), id = String(m.id || S.thr || ''), title = clean(String(m.title || ''), 40).trim();
+        if (!key || S.visit || !title) return send(chatsOut());
+        await thrSave().catch(() => {});
+        const t = (S.threads || []).find(x => x.id === id);
+        if (t) { t.title = title; await saveConvo(key, { threads: S.threads, thr: S.thr }); }
+        return send(chatsOut());
+      }
       if (m.type === 'chats' || m.type === 'chat_new' || m.type === 'chat_open') {
         const key = convoKey(); if (!key || S.visit) return send({ type: 'chats', cur: '', list: [], off: true });
         await thrSave().catch(() => {});
