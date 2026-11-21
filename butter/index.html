@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8"><meta name="hb-ver" content="11/21-1830">
+<meta charset="utf-8"><meta name="hb-ver" content="11/21-1900">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
 <title>福まねき特戦隊｜バターちゃん</title>
@@ -2351,6 +2351,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   function qpar(n) { let v = new URLSearchParams(location.search).get(n) || Q.get(n); if (!v) { try { const st = new URLSearchParams(location.search).get('liff.state'); if (st) v = new URLSearchParams(decodeURIComponent(st).split('?')[1] || '').get(n); } catch (e) {} } return v || ''; }
   const LIFF = Q.get('liff') === '1';
   const LIFF_ID = Q.get('liffId') || store.get('liffId', '');
+  const liffApi = n => { try { return !!(window.liff && liff.isApiAvailable && liff.isApiAvailable(n)); } catch (e) { return false; } };   // Googleで入ったとき（LINEのログインをしない）は liff が始まっていないので、聞くとエラーになる
   // サイトの「ログイン」→ Googleでログインしたとき：#wt=（12時間の印）。アドレスからは消して、このタブの中だけで持つ
   const WT = (() => { let t = ''; try { const h = new URLSearchParams(location.hash.slice(1)); t = h.get('wt') || ''; if (t) { sessionStorage.setItem('hb.wt', t); window.history.replaceState(null, '', location.pathname + location.search); } else t = sessionStorage.getItem('hb.wt') || ''; } catch (e) {} return t.replace(/[^\w.-]/g, ''); })();
   // パソコン（GoogleでログインしたPC・LINEアプリの外で開いたミニアプリ）は、つながる前に印をつけておく（あとから付けると、マイクや案内が間に合わない）
@@ -3967,7 +3968,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
     const url = (toHatabo ? 'https://miniapp.line.me/2012676035-yCkx6tBu' : MINI_URL) + (J.myRef ? '?ref=' + encodeURIComponent(J.myRef) : '');
     const text = KOMUGI_APP && !toHatabo ? '馬越 雅哉さんの相棒「コムギ」です。馬越さんへのご相談は、コムギが先にお聞きしてつなぎます。話しかけてみてください。\n' + url : 'AIの愛棒「ハタボ」だよ。話すだけで、調べもの・下書き・相談までいっしょにやってくれます。気軽に話してみて！\n' + url;
     try {
-      if (window.liff && liff.isApiAvailable && liff.isApiAvailable('shareTargetPicker')) {
+      if (liffApi('shareTargetPicker')) {
         let r; try { r = await liff.shareTargetPicker([shareCard(url)]); } catch (e) { r = await liff.shareTargetPicker([{ type: 'text', text }]); }
         if (r) toast('送ったよ！ありがとう'); return;
       }
@@ -4549,7 +4550,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   // ハタボをいつもの場所に：友だち追加・ホーム画面に追加・トークをピン留め（ピン留めはLINEの決まりで本人の操作だけ）
   const HBS = { friend: null };
   function hbpSetup() {
-    const can = window.liff && liff.isApiAvailable && liff.isApiAvailable('createShortcutOnHomeScreen');
+    const can = liffApi('createShortcutOnHomeScreen');
     const fr = HBS.friend;
     return `<div class="hbc"><div class="k">SET UP</div><h3>${esc(avName() || 'ハタボ')}を、いつもの場所に</h3>
       <div class="hbplan"><div><b>1. 公式LINEを友だち追加</b><span>トークからいつでも話せて、メニューも出ます</span></div>${fr ? '<span class="hbtag">追加ずみ</span>' : '<a class="hbtag gold" href="https://line.me/R/ti/p/${OA_ID}" style="text-decoration:none">追加する</a>'}</div>
