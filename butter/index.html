@@ -4075,7 +4075,6 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
             <div class="hbc hbwide acctrows"><div class="k">APP</div><h3>アプリ</h3><div class="hbrows">${B.map(row).join('')}<label class="hbrow hbsw"><div><b>触覚フィードバック</b><span>話すボタンを押したとき、ブルッと震える（対応しているスマホだけ）</span></div><input type="checkbox" id="hbHap" ${store.get('hbHaptic', true) ? 'checked' : ''}></label></div></div>
             <div class="hbc hbwide acctrows"><div class="k">MORE</div><h3>そのほか</h3><div class="hbrows">${C.map(row).join('')}<button type="button" class="hbrow" id="hbTourBtn"><div><b>使い方の案内</b><span>話すボタン・画面の場所・AIアプリとつなぐ（ハタボコネクト）</span></div><i>›</i></button><button type="button" class="hbrow hblogout" id="hbLogout"><div><b>ログアウト</b><span>この端末からログアウトします</span></div><i>›</i></button></div></div>`; })()}`;
       { const hp = document.getElementById('hbHap'); if (hp) hp.onchange = () => { store.set('hbHaptic', hp.checked); if (hp.checked && window.hbBuzz) window.hbBuzz(); }; }
-      $('hbTourBtn').onclick = () => hbTour();
       $('hbLogout').onclick = () => { if (!confirm('この端末からログアウトします。よろしいですか？')) return; try { ['hbpData', 'hbPins', 'srv'].forEach(k => store.set(k, null)); } catch (e) {} try { if (window.liff && liff.isLoggedIn && liff.isLoggedIn()) liff.logout(); } catch (e) {} try { sessionStorage.clear(); } catch (e) {} toast('ログアウトしました'); setTimeout(() => { location.replace('https://www.hatha-lab.com/mypage.html?out=1'); }, 600); };   // ログアウトしたら、サイトのMyハタボへもどる
     } else if (p === 'more') {
       const R = [['console', '管理画面', '会話・愛棒・窓口・お金・設定（PC・タブレットでも）'], ['share', '紹介する', 'ハタボのカードを友だちに。ご縁がひろがります'], ['notes', 'メモ・議事録', '話して残したメモと議事録'], ['gacha', 'AI棒ガチャ', '1日1回むりょう'], ['friends', '友だち', 'ガチャで出会った人・ご縁の人'], ['grow', '育てた' + nm, 'レベル・覚えたこと・引きつぎ'], ['aisai', 'AISAI・愛祭', 'オーナーズクラブ・ランク・アワード'], ['plan', 'プラン・支払い', 'お試し・お支払い'], ['times', 'ハタボタイムズ', 'お知らせ・使い方'], ['api', 'AIからつなぐ（API）', 'ChatGPT・Gemini・Claude・Grokから使う'], ['settings', '設定', 'キャラ・連携・公開設定・PCで使う']];
@@ -4896,8 +4895,8 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
       ['準備できました', 'ハタボと話してみましょう。「ハタボと話してみる」を押すと、マイクがオンになります。あとから案内を見るときは「アカウント」→「使い方の案内」です。', '']
     ];
     let i = 0; const d = document.createElement('div'); d.id = 'hbTour';
-    d.style.cssText = 'position:fixed;inset:0;z-index:99998;background:rgba(8,12,24,.55);display:grid;place-items:center;padding:20px';
-    const mark = sel => { document.querySelectorAll('.hbTourMark').forEach(e => { e.classList.remove('hbTourMark'); e.style.outline = ''; e.style.outlineOffset = ''; e.style.position = e.dataset.tpos || ''; e.style.zIndex = e.dataset.tz || ''; }); const e = sel && document.querySelector(sel); if (e && e.offsetParent) { e.classList.add('hbTourMark'); e.dataset.tpos = e.style.position; e.dataset.tz = e.style.zIndex; e.style.outline = '4px solid #F7D774'; e.style.outlineOffset = '4px'; if (getComputedStyle(e).position === 'static') e.style.position = 'relative'; e.style.zIndex = '99999'; } };
+    d.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:rgba(8,12,24,.55);display:grid;place-items:center;padding:20px';
+    const mark = sel => { document.querySelectorAll('.hbTourMark').forEach(e => { e.classList.remove('hbTourMark'); e.style.outline = ''; e.style.outlineOffset = ''; e.style.position = e.dataset.tpos || ''; e.style.zIndex = e.dataset.tz || ''; }); const e = sel && document.querySelector(sel); if (e && e.offsetParent) { e.classList.add('hbTourMark'); e.dataset.tpos = e.style.position; e.dataset.tz = e.style.zIndex; e.style.outline = '4px solid #F7D774'; e.style.outlineOffset = '4px'; if (getComputedStyle(e).position === 'static') e.style.position = 'relative'; e.style.zIndex = '2147483001'; } };
     const end = talk => { mark(''); d.remove(); store.set('hbPcTour', 2); if (talk && J.micOff) $('cvMicSw').click(); };
     const draw = () => {
       const [t, b, sel] = S[i], last = i === S.length - 1;
@@ -4913,7 +4912,10 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
     document.body.appendChild(d); draw();
   }
   window.hbTour = hbTour;
-  document.addEventListener('jrready', () => { if (document.body.classList.contains('pcweb') && !store.get('hbPcTour', 0)) setTimeout(hbTour, 600); }, { once: true });
+  { const tourOnce = () => { if (document.body.classList.contains('pcweb') && !store.get('hbPcTour', 0) && !document.getElementById('hbTour')) hbTour(); };
+    document.addEventListener('jrready', () => setTimeout(tourOnce, 600), { once: true });
+    setTimeout(tourOnce, 4000);   // サーバーとつながるのを待たずに、開いて少ししたら出す
+    document.addEventListener('click', e => { if (e.target.closest && e.target.closest('#hbTourBtn')) { e.preventDefault(); hbTour(); } }, true); }   // 「使い方の案内」は、どの画面から押しても開く
   window.hbpPreview = (d, pg, gn, ib, ex) => { HBP.data = d; if (gn) HBP.goen = gn; if (ib) { HBP.inbox = ib; HBP.inboxShown = true; } if (ex) Object.assign(HBP, ex); hbpOpen(pg); };   // 画面の確認用
   $('trioBtn').addEventListener('click', () => jrSend({ type: 'trio', on: !J.trio }));
   $('planBtn').addEventListener('click', () => { const p = store.get('jrPlan2', J.canPlan ? 'super' : 'std'); jrSend({ type: 'plan', plan: PLAN_ORDER[(PLAN_ORDER.indexOf(p) + 1) % PLAN_ORDER.length] }); });
@@ -4921,7 +4923,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
   /* --- トーク画面（自分用）。話したことと返事をぜんぶ残して、さかのぼって読める --- */
   (() => {
     const V = $('chatV'), L = $('cvList'), map = new WeakMap();
-    const isApp = () => document.body.classList.contains('av-hatabo') || document.body.classList.contains('av-komugi');
+    const isApp = () => document.body.classList.contains('av-hatabo') || document.body.classList.contains('av-komugi') || document.body.classList.contains('pcweb');   // パソコンのMyハタボ・管理画面もトーク画面を使う
     const setView = window.hbSetView = v => { document.querySelectorAll('.hbp-mode [data-mode]').forEach(b => b.classList.toggle('on', b.dataset.mode === (v === 'chat' ? 'chat' : 'char'))); if (document.body.classList.contains('plain')) v = 'chat'; document.body.classList.toggle('chatview', v === 'chat' && isApp()); store.set('hbView', v); if (v === 'chat') requestAnimationFrame(() => { L.scrollTop = L.scrollHeight; }); };
     let stick = true;
     L.addEventListener('scroll', () => { stick = L.scrollHeight - L.scrollTop - L.clientHeight < 80; }, { passive: true });
@@ -4996,7 +4998,7 @@ body.cv-listen .hbvt-orb::before, body.cv-listen .hbvt-orb::after, body.cv-speak
       document.querySelectorAll('.shareb').forEach(b => { b.hidden = false; });
       const nm = (typeof avName === 'function' && avName()) || 'ハタボ'; if ($('cvName').textContent !== nm) $('cvName').textContent = nm;
       document.body.classList.toggle('cv-speak', state === 'speaking'); document.body.classList.toggle('cv-listen', state === 'listening' && !!J.ready);
-      if (isApp() && !document.body.dataset.cvInit) { document.body.dataset.cvInit = '1'; setView(store.get('hbView', 'chat')); }
+      if (isApp() && !document.body.dataset.cvInit) { document.body.dataset.cvInit = '1'; setView(document.body.classList.contains('pcweb') ? 'chat' : store.get('hbView', 'chat')); }   // パソコンは、いつもトーク画面から
     }, 300);
     // 左右のスワイプで、トーク画面とキャラ画面を切りかえる
     let sx = 0, sy = 0;
